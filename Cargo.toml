@@ -1,0 +1,101 @@
+[package]
+name = "siem_schema_validator"
+version = "0.2.0"
+edition = "2021"
+authors = ["SIEM Team"]
+description = "Comprehensive schema validator for SIEM platform ensuring consistency across ClickHouse, Rust, and TypeScript"
+
+[[bin]]
+name = "schema_validator"
+path = "schema_validator.rs"
+
+[[bin]]
+name = "schema_validator_v2"
+path = "src/schema_validator_v2.rs"
+
+[[bin]]
+name = "schema_validator_v3"
+path = "src/main_v3.rs"
+
+[[bin]]
+name = "schema_validator_v4"
+path = "src/main_v4.rs"
+
+[[bin]]
+name = "schema_validator_v5"
+path = "src/main_v5.rs"
+
+[dependencies]
+# Core dependencies
+regex = "1.10"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+walkdir = "2.4"
+chrono = { version = "0.4", features = ["serde"] }
+uuid = { version = "1.6", features = ["v4", "serde"] }
+
+# CLI and error handling
+clap = { version = "4.4", features = ["derive"] }
+anyhow = "1.0"
+thiserror = "1.0"
+
+# SQL parsing
+sqlparser = "0.39"
+
+# Rust AST parsing
+syn = { version = "2.0", features = ["full", "extra-traits", "visit"] }
+quote = "1.0"
+proc-macro2 = "1.0"
+
+# TypeScript parsing
+swc_ecma_parser = "0.141"
+swc_ecma_ast = "0.110"
+swc_common = "0.33"
+
+# Additional parsing and validation
+notify = { version = "6.1", optional = true }
+rayon = { version = "1.8", optional = true }
+dashmap = { version = "5.5", optional = true }
+
+# GraphQL parsing
+graphql-parser = { version = "0.4", optional = true }
+
+# OpenAPI parsing
+openapi = { version = "0.1", optional = true }
+serde_yaml = { version = "0.9" }
+
+# HTML reporting
+askama = { version = "0.12", optional = true }
+minijinja = { version = "1.0", optional = true }
+
+# Prometheus metrics
+prometheus = { version = "0.13", optional = true }
+
+
+
+# Optional: For colored terminal output
+colored = { version = "2.0", optional = true }
+
+# Existing dependencies
+tokio = { version = "1.0", features = ["full"] }
+reqwest = { version = "0.11", features = ["json"] }
+
+[dev-dependencies]
+tokio-test = "0.4"
+
+[features]
+default = ["colored-output"]
+colored-output = ["colored"]
+watch-mode = ["notify"]
+parallel-processing = ["rayon", "dashmap"]
+graphql-support = ["graphql-parser"]
+openapi-support = ["openapi"]
+html-reporting = ["askama", "minijinja"]
+prometheus-metrics = ["prometheus"]
+full = ["colored-output", "watch-mode", "parallel-processing", "graphql-support", "openapi-support", "html-reporting", "prometheus-metrics"]
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = "abort"

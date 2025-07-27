@@ -1,0 +1,297 @@
+name: Schema Validation
+
+# Trigger validation on pull requests and pushes to main branches
+on:
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'database_setup.sql'
+      - 'siem_api/src/**/*.rs'
+      - 'siem_consumer/src/**/*.rs'
+      - 'siem_rule_engine/src/**/*.rs'
+      - 'siem_parser/src/**/*.rs'
+      - 'siem_ui/src/**/*.ts'
+      - 'siem_ui/src/**/*.tsx'
+      - 'schema_validator_v2.rs'
+      - 'Cargo.toml'
+  push:
+    branches: [ main ]
+    paths:
+      - 'database_setup.sql'
+      - 'siem_api/src/**/*.rs'
+      - 'siem_consumer/src/**/*.rs'
+      - 'siem_rule_engine/src/**/*.rs'
+      - 'siem_parser/src/**/*.rs'
+      - 'siem_ui/src/**/*.ts'
+      - 'siem_ui/src/**/*.tsx'
+      - 'schema_validator_v2.rs'
+      - 'Cargo.toml'
+  workflow_dispatch: # Allow manual triggering
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  schema-validation:
+    name: Validate Schema Consistency
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Full history for better analysis
+          
+      - name: Setup Rust Toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          override: true
+          components: rustfmt, clippy
+          
+      - name: Cache Cargo Dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+            
+      - name: Install Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential
+          
+      - name: Build Schema Validator
+        run: |
+          echo "🔨 Building schema validator..."
+          cargo build --release --bin schema_validator_v2
+          echo "✅ Build completed successfully"
+          
+      - name: Verify Database Schema File
+        run: |
+          if [ ! -f "database_setup.sql" ]; then
+            echo "❌ database_setup.sql not found!"
+            exit 1
+          fi
+          echo "✅ Database schema file found"
+          echo "📊 Schema file size: $(wc -l < database_setup.sql) lines"
+          
+      - name: Run Schema Validation
+        id: validation
+        run: |
+          echo "🔍 Running comprehensive schema validation..."
+          echo "📋 Validating consistency across:"
+          echo "   - ClickHouse database schema (database_setup.sql)"
+          echo "   - Rust backend SQL queries and structs"
+          echo "   - TypeScript frontend interfaces"
+          echo ""
+          
+          # Run the validator and capture exit code
+          if ./target/release/schema_validator_v2; then
+            echo "validation_result=success" >> $GITHUB_OUTPUT
+            echo "✅ Schema validation passed!"
+          else
+            echo "validation_result=failure" >> $GITHUB_OUTPUT
+            echo "❌ Schema validation failed!"
+            exit 1
+          fi
+          
+      - name: Generate Validation Summary
+        if: always()
+        run: |
+          echo "📊 Validation Summary" >> $GITHUB_STEP_SUMMARY
+          echo "==================" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ -f "schema_validation_report.md" ]; then
+            echo "## Schema Validation Report" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            cat schema_validation_report.md >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⚠️ No validation report generated" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+      - name: Upload Validation Reports
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: schema-validation-reports-${{ github.run_number }}
+          path: |
+            schema_validation_report.md
+            schema_validation_report.json
+          retention-days: 30
+          
+      - name: Parse JSON Report for Metrics
+        if: always() && hashFiles('schema_validation_report.json') != ''
+        run: |
+          echo "📈 Extracting validation metrics..."
+          
+          # Extract metrics from JSON report
+          CRITICAL_COUNT=$(jq '[.[] | select(.severity == "Critical")] | length' schema_validation_report.json)
+          WARNING_COUNT=$(jq '[.[] | select(.severity == "Warning")] | length' schema_validation_report.json)
+          INFO_COUNT=$(jq '[.[] | select(.severity == "Info")] | length' schema_validation_report.json)
+          
+          echo "🚨 Critical Issues: $CRITICAL_COUNT"
+          echo "⚠️ Warnings: $WARNING_COUNT"
+          echo "ℹ️ Info: $INFO_COUNT"
+          
+          # Set outputs for use in other steps
+          echo "critical_count=$CRITICAL_COUNT" >> $GITHUB_OUTPUT
+          echo "warning_count=$WARNING_COUNT" >> $GITHUB_OUTPUT
+          echo "info_count=$INFO_COUNT" >> $GITHUB_OUTPUT
+          
+      - name: Comment on Pull Request (Success)
+        if: github.event_name == 'pull_request' && steps.validation.outputs.validation_result == 'success'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require('fs');
+            
+            let comment = `## ✅ Schema Validation Passed\n\n`;
+            comment += `All schema consistency checks passed successfully!\n\n`;
+            comment += `### Validation Summary\n`;
+            comment += `- 🔍 **SQL Queries**: Validated against database schema\n`;
+            comment += `- 🦀 **Rust Structs**: Checked for field consistency\n`;
+            comment += `- 📝 **TypeScript Interfaces**: Verified against backend types\n`;
+            comment += `- 🚫 **Hardcoded Names**: No hardcoded database prefixes found\n\n`;
+            comment += `*Generated by Schema Validator v2 at ${new Date().toISOString()}*`;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+            
+      - name: Comment on Pull Request (Failure)
+        if: github.event_name == 'pull_request' && steps.validation.outputs.validation_result == 'failure'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require('fs');
+            
+            let comment = `## ❌ Schema Validation Failed\n\n`;
+            comment += `Schema consistency issues were detected that need to be resolved before merging.\n\n`;
+            
+            // Include the markdown report if available
+            if (fs.existsSync('schema_validation_report.md')) {
+              const report = fs.readFileSync('schema_validation_report.md', 'utf8');
+              comment += `### Detailed Report\n\n`;
+              comment += report;
+            } else {
+              comment += `### Issues Detected\n\n`;
+              comment += `Please check the workflow logs for detailed error information.\n`;
+            }
+            
+            comment += `\n\n---\n`;
+            comment += `*Generated by Schema Validator v2 at ${new Date().toISOString()}*\n`;
+            comment += `*Please fix all critical issues before merging.*`;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+            
+      - name: Create Check Run Summary
+        if: always()
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require('fs');
+            const success = '${{ steps.validation.outputs.validation_result }}' === 'success';
+            
+            let summary = success ? 
+              '✅ All schema validations passed successfully!' : 
+              '❌ Schema validation failed - critical issues detected';
+              
+            if (fs.existsSync('schema_validation_report.json')) {
+              const report = JSON.parse(fs.readFileSync('schema_validation_report.json', 'utf8'));
+              const critical = report.filter(e => e.severity === 'Critical').length;
+              const warnings = report.filter(e => e.severity === 'Warning').length;
+              
+              summary += `\n\n**Issues Found:**\n`;
+              summary += `- Critical: ${critical}\n`;
+              summary += `- Warnings: ${warnings}\n`;
+            }
+            
+            core.summary.addRaw(summary);
+            await core.summary.write();
+            
+  # Optional: Run additional checks in parallel
+  schema-format-check:
+    name: Schema Format Validation
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        
+      - name: Validate SQL Syntax
+        run: |
+          echo "🔍 Checking SQL syntax in database_setup.sql..."
+          
+          # Basic SQL syntax validation
+          if grep -q "CREATE TABLE" database_setup.sql; then
+            echo "✅ Found CREATE TABLE statements"
+          else
+            echo "❌ No CREATE TABLE statements found"
+            exit 1
+          fi
+          
+          # Check for common SQL syntax issues
+          if grep -q ";"; database_setup.sql; then
+            echo "✅ SQL statements properly terminated"
+          else
+            echo "⚠️ Some SQL statements may be missing semicolons"
+          fi
+          
+      - name: Check Schema File Size
+        run: |
+          SIZE=$(wc -c < database_setup.sql)
+          LINES=$(wc -l < database_setup.sql)
+          
+          echo "📊 Schema file statistics:"
+          echo "   Size: $SIZE bytes"
+          echo "   Lines: $LINES"
+          
+          if [ $SIZE -lt 100 ]; then
+            echo "⚠️ Schema file seems unusually small"
+          fi
+          
+  # Security check for sensitive data
+  security-check:
+    name: Security Validation
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        
+      - name: Check for Hardcoded Secrets
+        run: |
+          echo "🔒 Scanning for potential security issues..."
+          
+          # Check for common secret patterns
+          if grep -r -i "password\s*=" --include="*.rs" --include="*.sql" .; then
+            echo "⚠️ Found potential hardcoded passwords"
+          fi
+          
+          if grep -r -i "api[_-]key" --include="*.rs" --include="*.sql" .; then
+            echo "⚠️ Found potential API keys"
+          fi
+          
+          if grep -r "dev\." --include="*.rs" siem_api/src/ || true; then
+            echo "⚠️ Found hardcoded database prefixes (will be caught by schema validator)"
+          fi
+          
+          echo "✅ Security scan completed"

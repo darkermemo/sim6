@@ -1,0 +1,11 @@
+title: Complex Sigma Rule Test
+detection:
+  selection_keywords:
+    keywords|all:
+      - 'failed login'
+      - 'user root'
+  selection_ip:
+    source_ip: '10.0.0.5'
+  filter:
+    hostname: 'test-server'
+  condition: (selection_keywords or selection_ip) and not filter 

@@ -1,0 +1,29 @@
+[package]
+name = "siem_backup_manager"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+tokio = { version = "1", features = ["full"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+chrono = { version = "0.4", features = ["serde"] }
+uuid = { version = "1.0", features = ["serde", "v4"] }
+anyhow = "1.0"
+log = "0.4"
+env_logger = "0.10"
+clap = { version = "4.0", features = ["derive", "env"] }
+reqwest = { version = "0.11", features = ["json", "multipart"] }
+sha2 = "0.10"
+base64 = "0.22"
+tar = "0.4"
+flate2 = "1.0"
+aws-config = "1.0"
+aws-sdk-s3 = "1.0"
+google-cloud-storage = "0.14"
+azure_storage = "0.19"
+azure_storage_blobs = "0.19"
+toml = "0.8"
+cron = "0.12"
+tempfile = "3.0"
+walkdir = "2.0" 

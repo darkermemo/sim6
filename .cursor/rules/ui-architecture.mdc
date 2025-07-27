@@ -1,0 +1,173 @@
+---
+title: UI Architecture Rules for SIEM React Components
+description: Backend-first UI development methodology ensuring perfect alignment between Rust backend and React frontend
+---
+
+# UI Architecture Rules for SIEM React Components
+
+You are the UI architect for a Rust backend + React frontend SIEM application.
+
+## Core Principle: Backend-First UI Development
+
+Before you write **any** React component, follow these steps **in order**:
+
+---
+
+## 1. DISCOVER Phase
+
+### a. Route Discovery
+- **ALWAYS** start by examining `siem_api/src/*.rs` files
+- Find the **Axum route handler** for your feature (e.g., `GET /v1/rules`, `POST /v1/alerts`)
+- Read the route function signature and understand:
+  - Request parameters (path, query, body)
+  - Response structure
+  - Authentication requirements
+  - Error handling
+
+### b. Type Extraction
+- Copy the **Rust struct** returned by the route
+- Convert to TypeScript interface with **exact field names**
+- Convert Rust types to TypeScript:
+  - `String` → `string`
+  - `u32/i32` → `number`
+  - `bool` → `boolean`
+  - `Option<T>` → `T | null`
+  - `Vec<T>` → `T[]`
+
+### c. Enum Handling
+- Rust enums → TypeScript union types
+- Example: `Severity::Critical` → `type Severity = "Critical" | "High" | "Medium" | "Low"`
+- **Keep exact case matching** the Rust enum variants
+
+---
+
+## 2. DESIGN Phase
+
+### a. UI Mapping Strategy
+Map each struct field to appropriate UI controls:
+- **Timestamps** → formatted date/time display
+- **Enums** → Badge components with color variants
+- **IDs** → clickable elements that open detail views
+- **Booleans** → Switch components or status badges
+- **Strings** → text display with potential filtering
+- **Arrays** → lists, tables, or chip groups
+
+### b. Data Flow Decision
+Choose the right data fetching pattern:
+- **Static data** → `useSWR` with refresh intervals
+- **Real-time updates** → `useSSE` for Server-Sent Events
+- **Paginated data** → `useInfiniteQuery` for cursor-based pagination
+- **CRUD operations** → dedicated hooks (`useCreateX`, `useUpdateX`, `useDeleteX`)
+
+### c. Component Architecture
+- Use **Shadcn/ui components** exclusively
+- Match component variants to enum values (e.g., `<Badge variant="critical">`)
+- Follow existing patterns from `src/components/ui/`
+
+---
+
+## 3. GENERATE Phase
+
+### a. TypeScript Interfaces First
+```typescript
+/**
+ * Exact copy of Rust struct from backend
+ * Route: GET /api/v1/endpoint
+ */
+export interface BackendResponse {
+  field_name: string;  // Matches Rust exactly
+  enum_field: "Variant1" | "Variant2";
+  optional_field?: number;
+}
+```
+
+### b. React Component Requirements
+Your component MUST include:
+
+#### Essential Features:
+- **Skeleton loaders** with same height as actual content rows
+- **Event handling**: `e.stopPropagation()` on all inline buttons
+- **API integration**: Use existing `useApi()` patterns
+- **Error boundaries**: Handle loading/error states
+- **Accessibility**: ARIA labels, keyboard navigation
+
+#### Component Structure:
+```typescript
+/**
+ * ComponentName - Description of what this component does
+ * 
+ * @example
+ * <ComponentName />
+ */
+export function ComponentName() {
+  // State management
+  // API hooks
+  // Event handlers
+  // Render logic
+}
+```
+
+#### Export Pattern:
+- **Zero breaking props** - component should work without required props
+- Provide sensible defaults for all optional props
+- Use TypeScript strict mode
+
+### c. Interaction Patterns
+```typescript
+// Row click handling
+const handleRowClick = (id: string) => {
+  openDetailDrawer(id);
+};
+
+// Button click with propagation stop
+const handleButtonClick = stopPropagation((id: string) => {
+  performAction(id);
+});
+
+// Table row structure
+<tr onClick={() => handleRowClick(item.id)}>
+  <td>
+    <Button onClick={stopPropagation(() => handleEdit(item.id))}>
+      Edit
+    </Button>
+  </td>
+</tr>
+```
+
+---
+
+## 4. TEST Phase
+
+### a. Unit Test Template
+```typescript
+// __tests__/ComponentName.test.tsx
+import { render, screen } from '@testing-library/react';
+import { ComponentName } from '../ComponentName';
+
+describe('ComponentName', () => {
+  it('renders without crashing', () => {
+    render(<ComponentName />);
+    expect(screen.getByRole('table')).toBeInTheDocument();
+  });
+
+  it('handles loading state', () => {
+    // Test skeleton loader
+  });
+
+  it('handles error state', () => {
+    // Test error display
+  });
+});
+```
+
+---
+
+## ENFORCEMENT
+
+- **Never** create a component without following steps 1-4
+- **Always** check existing Rust backend code first
+- **Must** use exact field names from Rust structs
+- **Required** to handle loading, error, and empty states
+- **Mandatory** to use `stopPropagation()` for nested interactive elements
+
+This ensures perfect alignment between backend and frontend, maintainable code, and consistent user experience.

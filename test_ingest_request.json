@@ -1,0 +1,40 @@
+{
+  "events": [
+    {
+      "source_ip": "192.168.1.100",
+      "raw_log": "Process created: mimikatz.exe - potential malware detected on win-host-1"
+    },
+    {
+      "source_ip": "192.168.1.101", 
+      "raw_log": "Logon failed for admin user from 192.168.1.101 - event_id 4625"
+    },
+    {
+      "source_ip": "10.10.10.10",
+      "raw_log": "TCP connection attempt from 10.10.10.10 to port 22 on 192.168.1.20"
+    },
+    {
+      "source_ip": "10.10.10.10",
+      "raw_log": "TCP connection attempt from 10.10.10.10 to port 80 on 192.168.1.20"
+    },
+    {
+      "source_ip": "10.10.10.10",
+      "raw_log": "TCP connection attempt from 10.10.10.10 to port 443 on 192.168.1.20"
+    },
+    {
+      "source_ip": "10.10.10.10",
+      "raw_log": "TCP connection attempt from 10.10.10.10 to port 3389 on 192.168.1.20"
+    },
+    {
+      "source_ip": "10.10.10.10",
+      "raw_log": "TCP connection attempt from 10.10.10.10 to port 135 on 192.168.1.20"
+    },
+    {
+      "source_ip": "10.10.10.10",
+      "raw_log": "TCP connection attempt from 10.10.10.10 to port 445 on 192.168.1.20"
+    },
+    {
+      "source_ip": "10.10.10.10",
+      "raw_log": "TCP connection attempt from 10.10.10.10 to port 1433 on 192.168.1.20"
+    }
+  ]
+}

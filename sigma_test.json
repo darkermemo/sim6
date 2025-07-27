@@ -1,0 +1,3 @@
+{
+  "sigma_yaml": "title: Complex Sigma Rule Test\ndetection:\n  selection_keywords:\n    keywords|all:\n      - 'failed login'\n      - 'user root'\n  selection_ip:\n    source_ip: '10.0.0.5'\n  filter:\n    hostname: 'test-server'\n  condition: (selection_keywords or selection_ip) and not filter"
+} 

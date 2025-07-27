@@ -1,0 +1,144 @@
+{
+  "timestamp": "2025-07-24T16:22:47.843321",
+  "summary": {
+    "total_tests": 20,
+    "passed_tests": 16,
+    "success_rate": 80.0
+  },
+  "detailed_results": {
+    "parsing": [
+      {
+        "timestamp": "2025-07-24T16:22:38.363746",
+        "test_name": "LEEF Format Parsing",
+        "success": false,
+        "details": "Found 0/3 expected fields"
+      },
+      {
+        "timestamp": "2025-07-24T16:22:40.524626",
+        "test_name": "Syslog Format Parsing",
+        "success": false,
+        "details": "Found 0/3 expected fields"
+      },
+      {
+        "timestamp": "2025-07-24T16:22:42.682536",
+        "test_name": "Key-Value Parsing",
+        "success": false,
+        "details": "Found 0/3 expected fields"
+      }
+    ],
+    "searching": [
+      {
+        "timestamp": "2025-07-24T16:22:47.739624",
+        "test_name": "Basic Search",
+        "success": true,
+        "details": "Found 10 events"
+      },
+      {
+        "timestamp": "2025-07-24T16:22:47.773111",
+        "test_name": "IP Address Search",
+        "success": true,
+        "details": "Found 10 events"
+      },
+      {
+        "timestamp": "2025-07-24T16:22:47.806112",
+        "test_name": "Severity Search",
+        "success": true,
+        "details": "Found 10 events"
+      },
+      {
+        "timestamp": "2025-07-24T16:22:47.840408",
+        "test_name": "Time Range Search",
+        "success": true,
+        "details": "Found 10 events"
+      }
+    ],
+    "rules": [
+      {
+        "timestamp": "2025-07-24T16:22:47.842969",
+        "test_name": "Brute Force Detection",
+        "success": true,
+        "details": "Rule executed: Multiple failed login attempts"
+      },
+      {
+        "timestamp": "2025-07-24T16:22:47.842972",
+        "test_name": "Malware Detection",
+        "success": true,
+        "details": "Rule executed: Known malware signature detected"
+      },
+      {
+        "timestamp": "2025-07-24T16:22:47.842974",
+        "test_name": "Suspicious Network Activity",
+        "success": true,
+        "details": "Rule executed: Unusual network traffic patterns"
+      },
+      {
+        "timestamp": "2025-07-24T16:22:47.842976",
+        "test_name": "Data Exfiltration",
+        "success": true,
+        "details": "Rule executed: Large data transfer to external IP"
+      }
+    ],
+    "ingestion": [
+      {
+        "timestamp": "2025-07-24T16:22:36.201807",
+        "test_name": "Performance Test",
+        "success": true,
+        "details": "Ingested 100/100 logs in 22.17s (4.51 logs/sec)"
+      }
+    ],
+    "compression": [
+      {
+        "timestamp": "2025-07-24T16:22:47.842869",
+        "test_name": "Compression Ratio",
+        "success": false,
+        "details": "Ratio: 1.00:1, File size: 256.57 MB"
+      }
+    ],
+    "mapping": [
+      {
+        "timestamp": "2025-07-24T16:22:47.842936",
+        "test_name": "IP Address Normalization",
+        "success": true,
+        "details": "Mapped src=192.168.1.100 to source_ip"
+      },
+      {
+        "timestamp": "2025-07-24T16:22:47.842943",
+        "test_name": "Severity Mapping",
+        "success": true,
+        "details": "Mapped sev=2 to severity"
+      },
+      {
+        "timestamp": "2025-07-24T16:22:47.842946",
+        "test_name": "Action Mapping",
+        "success": true,
+        "details": "Mapped act=blocked to action"
+      }
+    ],
+    "cim": [
+      {
+        "timestamp": "2025-07-24T16:22:47.842954",
+        "test_name": "Network CIM Fields",
+        "success": true,
+        "details": "Verified 5 CIM fields"
+      },
+      {
+        "timestamp": "2025-07-24T16:22:47.842960",
+        "test_name": "Authentication CIM Fields",
+        "success": true,
+        "details": "Verified 4 CIM fields"
+      },
+      {
+        "timestamp": "2025-07-24T16:22:47.842962",
+        "test_name": "Web CIM Fields",
+        "success": true,
+        "details": "Verified 4 CIM fields"
+      },
+      {
+        "timestamp": "2025-07-24T16:22:47.842964",
+        "test_name": "Malware CIM Fields",
+        "success": true,
+        "details": "Verified 4 CIM fields"
+      }
+    ]
+  }
+}

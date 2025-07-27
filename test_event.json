@@ -1,0 +1,10 @@
+{
+  "event_id": "e-12345",
+  "tenant_id": "t-001",
+  "timestamp": "2025-07-26T17:54:00Z",
+  "username": "admin01",
+  "source_ip": "8.8.8.8",
+  "log_source": "windows",
+  "event_type": "logon_failure",
+  "raw_event": "Failed login attempt for user admin01 from 8.8.8.8"
+}

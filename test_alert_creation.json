@@ -1,0 +1,15 @@
+{
+  "alerts": [
+    {
+      "alert_id": "test-alert-001",
+      "tenant_id": "tenant-A",
+      "rule_id": "rule-001",
+      "rule_name": "Malware Activity Detection",
+      "event_id": "test-event-001",
+      "alert_timestamp": 1737920400,
+      "severity": "High",
+      "status": "Open",
+      "created_at": 1737920400
+    }
+  ]
+}

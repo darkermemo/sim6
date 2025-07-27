@@ -1,0 +1,339 @@
+---
+- name: Install Software for SIEM Disaster Recovery
+  hosts: all
+  become: yes
+  gather_facts: yes
+  
+  vars:
+    docker_version: "5:24.0.0-1~ubuntu.22.04~jammy"
+    docker_compose_version: "2.19.1"
+    
+  tasks:
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+    
+    - name: Install common packages
+      apt:
+        name:
+          - curl
+          - wget
+          - unzip
+          - jq
+          - htop
+          - iotop
+          - net-tools
+          - tcpdump
+          - rsync
+          - logrotate
+          - python3
+          - python3-pip
+        state: present
+    
+    - name: Add Docker GPG key
+      apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        state: present
+    
+    - name: Add Docker repository
+      apt_repository:
+        repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
+        state: present
+    
+    - name: Install Docker
+      apt:
+        name:
+          - docker-ce={{ docker_version }}
+          - docker-ce-cli={{ docker_version }}
+          - containerd.io
+        state: present
+    
+    - name: Start and enable Docker
+      systemd:
+        name: docker
+        state: started
+        enabled: yes
+    
+    - name: Add ubuntu user to docker group
+      user:
+        name: ubuntu
+        groups: docker
+        append: yes
+    
+    - name: Install Docker Compose
+      get_url:
+        url: "https://github.com/docker/compose/releases/download/v{{ docker_compose_version }}/docker-compose-Linux-x86_64"
+        dest: /usr/local/bin/docker-compose
+        mode: '0755'
+    
+    - name: Create symbolic link for docker-compose
+      file:
+        src: /usr/local/bin/docker-compose
+        dest: /usr/bin/docker-compose
+        state: link
+    
+    - name: Create SIEM directories
+      file:
+        path: "{{ item }}"
+        state: directory
+        owner: ubuntu
+        group: ubuntu
+        mode: '0755'
+      loop:
+        - /opt/siem
+        - /var/log/siem
+        - /var/lib/siem
+        - /etc/siem
+    
+    - name: Configure log rotation for SIEM
+      copy:
+        content: |
+          /var/log/siem/*.log {
+              daily
+              rotate 30
+              compress
+              delaycompress
+              missingok
+              notifempty
+              create 644 ubuntu ubuntu
+          }
+        dest: /etc/logrotate.d/siem
+        mode: '0644'
+
+- name: Install ClickHouse-specific software
+  hosts: clickhouse
+  become: yes
+  
+  tasks:
+    - name: Add ClickHouse GPG key
+      apt_key:
+        keyserver: keyserver.ubuntu.com
+        id: E0C56BD4
+    
+    - name: Add ClickHouse repository
+      apt_repository:
+        repo: "deb https://packages.clickhouse.com/deb stable main"
+        state: present
+    
+    - name: Install ClickHouse client
+      apt:
+        name: clickhouse-client
+        state: present
+    
+    - name: Install clickhouse-backup
+      get_url:
+        url: "https://github.com/Altinity/clickhouse-backup/releases/latest/download/clickhouse-backup-linux-amd64.tar.gz"
+        dest: /tmp/clickhouse-backup.tar.gz
+    
+    - name: Extract clickhouse-backup
+      unarchive:
+        src: /tmp/clickhouse-backup.tar.gz
+        dest: /usr/local/bin/
+        remote_src: yes
+        creates: /usr/local/bin/clickhouse-backup
+        mode: '0755'
+    
+    - name: Create ClickHouse configuration directory
+      file:
+        path: /etc/clickhouse-backup
+        state: directory
+        mode: '0755'
+
+- name: Install Kafka-specific software
+  hosts: kafka
+  become: yes
+  
+  tasks:
+    - name: Install Java 11
+      apt:
+        name: openjdk-11-jdk
+        state: present
+    
+    - name: Set JAVA_HOME
+      lineinfile:
+        path: /etc/environment
+        line: 'JAVA_HOME="/usr/lib/jvm/java-11-openjdk-amd64"'
+        create: yes
+    
+    - name: Download Kafka
+      get_url:
+        url: "https://downloads.apache.org/kafka/2.8.2/kafka_2.13-2.8.2.tgz"
+        dest: /tmp/kafka.tgz
+    
+    - name: Extract Kafka
+      unarchive:
+        src: /tmp/kafka.tgz
+        dest: /opt/
+        remote_src: yes
+        creates: /opt/kafka_2.13-2.8.2
+        owner: ubuntu
+        group: ubuntu
+    
+    - name: Create Kafka symlink
+      file:
+        src: /opt/kafka_2.13-2.8.2
+        dest: /opt/kafka
+        state: link
+    
+    - name: Add Kafka bin to PATH
+      lineinfile:
+        path: /home/ubuntu/.bashrc
+        line: 'export PATH="/opt/kafka/bin:$PATH"'
+    
+    - name: Create Kafka directories
+      file:
+        path: "{{ item }}"
+        state: directory
+        owner: ubuntu
+        group: ubuntu
+        mode: '0755'
+      loop:
+        - /var/kafka-logs
+        - /var/zookeeper
+
+- name: Install application server software
+  hosts: app_servers
+  become: yes
+  
+  tasks:
+    - name: Install Rust (for building SIEM components)
+      shell: |
+        curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+        source ~/.cargo/env
+      become_user: ubuntu
+      args:
+        creates: /home/ubuntu/.cargo/bin/rustc
+    
+    - name: Add Rust to PATH
+      lineinfile:
+        path: /home/ubuntu/.bashrc
+        line: 'source ~/.cargo/env'
+    
+    - name: Install build dependencies
+      apt:
+        name:
+          - build-essential
+          - pkg-config
+          - libssl-dev
+          - libsqlite3-dev
+          - cmake
+        state: present
+    
+    - name: Install HAProxy
+      apt:
+        name: haproxy
+        state: present
+    
+    - name: Install Redis
+      apt:
+        name: redis-server
+        state: present
+    
+    - name: Configure Redis
+      lineinfile:
+        path: /etc/redis/redis.conf
+        regexp: '^bind'
+        line: 'bind 0.0.0.0'
+        backup: yes
+      notify: restart redis
+    
+    - name: Start and enable Redis
+      systemd:
+        name: redis-server
+        state: started
+        enabled: yes
+    
+    - name: Install Python packages for monitoring
+      pip:
+        name:
+          - psutil
+          - requests
+          - pyyaml
+        executable: pip3
+
+- name: Configure monitoring
+  hosts: all
+  become: yes
+  
+  tasks:
+    - name: Install Node Exporter
+      get_url:
+        url: "https://github.com/prometheus/node_exporter/releases/download/v1.6.0/node_exporter-1.6.0.linux-amd64.tar.gz"
+        dest: /tmp/node_exporter.tar.gz
+    
+    - name: Extract Node Exporter
+      unarchive:
+        src: /tmp/node_exporter.tar.gz
+        dest: /tmp/
+        remote_src: yes
+        creates: /tmp/node_exporter-1.6.0.linux-amd64
+    
+    - name: Install Node Exporter binary
+      copy:
+        src: /tmp/node_exporter-1.6.0.linux-amd64/node_exporter
+        dest: /usr/local/bin/node_exporter
+        mode: '0755'
+        remote_src: yes
+    
+    - name: Create node_exporter user
+      user:
+        name: node_exporter
+        system: yes
+        shell: /bin/false
+        home: /
+    
+    - name: Create Node Exporter systemd service
+      copy:
+        content: |
+          [Unit]
+          Description=Node Exporter
+          Wants=network-online.target
+          After=network-online.target
+          
+          [Service]
+          User=node_exporter
+          Group=node_exporter
+          Type=simple
+          ExecStart=/usr/local/bin/node_exporter
+          
+          [Install]
+          WantedBy=multi-user.target
+        dest: /etc/systemd/system/node_exporter.service
+    
+    - name: Start and enable Node Exporter
+      systemd:
+        name: node_exporter
+        state: started
+        enabled: yes
+        daemon_reload: yes
+    
+    - name: Create system health check script
+      copy:
+        content: |
+          #!/bin/bash
+          # System health check script
+          
+          echo "=== System Health Check ==="
+          echo "Timestamp: $(date)"
+          echo "Hostname: $(hostname)"
+          echo "Uptime: $(uptime)"
+          echo "Memory: $(free -h | grep Mem)"
+          echo "Disk: $(df -h / | tail -1)"
+          echo "Load: $(cat /proc/loadavg)"
+          echo "Docker: $(docker version --format '{{.Server.Version}}' 2>/dev/null || echo 'Not running')"
+        dest: /usr/local/bin/health_check.sh
+        mode: '0755'
+    
+    - name: Create health check cron job
+      cron:
+        name: "System health check"
+        minute: "*/5"
+        job: "/usr/local/bin/health_check.sh >> /var/log/siem/health_check.log 2>&1"
+        user: root
+
+  handlers:
+    - name: restart redis
+      systemd:
+        name: redis-server
+        state: restarted 

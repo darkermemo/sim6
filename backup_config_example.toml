@@ -1,0 +1,83 @@
+# SIEM Backup Manager Configuration Example
+# Copy this file to backup_config.toml and customize for your environment
+
+# Backup schedule using cron format
+# Examples:
+# "0 2 * * *"     - Daily at 2 AM
+# "0 2 * * 0"     - Weekly on Sunday at 2 AM  
+# "0 2 1 * *"     - Monthly on the 1st at 2 AM
+# "0 */6 * * *"   - Every 6 hours
+schedule = "0 2 * * *"
+
+# ClickHouse database configuration
+[clickhouse]
+host = "localhost"
+port = 8123
+database = "dev"
+username = "default"
+password = ""
+backup_command = "clickhouse-backup"
+backup_args = ["create", "--rbac", "--configs"]
+
+# Storage provider configuration
+# Choose one of the following storage types:
+
+# Option 1: AWS S3 Storage
+[storage]
+type = "aws_s3"
+bucket = "siem-backups"
+region = "us-west-2"
+# access_key_id = "your-access-key"        # Optional, uses AWS credentials chain if not specified
+# secret_access_key = "your-secret-key"    # Optional, uses AWS credentials chain if not specified
+# endpoint = "https://s3.amazonaws.com"    # Optional, for S3-compatible storage
+prefix = "siem-production"
+
+# Option 2: Google Cloud Storage (uncomment to use)
+# [storage]
+# type = "gcp_storage"
+# bucket = "siem-backups"
+# project_id = "your-project-id"
+# credentials_path = "/path/to/service-account.json"  # Optional, uses default credentials if not specified
+# prefix = "siem-production"
+
+# Option 3: Azure Blob Storage (uncomment to use)
+# [storage]
+# type = "azure_blob"
+# account = "your-storage-account"
+# container = "siem-backups"
+# access_key = "your-access-key"           # Optional, can use connection_string instead
+# connection_string = "your-connection-string"  # Optional, alternative to access_key
+# prefix = "siem-production"
+
+# Option 4: Local Storage (uncomment to use)
+# [storage]
+# type = "local"
+# path = "/var/backups/siem"
+
+# Configuration files to backup
+config_paths = [
+    "/etc/siem",
+    "./docker-compose.yml",
+    "./haproxy.cfg",
+    "./siem_api/src",
+    "./siem_consumer/src",
+    "./siem_ingestor/src",
+    "./siem_rule_engine/src"
+]
+
+# Path to store backup metadata locally
+metadata_path = "/var/backups/siem/metadata"
+
+# Backup retention in days (0 = keep forever)
+retention_days = 30
+
+# Whether to backup service state (Redis dumps, Kafka offsets, etc.)
+backup_service_state = true
+
+# Compression level (0-9, where 9 is maximum compression but slower)
+compression_level = 6
+
+# Optional: Encryption configuration
+# [encryption]
+# key = "base64-encoded-encryption-key"
+# algorithm = "AES-256-GCM" 

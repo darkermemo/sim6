@@ -1,0 +1,184 @@
+=== TABLE: dev.agent_assignments ===
+asset_id	String					
+created_at	UInt32					
+policy_id	String					
+
+=== TABLE: dev.agent_policies ===
+config_json	String					
+created_at	UInt32					
+policy_id	String					
+policy_name	String					
+tenant_id	String					
+updated_at	UInt32					
+
+=== TABLE: dev.alerts ===
+alert_id	String					
+created_at	UInt32					
+event_id	String					
+rule_id	String					
+severity	String					
+status	String	DEFAULT	\'open\'			
+tenant_id	String					
+updated_at	UInt32					
+
+=== TABLE: dev.assets ===
+asset_id	String					
+asset_ip	String					
+asset_name	String					
+asset_type	String					
+created_at	UInt32					
+criticality	String					
+tenant_id	String					
+updated_at	UInt32					
+
+=== TABLE: dev.audit_logs ===
+action	String					
+audit_id	String					
+details	String					
+tenant_id	String					
+timestamp	UInt32					
+user_id	String					
+
+=== TABLE: dev.case_evidence ===
+added_at	UInt32					
+case_id	String					
+evidence_id	String					
+evidence_type	String					
+
+=== TABLE: dev.cases ===
+assigned_to	String					
+case_description	String					
+case_id	String					
+case_title	String					
+created_at	UInt32					
+priority	String					
+status	String	DEFAULT	\'open\'			
+tenant_id	String					
+updated_at	UInt32					
+
+=== TABLE: dev.custom_parsers ===
+created_at	UInt32					
+parser_id	String					
+parser_name	String					
+parser_type	String					
+pattern	String					
+tenant_id	String					
+updated_at	UInt32					
+
+=== TABLE: dev.events ===
+created_at	UInt32					
+destination_ip	String					
+destination_port	UInt16					
+event_action	String	DEFAULT	\'\'			
+event_category	String	DEFAULT	\'\'			
+event_id	String					
+event_outcome	String	DEFAULT	\'\'			
+event_type	String					
+message	String					
+parsed_fields	Map(String, String)					
+protocol	String					
+raw_log	String					
+severity	String					
+source_ip	String					
+source_port	UInt16					
+source_type	String	DEFAULT	\'\'			
+tenant_id	String					
+timestamp	UInt32					
+
+=== TABLE: dev.log_sources ===
+created_at	UInt32					
+source_id	String					
+source_ip	String					
+source_name	String					
+source_type	String					
+tenant_id	String					
+
+=== TABLE: dev.network_flows ===
+bytes_in	UInt64					
+bytes_out	UInt64					
+collector_ip	String					
+created_at	UInt32					
+destination_ip	String					
+destination_port	UInt16					
+flow_end_time	UInt32					
+flow_id	String					
+flow_start_time	UInt32					
+packets_in	UInt64					
+packets_out	UInt64					
+protocol	UInt8					
+source_ip	String					
+source_port	UInt16					
+tcp_flags	UInt8	DEFAULT	0			
+tenant_id	String					
+timestamp	UInt32					
+tos	UInt8	DEFAULT	0			
+
+=== TABLE: dev.retention_policies ===
+created_at	UInt32					
+policy_id	String					
+policy_name	String					
+retention_days	UInt32					
+source_type_match	String					
+tenant_id	String					
+updated_at	UInt32					
+
+=== TABLE: dev.roles ===
+description	String					
+role_id	String					
+role_name	String					
+
+=== TABLE: dev.rules ===
+created_at	UInt32					
+is_enabled	UInt8	DEFAULT	1			
+rule_id	String					
+rule_name	String					
+rule_query	String					
+severity	String					
+tenant_id	String					
+updated_at	UInt32					
+
+=== TABLE: dev.schema_migrations ===
+applied_at	UInt32					
+checksum	String					
+filename	String					
+version	String					
+
+=== TABLE: dev.taxonomy_mappings ===
+created_at	UInt32					
+event_action	String					
+event_category	String					
+event_outcome	String					
+field_to_check	String					
+mapping_id	String					
+source_type	String					
+tenant_id	String					
+value_to_match	String					
+
+=== TABLE: dev.tenants ===
+created_at	UInt32					
+is_active	UInt8	DEFAULT	1			
+tenant_id	String					
+tenant_name	String					
+
+=== TABLE: dev.threat_intel ===
+created_at	UInt32					
+first_seen	UInt32					
+ioc_id	String					
+ioc_type	LowCardinality(String)					
+ioc_value	String					
+source	String					
+
+=== TABLE: dev.user_roles ===
+role_name	String					
+tenant_id	String					
+user_id	String					
+
+=== TABLE: dev.users ===
+created_at	UInt32					
+email	String					
+is_active	UInt8	DEFAULT	1			
+password_hash	String					
+tenant_id	String					
+updated_at	UInt32	DEFAULT	0			
+user_id	String					
+

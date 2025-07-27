@@ -1,0 +1,6 @@
+[
+  {
+    "name": "OTRF WMI Process Execution",
+    "sigma_yaml": "\ntitle: WMI Process Execution\nid: otrf-t1047-001\nstatus: experimental\ndescription: Detects process execution via WMI\nlogsource:\n    category: process_creation\n    product: windows\ndetection:\n    keywords:\n        - \"wmic\"\n        - \"process call create\"\n        - \"Win32_Process\"\n    condition: keywords\nfalsepositives:\n    - Administrative activities\n    - Security tools\nlevel: medium\ntags:\n    - attack.t1047\n"
+  }
+]

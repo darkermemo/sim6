@@ -1,0 +1,425 @@
+{
+  "dashboard": {
+    "id": "palo-alto-security-overview",
+    "name": "Palo Alto Networks Security Overview",
+    "description": "Comprehensive security dashboard for Palo Alto Networks PAN-OS firewall and threat prevention",
+    "version": "1.0.0",
+    "vendor": "Palo Alto Networks",
+    "product": "PAN-OS",
+    "category": "Network Security",
+    "tags": ["palo_alto", "firewall", "threat_prevention", "network_security"],
+    "refresh_interval": 300,
+    "time_range": {
+      "default": "24h",
+      "options": ["1h", "6h", "24h", "7d", "30d"]
+    },
+    "filters": [
+      {
+        "name": "device_hostname",
+        "label": "Firewall Device",
+        "type": "multi_select",
+        "field": "hostname",
+        "data_source": "palo_alto_logs"
+      },
+      {
+        "name": "severity",
+        "label": "Severity Level",
+        "type": "multi_select",
+        "field": "severity",
+        "options": ["critical", "high", "medium", "low", "informational"]
+      },
+      {
+        "name": "src_zone",
+        "label": "Source Zone",
+        "type": "multi_select",
+        "field": "src_zone",
+        "data_source": "palo_alto_logs"
+      },
+      {
+        "name": "dest_zone",
+        "label": "Destination Zone",
+        "type": "multi_select",
+        "field": "dest_zone",
+        "data_source": "palo_alto_logs"
+      }
+    ],
+    "layout": {
+      "grid_columns": 12,
+      "grid_rows": 20,
+      "widgets": [
+        {
+          "id": "security_kpis",
+          "type": "kpi_row",
+          "title": "Security KPIs",
+          "position": {"x": 0, "y": 0, "w": 12, "h": 2},
+          "widgets": [
+            {
+              "id": "total_events",
+              "type": "kpi_card",
+              "title": "Total Events",
+              "query": {
+                "data_source": "palo_alto_logs",
+                "aggregation": "count",
+                "time_field": "timestamp"
+              },
+              "format": "number",
+              "trend": true
+            },
+            {
+              "id": "threat_events",
+              "type": "kpi_card",
+              "title": "Threat Events",
+              "query": {
+                "data_source": "palo_alto_logs",
+                "aggregation": "count",
+                "time_field": "timestamp",
+                "filters": [{"field": "event_type", "value": "security_threat"}]
+              },
+              "format": "number",
+              "trend": true,
+              "color": "red"
+            },
+            {
+              "id": "blocked_events",
+              "type": "kpi_card",
+              "title": "Blocked Events",
+              "query": {
+                "data_source": "palo_alto_logs",
+                "aggregation": "count",
+                "time_field": "timestamp",
+                "filters": [{"field": "action", "value": ["deny", "drop", "block", "reject"]}]
+              },
+              "format": "number",
+              "trend": true,
+              "color": "orange"
+            },
+            {
+              "id": "data_transferred",
+              "type": "kpi_card",
+              "title": "Data Transferred",
+              "query": {
+                "data_source": "palo_alto_logs",
+                "aggregation": "sum",
+                "field": "bytes_total",
+                "time_field": "timestamp"
+              },
+              "format": "bytes",
+              "trend": true
+            }
+          ]
+        },
+        {
+          "id": "threat_timeline",
+          "type": "line_chart",
+          "title": "Threat Events Over Time",
+          "position": {"x": 0, "y": 2, "w": 8, "h": 4},
+          "query": {
+            "data_source": "palo_alto_logs",
+            "aggregation": "count",
+            "time_field": "timestamp",
+            "group_by": ["severity"],
+            "filters": [{"field": "event_type", "value": "security_threat"}],
+            "interval": "auto"
+          },
+          "chart_config": {
+            "x_axis": "timestamp",
+            "y_axis": "count",
+            "series": "severity",
+            "colors": {
+              "critical": "#dc2626",
+              "high": "#ea580c",
+              "medium": "#d97706",
+              "low": "#65a30d",
+              "informational": "#0891b2"
+            },
+            "stacked": true
+          }
+        },
+        {
+          "id": "top_threat_categories",
+          "type": "pie_chart",
+          "title": "Top Threat Categories",
+          "position": {"x": 8, "y": 2, "w": 4, "h": 4},
+          "query": {
+            "data_source": "palo_alto_logs",
+            "aggregation": "count",
+            "group_by": ["threat_category"],
+            "filters": [{"field": "event_type", "value": "security_threat"}],
+            "limit": 10
+          },
+          "chart_config": {
+            "show_legend": true,
+            "show_labels": true,
+            "colors": ["#dc2626", "#ea580c", "#d97706", "#65a30d", "#0891b2", "#7c3aed", "#db2777", "#059669", "#0284c7", "#7c2d12"]
+          }
+        },
+        {
+          "id": "traffic_by_zone",
+          "type": "sankey_diagram",
+          "title": "Traffic Flow by Security Zones",
+          "position": {"x": 0, "y": 6, "w": 6, "h": 4},
+          "query": {
+            "data_source": "palo_alto_logs",
+            "aggregation": "count",
+            "group_by": ["src_zone", "dest_zone"],
+            "filters": [{"field": "event_type", "value": "network_traffic"}],
+            "limit": 20
+          },
+          "chart_config": {
+            "source_field": "src_zone",
+            "target_field": "dest_zone",
+            "value_field": "count",
+            "node_colors": {
+              "trust": "#10b981",
+              "untrust": "#ef4444",
+              "dmz": "#f59e0b",
+              "guest": "#8b5cf6"
+            }
+          }
+        },
+        {
+          "id": "top_applications",
+          "type": "horizontal_bar_chart",
+          "title": "Top Applications by Traffic Volume",
+          "position": {"x": 6, "y": 6, "w": 6, "h": 4},
+          "query": {
+            "data_source": "palo_alto_logs",
+            "aggregation": "sum",
+            "field": "bytes_total",
+            "group_by": ["app_name"],
+            "filters": [{"field": "event_type", "value": "network_traffic"}],
+            "limit": 15,
+            "order_by": "bytes_total DESC"
+          },
+          "chart_config": {
+            "x_axis": "bytes_total",
+            "y_axis": "app_name",
+            "format": "bytes",
+            "color": "#3b82f6"
+          }
+        },
+        {
+          "id": "geographic_threats",
+          "type": "world_map",
+          "title": "Threat Sources by Country",
+          "position": {"x": 0, "y": 10, "w": 8, "h": 5},
+          "query": {
+            "data_source": "palo_alto_logs",
+            "aggregation": "count",
+            "group_by": ["src_country"],
+            "filters": [
+              {"field": "event_type", "value": "security_threat"},
+              {"field": "src_country", "operator": "is_not_null"}
+            ],
+            "limit": 50
+          },
+          "chart_config": {
+            "country_field": "src_country",
+            "value_field": "count",
+            "color_scale": ["#fef3c7", "#fcd34d", "#f59e0b", "#d97706", "#92400e"],
+            "show_tooltip": true
+          }
+        },
+        {
+          "id": "blocked_countries",
+          "type": "table",
+          "title": "Top Blocked Countries",
+          "position": {"x": 8, "y": 10, "w": 4, "h": 5},
+          "query": {
+            "data_source": "palo_alto_logs",
+            "aggregation": "count",
+            "group_by": ["src_country"],
+            "filters": [
+              {"field": "action", "value": ["deny", "drop", "block", "reject"]},
+              {"field": "src_country", "operator": "is_not_null"}
+            ],
+            "limit": 20,
+            "order_by": "count DESC"
+          },
+          "table_config": {
+            "columns": [
+              {"field": "src_country", "title": "Country", "width": "40%"},
+              {"field": "count", "title": "Blocked Events", "width": "60%", "format": "number"}
+            ],
+            "pagination": true,
+            "page_size": 10
+          }
+        },
+        {
+          "id": "user_activity",
+          "type": "table",
+          "title": "Top Users by Activity",
+          "position": {"x": 0, "y": 15, "w": 6, "h": 5},
+          "query": {
+            "data_source": "palo_alto_logs",
+            "aggregation": "count",
+            "group_by": ["username"],
+            "filters": [
+              {"field": "username", "operator": "is_not_null"},
+              {"field": "username", "operator": "not_equals", "value": ""}
+            ],
+            "limit": 20,
+            "order_by": "count DESC"
+          },
+          "table_config": {
+            "columns": [
+              {"field": "username", "title": "Username", "width": "50%"},
+              {"field": "count", "title": "Events", "width": "25%", "format": "number"},
+              {"field": "bytes_total", "title": "Data Transfer", "width": "25%", "format": "bytes", "aggregation": "sum"}
+            ],
+            "pagination": true,
+            "page_size": 10,
+            "clickable_rows": true,
+            "drill_down": {
+              "target_dashboard": "user_activity_detail",
+              "parameters": {"username": "username"}
+            }
+          }
+        },
+        {
+          "id": "recent_threats",
+          "type": "table",
+          "title": "Recent Threat Events",
+          "position": {"x": 6, "y": 15, "w": 6, "h": 5},
+          "query": {
+            "data_source": "palo_alto_logs",
+            "filters": [{"field": "event_type", "value": "security_threat"}],
+            "limit": 50,
+            "order_by": "timestamp DESC"
+          },
+          "table_config": {
+            "columns": [
+              {"field": "timestamp", "title": "Time", "width": "15%", "format": "datetime"},
+              {"field": "source_ip", "title": "Source IP", "width": "15%"},
+              {"field": "threat_name", "title": "Threat", "width": "25%"},
+              {"field": "threat_category", "title": "Category", "width": "15%"},
+              {"field": "severity", "title": "Severity", "width": "10%", "format": "severity_badge"},
+              {"field": "action", "title": "Action", "width": "10%", "format": "action_badge"},
+              {"field": "src_country", "title": "Country", "width": "10%"}
+            ],
+            "pagination": true,
+            "page_size": 15,
+            "auto_refresh": true,
+            "refresh_interval": 30,
+            "clickable_rows": true,
+            "drill_down": {
+              "target_dashboard": "threat_investigation",
+              "parameters": {"threat_id": "session_id", "source_ip": "source_ip"}
+            }
+          }
+        }
+      ]
+    },
+    "drill_downs": [
+      {
+        "id": "user_activity_detail",
+        "name": "User Activity Detail",
+        "description": "Detailed view of user activity",
+        "parameters": ["username"],
+        "widgets": [
+          {
+            "id": "user_timeline",
+            "type": "line_chart",
+            "title": "User Activity Timeline",
+            "query": {
+              "data_source": "palo_alto_logs",
+              "aggregation": "count",
+              "time_field": "timestamp",
+              "filters": [{"field": "username", "value": "${username}"}],
+              "interval": "1h"
+            }
+          }
+        ]
+      },
+      {
+        "id": "threat_investigation",
+        "name": "Threat Investigation",
+        "description": "Detailed threat analysis",
+        "parameters": ["threat_id", "source_ip"],
+        "widgets": [
+          {
+            "id": "threat_details",
+            "type": "detail_panel",
+            "title": "Threat Details",
+            "query": {
+              "data_source": "palo_alto_logs",
+              "filters": [
+                {"field": "session_id", "value": "${threat_id}"},
+                {"field": "source_ip", "value": "${source_ip}"}
+              ]
+            }
+          }
+        ]
+      }
+    ],
+    "alerts": [
+      {
+        "id": "high_threat_volume",
+        "name": "High Threat Volume Alert",
+        "description": "Alert when threat events exceed threshold",
+        "query": {
+          "data_source": "palo_alto_logs",
+          "aggregation": "count",
+          "time_field": "timestamp",
+          "filters": [{"field": "event_type", "value": "security_threat"}],
+          "time_window": "1h"
+        },
+        "threshold": {
+          "operator": ">",
+          "value": 100
+        },
+        "severity": "high",
+        "notification_channels": ["email", "slack"]
+      },
+      {
+        "id": "critical_threat_detected",
+        "name": "Critical Threat Detected",
+        "description": "Alert on any critical severity threat",
+        "query": {
+          "data_source": "palo_alto_logs",
+          "aggregation": "count",
+          "time_field": "timestamp",
+          "filters": [
+            {"field": "event_type", "value": "security_threat"},
+            {"field": "severity", "value": "critical"}
+          ],
+          "time_window": "5m"
+        },
+        "threshold": {
+          "operator": ">=",
+          "value": 1
+        },
+        "severity": "critical",
+        "notification_channels": ["email", "slack", "pagerduty"]
+      }
+    ],
+    "export_options": {
+      "formats": ["pdf", "png", "csv"],
+      "schedule": {
+        "enabled": true,
+        "frequencies": ["daily", "weekly", "monthly"]
+      }
+    },
+    "permissions": {
+      "view": ["security_analyst", "security_admin", "soc_operator"],
+      "edit": ["security_admin", "dashboard_admin"],
+      "export": ["security_analyst", "security_admin"]
+    },
+    "metadata": {
+      "created_by": "SIEM OOTB Content Pack",
+      "created_date": "2024-01-15",
+      "last_updated": "2024-01-15",
+      "version_history": [
+        {
+          "version": "1.0.0",
+          "date": "2024-01-15",
+          "changes": "Initial Palo Alto Networks security overview dashboard"
+        }
+      ],
+      "compatibility": {
+        "parser_version": "1.0.0",
+        "siem_version": ">=1.0.0"
+      }
+    }
+  }
+}

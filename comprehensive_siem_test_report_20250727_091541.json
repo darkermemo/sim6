@@ -1,0 +1,6228 @@
+{
+  "test_execution": {
+    "timestamp": "2025-07-27T09:15:41.777655",
+    "total_events_processed": 0,
+    "datasets_used": "OTRF Security Datasets",
+    "schema_validators": [
+      "v4",
+      "v5"
+    ]
+  },
+  "results": {
+    "ingestion": [
+      {
+        "timestamp": "2025-07-27T09:15:12.946478",
+        "test_name": "SIEM API Health Check",
+        "status": "PASS",
+        "details": "Service is responding (status: 200)"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:12.949011",
+        "test_name": "Ingestor Health Check",
+        "status": "PASS",
+        "details": "Service is responding (status: 405)"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:12.955205",
+        "test_name": "ClickHouse Health Check",
+        "status": "PASS",
+        "details": "Service is responding (status: 200)"
+      }
+    ],
+    "consumers": [
+      {
+        "timestamp": "2025-07-27T09:15:23.620805",
+        "test_name": "Event Processing",
+        "status": "PASS",
+        "details": "Found 100 events in database"
+      }
+    ],
+    "tenants": [
+      {
+        "timestamp": "2025-07-27T09:15:12.964692",
+        "test_name": "Tenant tenant-A Data Preparation",
+        "status": "FAIL",
+        "details": "No events extracted"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:12.966144",
+        "test_name": "Tenant tenant-B Data Preparation",
+        "status": "FAIL",
+        "details": "No events extracted"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:12.971000",
+        "test_name": "Tenant tenant-C Ingestion",
+        "status": "FAIL",
+        "details": "Ingestion failed"
+      }
+    ],
+    "rules": [
+      {
+        "timestamp": "2025-07-27T09:15:23.622848",
+        "test_name": "Rule Creation - Rule 1",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.623721",
+        "test_name": "Rule Creation - Rule 2",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.624672",
+        "test_name": "Rule Creation - Rule 3",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.625617",
+        "test_name": "Rule Creation - Rule 4",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.626363",
+        "test_name": "Rule Creation - Rule 5",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.627042",
+        "test_name": "Rule Creation - Rule 6",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.627703",
+        "test_name": "Rule Creation - Rule 7",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.628458",
+        "test_name": "Rule Creation - Rule 8",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.629175",
+        "test_name": "Rule Creation - Rule 9",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.630021",
+        "test_name": "Rule Creation - Rule 10",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.630878",
+        "test_name": "Rule Creation - Rule 11",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.631595",
+        "test_name": "Rule Creation - Rule 12",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.632230",
+        "test_name": "Rule Creation - Rule 13",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.632775",
+        "test_name": "Rule Creation - Rule 14",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.633325",
+        "test_name": "Rule Creation - Rule 15",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.633934",
+        "test_name": "Rule Creation - Rule 16",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.634574",
+        "test_name": "Rule Creation - Rule 17",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.635112",
+        "test_name": "Rule Creation - Rule 18",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.635763",
+        "test_name": "Rule Creation - Rule 19",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.636322",
+        "test_name": "Rule Creation - Rule 20",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.636873",
+        "test_name": "Rule Creation - Rule 21",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.637439",
+        "test_name": "Rule Creation - Rule 22",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.638056",
+        "test_name": "Rule Creation - Rule 23",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.638639",
+        "test_name": "Rule Creation - Rule 24",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.639208",
+        "test_name": "Rule Creation - Rule 25",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.639968",
+        "test_name": "Rule Creation - Rule 26",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.640658",
+        "test_name": "Rule Creation - Rule 27",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.641261",
+        "test_name": "Rule Creation - Rule 28",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.641860",
+        "test_name": "Rule Creation - Rule 29",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.642439",
+        "test_name": "Rule Creation - Rule 30",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.642999",
+        "test_name": "Rule Creation - Rule 31",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.643613",
+        "test_name": "Rule Creation - Rule 32",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.645924",
+        "test_name": "Rule Creation - Rule 33",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.646995",
+        "test_name": "Rule Creation - Rule 34",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.647903",
+        "test_name": "Rule Creation - Rule 35",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.648847",
+        "test_name": "Rule Creation - Rule 36",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.649772",
+        "test_name": "Rule Creation - Rule 37",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.650681",
+        "test_name": "Rule Creation - Rule 38",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.651679",
+        "test_name": "Rule Creation - Rule 39",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.652394",
+        "test_name": "Rule Creation - Rule 40",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.653139",
+        "test_name": "Rule Creation - Rule 41",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.653743",
+        "test_name": "Rule Creation - Rule 42",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.654352",
+        "test_name": "Rule Creation - Rule 43",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.654922",
+        "test_name": "Rule Creation - Rule 44",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.655831",
+        "test_name": "Rule Creation - Rule 45",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.656915",
+        "test_name": "Rule Creation - Rule 46",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.657690",
+        "test_name": "Rule Creation - Rule 47",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.658437",
+        "test_name": "Rule Creation - Rule 48",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.659064",
+        "test_name": "Rule Creation - Rule 49",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.659807",
+        "test_name": "Rule Creation - Rule 50",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.660481",
+        "test_name": "Rule Creation - Rule 51",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.661229",
+        "test_name": "Rule Creation - Rule 52",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.661851",
+        "test_name": "Rule Creation - Rule 53",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.662445",
+        "test_name": "Rule Creation - Rule 54",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.663177",
+        "test_name": "Rule Creation - Rule 55",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.663787",
+        "test_name": "Rule Creation - Rule 56",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.664386",
+        "test_name": "Rule Creation - Rule 57",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.664963",
+        "test_name": "Rule Creation - Rule 58",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.665777",
+        "test_name": "Rule Creation - Rule 59",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.666445",
+        "test_name": "Rule Creation - Rule 60",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.667078",
+        "test_name": "Rule Creation - Rule 61",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.667705",
+        "test_name": "Rule Creation - Rule 62",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.668274",
+        "test_name": "Rule Creation - Rule 63",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.668847",
+        "test_name": "Rule Creation - Rule 64",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.669418",
+        "test_name": "Rule Creation - Rule 65",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.670039",
+        "test_name": "Rule Creation - Rule 66",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.670687",
+        "test_name": "Rule Creation - Rule 67",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.671230",
+        "test_name": "Rule Creation - Rule 68",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.671770",
+        "test_name": "Rule Creation - Rule 69",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.672352",
+        "test_name": "Rule Creation - Rule 70",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.673004",
+        "test_name": "Rule Creation - Rule 71",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.673720",
+        "test_name": "Rule Creation - Rule 72",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.674412",
+        "test_name": "Rule Creation - Rule 73",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.675112",
+        "test_name": "Rule Creation - Rule 74",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.675772",
+        "test_name": "Rule Creation - Rule 75",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.676372",
+        "test_name": "Rule Creation - Rule 76",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.677062",
+        "test_name": "Rule Creation - Rule 77",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.677697",
+        "test_name": "Rule Creation - Rule 78",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.678248",
+        "test_name": "Rule Creation - Rule 79",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.678780",
+        "test_name": "Rule Creation - Rule 80",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.679387",
+        "test_name": "Rule Creation - Rule 81",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.679898",
+        "test_name": "Rule Creation - Rule 82",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.680503",
+        "test_name": "Rule Creation - Rule 83",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.681099",
+        "test_name": "Rule Creation - Rule 84",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.681738",
+        "test_name": "Rule Creation - Rule 85",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.682354",
+        "test_name": "Rule Creation - Rule 86",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.682893",
+        "test_name": "Rule Creation - Rule 87",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.683445",
+        "test_name": "Rule Creation - Rule 88",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.683977",
+        "test_name": "Rule Creation - Rule 89",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.684488",
+        "test_name": "Rule Creation - Rule 90",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.685028",
+        "test_name": "Rule Creation - Rule 91",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.685575",
+        "test_name": "Rule Creation - Rule 92",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.686106",
+        "test_name": "Rule Creation - Rule 93",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.686616",
+        "test_name": "Rule Creation - Rule 94",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.687158",
+        "test_name": "Rule Creation - Rule 95",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.687674",
+        "test_name": "Rule Creation - Rule 96",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.688173",
+        "test_name": "Rule Creation - Rule 97",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.688708",
+        "test_name": "Rule Creation - Rule 98",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.689342",
+        "test_name": "Rule Creation - Rule 99",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.689904",
+        "test_name": "Rule Creation - Rule 100",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.690594",
+        "test_name": "Rule Creation - Rule 101",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.691334",
+        "test_name": "Rule Creation - Rule 102",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.692017",
+        "test_name": "Rule Creation - Rule 103",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.692713",
+        "test_name": "Rule Creation - Rule 104",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.693310",
+        "test_name": "Rule Creation - Rule 105",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.693900",
+        "test_name": "Rule Creation - Rule 106",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.694486",
+        "test_name": "Rule Creation - Rule 107",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.695099",
+        "test_name": "Rule Creation - Rule 108",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.695761",
+        "test_name": "Rule Creation - Rule 109",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.696377",
+        "test_name": "Rule Creation - Rule 110",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.696932",
+        "test_name": "Rule Creation - Rule 111",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.697550",
+        "test_name": "Rule Creation - Rule 112",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.698105",
+        "test_name": "Rule Creation - Rule 113",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.698663",
+        "test_name": "Rule Creation - Rule 114",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.699406",
+        "test_name": "Rule Creation - Rule 115",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.700139",
+        "test_name": "Rule Creation - Rule 116",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.700757",
+        "test_name": "Rule Creation - Rule 117",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.701365",
+        "test_name": "Rule Creation - Rule 118",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.701908",
+        "test_name": "Rule Creation - Rule 119",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.702474",
+        "test_name": "Rule Creation - Rule 120",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.703037",
+        "test_name": "Rule Creation - Rule 121",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.703571",
+        "test_name": "Rule Creation - Rule 122",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.704138",
+        "test_name": "Rule Creation - Rule 123",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.704662",
+        "test_name": "Rule Creation - Rule 124",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.705219",
+        "test_name": "Rule Creation - Rule 125",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.705854",
+        "test_name": "Rule Creation - Rule 126",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.706538",
+        "test_name": "Rule Creation - Rule 127",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.707283",
+        "test_name": "Rule Creation - Rule 128",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.707954",
+        "test_name": "Rule Creation - Rule 129",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.708544",
+        "test_name": "Rule Creation - Rule 130",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.709104",
+        "test_name": "Rule Creation - Rule 131",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.709656",
+        "test_name": "Rule Creation - Rule 132",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.710241",
+        "test_name": "Rule Creation - Rule 133",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.710768",
+        "test_name": "Rule Creation - Rule 134",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.711289",
+        "test_name": "Rule Creation - Rule 135",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.711816",
+        "test_name": "Rule Creation - Rule 136",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.712394",
+        "test_name": "Rule Creation - Rule 137",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.713020",
+        "test_name": "Rule Creation - Rule 138",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.713590",
+        "test_name": "Rule Creation - Rule 139",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.714257",
+        "test_name": "Rule Creation - Rule 140",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.714935",
+        "test_name": "Rule Creation - Rule 141",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.715673",
+        "test_name": "Rule Creation - Rule 142",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.716338",
+        "test_name": "Rule Creation - Rule 143",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.716956",
+        "test_name": "Rule Creation - Rule 144",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.717587",
+        "test_name": "Rule Creation - Rule 145",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.718151",
+        "test_name": "Rule Creation - Rule 146",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.718707",
+        "test_name": "Rule Creation - Rule 147",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.719243",
+        "test_name": "Rule Creation - Rule 148",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.719772",
+        "test_name": "Rule Creation - Rule 149",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.720346",
+        "test_name": "Rule Creation - Rule 150",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.720947",
+        "test_name": "Rule Creation - Rule 151",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.721515",
+        "test_name": "Rule Creation - Rule 152",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.722105",
+        "test_name": "Rule Creation - Rule 153",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.722797",
+        "test_name": "Rule Creation - Rule 154",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.723451",
+        "test_name": "Rule Creation - Rule 155",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.724312",
+        "test_name": "Rule Creation - Rule 156",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.724894",
+        "test_name": "Rule Creation - Rule 157",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.725604",
+        "test_name": "Rule Creation - Rule 158",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.726168",
+        "test_name": "Rule Creation - Rule 159",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.726725",
+        "test_name": "Rule Creation - Rule 160",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.727391",
+        "test_name": "Rule Creation - Rule 161",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.727963",
+        "test_name": "Rule Creation - Rule 162",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.728724",
+        "test_name": "Rule Creation - Rule 163",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.729303",
+        "test_name": "Rule Creation - Rule 164",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.729876",
+        "test_name": "Rule Creation - Rule 165",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.730501",
+        "test_name": "Rule Creation - Rule 166",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.731133",
+        "test_name": "Rule Creation - Rule 167",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.731740",
+        "test_name": "Rule Creation - Rule 168",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.732369",
+        "test_name": "Rule Creation - Rule 169",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.732920",
+        "test_name": "Rule Creation - Rule 170",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.733525",
+        "test_name": "Rule Creation - Rule 171",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.734147",
+        "test_name": "Rule Creation - Rule 172",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.734720",
+        "test_name": "Rule Creation - Rule 173",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.735309",
+        "test_name": "Rule Creation - Rule 174",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.735876",
+        "test_name": "Rule Creation - Rule 175",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.736456",
+        "test_name": "Rule Creation - Rule 176",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.737038",
+        "test_name": "Rule Creation - Rule 177",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.737658",
+        "test_name": "Rule Creation - Rule 178",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.738247",
+        "test_name": "Rule Creation - Rule 179",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.738820",
+        "test_name": "Rule Creation - Rule 180",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.739489",
+        "test_name": "Rule Creation - Rule 181",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.740204",
+        "test_name": "Rule Creation - Rule 182",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.740873",
+        "test_name": "Rule Creation - Rule 183",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.741528",
+        "test_name": "Rule Creation - Rule 184",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.742226",
+        "test_name": "Rule Creation - Rule 185",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.742867",
+        "test_name": "Rule Creation - Rule 186",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.743448",
+        "test_name": "Rule Creation - Rule 187",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.744093",
+        "test_name": "Rule Creation - Rule 188",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.744647",
+        "test_name": "Rule Creation - Rule 189",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.745202",
+        "test_name": "Rule Creation - Rule 190",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.745747",
+        "test_name": "Rule Creation - Rule 191",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.746268",
+        "test_name": "Rule Creation - Rule 192",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.746793",
+        "test_name": "Rule Creation - Rule 193",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.747372",
+        "test_name": "Rule Creation - Rule 194",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.748034",
+        "test_name": "Rule Creation - Rule 195",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.748663",
+        "test_name": "Rule Creation - Rule 196",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.749393",
+        "test_name": "Rule Creation - Rule 197",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.750165",
+        "test_name": "Rule Creation - Rule 198",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.750772",
+        "test_name": "Rule Creation - Rule 199",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.751393",
+        "test_name": "Rule Creation - Rule 200",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.751928",
+        "test_name": "Rule Creation - Rule 201",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.752537",
+        "test_name": "Rule Creation - Rule 202",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.753108",
+        "test_name": "Rule Creation - Rule 203",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.753665",
+        "test_name": "Rule Creation - Rule 204",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.754248",
+        "test_name": "Rule Creation - Rule 205",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.754809",
+        "test_name": "Rule Creation - Rule 206",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.755352",
+        "test_name": "Rule Creation - Rule 207",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.755946",
+        "test_name": "Rule Creation - Rule 208",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.756591",
+        "test_name": "Rule Creation - Rule 209",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.757247",
+        "test_name": "Rule Creation - Rule 210",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.757904",
+        "test_name": "Rule Creation - Rule 211",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.758503",
+        "test_name": "Rule Creation - Rule 212",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.759043",
+        "test_name": "Rule Creation - Rule 213",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.759609",
+        "test_name": "Rule Creation - Rule 214",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.760182",
+        "test_name": "Rule Creation - Rule 215",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.760783",
+        "test_name": "Rule Creation - Rule 216",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.761367",
+        "test_name": "Rule Creation - Rule 217",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.761888",
+        "test_name": "Rule Creation - Rule 218",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.762457",
+        "test_name": "Rule Creation - Rule 219",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.763006",
+        "test_name": "Rule Creation - Rule 220",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.763555",
+        "test_name": "Rule Creation - Rule 221",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.764106",
+        "test_name": "Rule Creation - Rule 222",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.764705",
+        "test_name": "Rule Creation - Rule 223",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.765376",
+        "test_name": "Rule Creation - Rule 224",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.765988",
+        "test_name": "Rule Creation - Rule 225",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.766644",
+        "test_name": "Rule Creation - Rule 226",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.767283",
+        "test_name": "Rule Creation - Rule 227",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.767874",
+        "test_name": "Rule Creation - Rule 228",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.768473",
+        "test_name": "Rule Creation - Rule 229",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.768980",
+        "test_name": "Rule Creation - Rule 230",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.769521",
+        "test_name": "Rule Creation - Rule 231",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.770123",
+        "test_name": "Rule Creation - Rule 232",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.770667",
+        "test_name": "Rule Creation - Rule 233",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.771248",
+        "test_name": "Rule Creation - Rule 234",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.771877",
+        "test_name": "Rule Creation - Rule 235",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.772526",
+        "test_name": "Rule Creation - Rule 236",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.773185",
+        "test_name": "Rule Creation - Rule 237",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.773833",
+        "test_name": "Rule Creation - Rule 238",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.774515",
+        "test_name": "Rule Creation - Rule 239",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.775152",
+        "test_name": "Rule Creation - Rule 240",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.775751",
+        "test_name": "Rule Creation - Rule 241",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.776343",
+        "test_name": "Rule Creation - Rule 242",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.776885",
+        "test_name": "Rule Creation - Rule 243",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.777480",
+        "test_name": "Rule Creation - Rule 244",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.778072",
+        "test_name": "Rule Creation - Rule 245",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.778644",
+        "test_name": "Rule Creation - Rule 246",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.779316",
+        "test_name": "Rule Creation - Rule 247",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.779928",
+        "test_name": "Rule Creation - Rule 248",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.780572",
+        "test_name": "Rule Creation - Rule 249",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.781190",
+        "test_name": "Rule Creation - Rule 250",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.781787",
+        "test_name": "Rule Creation - Rule 251",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.782389",
+        "test_name": "Rule Creation - Rule 252",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.782979",
+        "test_name": "Rule Creation - Rule 253",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.783547",
+        "test_name": "Rule Creation - Rule 254",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.784087",
+        "test_name": "Rule Creation - Rule 255",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.784649",
+        "test_name": "Rule Creation - Rule 256",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.785222",
+        "test_name": "Rule Creation - Rule 257",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.785747",
+        "test_name": "Rule Creation - Rule 258",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.786272",
+        "test_name": "Rule Creation - Rule 259",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.786818",
+        "test_name": "Rule Creation - Rule 260",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.787384",
+        "test_name": "Rule Creation - Rule 261",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.787963",
+        "test_name": "Rule Creation - Rule 262",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.788501",
+        "test_name": "Rule Creation - Rule 263",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.789030",
+        "test_name": "Rule Creation - Rule 264",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.789676",
+        "test_name": "Rule Creation - Rule 265",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.790406",
+        "test_name": "Rule Creation - Rule 266",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.790973",
+        "test_name": "Rule Creation - Rule 267",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.791525",
+        "test_name": "Rule Creation - Rule 268",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.792078",
+        "test_name": "Rule Creation - Rule 269",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.792610",
+        "test_name": "Rule Creation - Rule 270",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.793150",
+        "test_name": "Rule Creation - Rule 271",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.793691",
+        "test_name": "Rule Creation - Rule 272",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.794393",
+        "test_name": "Rule Creation - Rule 273",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.795178",
+        "test_name": "Rule Creation - Rule 274",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.795837",
+        "test_name": "Rule Creation - Rule 275",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.796520",
+        "test_name": "Rule Creation - Rule 276",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.797150",
+        "test_name": "Rule Creation - Rule 277",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.797736",
+        "test_name": "Rule Creation - Rule 278",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.798451",
+        "test_name": "Rule Creation - Rule 279",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.799106",
+        "test_name": "Rule Creation - Rule 280",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.799839",
+        "test_name": "Rule Creation - Rule 281",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.800696",
+        "test_name": "Rule Creation - Rule 282",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.801279",
+        "test_name": "Rule Creation - Rule 283",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.801830",
+        "test_name": "Rule Creation - Rule 284",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.802389",
+        "test_name": "Rule Creation - Rule 285",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.802898",
+        "test_name": "Rule Creation - Rule 286",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.803432",
+        "test_name": "Rule Creation - Rule 287",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.803953",
+        "test_name": "Rule Creation - Rule 288",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.804490",
+        "test_name": "Rule Creation - Rule 289",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.805031",
+        "test_name": "Rule Creation - Rule 290",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.805590",
+        "test_name": "Rule Creation - Rule 291",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.806148",
+        "test_name": "Rule Creation - Rule 292",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.806829",
+        "test_name": "Rule Creation - Rule 293",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.807617",
+        "test_name": "Rule Creation - Rule 294",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.808299",
+        "test_name": "Rule Creation - Rule 295",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.808881",
+        "test_name": "Rule Creation - Rule 296",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.809391",
+        "test_name": "Rule Creation - Rule 297",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.810010",
+        "test_name": "Rule Creation - Rule 298",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.810599",
+        "test_name": "Rule Creation - Rule 299",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.811180",
+        "test_name": "Rule Creation - Rule 300",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.811738",
+        "test_name": "Rule Creation - Rule 301",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.812325",
+        "test_name": "Rule Creation - Rule 302",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.812838",
+        "test_name": "Rule Creation - Rule 303",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.813348",
+        "test_name": "Rule Creation - Rule 304",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.813861",
+        "test_name": "Rule Creation - Rule 305",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.814377",
+        "test_name": "Rule Creation - Rule 306",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.815038",
+        "test_name": "Rule Creation - Rule 307",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.815678",
+        "test_name": "Rule Creation - Rule 308",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.816295",
+        "test_name": "Rule Creation - Rule 309",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.816940",
+        "test_name": "Rule Creation - Rule 310",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.817591",
+        "test_name": "Rule Creation - Rule 311",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.818144",
+        "test_name": "Rule Creation - Rule 312",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.818673",
+        "test_name": "Rule Creation - Rule 313",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.819184",
+        "test_name": "Rule Creation - Rule 314",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.819687",
+        "test_name": "Rule Creation - Rule 315",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.820258",
+        "test_name": "Rule Creation - Rule 316",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.820838",
+        "test_name": "Rule Creation - Rule 317",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.821417",
+        "test_name": "Rule Creation - Rule 318",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.821933",
+        "test_name": "Rule Creation - Rule 319",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.822525",
+        "test_name": "Rule Creation - Rule 320",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.823108",
+        "test_name": "Rule Creation - Rule 321",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.823766",
+        "test_name": "Rule Creation - Rule 322",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.824349",
+        "test_name": "Rule Creation - Rule 323",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.824940",
+        "test_name": "Rule Creation - Rule 324",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.825546",
+        "test_name": "Rule Creation - Rule 325",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.826132",
+        "test_name": "Rule Creation - Rule 326",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.826767",
+        "test_name": "Rule Creation - Rule 327",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.827457",
+        "test_name": "Rule Creation - Rule 328",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.828088",
+        "test_name": "Rule Creation - Rule 329",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.828758",
+        "test_name": "Rule Creation - Rule 330",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.829350",
+        "test_name": "Rule Creation - Rule 331",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.829937",
+        "test_name": "Rule Creation - Rule 332",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.830613",
+        "test_name": "Rule Creation - Rule 333",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.831253",
+        "test_name": "Rule Creation - Rule 334",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.831861",
+        "test_name": "Rule Creation - Rule 335",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.832478",
+        "test_name": "Rule Creation - Rule 336",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.833071",
+        "test_name": "Rule Creation - Rule 337",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.833629",
+        "test_name": "Rule Creation - Rule 338",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.834154",
+        "test_name": "Rule Creation - Rule 339",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.834742",
+        "test_name": "Rule Creation - Rule 340",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.835385",
+        "test_name": "Rule Creation - Rule 341",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.835947",
+        "test_name": "Rule Creation - Rule 342",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.836501",
+        "test_name": "Rule Creation - Rule 343",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.837069",
+        "test_name": "Rule Creation - Rule 344",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.837666",
+        "test_name": "Rule Creation - Rule 345",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.838261",
+        "test_name": "Rule Creation - Rule 346",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.838857",
+        "test_name": "Rule Creation - Rule 347",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.839491",
+        "test_name": "Rule Creation - Rule 348",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.840059",
+        "test_name": "Rule Creation - Rule 349",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.840661",
+        "test_name": "Rule Creation - Rule 350",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.841265",
+        "test_name": "Rule Creation - Rule 351",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.841817",
+        "test_name": "Rule Creation - Rule 352",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.842394",
+        "test_name": "Rule Creation - Rule 353",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.842978",
+        "test_name": "Rule Creation - Rule 354",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.843542",
+        "test_name": "Rule Creation - Rule 355",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.844063",
+        "test_name": "Rule Creation - Rule 356",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.844585",
+        "test_name": "Rule Creation - Rule 357",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.845143",
+        "test_name": "Rule Creation - Rule 358",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.845715",
+        "test_name": "Rule Creation - Rule 359",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.846282",
+        "test_name": "Rule Creation - Rule 360",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.846961",
+        "test_name": "Rule Creation - Rule 361",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.847703",
+        "test_name": "Rule Creation - Rule 362",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.848395",
+        "test_name": "Rule Creation - Rule 363",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.849045",
+        "test_name": "Rule Creation - Rule 364",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.849641",
+        "test_name": "Rule Creation - Rule 365",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.850233",
+        "test_name": "Rule Creation - Rule 366",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.850818",
+        "test_name": "Rule Creation - Rule 367",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.851354",
+        "test_name": "Rule Creation - Rule 368",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.851900",
+        "test_name": "Rule Creation - Rule 369",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.852470",
+        "test_name": "Rule Creation - Rule 370",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.852996",
+        "test_name": "Rule Creation - Rule 371",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.853522",
+        "test_name": "Rule Creation - Rule 372",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.854060",
+        "test_name": "Rule Creation - Rule 373",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.854575",
+        "test_name": "Rule Creation - Rule 374",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.855169",
+        "test_name": "Rule Creation - Rule 375",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.855810",
+        "test_name": "Rule Creation - Rule 376",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.856504",
+        "test_name": "Rule Creation - Rule 377",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.857244",
+        "test_name": "Rule Creation - Rule 378",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.857960",
+        "test_name": "Rule Creation - Rule 379",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.858617",
+        "test_name": "Rule Creation - Rule 380",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.859175",
+        "test_name": "Rule Creation - Rule 381",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.859753",
+        "test_name": "Rule Creation - Rule 382",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.860341",
+        "test_name": "Rule Creation - Rule 383",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.860975",
+        "test_name": "Rule Creation - Rule 384",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.861551",
+        "test_name": "Rule Creation - Rule 385",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.862111",
+        "test_name": "Rule Creation - Rule 386",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.862684",
+        "test_name": "Rule Creation - Rule 387",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.863244",
+        "test_name": "Rule Creation - Rule 388",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.863791",
+        "test_name": "Rule Creation - Rule 389",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.864323",
+        "test_name": "Rule Creation - Rule 390",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.865013",
+        "test_name": "Rule Creation - Rule 391",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.865614",
+        "test_name": "Rule Creation - Rule 392",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.866247",
+        "test_name": "Rule Creation - Rule 393",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.866790",
+        "test_name": "Rule Creation - Rule 394",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.867431",
+        "test_name": "Rule Creation - Rule 395",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.868162",
+        "test_name": "Rule Creation - Rule 396",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.868824",
+        "test_name": "Rule Creation - Rule 397",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.869401",
+        "test_name": "Rule Creation - Rule 398",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.869960",
+        "test_name": "Rule Creation - Rule 399",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.870558",
+        "test_name": "Rule Creation - Rule 400",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.871087",
+        "test_name": "Rule Creation - Rule 401",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.871660",
+        "test_name": "Rule Creation - Rule 402",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.872263",
+        "test_name": "Rule Creation - Rule 403",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.872810",
+        "test_name": "Rule Creation - Rule 404",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.873363",
+        "test_name": "Rule Creation - Rule 405",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.873883",
+        "test_name": "Rule Creation - Rule 406",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.874400",
+        "test_name": "Rule Creation - Rule 407",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.874914",
+        "test_name": "Rule Creation - Rule 408",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.875521",
+        "test_name": "Rule Creation - Rule 409",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.876247",
+        "test_name": "Rule Creation - Rule 410",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.876948",
+        "test_name": "Rule Creation - Rule 411",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.877609",
+        "test_name": "Rule Creation - Rule 412",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.878161",
+        "test_name": "Rule Creation - Rule 413",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.878714",
+        "test_name": "Rule Creation - Rule 414",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.879285",
+        "test_name": "Rule Creation - Rule 415",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.879836",
+        "test_name": "Rule Creation - Rule 416",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.880459",
+        "test_name": "Rule Creation - Rule 417",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.881058",
+        "test_name": "Rule Creation - Rule 418",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.881661",
+        "test_name": "Rule Creation - Rule 419",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.882291",
+        "test_name": "Rule Creation - Rule 420",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.882891",
+        "test_name": "Rule Creation - Rule 421",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.883444",
+        "test_name": "Rule Creation - Rule 422",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.883995",
+        "test_name": "Rule Creation - Rule 423",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.884569",
+        "test_name": "Rule Creation - Rule 424",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.885181",
+        "test_name": "Rule Creation - Rule 425",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.885769",
+        "test_name": "Rule Creation - Rule 426",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.886406",
+        "test_name": "Rule Creation - Rule 427",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.886942",
+        "test_name": "Rule Creation - Rule 428",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.887543",
+        "test_name": "Rule Creation - Rule 429",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.888102",
+        "test_name": "Rule Creation - Rule 430",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.888644",
+        "test_name": "Rule Creation - Rule 431",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.889205",
+        "test_name": "Rule Creation - Rule 432",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.889743",
+        "test_name": "Rule Creation - Rule 433",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.890397",
+        "test_name": "Rule Creation - Rule 434",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.891027",
+        "test_name": "Rule Creation - Rule 435",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.891613",
+        "test_name": "Rule Creation - Rule 436",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.892154",
+        "test_name": "Rule Creation - Rule 437",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.892731",
+        "test_name": "Rule Creation - Rule 438",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.893272",
+        "test_name": "Rule Creation - Rule 439",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.893836",
+        "test_name": "Rule Creation - Rule 440",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.894378",
+        "test_name": "Rule Creation - Rule 441",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.894919",
+        "test_name": "Rule Creation - Rule 442",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.895482",
+        "test_name": "Rule Creation - Rule 443",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.896008",
+        "test_name": "Rule Creation - Rule 444",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.896558",
+        "test_name": "Rule Creation - Rule 445",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.897162",
+        "test_name": "Rule Creation - Rule 446",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.897928",
+        "test_name": "Rule Creation - Rule 447",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.898617",
+        "test_name": "Rule Creation - Rule 448",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.899219",
+        "test_name": "Rule Creation - Rule 449",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.899896",
+        "test_name": "Rule Creation - Rule 450",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.900517",
+        "test_name": "Rule Creation - Rule 451",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.901108",
+        "test_name": "Rule Creation - Rule 452",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.901695",
+        "test_name": "Rule Creation - Rule 453",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.902256",
+        "test_name": "Rule Creation - Rule 454",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.902788",
+        "test_name": "Rule Creation - Rule 455",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.903325",
+        "test_name": "Rule Creation - Rule 456",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.903866",
+        "test_name": "Rule Creation - Rule 457",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.904404",
+        "test_name": "Rule Creation - Rule 458",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.904952",
+        "test_name": "Rule Creation - Rule 459",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.905545",
+        "test_name": "Rule Creation - Rule 460",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.906155",
+        "test_name": "Rule Creation - Rule 461",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.906725",
+        "test_name": "Rule Creation - Rule 462",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.907351",
+        "test_name": "Rule Creation - Rule 463",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.907965",
+        "test_name": "Rule Creation - Rule 464",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.908566",
+        "test_name": "Rule Creation - Rule 465",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.909244",
+        "test_name": "Rule Creation - Rule 466",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.909897",
+        "test_name": "Rule Creation - Rule 467",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.910588",
+        "test_name": "Rule Creation - Rule 468",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.911190",
+        "test_name": "Rule Creation - Rule 469",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.911741",
+        "test_name": "Rule Creation - Rule 470",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.912365",
+        "test_name": "Rule Creation - Rule 471",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.912943",
+        "test_name": "Rule Creation - Rule 472",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.913484",
+        "test_name": "Rule Creation - Rule 473",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.914041",
+        "test_name": "Rule Creation - Rule 474",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.914746",
+        "test_name": "Rule Creation - Rule 475",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.915436",
+        "test_name": "Rule Creation - Rule 476",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.916039",
+        "test_name": "Rule Creation - Rule 477",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.916653",
+        "test_name": "Rule Creation - Rule 478",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.917360",
+        "test_name": "Rule Creation - Rule 479",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.917945",
+        "test_name": "Rule Creation - Rule 480",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.918564",
+        "test_name": "Rule Creation - Rule 481",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.919177",
+        "test_name": "Rule Creation - Rule 482",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.919772",
+        "test_name": "Rule Creation - Rule 483",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.920445",
+        "test_name": "Rule Creation - Rule 484",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.921105",
+        "test_name": "Rule Creation - Rule 485",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.921708",
+        "test_name": "Rule Creation - Rule 486",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.922329",
+        "test_name": "Rule Creation - Rule 487",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.922939",
+        "test_name": "Rule Creation - Rule 488",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.923596",
+        "test_name": "Rule Creation - Rule 489",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.924231",
+        "test_name": "Rule Creation - Rule 490",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.924902",
+        "test_name": "Rule Creation - Rule 491",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.925566",
+        "test_name": "Rule Creation - Rule 492",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.926177",
+        "test_name": "Rule Creation - Rule 493",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.926734",
+        "test_name": "Rule Creation - Rule 494",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.927317",
+        "test_name": "Rule Creation - Rule 495",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.927923",
+        "test_name": "Rule Creation - Rule 496",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.928486",
+        "test_name": "Rule Creation - Rule 497",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.929089",
+        "test_name": "Rule Creation - Rule 498",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.929650",
+        "test_name": "Rule Creation - Rule 499",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.930262",
+        "test_name": "Rule Creation - Rule 500",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.930828",
+        "test_name": "Rule Creation - Rule 501",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.931422",
+        "test_name": "Rule Creation - Rule 502",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.932067",
+        "test_name": "Rule Creation - Rule 503",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.932614",
+        "test_name": "Rule Creation - Rule 504",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.933152",
+        "test_name": "Rule Creation - Rule 505",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.933684",
+        "test_name": "Rule Creation - Rule 506",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.934220",
+        "test_name": "Rule Creation - Rule 507",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.934769",
+        "test_name": "Rule Creation - Rule 508",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.935330",
+        "test_name": "Rule Creation - Rule 509",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.935854",
+        "test_name": "Rule Creation - Rule 510",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.936396",
+        "test_name": "Rule Creation - Rule 511",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.936921",
+        "test_name": "Rule Creation - Rule 512",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.937512",
+        "test_name": "Rule Creation - Rule 513",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.938052",
+        "test_name": "Rule Creation - Rule 514",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.938600",
+        "test_name": "Rule Creation - Rule 515",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.939159",
+        "test_name": "Rule Creation - Rule 516",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.939797",
+        "test_name": "Rule Creation - Rule 517",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.940533",
+        "test_name": "Rule Creation - Rule 518",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.941208",
+        "test_name": "Rule Creation - Rule 519",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.941918",
+        "test_name": "Rule Creation - Rule 520",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.942532",
+        "test_name": "Rule Creation - Rule 521",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.943068",
+        "test_name": "Rule Creation - Rule 522",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.943627",
+        "test_name": "Rule Creation - Rule 523",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.944163",
+        "test_name": "Rule Creation - Rule 524",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.944913",
+        "test_name": "Rule Creation - Rule 525",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.945546",
+        "test_name": "Rule Creation - Rule 526",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.946186",
+        "test_name": "Rule Creation - Rule 527",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.946766",
+        "test_name": "Rule Creation - Rule 528",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.947389",
+        "test_name": "Rule Creation - Rule 529",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.948027",
+        "test_name": "Rule Creation - Rule 530",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.948701",
+        "test_name": "Rule Creation - Rule 531",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.949338",
+        "test_name": "Rule Creation - Rule 532",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.949914",
+        "test_name": "Rule Creation - Rule 533",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.950523",
+        "test_name": "Rule Creation - Rule 534",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.951133",
+        "test_name": "Rule Creation - Rule 535",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.951684",
+        "test_name": "Rule Creation - Rule 536",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.952274",
+        "test_name": "Rule Creation - Rule 537",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.952888",
+        "test_name": "Rule Creation - Rule 538",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.953470",
+        "test_name": "Rule Creation - Rule 539",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.954022",
+        "test_name": "Rule Creation - Rule 540",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.954599",
+        "test_name": "Rule Creation - Rule 541",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.955193",
+        "test_name": "Rule Creation - Rule 542",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.955773",
+        "test_name": "Rule Creation - Rule 543",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.956481",
+        "test_name": "Rule Creation - Rule 544",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.957157",
+        "test_name": "Rule Creation - Rule 545",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.957760",
+        "test_name": "Rule Creation - Rule 546",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.958509",
+        "test_name": "Rule Creation - Rule 547",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.959124",
+        "test_name": "Rule Creation - Rule 548",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.959723",
+        "test_name": "Rule Creation - Rule 549",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.960364",
+        "test_name": "Rule Creation - Rule 550",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.960959",
+        "test_name": "Rule Creation - Rule 551",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.961561",
+        "test_name": "Rule Creation - Rule 552",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.962131",
+        "test_name": "Rule Creation - Rule 553",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.962720",
+        "test_name": "Rule Creation - Rule 554",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.963299",
+        "test_name": "Rule Creation - Rule 555",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.963837",
+        "test_name": "Rule Creation - Rule 556",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.964483",
+        "test_name": "Rule Creation - Rule 557",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.965074",
+        "test_name": "Rule Creation - Rule 558",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.965608",
+        "test_name": "Rule Creation - Rule 559",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.966159",
+        "test_name": "Rule Creation - Rule 560",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.966711",
+        "test_name": "Rule Creation - Rule 561",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.967293",
+        "test_name": "Rule Creation - Rule 562",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.967870",
+        "test_name": "Rule Creation - Rule 563",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.968549",
+        "test_name": "Rule Creation - Rule 564",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.969102",
+        "test_name": "Rule Creation - Rule 565",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.969641",
+        "test_name": "Rule Creation - Rule 566",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.970193",
+        "test_name": "Rule Creation - Rule 567",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.970725",
+        "test_name": "Rule Creation - Rule 568",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.971248",
+        "test_name": "Rule Creation - Rule 569",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.971774",
+        "test_name": "Rule Creation - Rule 570",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.972399",
+        "test_name": "Rule Creation - Rule 571",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.972972",
+        "test_name": "Rule Creation - Rule 572",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.973521",
+        "test_name": "Rule Creation - Rule 573",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.974065",
+        "test_name": "Rule Creation - Rule 574",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.974596",
+        "test_name": "Rule Creation - Rule 575",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.975165",
+        "test_name": "Rule Creation - Rule 576",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.975740",
+        "test_name": "Rule Creation - Rule 577",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.976300",
+        "test_name": "Rule Creation - Rule 578",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.976821",
+        "test_name": "Rule Creation - Rule 579",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.977379",
+        "test_name": "Rule Creation - Rule 580",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.977928",
+        "test_name": "Rule Creation - Rule 581",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.978519",
+        "test_name": "Rule Creation - Rule 582",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.979212",
+        "test_name": "Rule Creation - Rule 583",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.979833",
+        "test_name": "Rule Creation - Rule 584",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.980508",
+        "test_name": "Rule Creation - Rule 585",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.981104",
+        "test_name": "Rule Creation - Rule 586",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.981761",
+        "test_name": "Rule Creation - Rule 587",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.982379",
+        "test_name": "Rule Creation - Rule 588",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.982991",
+        "test_name": "Rule Creation - Rule 589",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.983607",
+        "test_name": "Rule Creation - Rule 590",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.984211",
+        "test_name": "Rule Creation - Rule 591",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.984791",
+        "test_name": "Rule Creation - Rule 592",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.985387",
+        "test_name": "Rule Creation - Rule 593",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.985982",
+        "test_name": "Rule Creation - Rule 594",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.986554",
+        "test_name": "Rule Creation - Rule 595",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.987152",
+        "test_name": "Rule Creation - Rule 596",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.987717",
+        "test_name": "Rule Creation - Rule 597",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.988317",
+        "test_name": "Rule Creation - Rule 598",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.988915",
+        "test_name": "Rule Creation - Rule 599",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.989551",
+        "test_name": "Rule Creation - Rule 600",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.990231",
+        "test_name": "Rule Creation - Rule 601",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.990883",
+        "test_name": "Rule Creation - Rule 602",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.991524",
+        "test_name": "Rule Creation - Rule 603",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.992128",
+        "test_name": "Rule Creation - Rule 604",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.992800",
+        "test_name": "Rule Creation - Rule 605",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.993409",
+        "test_name": "Rule Creation - Rule 606",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.993976",
+        "test_name": "Rule Creation - Rule 607",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.994516",
+        "test_name": "Rule Creation - Rule 608",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.995098",
+        "test_name": "Rule Creation - Rule 609",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.995680",
+        "test_name": "Rule Creation - Rule 610",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.996264",
+        "test_name": "Rule Creation - Rule 611",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.996832",
+        "test_name": "Rule Creation - Rule 612",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.997406",
+        "test_name": "Rule Creation - Rule 613",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.998050",
+        "test_name": "Rule Creation - Rule 614",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.998711",
+        "test_name": "Rule Creation - Rule 615",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.999306",
+        "test_name": "Rule Creation - Rule 616",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.999858",
+        "test_name": "Rule Creation - Rule 617",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.000456",
+        "test_name": "Rule Creation - Rule 618",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.001008",
+        "test_name": "Rule Creation - Rule 619",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.001559",
+        "test_name": "Rule Creation - Rule 620",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.002167",
+        "test_name": "Rule Creation - Rule 621",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.002691",
+        "test_name": "Rule Creation - Rule 622",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.003243",
+        "test_name": "Rule Creation - Rule 623",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.003828",
+        "test_name": "Rule Creation - Rule 624",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.004398",
+        "test_name": "Rule Creation - Rule 625",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.004920",
+        "test_name": "Rule Creation - Rule 626",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.005477",
+        "test_name": "Rule Creation - Rule 627",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.006000",
+        "test_name": "Rule Creation - Rule 628",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.006537",
+        "test_name": "Rule Creation - Rule 629",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.007072",
+        "test_name": "Rule Creation - Rule 630",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.007607",
+        "test_name": "Rule Creation - Rule 631",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.008127",
+        "test_name": "Rule Creation - Rule 632",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.008663",
+        "test_name": "Rule Creation - Rule 633",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.009179",
+        "test_name": "Rule Creation - Rule 634",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.009701",
+        "test_name": "Rule Creation - Rule 635",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.010249",
+        "test_name": "Rule Creation - Rule 636",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.010815",
+        "test_name": "Rule Creation - Rule 637",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.011338",
+        "test_name": "Rule Creation - Rule 638",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.011884",
+        "test_name": "Rule Creation - Rule 639",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.012477",
+        "test_name": "Rule Creation - Rule 640",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.013211",
+        "test_name": "Rule Creation - Rule 641",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.013808",
+        "test_name": "Rule Creation - Rule 642",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.014383",
+        "test_name": "Rule Creation - Rule 643",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.014923",
+        "test_name": "Rule Creation - Rule 644",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.015630",
+        "test_name": "Rule Creation - Rule 645",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.016233",
+        "test_name": "Rule Creation - Rule 646",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.016813",
+        "test_name": "Rule Creation - Rule 647",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.017434",
+        "test_name": "Rule Creation - Rule 648",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.018036",
+        "test_name": "Rule Creation - Rule 649",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.018686",
+        "test_name": "Rule Creation - Rule 650",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.019325",
+        "test_name": "Rule Creation - Rule 651",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.019900",
+        "test_name": "Rule Creation - Rule 652",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.020529",
+        "test_name": "Rule Creation - Rule 653",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.021077",
+        "test_name": "Rule Creation - Rule 654",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.021719",
+        "test_name": "Rule Creation - Rule 655",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.022344",
+        "test_name": "Rule Creation - Rule 656",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.022996",
+        "test_name": "Rule Creation - Rule 657",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.023678",
+        "test_name": "Rule Creation - Rule 658",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.024388",
+        "test_name": "Rule Creation - Rule 659",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.025028",
+        "test_name": "Rule Creation - Rule 660",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.025667",
+        "test_name": "Rule Creation - Rule 661",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.026305",
+        "test_name": "Rule Creation - Rule 662",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.026838",
+        "test_name": "Rule Creation - Rule 663",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.027386",
+        "test_name": "Rule Creation - Rule 664",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.027965",
+        "test_name": "Rule Creation - Rule 665",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.028571",
+        "test_name": "Rule Creation - Rule 666",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.029130",
+        "test_name": "Rule Creation - Rule 667",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.029661",
+        "test_name": "Rule Creation - Rule 668",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.030234",
+        "test_name": "Rule Creation - Rule 669",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.030766",
+        "test_name": "Rule Creation - Rule 670",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.031313",
+        "test_name": "Rule Creation - Rule 671",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.031865",
+        "test_name": "Rule Creation - Rule 672",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.032444",
+        "test_name": "Rule Creation - Rule 673",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.032998",
+        "test_name": "Rule Creation - Rule 674",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.033528",
+        "test_name": "Rule Creation - Rule 675",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.034065",
+        "test_name": "Rule Creation - Rule 676",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.034604",
+        "test_name": "Rule Creation - Rule 677",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.035195",
+        "test_name": "Rule Creation - Rule 678",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.035798",
+        "test_name": "Rule Creation - Rule 679",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.036342",
+        "test_name": "Rule Creation - Rule 680",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.036878",
+        "test_name": "Rule Creation - Rule 681",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.037502",
+        "test_name": "Rule Creation - Rule 682",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.038152",
+        "test_name": "Rule Creation - Rule 683",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.038919",
+        "test_name": "Rule Creation - Rule 684",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.039493",
+        "test_name": "Rule Creation - Rule 685",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.040108",
+        "test_name": "Rule Creation - Rule 686",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.040785",
+        "test_name": "Rule Creation - Rule 687",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.041550",
+        "test_name": "Rule Creation - Rule 688",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.042265",
+        "test_name": "Rule Creation - Rule 689",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.042835",
+        "test_name": "Rule Creation - Rule 690",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.043389",
+        "test_name": "Rule Creation - Rule 691",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.043931",
+        "test_name": "Rule Creation - Rule 692",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.044489",
+        "test_name": "Rule Creation - Rule 693",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.045071",
+        "test_name": "Rule Creation - Rule 694",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.045630",
+        "test_name": "Rule Creation - Rule 695",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.046177",
+        "test_name": "Rule Creation - Rule 696",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.046716",
+        "test_name": "Rule Creation - Rule 697",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.047326",
+        "test_name": "Rule Creation - Rule 698",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.047935",
+        "test_name": "Rule Creation - Rule 699",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.048622",
+        "test_name": "Rule Creation - Rule 700",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.049219",
+        "test_name": "Rule Creation - Rule 701",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.049774",
+        "test_name": "Rule Creation - Rule 702",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.050333",
+        "test_name": "Rule Creation - Rule 703",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.050863",
+        "test_name": "Rule Creation - Rule 704",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.051403",
+        "test_name": "Rule Creation - Rule 705",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.051938",
+        "test_name": "Rule Creation - Rule 706",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.052536",
+        "test_name": "Rule Creation - Rule 707",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.053147",
+        "test_name": "Rule Creation - Rule 708",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.053712",
+        "test_name": "Rule Creation - Rule 709",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.054284",
+        "test_name": "Rule Creation - Rule 710",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.054915",
+        "test_name": "Rule Creation - Rule 711",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.055542",
+        "test_name": "Rule Creation - Rule 712",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.056156",
+        "test_name": "Rule Creation - Rule 713",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.056775",
+        "test_name": "Rule Creation - Rule 714",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.057413",
+        "test_name": "Rule Creation - Rule 715",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.058055",
+        "test_name": "Rule Creation - Rule 716",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.058704",
+        "test_name": "Rule Creation - Rule 717",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.059272",
+        "test_name": "Rule Creation - Rule 718",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.059883",
+        "test_name": "Rule Creation - Rule 719",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.060558",
+        "test_name": "Rule Creation - Rule 720",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.061105",
+        "test_name": "Rule Creation - Rule 721",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.061669",
+        "test_name": "Rule Creation - Rule 722",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.062281",
+        "test_name": "Rule Creation - Rule 723",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.062928",
+        "test_name": "Rule Creation - Rule 724",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.063532",
+        "test_name": "Rule Creation - Rule 725",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.064093",
+        "test_name": "Rule Creation - Rule 726",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.064683",
+        "test_name": "Rule Creation - Rule 727",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.065314",
+        "test_name": "Rule Creation - Rule 728",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.065962",
+        "test_name": "Rule Creation - Rule 729",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.066629",
+        "test_name": "Rule Creation - Rule 730",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.067239",
+        "test_name": "Rule Creation - Rule 731",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.067809",
+        "test_name": "Rule Creation - Rule 732",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.068378",
+        "test_name": "Rule Creation - Rule 733",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.068968",
+        "test_name": "Rule Creation - Rule 734",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.069574",
+        "test_name": "Rule Creation - Rule 735",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.070330",
+        "test_name": "Rule Creation - Rule 736",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.070936",
+        "test_name": "Rule Creation - Rule 737",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.071481",
+        "test_name": "Rule Creation - Rule 738",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.072020",
+        "test_name": "Rule Creation - Rule 739",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.072577",
+        "test_name": "Rule Creation - Rule 740",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.073185",
+        "test_name": "Rule Creation - Rule 741",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.073765",
+        "test_name": "Rule Creation - Rule 742",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.074327",
+        "test_name": "Rule Creation - Rule 743",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.074900",
+        "test_name": "Rule Creation - Rule 744",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.075456",
+        "test_name": "Rule Creation - Rule 745",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.076001",
+        "test_name": "Rule Creation - Rule 746",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.076534",
+        "test_name": "Rule Creation - Rule 747",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.077083",
+        "test_name": "Rule Creation - Rule 748",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.077624",
+        "test_name": "Rule Creation - Rule 749",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.078180",
+        "test_name": "Rule Creation - Rule 750",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.078728",
+        "test_name": "Rule Creation - Rule 751",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.079280",
+        "test_name": "Rule Creation - Rule 752",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.079814",
+        "test_name": "Rule Creation - Rule 753",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.080457",
+        "test_name": "Rule Creation - Rule 754",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.081099",
+        "test_name": "Rule Creation - Rule 755",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.081680",
+        "test_name": "Rule Creation - Rule 756",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.082256",
+        "test_name": "Rule Creation - Rule 757",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.082872",
+        "test_name": "Rule Creation - Rule 758",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.083522",
+        "test_name": "Rule Creation - Rule 759",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.084070",
+        "test_name": "Rule Creation - Rule 760",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.084612",
+        "test_name": "Rule Creation - Rule 761",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.085172",
+        "test_name": "Rule Creation - Rule 762",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.085717",
+        "test_name": "Rule Creation - Rule 763",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.086237",
+        "test_name": "Rule Creation - Rule 764",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.086847",
+        "test_name": "Rule Creation - Rule 765",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.087408",
+        "test_name": "Rule Creation - Rule 766",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.087940",
+        "test_name": "Rule Creation - Rule 767",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.088519",
+        "test_name": "Rule Creation - Rule 768",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.089207",
+        "test_name": "Rule Creation - Rule 769",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.089946",
+        "test_name": "Rule Creation - Rule 770",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.090629",
+        "test_name": "Rule Creation - Rule 771",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.091317",
+        "test_name": "Rule Creation - Rule 772",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.091940",
+        "test_name": "Rule Creation - Rule 773",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.092570",
+        "test_name": "Rule Creation - Rule 774",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.093142",
+        "test_name": "Rule Creation - Rule 775",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.093734",
+        "test_name": "Rule Creation - Rule 776",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.094285",
+        "test_name": "Rule Creation - Rule 777",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.094840",
+        "test_name": "Rule Creation - Rule 778",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.095470",
+        "test_name": "Rule Creation - Rule 779",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.096077",
+        "test_name": "Rule Creation - Rule 780",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.096652",
+        "test_name": "Rule Creation - Rule 781",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.097300",
+        "test_name": "Rule Creation - Rule 782",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.098057",
+        "test_name": "Rule Creation - Rule 783",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.098838",
+        "test_name": "Rule Creation - Rule 784",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.099468",
+        "test_name": "Rule Creation - Rule 785",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.100103",
+        "test_name": "Rule Creation - Rule 786",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.100694",
+        "test_name": "Rule Creation - Rule 787",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.101261",
+        "test_name": "Rule Creation - Rule 788",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.101804",
+        "test_name": "Rule Creation - Rule 789",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.102475",
+        "test_name": "Rule Creation - Rule 790",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.103046",
+        "test_name": "Rule Creation - Rule 791",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.103619",
+        "test_name": "Rule Creation - Rule 792",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.104143",
+        "test_name": "Rule Creation - Rule 793",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.104669",
+        "test_name": "Rule Creation - Rule 794",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.105231",
+        "test_name": "Rule Creation - Rule 795",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.105832",
+        "test_name": "Rule Creation - Rule 796",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.106447",
+        "test_name": "Rule Creation - Rule 797",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.107074",
+        "test_name": "Rule Creation - Rule 798",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.107669",
+        "test_name": "Rule Creation - Rule 799",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.108213",
+        "test_name": "Rule Creation - Rule 800",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.108805",
+        "test_name": "Rule Creation - Rule 801",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.109341",
+        "test_name": "Rule Creation - Rule 802",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.109896",
+        "test_name": "Rule Creation - Rule 803",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.110481",
+        "test_name": "Rule Creation - Rule 804",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.111052",
+        "test_name": "Rule Creation - Rule 805",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.111601",
+        "test_name": "Rule Creation - Rule 806",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.112202",
+        "test_name": "Rule Creation - Rule 807",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.112799",
+        "test_name": "Rule Creation - Rule 808",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.113412",
+        "test_name": "Rule Creation - Rule 809",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.114049",
+        "test_name": "Rule Creation - Rule 810",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.114720",
+        "test_name": "Rule Creation - Rule 811",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.115376",
+        "test_name": "Rule Creation - Rule 812",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.115967",
+        "test_name": "Rule Creation - Rule 813",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.116522",
+        "test_name": "Rule Creation - Rule 814",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.117125",
+        "test_name": "Rule Creation - Rule 815",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.117724",
+        "test_name": "Rule Creation - Rule 816",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.118263",
+        "test_name": "Rule Creation - Rule 817",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.118845",
+        "test_name": "Rule Creation - Rule 818",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.119526",
+        "test_name": "Rule Creation - Rule 819",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.120161",
+        "test_name": "Rule Creation - Rule 820",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.120768",
+        "test_name": "Rule Creation - Rule 821",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.121349",
+        "test_name": "Rule Creation - Rule 822",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.121907",
+        "test_name": "Rule Creation - Rule 823",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.122492",
+        "test_name": "Rule Creation - Rule 824",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.123052",
+        "test_name": "Rule Creation - Rule 825",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.123642",
+        "test_name": "Rule Creation - Rule 826",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.124231",
+        "test_name": "Rule Creation - Rule 827",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.124889",
+        "test_name": "Rule Creation - Rule 828",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.125555",
+        "test_name": "Rule Creation - Rule 829",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.126133",
+        "test_name": "Rule Creation - Rule 830",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.126709",
+        "test_name": "Rule Creation - Rule 831",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.127312",
+        "test_name": "Rule Creation - Rule 832",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.127870",
+        "test_name": "Rule Creation - Rule 833",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.128420",
+        "test_name": "Rule Creation - Rule 834",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.129048",
+        "test_name": "Rule Creation - Rule 835",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.129701",
+        "test_name": "Rule Creation - Rule 836",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.130372",
+        "test_name": "Rule Creation - Rule 837",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.130994",
+        "test_name": "Rule Creation - Rule 838",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.131743",
+        "test_name": "Rule Creation - Rule 839",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.132424",
+        "test_name": "Rule Creation - Rule 840",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.133010",
+        "test_name": "Rule Creation - Rule 841",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.133567",
+        "test_name": "Rule Creation - Rule 842",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.134142",
+        "test_name": "Rule Creation - Rule 843",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.134686",
+        "test_name": "Rule Creation - Rule 844",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.135273",
+        "test_name": "Rule Creation - Rule 845",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.135873",
+        "test_name": "Rule Creation - Rule 846",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.136484",
+        "test_name": "Rule Creation - Rule 847",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.137032",
+        "test_name": "Rule Creation - Rule 848",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.137569",
+        "test_name": "Rule Creation - Rule 849",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.138117",
+        "test_name": "Rule Creation - Rule 850",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.138658",
+        "test_name": "Rule Creation - Rule 851",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.139197",
+        "test_name": "Rule Creation - Rule 852",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.139772",
+        "test_name": "Rule Creation - Rule 853",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.140301",
+        "test_name": "Rule Creation - Rule 854",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.140857",
+        "test_name": "Rule Creation - Rule 855",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.141392",
+        "test_name": "Rule Creation - Rule 856",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.141972",
+        "test_name": "Rule Creation - Rule 857",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.142568",
+        "test_name": "Rule Creation - Rule 858",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.143127",
+        "test_name": "Rule Creation - Rule 859",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.143701",
+        "test_name": "Rule Creation - Rule 860",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.144240",
+        "test_name": "Rule Creation - Rule 861",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.144776",
+        "test_name": "Rule Creation - Rule 862",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.145340",
+        "test_name": "Rule Creation - Rule 863",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.145870",
+        "test_name": "Rule Creation - Rule 864",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.146442",
+        "test_name": "Rule Creation - Rule 865",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.147141",
+        "test_name": "Rule Creation - Rule 866",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.147829",
+        "test_name": "Rule Creation - Rule 867",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.148373",
+        "test_name": "Rule Creation - Rule 868",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.148916",
+        "test_name": "Rule Creation - Rule 869",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.149487",
+        "test_name": "Rule Creation - Rule 870",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.150027",
+        "test_name": "Rule Creation - Rule 871",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.150580",
+        "test_name": "Rule Creation - Rule 872",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.151120",
+        "test_name": "Rule Creation - Rule 873",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.151666",
+        "test_name": "Rule Creation - Rule 874",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.152250",
+        "test_name": "Rule Creation - Rule 875",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.152830",
+        "test_name": "Rule Creation - Rule 876",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.153365",
+        "test_name": "Rule Creation - Rule 877",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.153869",
+        "test_name": "Rule Creation - Rule 878",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.154380",
+        "test_name": "Rule Creation - Rule 879",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.154875",
+        "test_name": "Rule Creation - Rule 880",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.155497",
+        "test_name": "Rule Creation - Rule 881",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.156058",
+        "test_name": "Rule Creation - Rule 882",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.156667",
+        "test_name": "Rule Creation - Rule 883",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.157261",
+        "test_name": "Rule Creation - Rule 884",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.157886",
+        "test_name": "Rule Creation - Rule 885",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.158435",
+        "test_name": "Rule Creation - Rule 886",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.158990",
+        "test_name": "Rule Creation - Rule 887",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.159550",
+        "test_name": "Rule Creation - Rule 888",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.160205",
+        "test_name": "Rule Creation - Rule 889",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.160816",
+        "test_name": "Rule Creation - Rule 890",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.161398",
+        "test_name": "Rule Creation - Rule 891",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.161960",
+        "test_name": "Rule Creation - Rule 892",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.162581",
+        "test_name": "Rule Creation - Rule 893",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.163129",
+        "test_name": "Rule Creation - Rule 894",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.163776",
+        "test_name": "Rule Creation - Rule 895",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.164467",
+        "test_name": "Rule Creation - Rule 896",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.165204",
+        "test_name": "Rule Creation - Rule 897",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.165888",
+        "test_name": "Rule Creation - Rule 898",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.166512",
+        "test_name": "Rule Creation - Rule 899",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.167025",
+        "test_name": "Rule Creation - Rule 900",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.167666",
+        "test_name": "Rule Creation - Rule 901",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.168202",
+        "test_name": "Rule Creation - Rule 902",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.168779",
+        "test_name": "Rule Creation - Rule 903",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.169348",
+        "test_name": "Rule Creation - Rule 904",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.169921",
+        "test_name": "Rule Creation - Rule 905",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.170511",
+        "test_name": "Rule Creation - Rule 906",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.171030",
+        "test_name": "Rule Creation - Rule 907",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.171561",
+        "test_name": "Rule Creation - Rule 908",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.172167",
+        "test_name": "Rule Creation - Rule 909",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.172710",
+        "test_name": "Rule Creation - Rule 910",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.173271",
+        "test_name": "Rule Creation - Rule 911",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.173804",
+        "test_name": "Rule Creation - Rule 912",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.174332",
+        "test_name": "Rule Creation - Rule 913",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.174851",
+        "test_name": "Rule Creation - Rule 914",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.175430",
+        "test_name": "Rule Creation - Rule 915",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.176045",
+        "test_name": "Rule Creation - Rule 916",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.176578",
+        "test_name": "Rule Creation - Rule 917",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.177137",
+        "test_name": "Rule Creation - Rule 918",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.177825",
+        "test_name": "Rule Creation - Rule 919",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.178467",
+        "test_name": "Rule Creation - Rule 920",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.179159",
+        "test_name": "Rule Creation - Rule 921",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.179880",
+        "test_name": "Rule Creation - Rule 922",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.180553",
+        "test_name": "Rule Creation - Rule 923",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.181156",
+        "test_name": "Rule Creation - Rule 924",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.181792",
+        "test_name": "Rule Creation - Rule 925",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.182384",
+        "test_name": "Rule Creation - Rule 926",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.182948",
+        "test_name": "Rule Creation - Rule 927",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.183557",
+        "test_name": "Rule Creation - Rule 928",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.184112",
+        "test_name": "Rule Creation - Rule 929",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.184649",
+        "test_name": "Rule Creation - Rule 930",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.185239",
+        "test_name": "Rule Creation - Rule 931",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.185808",
+        "test_name": "Rule Creation - Rule 932",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.186374",
+        "test_name": "Rule Creation - Rule 933",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.186896",
+        "test_name": "Rule Creation - Rule 934",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.187490",
+        "test_name": "Rule Creation - Rule 935",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.188013",
+        "test_name": "Rule Creation - Rule 936",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.188548",
+        "test_name": "Rule Creation - Rule 937",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.189108",
+        "test_name": "Rule Creation - Rule 938",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.189801",
+        "test_name": "Rule Creation - Rule 939",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.190425",
+        "test_name": "Rule Creation - Rule 940",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.191003",
+        "test_name": "Rule Creation - Rule 941",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.191575",
+        "test_name": "Rule Creation - Rule 942",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.192157",
+        "test_name": "Rule Creation - Rule 943",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.192770",
+        "test_name": "Rule Creation - Rule 944",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.193317",
+        "test_name": "Rule Creation - Rule 945",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.193831",
+        "test_name": "Rule Creation - Rule 946",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.194336",
+        "test_name": "Rule Creation - Rule 947",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.194849",
+        "test_name": "Rule Creation - Rule 948",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.195422",
+        "test_name": "Rule Creation - Rule 949",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.196019",
+        "test_name": "Rule Creation - Rule 950",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.196650",
+        "test_name": "Rule Creation - Rule 951",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.197231",
+        "test_name": "Rule Creation - Rule 952",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.197872",
+        "test_name": "Rule Creation - Rule 953",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.198466",
+        "test_name": "Rule Creation - Rule 954",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.199097",
+        "test_name": "Rule Creation - Rule 955",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.199631",
+        "test_name": "Rule Creation - Rule 956",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.200195",
+        "test_name": "Rule Creation - Rule 957",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.200735",
+        "test_name": "Rule Creation - Rule 958",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.201285",
+        "test_name": "Rule Creation - Rule 959",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.201828",
+        "test_name": "Rule Creation - Rule 960",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.202403",
+        "test_name": "Rule Creation - Rule 961",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.202936",
+        "test_name": "Rule Creation - Rule 962",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.203502",
+        "test_name": "Rule Creation - Rule 963",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.204041",
+        "test_name": "Rule Creation - Rule 964",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.204572",
+        "test_name": "Rule Creation - Rule 965",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.205145",
+        "test_name": "Rule Creation - Rule 966",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.205718",
+        "test_name": "Rule Creation - Rule 967",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.206448",
+        "test_name": "Rule Creation - Rule 968",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.207227",
+        "test_name": "Rule Creation - Rule 969",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.207886",
+        "test_name": "Rule Creation - Rule 970",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.208475",
+        "test_name": "Rule Creation - Rule 971",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.209179",
+        "test_name": "Rule Creation - Rule 972",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.209802",
+        "test_name": "Rule Creation - Rule 973",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.210419",
+        "test_name": "Rule Creation - Rule 974",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.210986",
+        "test_name": "Rule Creation - Rule 975",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.211547",
+        "test_name": "Rule Creation - Rule 976",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.212121",
+        "test_name": "Rule Creation - Rule 977",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.212712",
+        "test_name": "Rule Creation - Rule 978",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.213283",
+        "test_name": "Rule Creation - Rule 979",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.213849",
+        "test_name": "Rule Creation - Rule 980",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.214481",
+        "test_name": "Rule Creation - Rule 981",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.215102",
+        "test_name": "Rule Creation - Rule 982",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.215729",
+        "test_name": "Rule Creation - Rule 983",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.216331",
+        "test_name": "Rule Creation - Rule 984",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.216865",
+        "test_name": "Rule Creation - Rule 985",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.217488",
+        "test_name": "Rule Creation - Rule 986",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.218036",
+        "test_name": "Rule Creation - Rule 987",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.218584",
+        "test_name": "Rule Creation - Rule 988",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.219143",
+        "test_name": "Rule Creation - Rule 989",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.219816",
+        "test_name": "Rule Creation - Rule 990",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.220405",
+        "test_name": "Rule Creation - Rule 991",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.221100",
+        "test_name": "Rule Creation - Rule 992",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.221684",
+        "test_name": "Rule Creation - Rule 993",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.222268",
+        "test_name": "Rule Creation - Rule 994",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.222881",
+        "test_name": "Rule Creation - Rule 995",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.223444",
+        "test_name": "Rule Creation - Rule 996",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.223962",
+        "test_name": "Rule Creation - Rule 997",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.224505",
+        "test_name": "Rule Creation - Rule 998",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.225095",
+        "test_name": "Rule Creation - Rule 999",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:24.225641",
+        "test_name": "Rule Creation - Rule 1000",
+        "status": "FAIL",
+        "details": "Status: 400"
+      }
+    ],
+    "parsing": [
+      {
+        "timestamp": "2025-07-27T09:15:12.964654",
+        "test_name": "Dataset Transformation - sh_binary_padding_dd",
+        "status": "PASS",
+        "details": "Extracted 0 events"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:12.966065",
+        "test_name": "Dataset Transformation - sh_arp_cache",
+        "status": "PASS",
+        "details": "Extracted 0 events"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:12.969000",
+        "test_name": "Dataset Transformation - cmd_discover_iexplorer_version_registry",
+        "status": "PASS",
+        "details": "Extracted 68 events"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:23.620845",
+        "test_name": "Event Parsing",
+        "status": "PASS",
+        "details": "100 events parsed"
+      }
+    ],
+    "storing": [
+      {
+        "timestamp": "2025-07-27T09:15:23.620829",
+        "test_name": "Data Storage",
+        "status": "PASS",
+        "details": "Events successfully stored"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:41.277872",
+        "test_name": "Schema Validation - schema_validator_v4",
+        "status": "FAIL",
+        "details": "    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.17s\n     Running `target/debug/schema_validator_v4`\nerror: the following required arguments were not provided:\n  --schema <SCHEMA_FI"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:41.777558",
+        "test_name": "Schema Validation - schema_validator_v5",
+        "status": "FAIL",
+        "details": "    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.13s\n     Running `target/debug/schema_validator_v5`\nerror: the following required arguments were not provided:\n  --database-schema <"
+      }
+    ],
+    "detections": [
+      {
+        "timestamp": "2025-07-27T09:15:39.242023",
+        "test_name": "Detection Engine",
+        "status": "PASS",
+        "details": "Rules triggered alerts"
+      }
+    ],
+    "alerting": [
+      {
+        "timestamp": "2025-07-27T09:15:39.241984",
+        "test_name": "Alert Generation",
+        "status": "PASS",
+        "details": "Generated 2 alerts"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:39.275136",
+        "test_name": "Alert Detail - alert-current-001",
+        "status": "PASS",
+        "details": "Alert details retrieved"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:39.291456",
+        "test_name": "Alert Detail - alert-001",
+        "status": "PASS",
+        "details": "Alert details retrieved"
+      }
+    ],
+    "ui_display": [
+      {
+        "timestamp": "2025-07-27T09:15:39.399619",
+        "test_name": "UI Endpoint - Event List",
+        "status": "PASS",
+        "details": "Data retrieved successfully"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:39.433588",
+        "test_name": "UI Endpoint - Dashboard Data",
+        "status": "PASS",
+        "details": "Data retrieved successfully"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:39.540595",
+        "test_name": "UI Endpoint - Field Values",
+        "status": "PASS",
+        "details": "Data retrieved successfully"
+      },
+      {
+        "timestamp": "2025-07-27T09:15:39.544169",
+        "test_name": "UI Endpoint - Rules List",
+        "status": "PASS",
+        "details": "Data retrieved successfully"
+      }
+    ]
+  },
+  "summary": {
+    "ingestion": {
+      "total": 3,
+      "passed": 3,
+      "failed": 0,
+      "partial": 0,
+      "success_rate": 100.0
+    },
+    "consumers": {
+      "total": 1,
+      "passed": 1,
+      "failed": 0,
+      "partial": 0,
+      "success_rate": 100.0
+    },
+    "tenants": {
+      "total": 3,
+      "passed": 0,
+      "failed": 3,
+      "partial": 0,
+      "success_rate": 0.0
+    },
+    "rules": {
+      "total": 1000,
+      "passed": 0,
+      "failed": 1000,
+      "partial": 0,
+      "success_rate": 0.0
+    },
+    "parsing": {
+      "total": 4,
+      "passed": 4,
+      "failed": 0,
+      "partial": 0,
+      "success_rate": 100.0
+    },
+    "storing": {
+      "total": 3,
+      "passed": 1,
+      "failed": 2,
+      "partial": 0,
+      "success_rate": 33.33333333333333
+    },
+    "detections": {
+      "total": 1,
+      "passed": 1,
+      "failed": 0,
+      "partial": 0,
+      "success_rate": 100.0
+    },
+    "alerting": {
+      "total": 3,
+      "passed": 3,
+      "failed": 0,
+      "partial": 0,
+      "success_rate": 100.0
+    },
+    "ui_display": {
+      "total": 4,
+      "passed": 4,
+      "failed": 0,
+      "partial": 0,
+      "success_rate": 100.0
+    }
+  }
+}

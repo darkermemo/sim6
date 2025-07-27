@@ -1,0 +1,353 @@
+---
+title: Critical Quality Gates for SIEM Development
+description: 10 essential rules to ensure highest quality coding, prevent regressions, and maintain production readiness
+---
+
+# CRITICAL QUALITY GATES FOR SIEM DEVELOPMENT
+
+## 🚨 MANDATORY RULES - ZERO TOLERANCE FOR VIOLATIONS
+
+These rules MUST be followed for every single prompt, commit, and deployment. Violations compromise system security and reliability.
+
+---
+
+## **RULE 1: REGRESSION PREVENTION PROTOCOL** 🔒 **CRITICAL**
+
+### **Before ANY Change:**
+```bash
+# MANDATORY regression prevention checklist:
+1. Document EXACT current behavior with screenshots/videos
+2. Create test case that validates current functionality  
+3. Run full integration test suite: npm run test:e2e
+4. Record API response schemas with exact field types
+5. Verify no breaking changes in API contracts
+6. Test ALL interactive elements manually
+7. Validate SSE connections don't break
+8. Confirm authentication flows remain intact
+```
+
+### **After ANY Change:**
+```bash
+# MANDATORY verification protocol:
+1. Re-run ALL affected test suites
+2. Verify UI components render identically (except intended changes)
+3. Confirm API responses match documented schemas
+4. Test real-time features (SSE, WebSocket connections)
+5. Validate error handling still works correctly
+6. Check browser console for ANY new errors/warnings
+7. Test on multiple browsers/devices
+8. Document what changed and WHY
+```
+
+**FAILURE PROTOCOL:** If ANY regression detected → STOP immediately, revert changes, identify root cause, implement fix with additional tests.
+
+---
+
+## **RULE 2: API SCHEMA IMMUTABILITY** 🔐 **CRITICAL**
+
+### **API Contract Enforcement:**
+```typescript
+// MANDATORY for all API changes:
+1. NEVER modify existing field names without deprecation period
+2. NEVER change existing field types (String→Number, etc.)
+3. NEVER remove fields from existing endpoints
+4. ALWAYS add new fields as optional (Optional<T> in Rust)
+5. ALWAYS maintain backward compatibility for 2+ versions
+6. ALWAYS version breaking changes (/v2/endpoint)
+```
+
+### **Schema Validation Requirements:**
+```bash
+# MANDATORY schema verification:
+1. Generate TypeScript interfaces from Rust structs
+2. Validate response schemas with JSON Schema
+3. Create integration tests for schema compliance
+4. Document all field changes in API changelog
+5. Test with REAL production-like data
+6. Verify CIM field mappings remain intact
+```
+
+**ENFORCEMENT:** Any API change without schema validation → BLOCK deployment until compliant.
+
+---
+
+## **RULE 3: INFINITE LOOP PREVENTION** ⚡ **CRITICAL**
+
+### **React Anti-Pattern Detection:**
+```typescript
+// MANDATORY checks for ALL React code:
+1. ❌ NEVER use objects/arrays directly in useEffect dependencies
+2. ❌ NEVER call setState in render without conditions  
+3. ❌ NEVER use functions in useEffect deps without useCallback
+4. ❌ NEVER create new objects in render for component props
+5. ✅ ALWAYS memoize callbacks with useCallback
+6. ✅ ALWAYS memoize computed values with useMemo
+7. ✅ ALWAYS use primitive values in dependency arrays
+8. ✅ ALWAYS stabilize SWR keys with useMemo
+```
+
+### **Detection Protocol:**
+```bash
+# MANDATORY before committing ANY React component:
+1. Check React DevTools Profiler for infinite renders
+2. Monitor browser console for excessive re-render warnings
+3. Test component isolation in Storybook
+4. Verify no memory leaks after 5+ minutes of interaction
+5. Use React.StrictMode to catch issues early
+```
+
+**ZERO TOLERANCE:** Any infinite loop pattern → IMMEDIATE fix required before code review.
+
+---
+
+## **RULE 4: SECURITY-FIRST DEVELOPMENT** 🛡️ **CRITICAL**
+
+### **SIEM Security Requirements:**
+```bash
+# MANDATORY security checks for EVERY change:
+1. NEVER log sensitive data (passwords, tokens, PII)
+2. NEVER expose internal system details in error messages
+3. ALWAYS validate input on both frontend AND backend
+4. ALWAYS use parameterized queries (no SQL injection)
+5. ALWAYS sanitize user inputs before database storage
+6. ALWAYS validate JWT tokens on every API call
+7. ALWAYS use HTTPS for all communications
+8. ALWAYS implement rate limiting on public endpoints
+```
+
+### **Security Testing Protocol:**
+```bash
+# MANDATORY security validation:
+1. Run cargo audit for Rust dependency vulnerabilities
+2. Scan npm packages with npm audit --audit-level=moderate
+3. Test authentication bypasses manually
+4. Verify CORS policies are restrictive
+5. Check for XSS vulnerabilities in user inputs
+6. Validate CSRF protection mechanisms
+7. Test privilege escalation scenarios
+```
+
+**ENFORCEMENT:** Any security vulnerability → IMMEDIATE patching required, security review mandated.
+
+---
+
+## **RULE 5: PERFORMANCE GUARANTEE** 🚀 **CRITICAL**
+
+### **Performance Budgets:**
+```bash
+# MANDATORY performance requirements:
+1. Page load time: < 2 seconds on 3G connection
+2. API response time: < 500ms for 95th percentile  
+3. Database queries: < 100ms average response time
+4. Bundle size: < 1MB for main JavaScript bundle
+5. Memory usage: < 100MB sustained after 1 hour of use
+6. No memory leaks: heap size stable over time
+7. Real-time updates: < 100ms latency for SSE events
+```
+
+### **Performance Testing Protocol:**
+```bash
+# MANDATORY before deployment:
+1. Run Lighthouse audit (Performance score > 90)
+2. Load test API endpoints with k6 scripts
+3. Monitor memory usage during development
+4. Profile React components with React DevTools
+5. Test with slow network conditions
+6. Validate database query performance
+7. Check for N+1 query problems
+```
+
+**ENFORCEMENT:** Performance regression → BLOCK deployment until optimized.
+
+---
+
+## **RULE 6: COMPREHENSIVE ERROR BOUNDARY** 🚨 **CRITICAL**
+
+### **Error Handling Requirements:**
+```typescript
+// MANDATORY error handling for ALL components:
+1. ✅ ALWAYS wrap async operations in try-catch
+2. ✅ ALWAYS implement React Error Boundaries
+3. ✅ ALWAYS handle loading states explicitly  
+4. ✅ ALWAYS handle empty states explicitly
+5. ✅ ALWAYS provide user-friendly error messages
+6. ✅ ALWAYS log errors for debugging (without sensitive data)
+7. ✅ ALWAYS implement retry mechanisms for failed requests
+8. ✅ ALWAYS show fallback UI when components crash
+```
+
+### **Error Testing Protocol:**
+```bash
+# MANDATORY error scenario testing:
+1. Disconnect network during API calls
+2. Return invalid JSON from API endpoints
+3. Simulate database connection failures
+4. Test with malformed user inputs
+5. Trigger rate limiting scenarios
+6. Test authentication expiration handling
+7. Simulate server errors (500, 503, etc.)
+```
+
+**ENFORCEMENT:** Missing error handling → BLOCK merge until comprehensive error boundaries implemented.
+
+---
+
+## **RULE 7: REAL-TIME RELIABILITY** 📡 **CRITICAL**
+
+### **SSE/WebSocket Requirements:**
+```typescript
+// MANDATORY for ALL real-time features:
+1. ✅ ALWAYS implement connection retry logic
+2. ✅ ALWAYS handle connection state changes
+3. ✅ ALWAYS provide connection status indicators
+4. ✅ ALWAYS implement heartbeat mechanisms
+5. ✅ ALWAYS handle message deduplication
+6. ✅ ALWAYS implement graceful degradation
+7. ✅ ALWAYS test with unstable network conditions
+8. ✅ ALWAYS cleanup connections on component unmount
+```
+
+### **Real-Time Testing Protocol:**
+```bash
+# MANDATORY real-time testing:
+1. Test connection drops and recovery
+2. Simulate high-frequency message bursts
+3. Test concurrent connection scenarios
+4. Validate message ordering guarantees
+5. Test with network throttling enabled
+6. Verify no message loss during reconnection
+7. Test browser tab visibility changes
+```
+
+**ENFORCEMENT:** Real-time feature failure → CRITICAL bug, immediate fix required.
+
+---
+
+## **RULE 8: DATA INTEGRITY GUARANTEE** 💾 **CRITICAL**
+
+### **Data Consistency Requirements:**
+```sql
+-- MANDATORY data integrity checks:
+1. ✅ ALWAYS use database transactions for multi-table operations
+2. ✅ ALWAYS validate data types before database insertion
+3. ✅ ALWAYS implement foreign key constraints
+4. ✅ ALWAYS use appropriate database indexes
+5. ✅ ALWAYS handle concurrent access scenarios
+6. ✅ ALWAYS implement data migration scripts
+7. ✅ ALWAYS backup data before schema changes
+8. ✅ ALWAYS test with realistic data volumes
+```
+
+### **Data Validation Protocol:**
+```bash
+# MANDATORY data integrity testing:
+1. Test with edge case data values (null, empty, max length)
+2. Validate Unicode/special character handling
+3. Test concurrent write scenarios
+4. Verify data consistency across services
+5. Test database connection pooling limits
+6. Validate transaction rollback scenarios
+7. Test data recovery procedures
+```
+
+**ENFORCEMENT:** Data corruption risk → IMMEDIATE investigation, rollback if necessary.
+
+---
+
+## **RULE 9: ACCESSIBILITY COMPLIANCE** ♿ **CRITICAL**
+
+### **A11y Requirements:**
+```tsx
+// MANDATORY accessibility standards:
+1. ✅ ALWAYS provide ARIA labels for interactive elements
+2. ✅ ALWAYS ensure keyboard navigation works completely
+3. ✅ ALWAYS maintain color contrast ratio > 4.5:1
+4. ✅ ALWAYS provide alt text for images/icons
+5. ✅ ALWAYS support screen reader navigation
+6. ✅ ALWAYS implement focus management
+7. ✅ ALWAYS provide skip links for navigation
+8. ✅ ALWAYS test with keyboard-only navigation
+```
+
+### **Accessibility Testing Protocol:**
+```bash
+# MANDATORY a11y validation:
+1. Run axe-core accessibility audit
+2. Test with NVDA/JAWS screen readers
+3. Navigate entire app using only keyboard
+4. Verify color contrast with tools
+5. Test with browser zoom at 200%
+6. Validate form error announcements
+7. Test with high contrast mode enabled
+```
+
+**ENFORCEMENT:** A11y violation → BLOCK deployment until compliant (legal requirement).
+
+---
+
+## **RULE 10: DOCUMENTATION-DRIVEN DEVELOPMENT** 📚 **CRITICAL**
+
+### **Documentation Requirements:**
+```markdown
+# MANDATORY documentation for ALL changes:
+1. ✅ ALWAYS update API documentation with OpenAPI specs
+2. ✅ ALWAYS document component props with JSDoc
+3. ✅ ALWAYS update README for setup instructions
+4. ✅ ALWAYS document breaking changes in CHANGELOG
+5. ✅ ALWAYS provide code examples for new features
+6. ✅ ALWAYS document error codes and meanings
+7. ✅ ALWAYS update troubleshooting guides
+8. ✅ ALWAYS document security considerations
+```
+
+### **Documentation Validation Protocol:**
+```bash
+# MANDATORY documentation checks:
+1. Verify setup instructions work on clean environment
+2. Test all code examples actually compile/run
+3. Validate API documentation matches implementation
+4. Check for broken internal links
+5. Verify screenshots match current UI
+6. Test documentation search functionality
+7. Review for clarity with fresh eyes
+```
+
+**ENFORCEMENT:** Missing documentation → BLOCK merge until comprehensive docs provided.
+
+---
+
+## **🎯 ENFORCEMENT SUMMARY**
+
+**ZERO TOLERANCE VIOLATIONS:**
+- Security vulnerabilities
+- Data corruption risks  
+- Infinite loops/performance issues
+- API breaking changes without versioning
+- Missing error handling
+- Accessibility violations
+
+**MANDATORY TOOLS:**
+- React DevTools (infinite loop detection)
+- Lighthouse (performance auditing)
+- axe-core (accessibility testing)
+- cargo audit (security scanning)
+- Storybook (component isolation)
+- Jest + Testing Library (unit testing)
+- Playwright (E2E testing)
+
+**QUALITY GATES:**
+```bash
+# ALL must pass before deployment:
+✅ Zero console errors/warnings
+✅ All tests passing (unit + integration + E2E)
+✅ Performance budget met
+✅ Security audit clean
+✅ Accessibility compliance verified
+✅ Documentation updated and validated
+✅ Regression testing completed
+✅ Code review approved by 2+ developers
+✅ Staging environment validated
+✅ Rollback plan documented
+```
+
+**Remember: This is a CRITICAL SECURITY SIEM SYSTEM. Every bug could mean missing security threats. EXCELLENCE IS MANDATORY.**

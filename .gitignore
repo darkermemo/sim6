@@ -1,0 +1,91 @@
+# Build artifacts
+target/
+dist/
+build/
+node_modules/
+
+# Logs
+*.log
+logs/
+pids/
+
+# Environment files
+.env
+.env.local
+.env.production
+
+# Tokens and sensitive data
+*_token.txt
+*.token
+
+# Database files
+*.db
+*.sqlite
+
+# Temporary files
+*.tmp
+*.temp
+__pycache__/
+*.pyc
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Test results
+test-results/
+coverage/
+
+# Compressed files
+*.gz
+*.zip
+*.tar
+
+# Downloaded binaries
+downloaded_agent
+
+# Backup files
+*.bak
+*.backup
+
+# Lock files (keep package-lock.json and Cargo.lock)
+yarn.lock
+
+# Local development
+api.log
+api_*.log
+consumer*.log
+ingestor.log
+data_pruner.log
+startup*.log
+siem_*.log
+
+# Test environments
+siem_test_env/
+
+# Large datasets
+Security-Datasets/
+massive_logs.txt*
+
+# Embedded git repositories
+ClickVisual/
+siem_agent/
+siem_api/
+siem_ingestor/
+siem_sigma_transpiler/
+siem_cloud_poller/
+siem_stream_processor/
+Security-Datasets/
+siem_flow_collector/
+siem_rule_engine/
+siem_parser/
+siem_flow_consumer/
+
+# Vercel
+.vercel/

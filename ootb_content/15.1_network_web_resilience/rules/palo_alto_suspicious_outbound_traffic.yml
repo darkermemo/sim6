@@ -1,0 +1,319 @@
+title: Suspicious Outbound Traffic to High-Risk Countries
+id: pa-001-suspicious-outbound-traffic
+status: experimental
+description: Detects outbound network traffic from internal networks to high-risk countries that may indicate data exfiltration or command and control communication
+author: SIEM OOTB Content Pack
+date: 2024/01/15
+modified: 2024/01/15
+tags:
+    - attack.exfiltration
+    - attack.command_and_control
+    - attack.t1041
+    - attack.t1071
+    - palo_alto
+    - network_security
+logsource:
+    product: palo_alto
+    service: pan-os
+    category: firewall
+detection:
+    selection_outbound:
+        src_zone: 
+            - 'trust'
+            - 'internal'
+        dest_zone:
+            - 'untrust'
+            - 'external'
+        action: 'allow'
+    selection_high_risk_countries:
+        dest_country:
+            - 'CN'
+            - 'RU'
+            - 'IR'
+            - 'KP'
+            - 'SY'
+            - 'VE'
+    selection_significant_data:
+        bytes_out|gte: 10485760  # 10MB or more
+    condition: selection_outbound and selection_high_risk_countries and selection_significant_data
+falsepositives:
+    - Legitimate business communications with partners in these countries
+    - Software updates from vendors in these regions
+    - CDN traffic routed through these countries
+level: medium
+fields:
+    - timestamp
+    - source_ip
+    - destination_ip
+    - dest_country
+    - bytes_out
+    - app_name
+    - username
+    - src_zone
+    - dest_zone
+    - action
+---
+title: Multiple Failed Connection Attempts from External Sources
+id: pa-002-external-brute-force
+status: experimental
+description: Detects multiple failed connection attempts from external IP addresses that may indicate brute force attacks or reconnaissance activities
+author: SIEM OOTB Content Pack
+date: 2024/01/15
+modified: 2024/01/15
+tags:
+    - attack.credential_access
+    - attack.discovery
+    - attack.t1110
+    - attack.t1595
+    - palo_alto
+    - network_security
+logsource:
+    product: palo_alto
+    service: pan-os
+    category: firewall
+detection:
+    selection_external:
+        src_zone:
+            - 'untrust'
+            - 'external'
+        dest_zone:
+            - 'trust'
+            - 'internal'
+            - 'dmz'
+    selection_blocked:
+        action:
+            - 'deny'
+            - 'drop'
+            - 'block'
+            - 'reject'
+    timeframe: 5m
+    condition: selection_external and selection_blocked | count(source_ip) by source_ip >= 10
+falsepositives:
+    - Misconfigured network devices
+    - Legitimate services with connectivity issues
+    - Network scanning tools used by administrators
+level: high
+fields:
+    - timestamp
+    - source_ip
+    - destination_ip
+    - dest_port
+    - protocol
+    - action
+    - src_zone
+    - dest_zone
+    - src_country
+---
+title: Threat Detection - Malware or Vulnerability Exploit
+id: pa-003-threat-detection
+status: experimental
+description: Detects security threats identified by Palo Alto threat prevention including malware, vulnerabilities, and other security threats
+author: SIEM OOTB Content Pack
+date: 2024/01/15
+modified: 2024/01/15
+tags:
+    - attack.execution
+    - attack.initial_access
+    - attack.t1566
+    - attack.t1190
+    - palo_alto
+    - threat_prevention
+logsource:
+    product: palo_alto
+    service: pan-os
+    category: threat
+detection:
+    selection_threat:
+        event_type: 'security_threat'
+    selection_severity:
+        severity:
+            - 'critical'
+            - 'high'
+            - 'medium'
+    selection_action:
+        action:
+            - 'alert'
+            - 'block'
+            - 'reset'
+    condition: selection_threat and selection_severity and selection_action
+falsepositives:
+    - False positives from threat intelligence feeds
+    - Legitimate software flagged as suspicious
+    - Test files or security research activities
+level: high
+fields:
+    - timestamp
+    - source_ip
+    - destination_ip
+    - threat_name
+    - threat_category
+    - severity
+    - action
+    - app_name
+    - username
+    - file_name
+    - file_hash
+---
+title: Suspicious VPN Login Activity
+id: pa-004-suspicious-vpn-login
+status: experimental
+description: Detects suspicious VPN login activities including failed authentications and logins from unusual locations
+author: SIEM OOTB Content Pack
+date: 2024/01/15
+modified: 2024/01/15
+tags:
+    - attack.initial_access
+    - attack.credential_access
+    - attack.t1078
+    - attack.t1110
+    - palo_alto
+    - vpn_security
+logsource:
+    product: palo_alto
+    service: globalprotect
+    category: vpn
+detection:
+    selection_vpn:
+        event_type: 'vpn_event'
+    selection_failed_auth:
+        outcome: 'failure'
+        auth_method:
+            - 'LDAP'
+            - 'RADIUS'
+            - 'SAML'
+            - 'certificate'
+    selection_unusual_country:
+        src_country:
+            - 'CN'
+            - 'RU'
+            - 'IR'
+            - 'KP'
+            - 'SY'
+            - 'VE'
+    timeframe: 10m
+    condition: selection_vpn and (selection_failed_auth | count(username) by username >= 5 or (selection_vpn and selection_unusual_country))
+falsepositives:
+    - Legitimate users traveling to these countries
+    - Users with poor network connectivity
+    - Password expiration requiring multiple attempts
+level: medium
+fields:
+    - timestamp
+    - username
+    - source_ip
+    - src_country
+    - auth_method
+    - outcome
+    - vpn_tunnel_type
+    - client_version
+---
+title: Internal Network Lateral Movement Detection
+id: pa-005-lateral-movement
+status: experimental
+description: Detects potential lateral movement within internal networks by identifying unusual internal-to-internal traffic patterns
+author: SIEM OOTB Content Pack
+date: 2024/01/15
+modified: 2024/01/15
+tags:
+    - attack.lateral_movement
+    - attack.discovery
+    - attack.t1021
+    - attack.t1046
+    - palo_alto
+    - network_security
+logsource:
+    product: palo_alto
+    service: pan-os
+    category: firewall
+detection:
+    selection_internal:
+        src_zone:
+            - 'trust'
+            - 'internal'
+        dest_zone:
+            - 'trust'
+            - 'internal'
+        action: 'allow'
+    selection_admin_ports:
+        dest_port:
+            - 22    # SSH
+            - 23    # Telnet
+            - 135   # RPC
+            - 139   # NetBIOS
+            - 445   # SMB
+            - 3389  # RDP
+            - 5985  # WinRM HTTP
+            - 5986  # WinRM HTTPS
+    selection_multiple_targets:
+        timeframe: 15m
+    condition: selection_internal and selection_admin_ports | count(destination_ip) by source_ip >= 5
+falsepositives:
+    - System administrators performing legitimate tasks
+    - Automated backup or monitoring systems
+    - Network management tools
+    - Vulnerability scanners
+level: medium
+fields:
+    - timestamp
+    - source_ip
+    - destination_ip
+    - dest_port
+    - protocol
+    - app_name
+    - username
+    - bytes_in
+    - bytes_out
+---
+title: Data Exfiltration via File Transfer Protocols
+id: pa-006-data-exfiltration-ftp
+status: experimental
+description: Detects potential data exfiltration through file transfer protocols with large data volumes
+author: SIEM OOTB Content Pack
+date: 2024/01/15
+modified: 2024/01/15
+tags:
+    - attack.exfiltration
+    - attack.t1041
+    - attack.t1048
+    - palo_alto
+    - data_protection
+logsource:
+    product: palo_alto
+    service: pan-os
+    category: firewall
+detection:
+    selection_file_transfer:
+        app_name:
+            - 'ftp'
+            - 'sftp'
+            - 'scp'
+            - 'file-sharing'
+            - 'dropbox'
+            - 'google-drive'
+            - 'onedrive'
+    selection_outbound:
+        src_zone:
+            - 'trust'
+            - 'internal'
+        dest_zone:
+            - 'untrust'
+            - 'external'
+        action: 'allow'
+    selection_large_upload:
+        bytes_out|gte: 52428800  # 50MB or more
+    condition: selection_file_transfer and selection_outbound and selection_large_upload
+falsepositives:
+    - Legitimate file uploads for business purposes
+    - Backup operations to cloud storage
+    - Software deployments
+    - Large document sharing
+level: medium
+fields:
+    - timestamp
+    - source_ip
+    - destination_ip
+    - app_name
+    - bytes_out
+    - username
+    - dest_country
+    - session_id

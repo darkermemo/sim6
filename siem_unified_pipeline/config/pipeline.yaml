@@ -1,0 +1,391 @@
+# SIEM Unified Pipeline Configuration
+# Enhanced for Vector -> Kafka -> Pipeline -> Redis + ClickHouse -> UI flow
+# Target: 500,000 events/second with exactly-once delivery
+
+server:
+  host: "0.0.0.0"
+  port: 8080
+  workers: 8  # Increased for high-throughput
+  max_connections: 10000
+  request_timeout: 30
+  keepalive_timeout: 75
+  
+# Data Sources Configuration
+sources:
+  # Enhanced Kafka source for Vector integration
+  vector_kafka:
+    enabled: true
+    source_type: "Kafka"
+    connection_string: "localhost:9092"
+    data_format: "Json"
+    parameters:
+      topic: "siem-events"
+      group_id: "siem-pipeline-consumer"
+      batch_size: 1000  # High-throughput batching
+      commit_interval_ms: 5000
+      auto_offset_reset: "latest"
+      enable_auto_commit: false  # Manual commit for exactly-once
+      session_timeout_ms: 30000
+      heartbeat_interval_ms: 3000
+      fetch_min_bytes: 1024
+      fetch_max_wait_ms: 100
+      max_partition_fetch_bytes: 1048576  # 1MB
+      receive_message_max_bytes: 10485760  # 10MB
+      queued_min_messages: 100000
+      queued_max_messages_kbytes: 65536  # 64MB
+      compression_codec: "snappy"
+    
+  # Legacy syslog source (optional)
+  syslog_udp:
+    enabled: false
+    source_type: "Syslog"
+    connection_string: "0.0.0.0:514"
+    data_format: "Syslog"
+    parameters:
+      protocol: "udp"
+      max_message_size: 65536
+      
+  # Legacy file source (optional)
+  log_files:
+    enabled: false
+    source_type: "File"
+    connection_string: "/var/log/**/*.log"
+    data_format: "Raw"
+    parameters:
+      watch_mode: true
+      start_at_beginning: false
+      max_line_length: 65536
+
+# Transformation Pipeline
+transformations:
+  # Standard normalization pipeline
+  normalize_events:
+    enabled: true
+    steps:
+      - type: "ParseJson"
+        parameters:
+          field: "message"
+          target_field: "parsed"
+          ignore_errors: true
+          
+      - type: "ExtractFields"
+        parameters:
+          source_field: "parsed"
+          fields:
+            - "timestamp"
+            - "source_type"
+            - "hostname"
+            - "message"
+            - "severity"
+            - "facility"
+            
+      - type: "NormalizeTimestamp"
+        parameters:
+          field: "timestamp"
+          formats:
+            - "%Y-%m-%dT%H:%M:%S%.3fZ"
+            - "%Y-%m-%d %H:%M:%S"
+            - "%b %d %H:%M:%S"
+            
+      - type: "AddFields"
+        parameters:
+          fields:
+            pipeline_version: "2.0.0"
+            processing_timestamp: "{{now}}"
+            
+      - type: "GeoIPEnrichment"
+        parameters:
+          source_field: "source_ip"
+          target_field: "geo"
+          database_path: "/usr/share/GeoIP/GeoLite2-City.mmdb"
+          
+  # Security event classification
+  security_classification:
+    enabled: true
+    steps:
+      - type: "RegexMatch"
+        parameters:
+          field: "message"
+          patterns:
+            - pattern: "(?i)(attack|intrusion|malware|virus|breach|unauthorized|suspicious)"
+              action: "set_field"
+              target_field: "security_event"
+              value: true
+              
+      - type: "ConditionalTransform"
+        parameters:
+          condition: "security_event == true"
+          transforms:
+            - type: "AddFields"
+              parameters:
+                fields:
+                  risk_level: "high"
+                  requires_investigation: true
+
+# Routing Configuration
+routing:
+  default_destinations:
+    - "redis_cache"
+    - "clickhouse_primary"
+    
+  rules:
+    # High-priority security events
+    - name: "security_events"
+      condition: "security_event == true"
+      destinations:
+        - "redis_cache"
+        - "clickhouse_primary"
+        - "kafka_alerts"
+        
+    # Standard events
+    - name: "standard_events"
+      condition: "security_event != true"
+      destinations:
+        - "redis_cache"
+        - "clickhouse_primary"
+        
+    # Error events
+    - name: "error_events"
+      condition: "log_level == 'error'"
+      destinations:
+        - "redis_cache"
+        - "clickhouse_primary"
+        - "kafka_errors"
+
+# Data Destinations
+destinations:
+  # Redis cache for real-time UI streaming
+  redis_cache:
+    enabled: true
+    destination_type: "Redis"
+    connection_string: "redis://localhost:6379/0"
+    parameters:
+      key_pattern: "siem:events:{timestamp}:{source}"
+      ttl: 3600  # 1 hour TTL for cache
+      stream_key: "siem:stream:{source}"
+      max_stream_length: 10000
+      
+  # Primary ClickHouse storage
+  clickhouse_primary:
+    enabled: true
+    destination_type: "ClickHouse"
+    connection_string: "tcp://localhost:9000/siem"
+    parameters:
+      table: "siem_events"
+      batch_size: 10000  # High-throughput batching
+      flush_interval: 5000
+      compression: "lz4"
+      max_insert_block_size: 1048576
+      
+  # Kafka output for alerts
+  kafka_alerts:
+    enabled: true
+    destination_type: "Kafka"
+    connection_string: "localhost:9092"
+    parameters:
+      topic: "siem-alerts"
+      compression: "snappy"
+      acks: "all"
+      enable_idempotence: true
+      retries: 2147483647
+      max_in_flight_requests_per_connection: 5
+      delivery_timeout_ms: 300000
+      request_timeout_ms: 30000
+      retry_backoff_ms: 100
+      batch_size: 65536
+      linger_ms: 5
+      buffer_memory: 134217728
+      
+  # Kafka output for errors
+  kafka_errors:
+    enabled: true
+    destination_type: "Kafka"
+    connection_string: "localhost:9092"
+    parameters:
+      topic: "siem-errors"
+      compression: "snappy"
+      acks: "all"
+      enable_idempotence: true
+      
+  # File backup (optional)
+  file_backup:
+    enabled: false
+    destination_type: "File"
+    connection_string: "/var/log/siem/events"
+    parameters:
+      rotation:
+        max_size: "1GB"
+        max_age: "24h"
+        max_files: 30
+        compress: true
+
+# Storage Configuration
+storage:
+  # Data lake configuration
+  data_lake:
+    enabled: true
+    provider: "ClickHouse"
+    connection_string: "tcp://localhost:9000/siem"
+    
+  # Hot storage (Redis)
+  hot_storage:
+    enabled: true
+    provider: "Redis"
+    connection_string: "redis://localhost:6379/0"
+    ttl: 3600  # 1 hour
+    
+  # Cold storage (optional)
+  cold_storage:
+    enabled: false
+    provider: "S3"
+    connection_string: "s3://siem-cold-storage"
+    
+  # Retention policies
+  retention:
+    hot_storage_days: 1
+    warm_storage_days: 30
+    cold_storage_days: 365
+    delete_after_days: 2555  # 7 years
+
+# Metrics and Monitoring
+metrics:
+  enabled: true
+  prometheus:
+    enabled: true
+    endpoint: "/metrics"
+    port: 9090
+    
+  statsd:
+    enabled: false
+    host: "localhost"
+    port: 8125
+    
+  custom_metrics:
+    - name: "events_per_second"
+      type: "counter"
+      description: "Number of events processed per second"
+      
+    - name: "processing_latency"
+      type: "histogram"
+      description: "Event processing latency in milliseconds"
+      
+    - name: "error_rate"
+      type: "gauge"
+      description: "Error rate percentage"
+
+# Security Configuration
+security:
+  # TLS configuration
+  tls:
+    enabled: false
+    cert_file: "/etc/ssl/certs/siem.crt"
+    key_file: "/etc/ssl/private/siem.key"
+    ca_file: "/etc/ssl/certs/ca.crt"
+    
+  # Authentication
+  auth:
+    enabled: false
+    type: "jwt"
+    secret_key: "your-secret-key"
+    token_expiry: 3600
+    
+  # Rate limiting
+  rate_limit:
+    enabled: true
+    requests_per_second: 10000  # High limit for throughput
+    burst_size: 50000
+    
+# Performance Tuning
+performance:
+  # Worker configuration
+  workers:
+    ingestion_workers: 4
+    transformation_workers: 8
+    routing_workers: 4
+    storage_workers: 8
+    
+  # Buffer configuration
+  buffers:
+    event_buffer_size: 100000
+    batch_buffer_size: 10000
+    flush_interval_ms: 1000
+    
+  # Memory configuration
+  memory:
+    max_memory_usage: "8GB"
+    gc_threshold: "6GB"
+    
+  # Parallel processing
+  parallel_processing:
+    enabled: true
+    worker_count: 16  # For 500k eps target
+    batch_size: 1000
+    batch_timeout_ms: 100
+
+# Logging Configuration
+logging:
+  level: "info"
+  format: "json"
+  output: "stdout"
+  
+  # Log rotation
+  rotation:
+    max_size: "100MB"
+    max_age: "7d"
+    max_files: 10
+    compress: true
+    
+  # Component-specific logging
+  components:
+    ingestion: "debug"
+    transformation: "info"
+    routing: "info"
+    storage: "info"
+    metrics: "warn"
+
+# Health Check Configuration
+health:
+  enabled: true
+  endpoint: "/health"
+  interval: 30
+  timeout: 10
+  
+  checks:
+    - name: "kafka_connectivity"
+      type: "kafka"
+      config:
+        brokers: "localhost:9092"
+        
+    - name: "redis_connectivity"
+      type: "redis"
+      config:
+        url: "redis://localhost:6379/0"
+        
+    - name: "clickhouse_connectivity"
+      type: "clickhouse"
+      config:
+        url: "tcp://localhost:9000/siem"
+        
+    - name: "memory_usage"
+      type: "memory"
+      config:
+        threshold: 80  # percentage
+        
+    - name: "disk_usage"
+      type: "disk"
+      config:
+        path: "/var/log/siem"
+        threshold: 85  # percentage
+
+# Development and Testing
+development:
+  debug_mode: false
+  mock_data: false
+  test_mode: false
+  
+  # Load testing configuration
+  load_testing:
+    enabled: false
+    target_eps: 500000
+    duration: "10m"
+    ramp_up: "2m"

@@ -1,0 +1,512 @@
+{
+  "name": "Palo Alto Networks Taxonomy Mappings",
+  "description": "Default taxonomy mappings for Palo Alto Networks PAN-OS logs normalized to CIM",
+  "version": "1.0.0",
+  "vendor": "Palo Alto Networks",
+  "product": "PAN-OS",
+  "parser": "PaloAltoEnhanced",
+  "mappings": [
+    {
+      "field_name": "event_type",
+      "taxonomy_category": "Event Classification",
+      "taxonomy_subcategory": "Event Type",
+      "mapping_rules": [
+        {
+          "condition": "contains(raw_log, 'TRAFFIC')",
+          "value": "network_traffic",
+          "confidence": 1.0
+        },
+        {
+          "condition": "contains(raw_log, 'THREAT')",
+          "value": "security_threat",
+          "confidence": 1.0
+        },
+        {
+          "condition": "contains(raw_log, 'SYSTEM')",
+          "value": "system_event",
+          "confidence": 1.0
+        },
+        {
+          "condition": "contains(raw_log, 'GLOBALPROTECT')",
+          "value": "vpn_event",
+          "confidence": 1.0
+        },
+        {
+          "condition": "contains(raw_log, 'CONFIG')",
+          "value": "configuration_change",
+          "confidence": 1.0
+        }
+      ]
+    },
+    {
+      "field_name": "severity",
+      "taxonomy_category": "Risk Assessment",
+      "taxonomy_subcategory": "Severity Level",
+      "mapping_rules": [
+        {
+          "condition": "severity == 'critical' || severity == 'high'",
+          "value": "high_risk",
+          "confidence": 1.0
+        },
+        {
+          "condition": "severity == 'medium'",
+          "value": "medium_risk",
+          "confidence": 1.0
+        },
+        {
+          "condition": "severity == 'low' || severity == 'informational'",
+          "value": "low_risk",
+          "confidence": 1.0
+        }
+      ]
+    },
+    {
+      "field_name": "action",
+      "taxonomy_category": "Security Action",
+      "taxonomy_subcategory": "Firewall Action",
+      "mapping_rules": [
+        {
+          "condition": "action == 'allow' || action == 'permit' || action == 'accept'",
+          "value": "allowed",
+          "confidence": 1.0
+        },
+        {
+          "condition": "action == 'deny' || action == 'drop' || action == 'block' || action == 'reject'",
+          "value": "blocked",
+          "confidence": 1.0
+        },
+        {
+          "condition": "action == 'reset'",
+          "value": "connection_reset",
+          "confidence": 1.0
+        },
+        {
+          "condition": "action == 'alert'",
+          "value": "alerted",
+          "confidence": 1.0
+        }
+      ]
+    },
+    {
+      "field_name": "threat_category",
+      "taxonomy_category": "Threat Intelligence",
+      "taxonomy_subcategory": "Threat Type",
+      "mapping_rules": [
+        {
+          "condition": "threat_category == 'malware' || threat_category == 'virus'",
+          "value": "malware",
+          "confidence": 1.0
+        },
+        {
+          "condition": "threat_category == 'spyware'",
+          "value": "spyware",
+          "confidence": 1.0
+        },
+        {
+          "condition": "threat_category == 'vulnerability'",
+          "value": "vulnerability_exploit",
+          "confidence": 1.0
+        },
+        {
+          "condition": "threat_category == 'phishing'",
+          "value": "phishing",
+          "confidence": 1.0
+        },
+        {
+          "condition": "threat_category == 'command-and-control' || threat_category == 'c2'",
+          "value": "command_control",
+          "confidence": 1.0
+        }
+      ]
+    },
+    {
+      "field_name": "app_category",
+      "taxonomy_category": "Application Classification",
+      "taxonomy_subcategory": "Application Type",
+      "mapping_rules": [
+        {
+          "condition": "app_category == 'web-browsing' || app_category == 'web'",
+          "value": "web_application",
+          "confidence": 1.0
+        },
+        {
+          "condition": "app_category == 'email'",
+          "value": "email_application",
+          "confidence": 1.0
+        },
+        {
+          "condition": "app_category == 'file-sharing' || app_category == 'p2p'",
+          "value": "file_sharing",
+          "confidence": 1.0
+        },
+        {
+          "condition": "app_category == 'social-networking'",
+          "value": "social_media",
+          "confidence": 1.0
+        },
+        {
+          "condition": "app_category == 'database'",
+          "value": "database_application",
+          "confidence": 1.0
+        },
+        {
+          "condition": "app_category == 'remote-access'",
+          "value": "remote_access",
+          "confidence": 1.0
+        }
+      ]
+    },
+    {
+      "field_name": "src_zone",
+      "taxonomy_category": "Network Segmentation",
+      "taxonomy_subcategory": "Source Zone",
+      "mapping_rules": [
+        {
+          "condition": "src_zone == 'trust' || src_zone == 'internal'",
+          "value": "internal_network",
+          "confidence": 1.0
+        },
+        {
+          "condition": "src_zone == 'untrust' || src_zone == 'external'",
+          "value": "external_network",
+          "confidence": 1.0
+        },
+        {
+          "condition": "src_zone == 'dmz'",
+          "value": "dmz_network",
+          "confidence": 1.0
+        },
+        {
+          "condition": "src_zone == 'guest'",
+          "value": "guest_network",
+          "confidence": 1.0
+        }
+      ]
+    },
+    {
+      "field_name": "dest_zone",
+      "taxonomy_category": "Network Segmentation",
+      "taxonomy_subcategory": "Destination Zone",
+      "mapping_rules": [
+        {
+          "condition": "dest_zone == 'trust' || dest_zone == 'internal'",
+          "value": "internal_network",
+          "confidence": 1.0
+        },
+        {
+          "condition": "dest_zone == 'untrust' || dest_zone == 'external'",
+          "value": "external_network",
+          "confidence": 1.0
+        },
+        {
+          "condition": "dest_zone == 'dmz'",
+          "value": "dmz_network",
+          "confidence": 1.0
+        },
+        {
+          "condition": "dest_zone == 'guest'",
+          "value": "guest_network",
+          "confidence": 1.0
+        }
+      ]
+    },
+    {
+      "field_name": "protocol",
+      "taxonomy_category": "Network Protocol",
+      "taxonomy_subcategory": "Transport Protocol",
+      "mapping_rules": [
+        {
+          "condition": "protocol == 'TCP' || protocol == 'tcp'",
+          "value": "tcp_protocol",
+          "confidence": 1.0
+        },
+        {
+          "condition": "protocol == 'UDP' || protocol == 'udp'",
+          "value": "udp_protocol",
+          "confidence": 1.0
+        },
+        {
+          "condition": "protocol == 'ICMP' || protocol == 'icmp'",
+          "value": "icmp_protocol",
+          "confidence": 1.0
+        },
+        {
+          "condition": "protocol == 'ESP' || protocol == 'esp'",
+          "value": "ipsec_protocol",
+          "confidence": 1.0
+        }
+      ]
+    },
+    {
+      "field_name": "src_country",
+      "taxonomy_category": "Geographic Context",
+      "taxonomy_subcategory": "Source Country",
+      "mapping_rules": [
+        {
+          "condition": "src_country == 'US' || src_country == 'United States'",
+          "value": "united_states",
+          "confidence": 1.0
+        },
+        {
+          "condition": "src_country == 'CN' || src_country == 'China'",
+          "value": "china",
+          "confidence": 1.0
+        },
+        {
+          "condition": "src_country == 'RU' || src_country == 'Russia'",
+          "value": "russia",
+          "confidence": 1.0
+        },
+        {
+          "condition": "src_country == 'IR' || src_country == 'Iran'",
+          "value": "iran",
+          "confidence": 1.0
+        },
+        {
+          "condition": "src_country == 'KP' || src_country == 'North Korea'",
+          "value": "north_korea",
+          "confidence": 1.0
+        }
+      ]
+    },
+    {
+      "field_name": "dest_country",
+      "taxonomy_category": "Geographic Context",
+      "taxonomy_subcategory": "Destination Country",
+      "mapping_rules": [
+        {
+          "condition": "dest_country == 'US' || dest_country == 'United States'",
+          "value": "united_states",
+          "confidence": 1.0
+        },
+        {
+          "condition": "dest_country == 'CN' || dest_country == 'China'",
+          "value": "china",
+          "confidence": 1.0
+        },
+        {
+          "condition": "dest_country == 'RU' || dest_country == 'Russia'",
+          "value": "russia",
+          "confidence": 1.0
+        },
+        {
+          "condition": "dest_country == 'IR' || dest_country == 'Iran'",
+          "value": "iran",
+          "confidence": 1.0
+        },
+        {
+          "condition": "dest_country == 'KP' || dest_country == 'North Korea'",
+          "value": "north_korea",
+          "confidence": 1.0
+        }
+      ]
+    },
+    {
+      "field_name": "outcome",
+      "taxonomy_category": "Event Outcome",
+      "taxonomy_subcategory": "Result Status",
+      "mapping_rules": [
+        {
+          "condition": "outcome == 'success'",
+          "value": "successful_event",
+          "confidence": 1.0
+        },
+        {
+          "condition": "outcome == 'failure'",
+          "value": "failed_event",
+          "confidence": 1.0
+        },
+        {
+          "condition": "outcome == 'unknown'",
+          "value": "unknown_outcome",
+          "confidence": 0.5
+        }
+      ]
+    },
+    {
+      "field_name": "device_type",
+      "taxonomy_category": "Asset Classification",
+      "taxonomy_subcategory": "Device Type",
+      "mapping_rules": [
+        {
+          "condition": "device_type == 'firewall'",
+          "value": "network_security_device",
+          "confidence": 1.0
+        }
+      ]
+    },
+    {
+      "field_name": "auth_method",
+      "taxonomy_category": "Authentication",
+      "taxonomy_subcategory": "Authentication Method",
+      "mapping_rules": [
+        {
+          "condition": "auth_method == 'LDAP' || auth_method == 'ldap'",
+          "value": "ldap_authentication",
+          "confidence": 1.0
+        },
+        {
+          "condition": "auth_method == 'RADIUS' || auth_method == 'radius'",
+          "value": "radius_authentication",
+          "confidence": 1.0
+        },
+        {
+          "condition": "auth_method == 'SAML' || auth_method == 'saml'",
+          "value": "saml_authentication",
+          "confidence": 1.0
+        },
+        {
+          "condition": "auth_method == 'certificate' || auth_method == 'cert'",
+          "value": "certificate_authentication",
+          "confidence": 1.0
+        },
+        {
+          "condition": "auth_method == 'local'",
+          "value": "local_authentication",
+          "confidence": 1.0
+        }
+      ]
+    },
+    {
+      "field_name": "vpn_tunnel_type",
+      "taxonomy_category": "VPN Configuration",
+      "taxonomy_subcategory": "Tunnel Type",
+      "mapping_rules": [
+        {
+          "condition": "vpn_tunnel_type == 'IPSec' || vpn_tunnel_type == 'ipsec'",
+          "value": "ipsec_tunnel",
+          "confidence": 1.0
+        },
+        {
+          "condition": "vpn_tunnel_type == 'SSL' || vpn_tunnel_type == 'ssl'",
+          "value": "ssl_tunnel",
+          "confidence": 1.0
+        },
+        {
+          "condition": "vpn_tunnel_type == 'L2TP' || vpn_tunnel_type == 'l2tp'",
+          "value": "l2tp_tunnel",
+          "confidence": 1.0
+        }
+      ]
+    }
+  ],
+  "enrichment_rules": [
+    {
+      "name": "High Risk Country Detection",
+      "description": "Flag traffic from high-risk countries",
+      "condition": "src_country IN ['CN', 'RU', 'IR', 'KP'] OR dest_country IN ['CN', 'RU', 'IR', 'KP']",
+      "enrichment_fields": {
+        "risk_score": 8,
+        "risk_category": "geographic_risk",
+        "requires_review": true
+      }
+    },
+    {
+      "name": "Internal to External Traffic",
+      "description": "Flag internal to external network traffic",
+      "condition": "src_zone == 'trust' AND dest_zone == 'untrust'",
+      "enrichment_fields": {
+        "traffic_direction": "outbound",
+        "monitoring_priority": "medium"
+      }
+    },
+    {
+      "name": "External to Internal Traffic",
+      "description": "Flag external to internal network traffic",
+      "condition": "src_zone == 'untrust' AND dest_zone == 'trust'",
+      "enrichment_fields": {
+        "traffic_direction": "inbound",
+        "monitoring_priority": "high",
+        "requires_review": true
+      }
+    },
+    {
+      "name": "Threat Event Enrichment",
+      "description": "Enrich threat events with additional context",
+      "condition": "event_type == 'security_threat'",
+      "enrichment_fields": {
+        "requires_investigation": true,
+        "alert_priority": "high",
+        "auto_escalate": true
+      }
+    },
+    {
+      "name": "Blocked Traffic Analysis",
+      "description": "Analyze blocked traffic patterns",
+      "condition": "action IN ['deny', 'drop', 'block', 'reject']",
+      "enrichment_fields": {
+        "security_action_taken": true,
+        "blocked_traffic": true
+      }
+    },
+    {
+      "name": "VPN Event Context",
+      "description": "Add context to VPN events",
+      "condition": "event_type == 'vpn_event'",
+      "enrichment_fields": {
+        "remote_access_event": true,
+        "user_activity_monitoring": true
+      }
+    },
+    {
+      "name": "High Volume Traffic Detection",
+      "description": "Flag high volume traffic events",
+      "condition": "bytes_in > 100000000 OR bytes_out > 100000000",
+      "enrichment_fields": {
+        "high_volume_traffic": true,
+        "data_transfer_monitoring": true,
+        "potential_exfiltration": true
+      }
+    },
+    {
+      "name": "Administrative User Activity",
+      "description": "Flag administrative user activities",
+      "condition": "username LIKE '%admin%' OR username LIKE '%root%' OR username LIKE '%administrator%'",
+      "enrichment_fields": {
+        "privileged_user_activity": true,
+        "monitoring_priority": "high"
+      }
+    },
+    {
+      "name": "Non-Standard Port Usage",
+      "description": "Flag traffic on non-standard ports",
+      "condition": "(protocol == 'TCP' AND dest_port NOT IN [80, 443, 22, 23, 21, 25, 53, 110, 143, 993, 995]) OR (protocol == 'UDP' AND dest_port NOT IN [53, 67, 68, 69, 123, 161, 162])",
+      "enrichment_fields": {
+        "non_standard_port": true,
+        "requires_analysis": true
+      }
+    },
+    {
+      "name": "File Transfer Detection",
+      "description": "Detect file transfer activities",
+      "condition": "app_name IN ['ftp', 'sftp', 'scp', 'file-sharing'] OR protocol IN ['FTP', 'SFTP']",
+      "enrichment_fields": {
+        "file_transfer_activity": true,
+        "data_movement_monitoring": true
+      }
+    }
+  ],
+  "metadata": {
+    "created_by": "SIEM OOTB Content Pack",
+    "created_date": "2024-01-15",
+    "last_updated": "2024-01-15",
+    "version_history": [
+      {
+        "version": "1.0.0",
+        "date": "2024-01-15",
+        "changes": "Initial taxonomy mappings for Palo Alto Networks PAN-OS"
+      }
+    ],
+    "compatibility": {
+      "parser_version": "1.0.0",
+      "siem_version": ">=1.0.0"
+    },
+    "tags": [
+      "palo_alto",
+      "firewall",
+      "network_security",
+      "pan-os",
+      "ootb_content"
+    ]
+  }
+}

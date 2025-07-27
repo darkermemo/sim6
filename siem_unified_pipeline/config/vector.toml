@@ -1,0 +1,362 @@
+# Vector Configuration for SIEM Unified Pipeline
+# This configuration collects logs from various sources and sends them to Kafka
+# for processing by the SIEM pipeline
+
+[api]
+enabled = true
+address = "127.0.0.1:8686"
+playground = false
+
+# Data directory for Vector's internal state
+data_dir = "/tmp/vector"
+
+# ==============================================================================
+# SOURCES - Log Collection
+# ==============================================================================
+
+# Syslog source (UDP)
+[sources.syslog_udp]
+type = "syslog"
+mode = "udp"
+address = "0.0.0.0:514"
+max_length = 102400
+
+# Syslog source (TCP)
+[sources.syslog_tcp]
+type = "syslog"
+mode = "tcp"
+address = "0.0.0.0:1514"
+max_length = 102400
+
+# File source for log files
+[sources.log_files]
+type = "file"
+include = [
+  "/var/log/**/*.log",
+  "/var/log/syslog",
+  "/var/log/auth.log",
+  "/var/log/kern.log",
+  "/var/log/mail.log",
+  "/var/log/daemon.log"
+]
+exclude = [
+  "/var/log/wtmp",
+  "/var/log/btmp"
+]
+max_line_bytes = 102400
+start_at_beginning = false
+ignore_older_secs = 86400
+
+# Docker container logs
+[sources.docker_logs]
+type = "docker_logs"
+include_labels = ["*"]
+exclude_labels = ["vector.exclude=true"]
+
+# Journald logs (systemd)
+[sources.journald]
+type = "journald"
+current_boot_only = true
+include_units = []
+exclude_units = ["vector.service"]
+
+# HTTP source for webhook logs
+[sources.http_logs]
+type = "http_server"
+address = "0.0.0.0:8080"
+path = "/webhook"
+method = ["POST"]
+strict_path = true
+
+# ==============================================================================
+# TRANSFORMS - Log Processing and Enrichment
+# ==============================================================================
+
+# Parse and enrich syslog messages
+[transforms.parse_syslog]
+type = "remap"
+inputs = ["syslog_udp", "syslog_tcp"]
+source = '''
+# Parse syslog timestamp and extract fields
+.timestamp = parse_timestamp!(.timestamp, format: "%Y-%m-%dT%H:%M:%S%.3fZ")
+.source_type = "syslog"
+.facility = .facility
+.severity = .severity
+.hostname = .hostname
+.appname = .appname
+.procid = .procid
+.msgid = .msgid
+.message = .message
+
+# Add geolocation for source IP if available
+if exists(.source_ip) {
+  .geo = get_enrichment_table_record!("geoip", {"ip": .source_ip})
+}
+
+# Normalize severity levels
+.severity_name = if .severity == 0 {
+  "emergency"
+} else if .severity == 1 {
+  "alert"
+} else if .severity == 2 {
+  "critical"
+} else if .severity == 3 {
+  "error"
+} else if .severity == 4 {
+  "warning"
+} else if .severity == 5 {
+  "notice"
+} else if .severity == 6 {
+  "info"
+} else {
+  "debug"
+}
+
+# Extract common patterns
+if match(.message, r"Failed password for .* from ([0-9.]+)") {
+  .event_type = "authentication_failure"
+  .source_ip = parse_regex!(.message, r"from ([0-9.]+)")."1"
+}
+
+if match(.message, r"Accepted .* for .* from ([0-9.]+)") {
+  .event_type = "authentication_success"
+  .source_ip = parse_regex!(.message, r"from ([0-9.]+)")."1"
+}
+
+if match(.message, r"Connection from ([0-9.]+) port") {
+  .event_type = "connection"
+  .source_ip = parse_regex!(.message, r"Connection from ([0-9.]+)")."1"
+}
+'''
+
+# Parse and enrich file logs
+[transforms.parse_file_logs]
+type = "remap"
+inputs = ["log_files"]
+source = '''
+.timestamp = now()
+.source_type = "file"
+.file_path = .file
+.message = .message
+
+# Extract common log patterns
+if match(.message, r"\[(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})\]") {
+  .parsed_timestamp = parse_timestamp!(
+    parse_regex!(.message, r"\[(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})\]")."1",
+    format: "%Y-%m-%d %H:%M:%S"
+  )
+}
+
+# Detect log levels
+if match(.message, r"(?i)\b(error|err)\b") {
+  .log_level = "error"
+} else if match(.message, r"(?i)\b(warn|warning)\b") {
+  .log_level = "warning"
+} else if match(.message, r"(?i)\b(info|information)\b") {
+  .log_level = "info"
+} else if match(.message, r"(?i)\b(debug)\b") {
+  .log_level = "debug"
+} else {
+  .log_level = "unknown"
+}
+'''
+
+# Parse and enrich Docker logs
+[transforms.parse_docker_logs]
+type = "remap"
+inputs = ["docker_logs"]
+source = '''
+.timestamp = .timestamp
+.source_type = "docker"
+.container_id = .container_id
+.container_name = .container_name
+.container_image = .image
+.message = .message
+.stream = .stream
+
+# Parse JSON logs if possible
+if starts_with(.message, "{") {
+  parsed_json, err = parse_json(.message)
+  if err == null {
+    . = merge(., parsed_json)
+  }
+}
+'''
+
+# Parse and enrich journald logs
+[transforms.parse_journald_logs]
+type = "remap"
+inputs = ["journald"]
+source = '''
+.timestamp = .__REALTIME_TIMESTAMP
+.source_type = "journald"
+.unit = ._SYSTEMD_UNIT
+.hostname = ._HOSTNAME
+.message = .MESSAGE
+.priority = .PRIORITY
+.pid = ._PID
+.uid = ._UID
+.gid = ._GID
+'''
+
+# Parse HTTP webhook logs
+[transforms.parse_http_logs]
+type = "remap"
+inputs = ["http_logs"]
+source = '''
+.timestamp = now()
+.source_type = "http_webhook"
+.source_ip = .headers."x-forwarded-for" || .headers."x-real-ip" || "unknown"
+.user_agent = .headers."user-agent"
+.content_type = .headers."content-type"
+
+# Parse JSON payload if present
+if .headers."content-type" == "application/json" {
+  parsed_json, err = parse_json(.body)
+  if err == null {
+    .payload = parsed_json
+  }
+}
+'''
+
+# Unified enrichment and normalization
+[transforms.enrich_events]
+type = "remap"
+inputs = ["parse_syslog", "parse_file_logs", "parse_docker_logs", "parse_journald_logs", "parse_http_logs"]
+source = '''
+# Add common fields
+.event_id = uuid_v4()
+.ingestion_timestamp = now()
+.pipeline_version = "1.0.0"
+.vector_version = get_env_var!("VECTOR_VERSION")
+
+# Ensure required fields exist
+if !exists(.timestamp) {
+  .timestamp = now()
+}
+
+if !exists(.message) {
+  .message = "No message content"
+}
+
+if !exists(.source_type) {
+  .source_type = "unknown"
+}
+
+# Add security event classification
+if match(.message, r"(?i)(attack|intrusion|malware|virus|breach|unauthorized|suspicious)") {
+  .security_event = true
+  .risk_level = "high"
+} else if match(.message, r"(?i)(failed|error|denied|blocked|rejected)") {
+  .security_event = true
+  .risk_level = "medium"
+} else {
+  .security_event = false
+  .risk_level = "low"
+}
+
+# Add data classification
+.data_classification = "internal"
+.retention_days = 90
+
+# Remove sensitive fields
+del(.password)
+del(.secret)
+del(.token)
+del(.key)
+'''
+
+# ==============================================================================
+# SINKS - Output to Kafka
+# ==============================================================================
+
+# Primary Kafka sink for SIEM pipeline
+[sinks.kafka_siem]
+type = "kafka"
+inputs = ["enrich_events"]
+bootstrap_servers = "localhost:9092"
+topic = "siem-events"
+key_field = "event_id"
+compression = "snappy"
+
+# Kafka producer configuration for exactly-once delivery
+[sinks.kafka_siem.librdkafka_options]
+"acks" = "all"
+"enable.idempotence" = "true"
+"retries" = "2147483647"
+"max.in.flight.requests.per.connection" = "5"
+"delivery.timeout.ms" = "300000"
+"request.timeout.ms" = "30000"
+"retry.backoff.ms" = "100"
+"batch.size" = "65536"
+"linger.ms" = "5"
+"buffer.memory" = "134217728"
+"compression.type" = "snappy"
+"max.request.size" = "1048576"
+
+# Encoding configuration
+[sinks.kafka_siem.encoding]
+codec = "json"
+
+# Health check configuration
+[sinks.kafka_siem.healthcheck]
+enabled = true
+
+# Buffer configuration for high throughput
+[sinks.kafka_siem.buffer]
+type = "disk"
+max_size = 268435456  # 256MB
+when_full = "block"
+
+# ==============================================================================
+# OPTIONAL SINKS - Additional outputs
+# ==============================================================================
+
+# Console output for debugging (disabled by default)
+# [sinks.console_debug]
+# type = "console"
+# inputs = ["enrich_events"]
+# encoding.codec = "json"
+# target = "stdout"
+
+# File output for backup (disabled by default)
+# [sinks.file_backup]
+# type = "file"
+# inputs = ["enrich_events"]
+# path = "/var/log/vector/siem-events-%Y-%m-%d.log"
+# encoding.codec = "json"
+
+# ==============================================================================
+# ENRICHMENT TABLES
+# ==============================================================================
+
+# GeoIP enrichment table (optional)
+# [enrichment_tables.geoip]
+# type = "geoip"
+# path = "/usr/share/GeoIP/GeoLite2-City.mmdb"
+
+# ==============================================================================
+# METRICS AND MONITORING
+# ==============================================================================
+
+# Internal metrics
+[sources.internal_metrics]
+type = "internal_metrics"
+namespace = "vector"
+
+# Prometheus metrics sink
+[sinks.prometheus_metrics]
+type = "prometheus_exporter"
+inputs = ["internal_metrics"]
+address = "0.0.0.0:9598"
+default_namespace = "vector"
+
+# ==============================================================================
+# LOGGING CONFIGURATION
+# ==============================================================================
+
+[log_schema]
+host_key = "hostname"
+message_key = "message"
+source_type_key = "source_type"
+timestamp_key = "timestamp"

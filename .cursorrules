@@ -1,0 +1,259 @@
+# UI Architecture Rules for SIEM React Components
+
+You are the UI architect for a Rust backend + React frontend SIEM application.
+
+## Core Principle: Backend-First UI Development
+
+Before you write **any** React component, follow these steps **in order**:
+
+---
+
+## 1. DISCOVER Phase
+
+### a. Route Discovery
+- **ALWAYS** start by examining `siem_api/src/*.rs` files
+- Find the **Axum route handler** for your feature (e.g., `GET /v1/rules`, `POST /v1/alerts`)
+- Read the route function signature and understand:
+  - Request parameters (path, query, body)
+  - Response structure
+  - Authentication requirements
+  - Error handling
+
+### b. Type Extraction
+- Copy the **Rust struct** returned by the route
+- Convert to TypeScript interface with **exact field names**
+- Convert Rust types to TypeScript:
+  - `String` → `string`
+  - `u32/i32` → `number`
+  - `bool` → `boolean`
+  - `Option<T>` → `T | null`
+  - `Vec<T>` → `T[]`
+
+### c. Enum Handling
+- Rust enums → TypeScript union types
+- Example: `Severity::Critical` → `type Severity = "Critical" | "High" | "Medium" | "Low"`
+- **Keep exact case matching** the Rust enum variants
+
+---
+
+## 2. DESIGN Phase
+
+### a. UI Mapping Strategy
+Map each struct field to appropriate UI controls:
+- **Timestamps** → formatted date/time display
+- **Enums** → Badge components with color variants
+- **IDs** → clickable elements that open detail views
+- **Booleans** → Switch components or status badges
+- **Strings** → text display with potential filtering
+- **Arrays** → lists, tables, or chip groups
+
+### b. Data Flow Decision
+Choose the right data fetching pattern:
+- **Static data** → `useSWR` with refresh intervals
+- **Real-time updates** → `useSSE` for Server-Sent Events
+- **Paginated data** → `useInfiniteQuery` for cursor-based pagination
+- **CRUD operations** → dedicated hooks (`useCreateX`, `useUpdateX`, `useDeleteX`)
+
+### c. Component Architecture
+- Use **Shadcn/ui components** exclusively
+- Match component variants to enum values (e.g., `<Badge variant="critical">`)
+- Follow existing patterns from `src/components/ui/`
+
+---
+
+## 3. GENERATE Phase
+
+### a. TypeScript Interfaces First
+```typescript
+/**
+ * Exact copy of Rust struct from backend
+ * Route: GET /api/v1/endpoint
+ */
+export interface BackendResponse {
+  field_name: string;  // Matches Rust exactly
+  enum_field: "Variant1" | "Variant2";
+  optional_field?: number;
+}
+```
+
+### b. React Component Requirements
+Your component MUST include:
+
+#### Essential Features:
+- **Skeleton loaders** with same height as actual content rows
+- **Event handling**: `e.stopPropagation()` on all inline buttons
+- **API integration**: Use existing `useApi()` patterns
+- **Error boundaries**: Handle loading/error states
+- **Accessibility**: ARIA labels, keyboard navigation
+
+#### Component Structure:
+```typescript
+/**
+ * ComponentName - Description of what this component does
+ * 
+ * @example
+ * <ComponentName />
+ */
+export function ComponentName() {
+  // State management
+  // API hooks
+  // Event handlers
+  // Render logic
+}
+```
+
+#### Export Pattern:
+- **Zero breaking props** - component should work without required props
+- Provide sensible defaults for all optional props
+- Use TypeScript strict mode
+
+### c. Interaction Patterns
+```typescript
+// Row click handling
+const handleRowClick = (id: string) => {
+  openDetailDrawer(id);
+};
+
+// Button click with propagation stop
+const handleButtonClick = stopPropagation((id: string) => {
+  performAction(id);
+});
+
+// Table row structure
+<tr onClick={() => handleRowClick(item.id)}>
+  <td>
+    <Button onClick={stopPropagation(() => handleEdit(item.id))}>
+      Edit
+    </Button>
+  </td>
+</tr>
+```
+
+---
+
+## 4. TEST Phase
+
+### a. Unit Test Template
+```typescript
+// __tests__/ComponentName.test.tsx
+import { render, screen } from '@testing-library/react';
+import { ComponentName } from '../ComponentName';
+
+describe('ComponentName', () => {
+  it('renders without crashing', () => {
+    render(<ComponentName />);
+    expect(screen.getByRole('table')).toBeInTheDocument();
+  });
+
+  it('handles loading state', () => {
+    // Test skeleton loader
+  });
+
+  it('handles error state', () => {
+    // Test error display
+  });
+});
+```
+
+### b. E2E Test Template
+```typescript
+// e2e/component-name.spec.ts
+import { test, expect } from '@playwright/test';
+
+test.describe('ComponentName Page', () => {
+  test('loads and displays data', async ({ page }) => {
+    await page.goto('/component-name');
+    await expect(page.getByRole('table')).toBeVisible();
+  });
+
+  test('interactive elements work', async ({ page }) => {
+    await page.goto('/component-name');
+    await page.click('[data-testid="edit-button"]');
+    // Assert modal/drawer opens
+  });
+});
+```
+
+---
+
+## 5. FILE ORGANIZATION
+
+### Required Files for New Components:
+```
+src/
+├── components/
+│   ├── ComponentName.tsx           # Main component
+│   └── __tests__/
+│       └── ComponentName.test.tsx  # Unit tests
+├── hooks/api/
+│   └── useComponentName.ts         # API hooks
+├── types/
+│   └── api.ts                      # Add new interfaces
+├── services/
+│   └── api.ts                      # Add new API functions
+└── __tests__/e2e/
+    └── component-name.spec.ts      # E2E tests
+```
+
+---
+
+## 6. CODING STANDARDS
+
+### Import Order:
+```typescript
+// 1. React and external libraries
+import React, { useState } from 'react';
+import { Plus, Edit, Trash } from 'lucide-react';
+
+// 2. UI components
+import { Button } from '@/components/ui/Button';
+import { Card } from '@/components/ui/Card';
+
+// 3. Hooks and utilities
+import { useApi } from '@/hooks/useApi';
+import { stopPropagation } from '@/lib/dom';
+
+// 4. Types
+import type { ComponentProps } from '@/types/api';
+```
+
+### Naming Conventions:
+- **Components**: PascalCase (`AlertsList`, `RuleDetail`)
+- **Hooks**: camelCase starting with `use` (`useRules`, `useCreateAlert`)
+- **Types**: PascalCase (`AlertDetail`, `RuleFilters`)
+- **Files**: match component name (`AlertsList.tsx`)
+
+### Error Handling Pattern:
+```typescript
+if (isLoading) return <SkeletonLoader />;
+if (error) return <ErrorDisplay error={error} />;
+if (!data?.length) return <EmptyState />;
+```
+
+---
+
+## 7. DOCUMENTATION REQUIREMENTS
+
+Every component must include:
+- **JSDoc comment** explaining purpose
+- **Props documentation** with examples
+- **API endpoint mapping** in comments
+- **Usage examples** in JSDoc
+
+Update `UI_COMPONENT_TRACKING.md` with:
+- New component entry
+- API endpoint mapping
+- Interactive elements list
+- State management details
+
+---
+
+## ENFORCEMENT
+
+- **Never** create a component without following steps 1-4
+- **Always** check existing Rust backend code first
+- **Must** use exact field names from Rust structs
+- **Required** to handle loading, error, and empty states
+- **Mandatory** to use `stopPropagation()` for nested interactive elements
+
+This ensures perfect alignment between backend and frontend, maintainable code, and consistent user experience. 

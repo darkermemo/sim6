@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Schema Validation Report - {{ report.environment }}</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f8f9fa;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 2rem;
+            border-radius: 10px;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .header .meta {
+            opacity: 0.9;
+            font-size: 1.1rem;
+        }
+        
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .summary-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            border-left: 4px solid #667eea;
+        }
+        
+        .summary-card h3 {
+            color: #667eea;
+            margin-bottom: 1rem;
+            font-size: 1.2rem;
+        }
+        
+        .metric {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+        
+        .metric:last-child {
+            margin-bottom: 0;
+        }
+        
+        .metric-value {
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+        
+        .coverage-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        
+        .coverage-item {
+            background: white;
+            padding: 1rem;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        .coverage-percentage {
+            font-size: 2rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+        
+        .coverage-percentage.high { color: #28a745; }
+        .coverage-percentage.medium { color: #ffc107; }
+        .coverage-percentage.low { color: #dc3545; }
+        
+        .errors-section {
+            background: white;
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            margin-bottom: 2rem;
+        }
+        
+        .error-item {
+            border-left: 4px solid #dc3545;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            background: #f8f9fa;
+            border-radius: 0 8px 8px 0;
+        }
+        
+        .error-item:last-child {
+            margin-bottom: 0;
+        }
+        
+        .error-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+        
+        .error-severity {
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        
+        .error-severity.critical {
+            background: #dc3545;
+            color: white;
+        }
+        
+        .error-severity.warning {
+            background: #ffc107;
+            color: #212529;
+        }
+        
+        .error-details {
+            margin-top: 1rem;
+        }
+        
+        .error-details p {
+            margin-bottom: 0.5rem;
+        }
+        
+        .error-details strong {
+            color: #495057;
+        }
+        
+        .no-errors {
+            text-align: center;
+            color: #28a745;
+            font-size: 1.2rem;
+            padding: 2rem;
+        }
+        
+        .footer {
+            text-align: center;
+            margin-top: 2rem;
+            padding: 1rem;
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .summary-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .coverage-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Schema Validation Report</h1>
+            <div class="meta">
+                <strong>Environment:</strong> {{ report.environment }} |
+                <strong>Generated:</strong> {{ generated_at }}
+            </div>
+        </div>
+        
+        <div class="summary-grid">
+            <div class="summary-card">
+                <h3>Database Schema</h3>
+                <div class="metric">
+                    <span>Tables Loaded</span>
+                    <span class="metric-value">{{ report.total_tables_loaded }}</span>
+                </div>
+                <div class="metric">
+                    <span>SQL References</span>
+                    <span class="metric-value">{{ report.total_sql_references }}</span>
+                </div>
+            </div>
+            
+            <div class="summary-card">
+                <h3>API Schemas</h3>
+                <div class="metric">
+                    <span>TypeScript Interfaces</span>
+                    <span class="metric-value">{{ report.total_typescript_interfaces }}</span>
+                </div>
+                <div class="metric">
+                    <span>GraphQL Types</span>
+                    <span class="metric-value">{{ report.total_graphql_types }}</span>
+                </div>
+                <div class="metric">
+                    <span>OpenAPI Operations</span>
+                    <span class="metric-value">{{ report.total_openapi_operations }}</span>
+                </div>
+            </div>
+            
+            <div class="summary-card">
+                <h3>Validation Results</h3>
+                <div class="metric">
+                    <span>Critical Issues</span>
+                    <span class="metric-value" style="color: #dc3545;">{{ report.summary.critical_issues }}</span>
+                </div>
+                <div class="metric">
+                    <span>Warnings</span>
+                    <span class="metric-value" style="color: #ffc107;">{{ report.summary.warnings }}</span>
+                </div>
+                <div class="metric">
+                    <span>Cross-Layer Mismatches</span>
+                    <span class="metric-value">{{ report.summary.cross_layer_mismatches }}</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="errors-section">
+            <h2 style="margin-bottom: 1.5rem; color: #495057;">Layer Coverage</h2>
+            <div class="coverage-grid">
+                {% for layer, coverage in report.summary.layer_coverage %}
+                <div class="coverage-item">
+                    <div class="coverage-percentage {% if coverage >= 80 %}high{% elif coverage >= 50 %}medium{% else %}low{% endif %}">
+                        {{ coverage | round(1) }}%
+                    </div>
+                    <div>{{ layer }}</div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        
+        <div class="errors-section">
+            <h2 style="margin-bottom: 1.5rem; color: #495057;">Validation Errors</h2>
+            {% if report.errors.is_empty() %}
+                <div class="no-errors">
+                    ✅ No validation errors found!
+                </div>
+            {% else %}
+                {% for error in report.errors %}
+                <div class="error-item">
+                    <div class="error-header">
+                        <h4>{{ error.error_type }}</h4>
+                        <span class="error-severity {{ error.severity | lower }}">{{ error.severity }}</span>
+                    </div>
+                    <p><strong>Message:</strong> {{ error.message }}</p>
+                    <div class="error-details">
+                        <p><strong>File:</strong> {{ error.file_path }} (Line {{ error.line_number }})</p>
+                        <p><strong>Layer:</strong> {{ error.layer }}</p>
+                        {% if error.suggestion %}
+                        <p><strong>Suggestion:</strong> {{ error.suggestion }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            {% endif %}
+        </div>
+        
+        <div class="footer">
+            Generated by Schema Validator v5 • {{ generated_at }}
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,240 @@
+{
+  "test_execution": {
+    "timestamp": "2025-07-27T02:59:13.771207",
+    "total_events_processed": 0,
+    "datasets_used": "OTRF Security Datasets",
+    "schema_validators": [
+      "v4",
+      "v5"
+    ]
+  },
+  "results": {
+    "ingestion": [
+      {
+        "timestamp": "2025-07-27T02:58:46.523093",
+        "test_name": "SIEM API Health Check",
+        "status": "PASS",
+        "details": "Service is responding (status: 200)"
+      },
+      {
+        "timestamp": "2025-07-27T02:58:46.524250",
+        "test_name": "Ingestor Health Check",
+        "status": "PASS",
+        "details": "Service is responding (status: 405)"
+      },
+      {
+        "timestamp": "2025-07-27T02:58:46.525371",
+        "test_name": "ClickHouse Health Check",
+        "status": "PASS",
+        "details": "Service is responding (status: 200)"
+      }
+    ],
+    "consumers": [
+      {
+        "timestamp": "2025-07-27T02:58:57.127856",
+        "test_name": "Event Processing",
+        "status": "PASS",
+        "details": "Found 100 events in database"
+      }
+    ],
+    "tenants": [
+      {
+        "timestamp": "2025-07-27T02:58:46.527601",
+        "test_name": "Tenant tenant-A Data Preparation",
+        "status": "FAIL",
+        "details": "No events extracted"
+      },
+      {
+        "timestamp": "2025-07-27T02:58:46.528037",
+        "test_name": "Tenant tenant-B Data Preparation",
+        "status": "FAIL",
+        "details": "No events extracted"
+      },
+      {
+        "timestamp": "2025-07-27T02:58:46.530575",
+        "test_name": "Tenant tenant-C Ingestion",
+        "status": "FAIL",
+        "details": "Ingestion failed"
+      }
+    ],
+    "rules": [
+      {
+        "timestamp": "2025-07-27T02:58:57.128750",
+        "test_name": "Rule Creation - OTRF Mimikatz Detection",
+        "status": "FAIL",
+        "details": "Status: 400"
+      },
+      {
+        "timestamp": "2025-07-27T02:58:57.129359",
+        "test_name": "Rule Creation - OTRF PowerShell Execution",
+        "status": "FAIL",
+        "details": "Status: 400"
+      }
+    ],
+    "parsing": [
+      {
+        "timestamp": "2025-07-27T02:58:46.527585",
+        "test_name": "Dataset Transformation - sh_binary_padding_dd",
+        "status": "PASS",
+        "details": "Extracted 0 events"
+      },
+      {
+        "timestamp": "2025-07-27T02:58:46.528016",
+        "test_name": "Dataset Transformation - sh_arp_cache",
+        "status": "PASS",
+        "details": "Extracted 0 events"
+      },
+      {
+        "timestamp": "2025-07-27T02:58:46.529403",
+        "test_name": "Dataset Transformation - cmd_discover_iexplorer_version_registry",
+        "status": "PASS",
+        "details": "Extracted 68 events"
+      },
+      {
+        "timestamp": "2025-07-27T02:58:57.127885",
+        "test_name": "Event Parsing",
+        "status": "PASS",
+        "details": "100 events parsed"
+      }
+    ],
+    "storing": [
+      {
+        "timestamp": "2025-07-27T02:58:57.127872",
+        "test_name": "Data Storage",
+        "status": "PASS",
+        "details": "Events successfully stored"
+      },
+      {
+        "timestamp": "2025-07-27T02:59:13.354969",
+        "test_name": "Schema Validation - schema_validator_v4",
+        "status": "FAIL",
+        "details": "warning: unused imports: `Expr`, `Query`, `SelectItem`, `SetExpr`, and `TableFactor`\n --> src/schema_validator_v4.rs:4:33\n  |\n4 | use sqlparser::ast::{Statement, TableFactor, Expr, SelectItem, SetExpr"
+      },
+      {
+        "timestamp": "2025-07-27T02:59:13.771145",
+        "test_name": "Schema Validation - schema_validator_v5",
+        "status": "FAIL",
+        "details": "warning: methods `set_environment_str` and `scan_all_sources` are never used\n   --> src/schema_validator_v5.rs:484:12\n    |\n417 | impl SchemaValidator {\n    | -------------------- methods in this impl"
+      }
+    ],
+    "detections": [
+      {
+        "timestamp": "2025-07-27T02:59:12.140925",
+        "test_name": "Detection Engine",
+        "status": "PASS",
+        "details": "Rules triggered alerts"
+      }
+    ],
+    "alerting": [
+      {
+        "timestamp": "2025-07-27T02:59:12.140906",
+        "test_name": "Alert Generation",
+        "status": "PASS",
+        "details": "Generated 2 alerts"
+      },
+      {
+        "timestamp": "2025-07-27T02:59:12.161088",
+        "test_name": "Alert Detail - alert-current-001",
+        "status": "PASS",
+        "details": "Alert details retrieved"
+      },
+      {
+        "timestamp": "2025-07-27T02:59:12.177266",
+        "test_name": "Alert Detail - alert-001",
+        "status": "PASS",
+        "details": "Alert details retrieved"
+      }
+    ],
+    "ui_display": [
+      {
+        "timestamp": "2025-07-27T02:59:12.255299",
+        "test_name": "UI Endpoint - Event List",
+        "status": "PASS",
+        "details": "Data retrieved successfully"
+      },
+      {
+        "timestamp": "2025-07-27T02:59:12.280462",
+        "test_name": "UI Endpoint - Dashboard Data",
+        "status": "PASS",
+        "details": "Data retrieved successfully"
+      },
+      {
+        "timestamp": "2025-07-27T02:59:12.362256",
+        "test_name": "UI Endpoint - Field Values",
+        "status": "PASS",
+        "details": "Data retrieved successfully"
+      },
+      {
+        "timestamp": "2025-07-27T02:59:12.364536",
+        "test_name": "UI Endpoint - Rules List",
+        "status": "PASS",
+        "details": "Data retrieved successfully"
+      }
+    ]
+  },
+  "summary": {
+    "ingestion": {
+      "total": 3,
+      "passed": 3,
+      "failed": 0,
+      "partial": 0,
+      "success_rate": 100.0
+    },
+    "consumers": {
+      "total": 1,
+      "passed": 1,
+      "failed": 0,
+      "partial": 0,
+      "success_rate": 100.0
+    },
+    "tenants": {
+      "total": 3,
+      "passed": 0,
+      "failed": 3,
+      "partial": 0,
+      "success_rate": 0.0
+    },
+    "rules": {
+      "total": 2,
+      "passed": 0,
+      "failed": 2,
+      "partial": 0,
+      "success_rate": 0.0
+    },
+    "parsing": {
+      "total": 4,
+      "passed": 4,
+      "failed": 0,
+      "partial": 0,
+      "success_rate": 100.0
+    },
+    "storing": {
+      "total": 3,
+      "passed": 1,
+      "failed": 2,
+      "partial": 0,
+      "success_rate": 33.33333333333333
+    },
+    "detections": {
+      "total": 1,
+      "passed": 1,
+      "failed": 0,
+      "partial": 0,
+      "success_rate": 100.0
+    },
+    "alerting": {
+      "total": 3,
+      "passed": 3,
+      "failed": 0,
+      "partial": 0,
+      "success_rate": 100.0
+    },
+    "ui_display": {
+      "total": 4,
+      "passed": 4,
+      "failed": 0,
+      "partial": 0,
+      "success_rate": 100.0
+    }
+  }
+}

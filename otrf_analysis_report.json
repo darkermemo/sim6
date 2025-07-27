@@ -1,0 +1,380 @@
+{
+  "summary": {
+    "total_datasets": 0,
+    "platforms": {},
+    "attack_techniques": {
+      "T1003": [
+        "SDWIN-201019002900",
+        "SDWIN-190625133822",
+        "SDWIN-191027055035",
+        "SDWIN-190625103712",
+        "SDWIN-201018225619",
+        "SDWIN-230718150800",
+        "SDWIN-190301174830",
+        "SDWIN-190518235535",
+        "SDWIN-201019033054",
+        "SDWIN-190518202151",
+        "SDWIN-190319145126",
+        "SDWIN-201018195009",
+        "SDWIN-230720004300",
+        "SDWIN-200922042230",
+        "SDWIN-230718151900",
+        "SDWIN-200807103913",
+        "SDWIN-200805020926",
+        "SDWIN-200921230246",
+        "SDWIN-190518230752"
+      ],
+      "T1069": [
+        "SDWIN-200806130039",
+        "SDWIN-190518201207",
+        "SDWIN-190319020147",
+        "SDWIN-190518224039"
+      ],
+      "T1021": [
+        "SDWIN-190518210125",
+        "SDWIN-200806115603",
+        "SDWIN-200918145959",
+        "SDWIN-201022042947",
+        "SDWIN-200806030120",
+        "SDWIN-200806015757",
+        "SDWIN-190518211456",
+        "SDWIN-200806022635",
+        "SDWIN-201009183000",
+        "SDWIN-200806031938",
+        "SDWIN-190518211052",
+        "SDWIN-190518210652",
+        "SDWIN-200806012009",
+        "SDWIN-200917174542",
+        "SDWIN-200805034820"
+      ],
+      "T1027": [
+        "SDLIN-201110081941"
+      ],
+      "T1018": [
+        "SDLIN-201110074812"
+      ],
+      "T1059": [
+        "SDWIN-201029202324",
+        "SDWIN-201029001615",
+        "SDWIN-201102041306",
+        "SDWIN-190518182022"
+      ],
+      "T1047": [
+        "SDWIN-201009173318",
+        "SDWIN-200806035621",
+        "SDWIN-200724174200",
+        "SDWIN-190518213907",
+        "SDWIN-200914080546",
+        "SDWIN-200921001437"
+      ],
+      "T1548": [
+        "SDWIN-200904032946"
+      ],
+      "T1562": [
+        "SDWIN-220708104300",
+        "SDWIN-220803205800",
+        "SDWIN-220708104215",
+        "SDWIN-201021001911",
+        "SDWIN-220630130349",
+        "SDWIN-220703123711",
+        "SDWIN-220705170038"
+      ],
+      "T1218": [
+        "SDWIN-201022015432",
+        "SDWIN-201022002145",
+        "SDWIN-201023020513",
+        "SDWIN-201012183248",
+        "SDWIN-201022025808",
+        "SDWIN-201022035214",
+        "SDWIN-200721232741",
+        "SDWIN-201022013121",
+        "SDWIN-201022022144",
+        "SDWIN-191027223020"
+      ],
+      "T1053": [
+        "SDWIN-201219075059",
+        "SDWIN-201219070027",
+        "SDWIN-190319024742",
+        "SDWIN-200921175806"
+      ],
+      "T1110": [
+        "SDWIN-201022042947"
+      ],
+      "T1558": [
+        "SDWIN-201022042947"
+      ],
+      "T1135": [
+        "SDWIN-201022042947"
+      ],
+      "T1518": [
+        "SDWIN-201021232814"
+      ],
+      "T1547": [
+        "SDWIN-190319023812",
+        "SDWIN-200722001847"
+      ],
+      "T1112": [
+        "SDWIN-190518201922",
+        "SDWIN-190518203650",
+        "SDWIN-191225045202"
+      ],
+      "T1049": [
+        "SDWIN-190519005224"
+      ],
+      "T1134": [
+        "SDWIN-210611210814",
+        "SDWIN-210611210814"
+      ],
+      "T1055": [
+        "SDWIN-201023031210",
+        "SDWIN-190518221344",
+        "SDWIN-201028191914",
+        "SDWIN-190518200432",
+        "SDWIN-201019232515",
+        "SDWIN-201026235835"
+      ],
+      "T1580": [
+        "SDAWS-2202181000"
+      ],
+      "T1197": [
+        "SDWIN-201023023651"
+      ],
+      "T1546": [
+        "SDWIN-190518184306"
+      ],
+      "T1037": [
+        "SDWIN-201019224718"
+      ],
+      "T1056": [
+        "SDWIN-201020013208"
+      ],
+      "T1012": [
+        "SDWIN-201102163918"
+      ],
+      "T1550": [
+        "SDWIN-190319131123"
+      ],
+      "T1220": [
+        "SDWIN-201017061100"
+      ],
+      "T1505": [
+        "SDWIN-210314014019"
+      ],
+      "T1078": [
+        "SDAWS-200914011940"
+      ],
+      "T1530": [
+        "SDAWS-200914011940"
+      ],
+      "T1574": [
+        "SDWIN-190403133337"
+      ],
+      "T1087": [
+        "SDWIN-190319021158",
+        "SDWIN-190319020729"
+      ],
+      "T1543": [
+        "SDWIN-201021204544"
+      ],
+      "T0000": [
+        "SDWIN-210427020247"
+      ],
+      "T1123": [
+        "SDWIN-200609225055"
+      ],
+      "T1210": [
+        "SDWIN-200916232559"
+      ],
+      "T1222": [
+        "SDWIN-190301125905"
+      ]
+    },
+    "top_techniques": [
+      {
+        "technique": "T1003",
+        "dataset_count": 19,
+        "datasets": [
+          "SDWIN-201019002900",
+          "SDWIN-190625133822",
+          "SDWIN-191027055035",
+          "SDWIN-190625103712",
+          "SDWIN-201018225619",
+          "SDWIN-230718150800",
+          "SDWIN-190301174830",
+          "SDWIN-190518235535",
+          "SDWIN-201019033054",
+          "SDWIN-190518202151",
+          "SDWIN-190319145126",
+          "SDWIN-201018195009",
+          "SDWIN-230720004300",
+          "SDWIN-200922042230",
+          "SDWIN-230718151900",
+          "SDWIN-200807103913",
+          "SDWIN-200805020926",
+          "SDWIN-200921230246",
+          "SDWIN-190518230752"
+        ]
+      },
+      {
+        "technique": "T1021",
+        "dataset_count": 15,
+        "datasets": [
+          "SDWIN-190518210125",
+          "SDWIN-200806115603",
+          "SDWIN-200918145959",
+          "SDWIN-201022042947",
+          "SDWIN-200806030120",
+          "SDWIN-200806015757",
+          "SDWIN-190518211456",
+          "SDWIN-200806022635",
+          "SDWIN-201009183000",
+          "SDWIN-200806031938",
+          "SDWIN-190518211052",
+          "SDWIN-190518210652",
+          "SDWIN-200806012009",
+          "SDWIN-200917174542",
+          "SDWIN-200805034820"
+        ]
+      },
+      {
+        "technique": "T1218",
+        "dataset_count": 10,
+        "datasets": [
+          "SDWIN-201022015432",
+          "SDWIN-201022002145",
+          "SDWIN-201023020513",
+          "SDWIN-201012183248",
+          "SDWIN-201022025808",
+          "SDWIN-201022035214",
+          "SDWIN-200721232741",
+          "SDWIN-201022013121",
+          "SDWIN-201022022144",
+          "SDWIN-191027223020"
+        ]
+      },
+      {
+        "technique": "T1562",
+        "dataset_count": 7,
+        "datasets": [
+          "SDWIN-220708104300",
+          "SDWIN-220803205800",
+          "SDWIN-220708104215",
+          "SDWIN-201021001911",
+          "SDWIN-220630130349",
+          "SDWIN-220703123711",
+          "SDWIN-220705170038"
+        ]
+      },
+      {
+        "technique": "T1047",
+        "dataset_count": 6,
+        "datasets": [
+          "SDWIN-201009173318",
+          "SDWIN-200806035621",
+          "SDWIN-200724174200",
+          "SDWIN-190518213907",
+          "SDWIN-200914080546",
+          "SDWIN-200921001437"
+        ]
+      },
+      {
+        "technique": "T1055",
+        "dataset_count": 6,
+        "datasets": [
+          "SDWIN-201023031210",
+          "SDWIN-190518221344",
+          "SDWIN-201028191914",
+          "SDWIN-190518200432",
+          "SDWIN-201019232515",
+          "SDWIN-201026235835"
+        ]
+      },
+      {
+        "technique": "T1069",
+        "dataset_count": 4,
+        "datasets": [
+          "SDWIN-200806130039",
+          "SDWIN-190518201207",
+          "SDWIN-190319020147",
+          "SDWIN-190518224039"
+        ]
+      },
+      {
+        "technique": "T1059",
+        "dataset_count": 4,
+        "datasets": [
+          "SDWIN-201029202324",
+          "SDWIN-201029001615",
+          "SDWIN-201102041306",
+          "SDWIN-190518182022"
+        ]
+      },
+      {
+        "technique": "T1053",
+        "dataset_count": 4,
+        "datasets": [
+          "SDWIN-201219075059",
+          "SDWIN-201219070027",
+          "SDWIN-190319024742",
+          "SDWIN-200921175806"
+        ]
+      },
+      {
+        "technique": "T1112",
+        "dataset_count": 3,
+        "datasets": [
+          "SDWIN-190518201922",
+          "SDWIN-190518203650",
+          "SDWIN-191225045202"
+        ]
+      }
+    ]
+  },
+  "datasets": [],
+  "test_scenarios": [
+    {
+      "name": "Credential Access Detection",
+      "description": "Test detection of credential dumping and access techniques",
+      "techniques": [
+        "T1003",
+        "T1110",
+        "T1558"
+      ],
+      "expected_alerts": [
+        "Mimikatz Activity",
+        "LSASS Access",
+        "Credential Dumping"
+      ],
+      "test_type": "detection"
+    },
+    {
+      "name": "Lateral Movement Detection",
+      "description": "Test detection of lateral movement techniques",
+      "techniques": [
+        "T1021",
+        "T1047"
+      ],
+      "expected_alerts": [
+        "Remote Execution",
+        "WMI Activity",
+        "Network Logon"
+      ],
+      "test_type": "detection"
+    },
+    {
+      "name": "Persistence Mechanism Detection",
+      "description": "Test detection of persistence techniques",
+      "techniques": [
+        "T1053",
+        "T1547",
+        "T1543"
+      ],
+      "expected_alerts": [
+        "Scheduled Task",
+        "Registry Modification",
+        "Service Creation"
+      ],
+      "test_type": "detection"
+    }
+  ]
+}

@@ -1,0 +1,30 @@
+ingestor_url: "http://localhost:8081/ingest/raw"
+
+# File monitoring configuration
+files_to_monitor:
+  - path: "C:\\inetpub\\logs\\LogFiles\\W3SVC1\\u_ex250721.log"
+    type: "iis"
+  - path: "C:\\Windows\\System32\\LogFiles\\Firewall\\firewall.log"
+    type: "windows_firewall"
+  - path: "C:\\Program Files\\MyApp\\logs\\application.log"
+    type: "custom_app"
+
+# Windows Event Log monitoring configuration
+windows_event_channels:
+  - channel: "Security"
+    type: "windows_security"
+  - channel: "Application"  
+    type: "windows_application"
+  - channel: "System"
+    type: "windows_system"
+  - channel: "Microsoft-Windows-Sysmon/Operational"
+    type: "sysmon"
+  - channel: "Microsoft-Windows-PowerShell/Operational"
+    type: "powershell"
+  - channel: "Microsoft-Windows-WinRM/Operational"
+    type: "winrm"
+
+# Agent configuration
+batch_size: 50
+forward_interval_seconds: 10
+buffer_dir: "C:\\ProgramData\\SiemAgent\\buffer" 

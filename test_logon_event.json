@@ -1,0 +1,12 @@
+{
+  "timestamp": "2025-01-25T12:01:00Z",
+  "event_id": "4625",
+  "username": "admin",
+  "logon_type": "3",
+  "source_ip": "192.168.1.101",
+  "tenant_id": "tenant-A",
+  "raw_event": "Logon failed for admin user from 192.168.1.101 - event_id 4625",
+  "event_timestamp": 1737806460,
+  "host": "dc-server-1",
+  "severity": "medium"
+}

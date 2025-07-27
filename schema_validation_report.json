@@ -1,0 +1,44 @@
+{
+  "timestamp": "2025-07-27T07:31:22.374908Z",
+  "environment": "development",
+  "total_files_scanned": {
+    "OpenAPI": 0,
+    "Frontend": 0,
+    "Backend": 0,
+    "Database": 1,
+    "GraphQL": 0
+  },
+  "total_sql_references": 0,
+  "total_tables_loaded": 24,
+  "total_typescript_interfaces": 0,
+  "total_graphql_types": 0,
+  "total_openapi_operations": 0,
+  "errors": [],
+  "warnings": [],
+  "cross_layer_validation": {
+    "database_backend_mismatches": [],
+    "backend_frontend_mismatches": [],
+    "database_frontend_mismatches": [],
+    "graphql_mismatches": [],
+    "openapi_mismatches": [],
+    "backend_graphql_mismatches": [],
+    "frontend_graphql_mismatches": [],
+    "backend_openapi_mismatches": []
+  },
+  "summary": {
+    "critical_issues": 0,
+    "warnings": 0,
+    "missing_tables": 0,
+    "missing_columns": 0,
+    "hardcoded_database_names": 0,
+    "unknown_references": 0,
+    "cross_layer_mismatches": 0,
+    "layer_coverage": {
+      "Backend": 0.0,
+      "OpenAPI": 0.0,
+      "Database": 100.0,
+      "Frontend": 0.0,
+      "GraphQL": 0.0
+    }
+  }
+}

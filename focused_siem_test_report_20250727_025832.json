@@ -1,0 +1,117 @@
+{
+  "test_execution": {
+    "timestamp": "2025-07-27T02:58:32.287565",
+    "test_type": "Focused SIEM Testing",
+    "events_processed": 3
+  },
+  "category_summary": {
+    "extraction": {
+      "total": 2,
+      "passed": 2,
+      "failed": 0,
+      "success_rate": 100.0
+    },
+    "analysis": {
+      "total": 2,
+      "passed": 2,
+      "failed": 0,
+      "success_rate": 100.0
+    },
+    "ingestion": {
+      "total": 3,
+      "passed": 3,
+      "failed": 0,
+      "success_rate": 100.0
+    },
+    "rules": {
+      "total": 1,
+      "passed": 1,
+      "failed": 0,
+      "success_rate": 100.0
+    },
+    "retrieval": {
+      "total": 1,
+      "passed": 1,
+      "failed": 0,
+      "success_rate": 100.0
+    },
+    "alerts": {
+      "total": 1,
+      "passed": 1,
+      "failed": 0,
+      "success_rate": 100.0
+    }
+  },
+  "detailed_results": [
+    {
+      "timestamp": "2025-07-27T02:58:15.621063",
+      "category": "extraction",
+      "test_name": "JSON File Discovery",
+      "status": "PASS",
+      "details": "Found: empire_mimikatz_logonpasswords_2020-08-07103224.json"
+    },
+    {
+      "timestamp": "2025-07-27T02:58:15.634166",
+      "category": "extraction",
+      "test_name": "Event Parsing",
+      "status": "PASS",
+      "details": "Parsed 1000 events from dataset"
+    },
+    {
+      "timestamp": "2025-07-27T02:58:15.634229",
+      "category": "analysis",
+      "test_name": "Event Structure Analysis",
+      "status": "PASS",
+      "details": "Identified 54 common fields"
+    },
+    {
+      "timestamp": "2025-07-27T02:58:15.646844",
+      "category": "ingestion",
+      "test_name": "Manual Event 1",
+      "status": "PASS",
+      "details": "Event ingested successfully"
+    },
+    {
+      "timestamp": "2025-07-27T02:58:16.156575",
+      "category": "ingestion",
+      "test_name": "Manual Event 2",
+      "status": "PASS",
+      "details": "Event ingested successfully"
+    },
+    {
+      "timestamp": "2025-07-27T02:58:16.669575",
+      "category": "ingestion",
+      "test_name": "Manual Event 3",
+      "status": "PASS",
+      "details": "Event ingested successfully"
+    },
+    {
+      "timestamp": "2025-07-27T02:58:17.180585",
+      "category": "rules",
+      "test_name": "Simple Rule Creation",
+      "status": "PASS",
+      "details": "Simple rule created successfully"
+    },
+    {
+      "timestamp": "2025-07-27T02:58:22.276585",
+      "category": "retrieval",
+      "test_name": "Event Retrieval",
+      "status": "PASS",
+      "details": "Retrieved 100 events"
+    },
+    {
+      "timestamp": "2025-07-27T02:58:22.276671",
+      "category": "analysis",
+      "test_name": "Retrieved Event Analysis",
+      "status": "PASS",
+      "details": "Analyzed 5 retrieved events"
+    },
+    {
+      "timestamp": "2025-07-27T02:58:32.287523",
+      "category": "alerts",
+      "test_name": "Alert Generation",
+      "status": "PASS",
+      "details": "Found 2 alerts"
+    }
+  ]
+}

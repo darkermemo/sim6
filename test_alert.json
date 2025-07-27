@@ -1,0 +1,10 @@
+{
+  "alert_id": "alert-test-001",
+  "tenant_id": "t-001",
+  "rule_id": "1f877c16-b933-4f1f-9ef6-082423b25f20",
+  "rule_name": "Suspicious Admin Logon",
+  "event_id": "e-12345",
+  "alert_timestamp": 1753552500,
+  "severity": "High",
+  "status": "Open"
+}

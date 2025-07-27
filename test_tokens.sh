@@ -1,0 +1,17 @@
+#!/bin/bash
+
+# Generated JWT tokens for comprehensive testing
+
+# SuperAdmin token for global operations
+SUPERADMIN_TOKEN="eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJzdXBlcmFkbWluIiwidGlkIjoiZ2xvYmFsIiwicm9sZXMiOlsiU3VwZXJBZG1pbiJdLCJleHAiOjE3NTMwMjc3ODF9.z504z5jjDghCKoCJtMjiA64namuwX1veTLzpRx9K8pM"
+
+# Admin token for tenant-A
+ADMIN_TOKEN="eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhbGljZSIsInRpZCI6InRlbmFudC1BIiwicm9sZXMiOlsiQWRtaW4iXSwiZXhwIjoxNzUzMDI3Nzg5fQ.Of3-vgGbYpypKeDtHm1u0q95O8_1lUaGYnoJvb95Skk"
+
+# Analyst token for tenant-B  
+ANALYST_TOKEN="eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJib2IiLCJ0aWQiOiJ0ZW5hbnQtQiIsInJvbGVzIjpbIkFuYWx5c3QiXSwiZXhwIjoxNzUzMDI3Nzk2fQ.49h_gs90GqSSXCabyn2K2cCdiO-qIfclmo2sCP0kAxg"
+
+# API configuration
+API_URL="http://localhost:8080"
+
+export SUPERADMIN_TOKEN ADMIN_TOKEN ANALYST_TOKEN API_URL 
