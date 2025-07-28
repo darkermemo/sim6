@@ -62,12 +62,12 @@ impl HttpClient {
             return Ok(0);
         }
         
-        // Serialize logs to JSON Lines format
-        let mut payload = String::new();
-        for log in logs {
-            payload.push_str(&serde_json::to_string(log)?);
-            payload.push('\n');
-        }
+        // Serialize logs to JSON format expected by ingestion service
+        let request_payload = serde_json::json!({
+            "logs": logs,
+            "metadata": {}
+        });
+        let payload = serde_json::to_string(&request_payload)?;
         
         // Compress payload if enabled
         let (compressed_data, content_encoding) = self.compress_payload(payload.as_bytes())?;
@@ -123,7 +123,7 @@ impl HttpClient {
     async fn send_request(&self, data: &[u8], content_encoding: &Option<String>) -> Result<Response> {
         let mut request = self.client
             .post(&self.endpoint)
-            .header("Content-Type", "application/x-ndjson")
+            .header("Content-Type", "application/json")
             .body(data.to_vec());
         
         if let Some(encoding) = content_encoding {

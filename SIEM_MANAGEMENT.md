@@ -1,5 +1,7 @@
 # SIEM System Management Guide
 
+> 📖 **Deployment Mode**: This system runs in Docker-free mode. See [DEPLOYMENT_MODE.md](./DEPLOYMENT_MODE.md) for architecture details.
+
 ## Quick Start
 
 ### Start the entire SIEM system:

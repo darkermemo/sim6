@@ -321,7 +321,11 @@
           echo "Memory: $(free -h | grep Mem)"
           echo "Disk: $(df -h / | tail -1)"
           echo "Load: $(cat /proc/loadavg)"
-          echo "Docker: $(docker version --format '{{.Server.Version}}' 2>/dev/null || echo 'Not running')"
+          if command -v docker &>/dev/null && docker info &>/dev/null 2>&1; then
+          echo "Docker: $(docker version --format '{{.Server.Version}}' 2>/dev/null)"
+        else
+          echo "Docker: Not available (but not required for native deployments)"
+        fi
         dest: /usr/local/bin/health_check.sh
         mode: '0755'
     
@@ -336,4 +340,4 @@
     - name: restart redis
       systemd:
         name: redis-server
-        state: restarted 
+        state: restarted

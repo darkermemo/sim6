@@ -371,8 +371,9 @@ const TaxonomyManagement: React.FC<TaxonomyManagementProps> = ({ userRole }) => 
           </SheetHeader>
           <div className="space-y-4 mt-6">
             <div>
-              <label className="block text-sm font-medium mb-2">Source Type</label>
+              <label htmlFor="taxonomy-source-type" className="block text-sm font-medium mb-2">Source Type</label>
               <input
+                id="taxonomy-source-type"
                 type="text"
                 value={formData.source_type}
                 onChange={(e) => setFormData({ ...formData, source_type: e.target.value })}
@@ -381,8 +382,9 @@ const TaxonomyManagement: React.FC<TaxonomyManagementProps> = ({ userRole }) => 
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-2">Field to Check</label>
+              <label htmlFor="taxonomy-field-check" className="block text-sm font-medium mb-2">Field to Check</label>
               <input
+                id="taxonomy-field-check"
                 type="text"
                 value={formData.field_to_check}
                 onChange={(e) => setFormData({ ...formData, field_to_check: e.target.value })}
@@ -391,8 +393,9 @@ const TaxonomyManagement: React.FC<TaxonomyManagementProps> = ({ userRole }) => 
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-2">Value to Match</label>
+              <label htmlFor="taxonomy-value-match" className="block text-sm font-medium mb-2">Value to Match</label>
               <input
+                id="taxonomy-value-match"
                 type="text"
                 value={formData.value_to_match}
                 onChange={(e) => setFormData({ ...formData, value_to_match: e.target.value })}
@@ -401,8 +404,9 @@ const TaxonomyManagement: React.FC<TaxonomyManagementProps> = ({ userRole }) => 
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-2">Event Category</label>
+              <label htmlFor="taxonomy-event-category" className="block text-sm font-medium mb-2">Event Category</label>
               <select
+                id="taxonomy-event-category"
                 value={formData.event_category}
                 onChange={(e) => setFormData({ ...formData, event_category: e.target.value as 'Authentication' | 'Network' | 'Process' | 'File' | 'System' | 'Application' | 'Database' })}
                 className="w-full px-3 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -417,8 +421,9 @@ const TaxonomyManagement: React.FC<TaxonomyManagementProps> = ({ userRole }) => 
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium mb-2">Event Outcome</label>
+              <label htmlFor="taxonomy-event-outcome" className="block text-sm font-medium mb-2">Event Outcome</label>
               <select
+                id="taxonomy-event-outcome"
                 value={formData.event_outcome}
                 onChange={(e) => setFormData({ ...formData, event_outcome: e.target.value as 'Success' | 'Failure' | 'Unknown' })}
                 className="w-full px-3 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -429,8 +434,9 @@ const TaxonomyManagement: React.FC<TaxonomyManagementProps> = ({ userRole }) => 
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium mb-2">Event Action</label>
+              <label htmlFor="taxonomy-event-action" className="block text-sm font-medium mb-2">Event Action</label>
               <input
+                id="taxonomy-event-action"
                 type="text"
                 value={formData.event_action}
                 onChange={(e) => setFormData({ ...formData, event_action: e.target.value })}

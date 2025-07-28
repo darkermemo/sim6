@@ -5,11 +5,18 @@ import path from 'path';
 
 export default defineConfig({
   plugins: [react()],
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, './src')
+    }
+  },
+  // @ts-ignore - Vitest configuration
   test: {
     environment: 'jsdom',
     globals: true,
-    setupFiles: ['./src/test/setup.ts'],
+    setupFiles: ['./src/setupTests.ts'],
     css: true,
+    exclude: ['**/node_modules/**', '**/e2e/**', '**/dist/**'],
     coverage: {
       reporter: ['text', 'json', 'html'],
       exclude: [
@@ -18,12 +25,8 @@ export default defineConfig({
         '**/*.d.ts',
         '**/*.config.*',
         '**/dist/**',
-      ],
-    },
-  },
-  resolve: {
-    alias: {
-      '@': path.resolve(__dirname, './src'),
-    },
-  },
-}); 
+        '**/e2e/**'
+      ]
+    }
+  }
+});

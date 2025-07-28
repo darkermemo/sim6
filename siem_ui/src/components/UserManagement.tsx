@@ -181,8 +181,10 @@ export function UserManagement() {
         <div className="flex items-center gap-4 flex-wrap">
           {/* Search */}
           <div className="relative flex-1 min-w-64">
+            <label htmlFor="user-search" className="sr-only">Search users</label>
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <input
+              id="user-search"
               type="text"
               placeholder="Search by email or user ID..."
               value={searchQuery}
@@ -192,9 +194,11 @@ export function UserManagement() {
           </div>
 
           {/* Role Filter */}
+          <span className="text-sm font-medium text-gray-700">Role Filter:</span>
           <Select 
             value={roleFilter} 
             onValueChange={setRoleFilter}
+            aria-label="Filter by role"
           >
             <option value="all">All Roles</option>
             {roles.map((role) => (

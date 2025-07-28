@@ -117,10 +117,11 @@ export const TimeRangePicker: React.FC<TimeRangePickerProps> = ({
           ) : (
             <div className="p-4 space-y-3">
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">
+                <label htmlFor="start-time" className="block text-xs font-medium text-gray-700 mb-1">
                   Start time
                 </label>
                 <input
+                  id="start-time"
                   type="datetime-local"
                   value={customStart}
                   onChange={(e) => setCustomStart(e.target.value)}
@@ -129,10 +130,11 @@ export const TimeRangePicker: React.FC<TimeRangePickerProps> = ({
               </div>
               
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">
+                <label htmlFor="end-time" className="block text-xs font-medium text-gray-700 mb-1">
                   End time
                 </label>
                 <input
+                  id="end-time"
                   type="datetime-local"
                   value={customEnd}
                   onChange={(e) => setCustomEnd(e.target.value)}

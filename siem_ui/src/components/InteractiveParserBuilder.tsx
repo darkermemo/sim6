@@ -178,7 +178,7 @@ export function InteractiveParserBuilder() {
   const generateHighlightedLog = useCallback(() => {
     if (!sampleLog) return <span className="text-muted-foreground">Paste your sample log above...</span>;
 
-    let result: JSX.Element[] = [];
+    const result: JSX.Element[] = [];
     let lastIndex = 0;
 
     // Sort fields by start index
@@ -424,7 +424,7 @@ export function InteractiveParserBuilder() {
         throw new Error('Failed to create parser');
       }
 
-      const result = await response.json();
+      const _result = await response.json();
 
       toast({
         title: 'Parser Saved',

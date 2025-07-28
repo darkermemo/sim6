@@ -1,0 +1,51 @@
+# ClickHouse Ingestion Service Configuration
+# Optimized for high-performance testing (10K+ EPS)
+
+[server]
+bind_address = "0.0.0.0:8080"
+enable_tls = false
+max_connections = 1000
+request_timeout_secs = 30
+max_body_size = 10485760  # 10MB
+enable_http2 = true
+keepalive_timeout = 60
+
+[clickhouse]
+url = "http://localhost:8123"
+database = "siem"
+username = "default"
+password = ""
+compression = "lz4"  # High-performance compression
+pool_size = 20
+connection_timeout_secs = 10
+
+[clickhouse.batch]
+size = 10000  # Large batch size for high throughput
+timeout_ms = 1000  # 1 second batch timeout
+memory_limit = 104857600  # 100MB memory limit
+
+[performance]
+target_eps = 50000  # Target 50K EPS
+max_buffer_size = 1048576  # 1MB buffer
+worker_threads = 8  # Utilize multiple cores
+enable_compression = true
+
+[security]
+require_auth = false  # Disabled for testing
+allowed_origins = ["*"]
+enable_tls = false
+
+[tenants]
+registry_file = "tenants.yaml"
+reload_interval = 300  # 5 minutes
+default_tenant = "tenant1"
+
+[metrics]
+enabled = true
+path = "/metrics"
+interval = 10  # 10 second intervals
+
+[logging]
+level = "info"
+format = "json"
+structured = true

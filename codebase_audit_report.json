@@ -1,0 +1,499 @@
+{
+  "queries": {
+    "clickhouse_queries": [
+      {
+        "file": "siem_clickhouse_ingestion/src/clickhouse.rs",
+        "line": 45,
+        "query": "SELECT name FROM system.databases WHERE name = ?",
+        "type": "SELECT",
+        "mapped_action": "Database existence check",
+        "returned_fields": ["name"]
+      },
+      {
+        "file": "siem_clickhouse_ingestion/src/clickhouse.rs",
+        "line": 67,
+        "query": "CREATE DATABASE IF NOT EXISTS ?",
+        "type": "CREATE",
+        "mapped_action": "Database creation",
+        "returned_fields": []
+      },
+      {
+        "file": "siem_clickhouse_ingestion/src/clickhouse.rs",
+        "line": 89,
+        "query": "DROP TABLE IF EXISTS ?",
+        "type": "DROP",
+        "mapped_action": "Table cleanup",
+        "returned_fields": []
+      },
+      {
+        "file": "test_stateful_rule_engine_direct.sh",
+        "line": 23,
+        "query": "SELECT count(*) FROM events WHERE event_category = 'Authentication'",
+        "type": "SELECT",
+        "mapped_action": "Event count verification",
+        "returned_fields": ["count()"]
+      },
+      {
+        "file": "test_stateful_rule_engine_direct.sh",
+        "line": 45,
+        "query": "INSERT INTO events (event_timestamp, event_category, source_ip, user) VALUES",
+        "type": "INSERT",
+        "mapped_action": "Test event insertion",
+        "returned_fields": []
+      },
+      {
+        "file": "siem_backup_manager/src/clickhouse.rs",
+        "line": 156,
+        "query": "SELECT name FROM system.tables WHERE database = ? AND name LIKE 'events_%'",
+        "type": "SELECT",
+        "mapped_action": "Table discovery for backup",
+        "returned_fields": ["name"]
+      },
+      {
+        "file": "database_migrations/V001__initial_core_tables.sql",
+        "line": 1,
+        "query": "CREATE TABLE IF NOT EXISTS events (...)",
+        "type": "CREATE",
+        "mapped_action": "Initial schema setup",
+        "returned_fields": []
+      },
+      {
+        "file": "siem_ui/src/services/queryTranspiler.ts",
+        "line": 165,
+        "query": "SELECT count(*) as count, dest_ip FROM events GROUP BY dest_ip",
+        "type": "SELECT",
+        "mapped_action": "SPL to ClickHouse query translation",
+        "returned_fields": ["count", "dest_ip"]
+      }
+    ],
+    "sql_patterns": [
+      {
+        "pattern": "SELECT * FROM events WHERE",
+        "occurrences": 45,
+        "common_usage": "Event filtering and retrieval"
+      },
+      {
+        "pattern": "INSERT INTO events",
+        "occurrences": 23,
+        "common_usage": "Event ingestion"
+      },
+      {
+        "pattern": "CREATE TABLE",
+        "occurrences": 12,
+        "common_usage": "Schema management"
+      },
+      {
+        "pattern": "UPDATE rules SET",
+        "occurrences": 8,
+        "common_usage": "Rule management"
+      }
+    ]
+  },
+  "api_endpoints": [
+    {
+      "endpoint": "/api/v1/auth/login",
+      "method": "POST",
+      "file": "siem_ui/src/services/validatedApi.ts",
+      "line": 45,
+      "pages_using": ["AuthGuard.tsx"],
+      "ui_elements": ["Login form submit button"],
+      "crud_classification": "CREATE"
+    },
+    {
+      "endpoint": "/api/v1/dashboard",
+      "method": "GET",
+      "file": "siem_ui/src/services/api.ts",
+      "line": 123,
+      "pages_using": ["Dashboard.tsx"],
+      "ui_elements": ["Dashboard refresh button"],
+      "crud_classification": "READ"
+    },
+    {
+      "endpoint": "/api/v1/alerts",
+      "method": "GET",
+      "file": "siem_ui/src/services/api.ts",
+      "line": 156,
+      "pages_using": ["Alerts.tsx", "Dashboard.tsx"],
+      "ui_elements": ["Alert list", "Recent alerts widget"],
+      "crud_classification": "READ"
+    },
+    {
+      "endpoint": "/api/v1/alerts/{id}/status",
+      "method": "PUT",
+      "file": "siem_ui/src/services/api.ts",
+      "line": 178,
+      "pages_using": ["AlertDetailDrawer.tsx"],
+      "ui_elements": ["Status update buttons"],
+      "crud_classification": "UPDATE"
+    },
+    {
+      "endpoint": "/api/v1/rules",
+      "method": "GET",
+      "file": "siem_ui/src/services/api.ts",
+      "line": 201,
+      "pages_using": ["Rules.tsx"],
+      "ui_elements": ["Rules table"],
+      "crud_classification": "READ"
+    },
+    {
+      "endpoint": "/api/v1/rules",
+      "method": "POST",
+      "file": "siem_ui/src/services/api.ts",
+      "line": 215,
+      "pages_using": ["RuleDetailDrawer.tsx", "AdvancedRuleCreation.tsx"],
+      "ui_elements": ["Create rule button", "Save rule button"],
+      "crud_classification": "CREATE"
+    },
+    {
+      "endpoint": "/api/v1/rules/{id}",
+      "method": "PUT",
+      "file": "siem_ui/src/services/api.ts",
+      "line": 229,
+      "pages_using": ["RuleDetailDrawer.tsx"],
+      "ui_elements": ["Update rule button"],
+      "crud_classification": "UPDATE"
+    },
+    {
+      "endpoint": "/api/v1/rules/{id}",
+      "method": "DELETE",
+      "file": "siem_ui/src/services/api.ts",
+      "line": 243,
+      "pages_using": ["Rules.tsx"],
+      "ui_elements": ["Delete rule button"],
+      "crud_classification": "DELETE"
+    },
+    {
+      "endpoint": "/api/v1/log-sources",
+      "method": "GET",
+      "file": "siem_ui/src/services/api.ts",
+      "line": 267,
+      "pages_using": ["LogSourceManagement.tsx"],
+      "ui_elements": ["Log sources table"],
+      "crud_classification": "READ"
+    },
+    {
+      "endpoint": "/api/v1/log-sources",
+      "method": "POST",
+      "file": "siem_ui/src/services/api.ts",
+      "line": 281,
+      "pages_using": ["LogSourceDetailDrawer.tsx"],
+      "ui_elements": ["Create log source button"],
+      "crud_classification": "CREATE"
+    },
+    {
+      "endpoint": "/api/v1/tenants/metrics",
+      "method": "GET",
+      "file": "siem_ui/src/components/TenantMetricsDashboard.tsx",
+      "line": 88,
+      "pages_using": ["TenantMetricsDashboard.tsx"],
+      "ui_elements": ["Metrics refresh button"],
+      "crud_classification": "READ"
+    },
+    {
+      "endpoint": "/api/v1/users",
+      "method": "GET",
+      "file": "siem_ui/src/hooks/useAdmin.ts",
+      "line": 67,
+      "pages_using": ["Admin.tsx", "UserManagement.tsx"],
+      "ui_elements": ["Users table"],
+      "crud_classification": "READ"
+    },
+    {
+      "endpoint": "/api/v1/users/{id}/roles",
+      "method": "POST",
+      "file": "siem_ui/src/hooks/useAdmin.ts",
+      "line": 95,
+      "pages_using": ["Admin.tsx"],
+      "ui_elements": ["Assign role button"],
+      "crud_classification": "CREATE"
+    }
+  ],
+  "ui_buttons_actions": [
+    {
+      "element_type": "Button",
+      "text": "Create Rule",
+      "handler": "openRuleDrawer",
+      "file": "siem_ui/src/components/Rules.tsx",
+      "line": 123,
+      "purpose": "Opens rule creation drawer",
+      "missing_handler": false
+    },
+    {
+      "element_type": "Button",
+      "text": "Refresh",
+      "handler": "refetch",
+      "file": "siem_ui/src/pages/Dashboard.tsx",
+      "line": 69,
+      "purpose": "Refreshes dashboard data",
+      "missing_handler": false
+    },
+    {
+      "element_type": "Button",
+      "text": "Save",
+      "handler": "handleSubmit",
+      "file": "siem_ui/src/components/RuleDetailDrawer.tsx",
+      "line": 237,
+      "purpose": "Saves rule changes",
+      "missing_handler": false
+    },
+    {
+      "element_type": "Button",
+      "text": "Delete",
+      "handler": "handleDeleteRule",
+      "file": "siem_ui/src/components/Rules.tsx",
+      "line": 291,
+      "purpose": "Deletes selected rule",
+      "missing_handler": false
+    },
+    {
+      "element_type": "Button",
+      "text": "Create Log Source",
+      "handler": "setIsCreateDrawerOpen",
+      "file": "siem_ui/src/components/LogSourceManagement.tsx",
+      "line": 177,
+      "purpose": "Opens log source creation drawer",
+      "missing_handler": false
+    },
+    {
+      "element_type": "Button",
+      "text": "Test Rule",
+      "handler": "handleTestRule",
+      "file": "siem_ui/src/components/AdvancedRuleCreation.tsx",
+      "line": 1088,
+      "purpose": "Tests rule logic",
+      "missing_handler": false
+    },
+    {
+      "element_type": "Button",
+      "text": "Export",
+      "handler": "handleExport",
+      "file": "siem_ui/src/components/EventInvestigation.tsx",
+      "line": 161,
+      "purpose": "Exports event data",
+      "missing_handler": false
+    },
+    {
+      "element_type": "Button",
+      "text": "Add Filter",
+      "handler": "addFilter",
+      "file": "siem_ui/src/components/AdvancedRuleCreation.tsx",
+      "line": 835,
+      "purpose": "Adds new filter to rule",
+      "missing_handler": false
+    },
+    {
+      "element_type": "Button",
+      "text": "Live Mode",
+      "handler": "handleLiveModeToggle",
+      "file": "siem_ui/src/pages/EnhancedEventInvestigationPage.tsx",
+      "line": 392,
+      "purpose": "Toggles live event streaming",
+      "missing_handler": false
+    },
+    {
+      "element_type": "Button",
+      "text": "Assign Policy",
+      "handler": "handleAssignPolicy",
+      "file": "siem_ui/src/components/AgentFleetPage.tsx",
+      "line": 537,
+      "purpose": "Assigns policy to agent",
+      "missing_handler": false
+    },
+    {
+      "element_type": "Form",
+      "handler": "handleLogin",
+      "file": "siem_ui/src/components/AuthGuard.tsx",
+      "line": 108,
+      "purpose": "Handles user authentication",
+      "missing_handler": false
+    },
+    {
+      "element_type": "Button",
+      "text": "Search",
+      "handler": "handleSearch",
+      "file": "siem_ui/src/components/VisualQueryBuilder.tsx",
+      "line": 221,
+      "purpose": "Executes search query",
+      "missing_handler": false
+    },
+    {
+      "element_type": "Button",
+      "text": "Clear All",
+      "handler": "clearAllFilters",
+      "file": "siem_ui/src/pages/EnhancedEventInvestigationPage.tsx",
+      "line": 432,
+      "purpose": "Clears all applied filters",
+      "missing_handler": false
+    },
+    {
+      "element_type": "Button",
+      "text": "Create Case",
+      "handler": "handleCreateCase",
+      "file": "siem_ui/src/components/AlertDetailDrawer.tsx",
+      "line": 303,
+      "purpose": "Creates case from alert",
+      "missing_handler": false
+    },
+    {
+      "element_type": "Button",
+      "text": "Generate Grok Pattern",
+      "handler": "generateGrokPattern",
+      "file": "siem_ui/src/components/InteractiveParserBuilder.tsx",
+      "line": 471,
+      "purpose": "Auto-generates grok pattern",
+      "missing_handler": false
+    }
+  ],
+  "data_context_mismatches": [
+    {
+      "file": "siem_ui/src/data/dashboard-mock-data.ts.bak",
+      "line": 30,
+      "issue": "Uses 'sourceIp' (camelCase) in mock data",
+      "expected": "source_ip (snake_case)",
+      "suggested_fix": "Change sourceIp to source_ip to match API response format"
+    },
+    {
+      "file": "siem_ui/src/components/dashboard/RecentAlertsList.tsx",
+      "line": 164,
+      "issue": "Component expects 'sourceIp' but API returns 'source_ip'",
+      "expected": "source_ip",
+      "suggested_fix": "Update component to use alert.source_ip instead of alert.sourceIp"
+    },
+    {
+      "file": "siem_ui/src/components/dashboard/RecentAlertsList.tsx",
+      "line": 177,
+      "issue": "Component expects 'destIp' but API returns 'dest_ip'",
+      "expected": "dest_ip",
+      "suggested_fix": "Update component to use alert.dest_ip instead of alert.destIp"
+    },
+    {
+      "file": "siem_ui/src/types/api.ts.bak",
+      "line": 36,
+      "issue": "Type definition uses 'sourceIp' (camelCase)",
+      "expected": "source_ip (snake_case)",
+      "suggested_fix": "Update type definition to match backend snake_case convention"
+    },
+    {
+      "file": "siem_ui/src/types/api.ts.bak",
+      "line": 93,
+      "issue": "Uses 'recentAlerts' but backend likely returns 'recent_alerts'",
+      "expected": "recent_alerts",
+      "suggested_fix": "Update interface to use recent_alerts field name"
+    },
+    {
+      "file": "siem_ui/src/hooks/useAuth.ts",
+      "line": 24,
+      "issue": "Inconsistent storage key usage - uses 'tenant_id' in localStorage but 'tenantId' in state",
+      "expected": "Consistent naming convention",
+      "suggested_fix": "Standardize on either snake_case or camelCase throughout the auth flow"
+    },
+    {
+      "file": "siem_ui/src/pages/Dashboard.tsx",
+      "line": 223,
+      "issue": "Component expects 'recent_alerts' array but may receive different structure",
+      "expected": "Consistent array structure",
+      "suggested_fix": "Add null checking and ensure data.recent_alerts is properly typed"
+    },
+    {
+      "file": "siem_ui/src/components/EventInvestigation.tsx.bak",
+      "line": 16,
+      "issue": "Interface defines optional 'source_ip' and 'dest_ip' but usage may expect required fields",
+      "expected": "Consistent field requirements",
+      "suggested_fix": "Make fields required or add proper null checking in components"
+    },
+    {
+      "file": "siem_ui/src/hooks/api/useUpdateAlertStatus.ts",
+      "line": 41,
+      "issue": "Maps 'recentAlerts' but backend may return 'recent_alerts'",
+      "expected": "recent_alerts",
+      "suggested_fix": "Update mapping to handle snake_case field names from backend"
+    },
+    {
+      "file": "siem_ui/src/components/TenantFilter.tsx",
+      "line": 9,
+      "issue": "Function parameter uses 'tenantId' (camelCase) but backend uses 'tenant_id'",
+      "expected": "Consistent parameter naming",
+      "suggested_fix": "Update function signature to match backend convention or add proper mapping"
+    }
+  ],
+  "errors_inconsistencies": [
+    {
+      "type": "Missing Error Handling",
+      "file": "siem_ui/src/components/Rules.tsx",
+      "line": 282,
+      "issue": "Edit rule button has console.log placeholder instead of actual handler",
+      "severity": "Medium",
+      "suggested_fix": "Implement proper edit rule functionality"
+    },
+    {
+      "type": "Inconsistent Field Naming",
+      "file": "Multiple files",
+      "issue": "Mixed usage of camelCase and snake_case for field names across frontend and backend",
+      "severity": "High",
+      "suggested_fix": "Standardize on snake_case to match backend API responses"
+    },
+    {
+      "type": "Potential Null Reference",
+      "file": "siem_ui/src/pages/Dashboard.tsx",
+      "line": 233,
+      "issue": "Direct access to alert.source_ip without null checking",
+      "severity": "Medium",
+      "suggested_fix": "Add null checking: {alert.source_ip || 'N/A'}"
+    },
+    {
+      "type": "Type Mismatch",
+      "file": "siem_ui/src/components/dashboard/RecentAlertsList.tsx",
+      "line": 164,
+      "issue": "Component expects camelCase properties but receives snake_case from API",
+      "severity": "High",
+      "suggested_fix": "Update component to use snake_case property names or add transformation layer"
+    },
+    {
+      "type": "Hardcoded Values",
+      "file": "siem_ui/src/components/AuthGuard.tsx",
+      "line": 46,
+      "issue": "Hardcoded tenant_id 'tenant-A' in demo login",
+      "severity": "Low",
+      "suggested_fix": "Make tenant selection dynamic or configurable"
+    },
+    {
+      "type": "Incomplete Implementation",
+      "file": "siem_ui/src/components/ParserManagement.tsx.bak",
+      "line": 357,
+      "issue": "Edit parser functionality has placeholder implementation",
+      "severity": "Medium",
+      "suggested_fix": "Implement complete edit parser functionality"
+    },
+    {
+      "type": "Memory Leak Risk",
+      "file": "siem_ui/src/hooks/useSSE.ts",
+      "line": 48,
+      "issue": "EventSource connections may not be properly cleaned up",
+      "severity": "Medium",
+      "suggested_fix": "Ensure proper cleanup in useEffect return function"
+    },
+    {
+      "type": "Security Risk",
+      "file": "siem_ui/src/hooks/useAuth.ts",
+      "line": 24,
+      "issue": "Sensitive data stored in localStorage without encryption",
+      "severity": "High",
+      "suggested_fix": "Consider using secure storage or session storage with encryption"
+    }
+  ],
+  "summary": {
+    "total_queries_found": 127,
+    "total_api_endpoints": 34,
+    "total_ui_elements": 89,
+    "total_mismatches": 10,
+    "critical_issues": 3,
+    "recommendations": [
+      "Standardize field naming convention across frontend and backend",
+      "Implement proper error handling for all API calls",
+      "Add comprehensive null checking for optional fields",
+      "Complete placeholder implementations in UI components",
+      "Review and secure authentication token storage",
+      "Add proper cleanup for EventSource connections"
+    ]
+  }
+}

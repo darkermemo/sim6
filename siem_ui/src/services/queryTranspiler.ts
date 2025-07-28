@@ -320,12 +320,12 @@ export class QueryTranspiler {
    */
   private static generateSQL(commands: ParsedCommand[]): string {
     let selectClause = 'SELECT *';
-    let fromClause = 'FROM dev.events';
-    let whereConditions: string[] = [];
+    const fromClause = 'FROM dev.events';
+    const whereConditions: string[] = [];
     let groupByClause = '';
     let orderByClause = '';
     let limitClause = '';
-    let havingClause = '';
+    const havingClause = '';
 
     // Process commands in order
     for (const command of commands) {

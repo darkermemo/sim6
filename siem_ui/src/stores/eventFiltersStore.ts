@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { EventFiltersState, EventFilter, TimeRange, SortConfig, TIME_RANGE_PRESETS } from '../types/events';
+import { EventFiltersState, EventFilter, TimeRange, SortConfig } from '../types/events';
 
 export const useEventFilters = create<EventFiltersState>((set) => ({
   filters: [],

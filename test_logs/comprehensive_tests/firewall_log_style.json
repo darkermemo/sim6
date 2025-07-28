@@ -1,0 +1,9 @@
+{
+  "srcip": "192.168.1.100",
+  "dstip": "8.8.8.8",
+  "srcport": "54321",
+  "dstport": "53",
+  "protocol": "udp",
+  "action": "allow",
+  "devname": "FW-01"
+}

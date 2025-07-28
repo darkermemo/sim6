@@ -1,0 +1,75 @@
+{
+  "total_routes": 14,
+  "routes": [
+    {
+      "method": "GET",
+      "path": "/api/v1/dashboard",
+      "file": "siem_ui_api_server.js"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/dashboard/kpis",
+      "file": "siem_ui_api_server.js"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/dashboard/alerts-over-time",
+      "file": "siem_ui_api_server.js"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/dashboard/top-sources",
+      "file": "siem_ui_api_server.js"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/users",
+      "file": "siem_ui_api_server.js"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/log-sources",
+      "file": "siem_ui_api_server.js"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/log_sources",
+      "file": "siem_ui_api_server.js"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/parsers",
+      "file": "siem_ui_api_server.js"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/agents",
+      "file": "siem_ui_api_server.js"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/agents/fleet",
+      "file": "siem_ui_api_server.js"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/health",
+      "file": "siem_ui_api_server.js"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/tenants",
+      "file": "siem_ui_api_server.js"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/metrics",
+      "file": "siem_ui_api_server.js"
+    },
+    {
+      "method": "GET",
+      "path": "/health",
+      "file": "siem_ui_api_server.js"
+    }
+  ]
+}

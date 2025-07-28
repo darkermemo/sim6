@@ -274,9 +274,11 @@ const AgentManagement: React.FC<AgentManagementProps> = ({ userRole }) => {
       {/* Search */}
       <Card className="p-4">
         <div className="relative">
+          <label htmlFor="policy-search" className="sr-only">Search policies</label>
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <input
             type="text"
+            id="policy-search"
             placeholder="Search policies..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -338,9 +340,10 @@ const AgentManagement: React.FC<AgentManagementProps> = ({ userRole }) => {
           </SheetHeader>
           <div className="space-y-4 mt-6">
             <div>
-              <label className="block text-sm font-medium mb-2">Policy Name</label>
+              <label htmlFor="create-policy-name" className="block text-sm font-medium mb-2">Policy Name</label>
               <input
                 type="text"
+                id="create-policy-name"
                 value={formData.policy_name}
                 onChange={(e) => setFormData({ ...formData, policy_name: e.target.value })}
                 placeholder="Enter policy name"
@@ -348,8 +351,9 @@ const AgentManagement: React.FC<AgentManagementProps> = ({ userRole }) => {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-2">Configuration JSON</label>
+              <label htmlFor="create-config-json" className="block text-sm font-medium mb-2">Configuration JSON</label>
               <textarea
+                id="create-config-json"
                 value={formData.config_json}
                 onChange={(e) => setFormData({ ...formData, config_json: e.target.value })}
                 placeholder="Enter JSON configuration"
@@ -380,9 +384,10 @@ const AgentManagement: React.FC<AgentManagementProps> = ({ userRole }) => {
           </SheetHeader>
           <div className="space-y-4 mt-6">
             <div>
-              <label className="block text-sm font-medium mb-2">Policy Name</label>
+              <label htmlFor="edit-policy-name" className="block text-sm font-medium mb-2">Policy Name</label>
               <input
                 type="text"
+                id="edit-policy-name"
                 value={formData.policy_name}
                 onChange={(e) => setFormData({ ...formData, policy_name: e.target.value })}
                 placeholder="Enter policy name"
@@ -390,8 +395,9 @@ const AgentManagement: React.FC<AgentManagementProps> = ({ userRole }) => {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-2">Configuration JSON</label>
+              <label htmlFor="edit-config-json" className="block text-sm font-medium mb-2">Configuration JSON</label>
               <textarea
+                id="edit-config-json"
                 value={formData.config_json}
                 onChange={(e) => setFormData({ ...formData, config_json: e.target.value })}
                 placeholder="Enter JSON configuration"
@@ -422,9 +428,10 @@ const AgentManagement: React.FC<AgentManagementProps> = ({ userRole }) => {
           </SheetHeader>
           <div className="space-y-4 mt-6">
             <div>
-              <label className="block text-sm font-medium mb-2">Asset ID</label>
+              <label htmlFor="assign-asset-id" className="block text-sm font-medium mb-2">Asset ID</label>
               <input
                 type="text"
+                id="assign-asset-id"
                 value={assignData.asset_id}
                 onChange={(e) => setAssignData({ ...assignData, asset_id: e.target.value })}
                 placeholder="Enter agent ID"
@@ -432,9 +439,10 @@ const AgentManagement: React.FC<AgentManagementProps> = ({ userRole }) => {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-2">Policy ID</label>
+              <label htmlFor="assign-policy-id" className="block text-sm font-medium mb-2">Policy ID</label>
               <input
                 type="text"
+                id="assign-policy-id"
                 value={assignData.policy_id}
                 onChange={(e) => setAssignData({ ...assignData, policy_id: e.target.value })}
                 placeholder="Policy ID"

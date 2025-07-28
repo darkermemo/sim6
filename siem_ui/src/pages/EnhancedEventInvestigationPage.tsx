@@ -20,13 +20,9 @@ import {
 import { useLogStream } from '../hooks/useLogStream';
 import { useEventFilters } from '../stores/eventFiltersStore';
 import { useDashboard } from '../hooks/useDashboard';
-import { EventFilter, SortConfig, TIME_RANGE_PRESETS, COMMON_FIELDS, FILTER_OPERATORS } from '../types/events';
+import { EventFilter, TIME_RANGE_PRESETS, COMMON_FIELDS, FILTER_OPERATORS } from '../types/events';
 
-interface ConnectionStatus {
-  connected: boolean;
-  lastHeartbeat: Date | null;
-  reconnectAttempts: number;
-}
+// Removed unused ConnectionStatus interface
 
 // Helper function to format bytes
 const formatBytes = (bytes: number): string => {
@@ -43,11 +39,7 @@ export const EnhancedEventInvestigationPage: React.FC = () => {
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
   const [isLiveMode, setIsLiveMode] = useState(false);
   const [realtimeEventCount, setRealtimeEventCount] = useState(0);
-  const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>({
-    connected: false,
-    lastHeartbeat: null,
-    reconnectAttempts: 0,
-  });
+  // Removed unused connectionStatus state
   const [newFilter, setNewFilter] = useState<EventFilter>({
     field: '',
     operator: '=',
@@ -90,7 +82,6 @@ export const EnhancedEventInvestigationPage: React.FC = () => {
   const {
     data: dashboardData,
     loading: dashboardLoading,
-    error: dashboardError,
     refetch: refetchDashboard
   } = useDashboard();
 
@@ -149,9 +140,6 @@ export const EnhancedEventInvestigationPage: React.FC = () => {
     if (newLiveMode) {
       // Reset real-time counter when entering live mode
       setRealtimeEventCount(0);
-      setConnectionStatus(prev => ({ ...prev, connected: true, lastHeartbeat: new Date() }));
-    } else {
-      setConnectionStatus(prev => ({ ...prev, connected: false }));
     }
   }, [isLiveMode]);
 
@@ -456,7 +444,7 @@ export const EnhancedEventInvestigationPage: React.FC = () => {
           <div className="flex flex-wrap gap-2">
             {freeText && (
               <div className="flex items-center space-x-1 px-2 py-1 bg-blue-100 text-blue-800 rounded-md text-sm">
-                <span>Search: "{freeText}"</span>
+                <span>Search: &quot;{freeText}&quot;</span>
                 <button
                   onClick={() => {
                     setSearchText('');
@@ -470,7 +458,7 @@ export const EnhancedEventInvestigationPage: React.FC = () => {
             )}
             {filters.map((filter, index) => (
               <div key={index} className="flex items-center space-x-1 px-2 py-1 bg-purple-100 text-purple-800 rounded-md text-sm">
-                <span>{filter.field} {filter.operator} "{filter.value}"</span>
+                <span>{filter.field} {filter.operator} &quot;{filter.value}&quot;</span>
                 <button
                   onClick={() => removeFilter(index)}
                   className="text-purple-600 hover:text-purple-800"
@@ -656,10 +644,11 @@ export const EnhancedEventInvestigationPage: React.FC = () => {
             
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-primary-text mb-1">
+                <label htmlFor="filter-field" className="block text-sm font-medium text-primary-text mb-1">
                   Field
                 </label>
                 <select
+                  id="filter-field"
                   value={newFilter.field}
                   onChange={(e) => setNewFilter({ ...newFilter, field: e.target.value })}
                   className="w-full px-3 py-2 border border-border bg-card text-primary-text rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -674,10 +663,11 @@ export const EnhancedEventInvestigationPage: React.FC = () => {
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-primary-text mb-1">
+                <label htmlFor="filter-operator" className="block text-sm font-medium text-primary-text mb-1">
                   Operator
                 </label>
                 <select
+                  id="filter-operator"
                   value={newFilter.operator}
                   onChange={(e) => setNewFilter({ ...newFilter, operator: e.target.value })}
                   className="w-full px-3 py-2 border border-border bg-card text-primary-text rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -691,10 +681,11 @@ export const EnhancedEventInvestigationPage: React.FC = () => {
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-primary-text mb-1">
+                <label htmlFor="filter-value" className="block text-sm font-medium text-primary-text mb-1">
                   Value
                 </label>
                 <input
+                  id="filter-value"
                   type="text"
                   value={newFilter.value}
                   onChange={(e) => setNewFilter({ ...newFilter, value: e.target.value })}

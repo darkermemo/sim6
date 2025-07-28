@@ -1,0 +1,10 @@
+{
+  "name": "basic_unknown_field",
+  "description": "Basic unknown field from AI prompt",
+  "data": {
+    "foobar_field": "unexpected"
+  },
+  "expected_additional_fields": {
+    "foobar_field": "unexpected"
+  }
+}

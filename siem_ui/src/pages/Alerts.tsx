@@ -6,7 +6,7 @@ import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Select } from '../components/ui/Select';
-import { AlertTriangle, Eye, User, Clock } from 'lucide-react';
+import { AlertTriangle, Eye } from 'lucide-react';
 import type { Alert } from '../types/api';
 
 const Alerts: React.FC = () => {
@@ -196,7 +196,7 @@ const Alerts: React.FC = () => {
               {filteredAlerts.map((alert) => (
                 <tr key={alert.alert_id} className="hover:bg-border">
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-mono">
-                    {alert.alert_id.substring(0, 8)}...
+                    {alert.alert_id ? alert.alert_id.substring(0, 8) + '...' : 'N/A'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                     {alert.rule_name}

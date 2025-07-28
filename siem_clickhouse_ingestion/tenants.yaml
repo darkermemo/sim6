@@ -1,0 +1,248 @@
+# Tenant Registry for ClickHouse Ingestion Testing
+# Defines 20 tenants for multi-tenant ingestion testing
+
+metadata:
+  version: "1.0.0"
+  updated_at: "2024-01-15T10:00:00Z"
+  description: "Test tenant registry for ClickHouse ingestion layer validation"
+
+tenants:
+  tenant1:
+    id: "tenant1"
+    name: "Test Tenant 1"
+    api_key: "test-key-1"
+    table_name: "events_tenant1"
+    enabled: true
+    rate_limit:
+      requests_per_second: 1000
+      bytes_per_second: 10485760  # 10MB/s
+      burst_capacity: 2000
+    schema_mappings: {}
+
+  tenant2:
+    id: "tenant2"
+    name: "Test Tenant 2"
+    api_key: "test-key-2"
+    table_name: "events_tenant2"
+    enabled: true
+    rate_limit:
+      requests_per_second: 1000
+      bytes_per_second: 10485760
+      burst_capacity: 2000
+    schema_mappings: {}
+
+  tenant3:
+    id: "tenant3"
+    name: "Test Tenant 3"
+    api_key: "test-key-3"
+    table_name: "events_tenant3"
+    enabled: true
+    rate_limit:
+      requests_per_second: 1000
+      bytes_per_second: 10485760
+      burst_capacity: 2000
+    schema_mappings: {}
+
+  tenant4:
+    id: "tenant4"
+    name: "Test Tenant 4"
+    api_key: "test-key-4"
+    table_name: "events_tenant4"
+    enabled: true
+    rate_limit:
+      requests_per_second: 1000
+      bytes_per_second: 10485760
+      burst_capacity: 2000
+    schema_mappings: {}
+
+  tenant5:
+    id: "tenant5"
+    name: "Test Tenant 5"
+    api_key: "test-key-5"
+    table_name: "events_tenant5"
+    enabled: true
+    rate_limit:
+      requests_per_second: 1000
+      bytes_per_second: 10485760
+      burst_capacity: 2000
+    schema_mappings: {}
+
+  tenant6:
+    id: "tenant6"
+    name: "Test Tenant 6"
+    api_key: "test-key-6"
+    table_name: "events_tenant6"
+    enabled: true
+    rate_limit:
+      requests_per_second: 1000
+      bytes_per_second: 10485760
+      burst_capacity: 2000
+    schema_mappings: {}
+
+  tenant7:
+    id: "tenant7"
+    name: "Test Tenant 7"
+    api_key: "test-key-7"
+    table_name: "events_tenant7"
+    enabled: true
+    rate_limit:
+      requests_per_second: 1000
+      bytes_per_second: 10485760
+      burst_capacity: 2000
+    schema_mappings: {}
+
+  tenant8:
+    id: "tenant8"
+    name: "Test Tenant 8"
+    api_key: "test-key-8"
+    table_name: "events_tenant8"
+    enabled: true
+    rate_limit:
+      requests_per_second: 1000
+      bytes_per_second: 10485760
+      burst_capacity: 2000
+    schema_mappings: {}
+
+  tenant9:
+    id: "tenant9"
+    name: "Test Tenant 9"
+    api_key: "test-key-9"
+    table_name: "events_tenant9"
+    enabled: true
+    rate_limit:
+      requests_per_second: 1000
+      bytes_per_second: 10485760
+      burst_capacity: 2000
+    schema_mappings: {}
+
+  tenant10:
+    id: "tenant10"
+    name: "Test Tenant 10"
+    api_key: "test-key-10"
+    table_name: "events_tenant10"
+    enabled: true
+    rate_limit:
+      requests_per_second: 1000
+      bytes_per_second: 10485760
+      burst_capacity: 2000
+    schema_mappings: {}
+
+  tenant11:
+    id: "tenant11"
+    name: "Test Tenant 11"
+    api_key: "test-key-11"
+    table_name: "events_tenant11"
+    enabled: true
+    rate_limit:
+      requests_per_second: 1000
+      bytes_per_second: 10485760
+      burst_capacity: 2000
+    schema_mappings: {}
+
+  tenant12:
+    id: "tenant12"
+    name: "Test Tenant 12"
+    api_key: "test-key-12"
+    table_name: "events_tenant12"
+    enabled: true
+    rate_limit:
+      requests_per_second: 1000
+      bytes_per_second: 10485760
+      burst_capacity: 2000
+    schema_mappings: {}
+
+  tenant13:
+    id: "tenant13"
+    name: "Test Tenant 13"
+    api_key: "test-key-13"
+    table_name: "events_tenant13"
+    enabled: true
+    rate_limit:
+      requests_per_second: 1000
+      bytes_per_second: 10485760
+      burst_capacity: 2000
+    schema_mappings: {}
+
+  tenant14:
+    id: "tenant14"
+    name: "Test Tenant 14"
+    api_key: "test-key-14"
+    table_name: "events_tenant14"
+    enabled: true
+    rate_limit:
+      requests_per_second: 1000
+      bytes_per_second: 10485760
+      burst_capacity: 2000
+    schema_mappings: {}
+
+  tenant15:
+    id: "tenant15"
+    name: "Test Tenant 15"
+    api_key: "test-key-15"
+    table_name: "events_tenant15"
+    enabled: true
+    rate_limit:
+      requests_per_second: 1000
+      bytes_per_second: 10485760
+      burst_capacity: 2000
+    schema_mappings: {}
+
+  tenant16:
+    id: "tenant16"
+    name: "Test Tenant 16"
+    api_key: "test-key-16"
+    table_name: "events_tenant16"
+    enabled: true
+    rate_limit:
+      requests_per_second: 1000
+      bytes_per_second: 10485760
+      burst_capacity: 2000
+    schema_mappings: {}
+
+  tenant17:
+    id: "tenant17"
+    name: "Test Tenant 17"
+    api_key: "test-key-17"
+    table_name: "events_tenant17"
+    enabled: true
+    rate_limit:
+      requests_per_second: 1000
+      bytes_per_second: 10485760
+      burst_capacity: 2000
+    schema_mappings: {}
+
+  tenant18:
+    id: "tenant18"
+    name: "Test Tenant 18"
+    api_key: "test-key-18"
+    table_name: "events_tenant18"
+    enabled: true
+    rate_limit:
+      requests_per_second: 1000
+      bytes_per_second: 10485760
+      burst_capacity: 2000
+    schema_mappings: {}
+
+  tenant19:
+    id: "tenant19"
+    name: "Test Tenant 19"
+    api_key: "test-key-19"
+    table_name: "events_tenant19"
+    enabled: true
+    rate_limit:
+      requests_per_second: 1000
+      bytes_per_second: 10485760
+      burst_capacity: 2000
+    schema_mappings: {}
+
+  tenant20:
+    id: "tenant20"
+    name: "Test Tenant 20"
+    api_key: "test-key-20"
+    table_name: "events_tenant20"
+    enabled: true
+    rate_limit:
+      requests_per_second: 1000
+      bytes_per_second: 10485760
+      burst_capacity: 2000
+    schema_mappings: {}

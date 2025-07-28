@@ -5,22 +5,22 @@ mod config;
 mod receiver;
 mod tenant_registry;
 mod router;
-mod clickhouse_writer;
+mod clickhouse;
 mod metrics;
 mod schema;
 
 use anyhow::Result;
 use std::sync::Arc;
 use tokio::signal;
+use tokio::sync::RwLock;
 use tracing::{info, error};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 use crate::{
-    config::Config,
-    receiver::start_http_server,
-    tenant_registry::TenantRegistry,
+    config::{Config, TenantRegistry},
+    receiver::LogReceiver,
     router::LogRouter,
-    clickhouse_writer::ClickHouseWriter,
+    clickhouse::ClickHouseWriter,
     metrics::MetricsCollector,
 };
 
@@ -45,51 +45,63 @@ async fn main() -> Result<()> {
     info!("Target throughput: {} EPS", config.performance.target_eps);
 
     // Initialize tenant registry
-    let tenant_registry = Arc::new(TenantRegistry::load(&config.tenant_config_path)?);
-    info!("Loaded {} tenants", tenant_registry.tenant_count());
-
-    // Initialize ClickHouse writer
-    let clickhouse_writer = Arc::new(ClickHouseWriter::new(&config.clickhouse).await?);
-    info!("ClickHouse writer initialized");
+    let tenant_registry = Arc::new(RwLock::new(TenantRegistry::load_from_file(&config.tenants.registry_file)?));
+    info!("Loaded {} tenants", tenant_registry.read().await.tenants.len());
 
     // Initialize metrics collector
-    let metrics = Arc::new(MetricsCollector::new());
+    let metrics = Arc::new(MetricsCollector::new(std::time::Duration::from_secs(10)));
+    
+    // Initialize ClickHouse writer
+    let clickhouse_writer: Arc<ClickHouseWriter> = Arc::new(ClickHouseWriter::new(Arc::new(config.clone()), metrics.clone()).await?);
+    info!("ClickHouse writer initialized");
+    metrics.start_collection().await?;
     info!("Metrics collector initialized");
 
     // Initialize log router
     let router = Arc::new(LogRouter::new(
+        Arc::new(config.clone()),
         tenant_registry.clone(),
         clickhouse_writer.clone(),
         metrics.clone(),
-        config.performance.clone(),
     ));
     info!("Log router initialized");
 
     // Start HTTP server
-    let server_handle = tokio::spawn(start_http_server(
-        config.server.clone(),
+    let log_receiver = LogReceiver::new(
+        Arc::new(config.clone()),
+        tenant_registry.clone(),
         router.clone(),
         metrics.clone(),
-    ));
+    );
+    let app = log_receiver.create_router();
+    let listener = tokio::net::TcpListener::bind(&config.server.bind_address).await?;
+    info!("HTTP server listening on {}", config.server.bind_address);
+    
+    let server_handle = tokio::spawn(async move {
+        axum::serve(listener, app).await.unwrap();
+    });
 
     // Start background tasks
     let flush_handle = tokio::spawn(async move {
         let mut interval = tokio::time::interval(
-            std::time::Duration::from_millis(config.performance.flush_interval_ms)
+            std::time::Duration::from_millis(config.clickhouse.batch.timeout_ms)
         );
         loop {
             interval.tick().await;
-            if let Err(e) = clickhouse_writer.flush_all().await {
-                error!("Failed to flush buffers: {}", e);
-            }
+            // ClickHouse writer doesn't need explicit flushing
+            // Batches are automatically committed when written
         }
     });
 
     let metrics_handle = tokio::spawn(async move {
-        let mut interval = tokio::time::interval(std::time::Duration::from_secs(10));
+        let mut interval = tokio::time::interval(std::time::Duration::from_secs(30));
         loop {
             interval.tick().await;
-            metrics.log_current_stats();
+            let snapshot = metrics.get_snapshot().await;
+            info!("Metrics: {} events/sec, {} total events, {} errors", 
+                  snapshot.performance.current_eps, 
+                  snapshot.performance.events_processed,
+                  snapshot.health.total_errors);
         }
     });
 
@@ -111,10 +123,8 @@ async fn main() -> Result<()> {
     flush_handle.abort();
     metrics_handle.abort();
 
-    // Final flush
-    if let Err(e) = clickhouse_writer.flush_all().await {
-        error!("Failed final flush: {}", e);
-    }
+    // ClickHouse writer doesn't need explicit flushing
+    // All pending operations are automatically handled
 
     info!("Shutdown complete");
     Ok(())

@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SIEM API Route Mapping Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .card-hover {
+            transition: all 0.3s ease;
+        }
+        .card-hover:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+        .status-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+        }
+        .status-matched { background-color: #10b981; }
+        .status-backend-only { background-color: #f59e0b; }
+        .status-frontend-only { background-color: #ef4444; }
+        .method-badge {
+            font-size: 0.75rem;
+            font-weight: 600;
+            padding: 2px 8px;
+            border-radius: 4px;
+            text-transform: uppercase;
+        }
+        .method-get { background-color: #dbeafe; color: #1e40af; }
+        .method-post { background-color: #dcfce7; color: #166534; }
+        .method-put { background-color: #fef3c7; color: #92400e; }
+        .method-delete { background-color: #fee2e2; color: #991b1b; }
+        .method-patch { background-color: #f3e8ff; color: #6b21a8; }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Header -->
+    <header class="gradient-bg text-white shadow-lg">
+        <div class="container mx-auto px-6 py-8">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-3xl font-bold mb-2">🎯 SIEM API Route Mapping</h1>
+                    <p class="text-blue-100">Comprehensive analysis of backend routes and frontend usage</p>
+                </div>
+                <div class="text-right">
+                    <div class="text-sm text-blue-100">Last Updated</div>
+                    <div id="lastUpdated" class="text-lg font-semibold">Loading...</div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-6 py-8">
+        <!-- Summary Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div class="bg-white rounded-lg shadow-md p-6 card-hover">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium text-gray-600">Backend Routes</p>
+                        <p id="backendCount" class="text-2xl font-bold text-gray-900">-</p>
+                    </div>
+                    <div class="p-3 bg-blue-100 rounded-full">
+                        <i data-lucide="server" class="w-6 h-6 text-blue-600"></i>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-white rounded-lg shadow-md p-6 card-hover">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium text-gray-600">Frontend Endpoints</p>
+                        <p id="frontendCount" class="text-2xl font-bold text-gray-900">-</p>
+                    </div>
+                    <div class="p-3 bg-green-100 rounded-full">
+                        <i data-lucide="monitor" class="w-6 h-6 text-green-600"></i>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-white rounded-lg shadow-md p-6 card-hover">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium text-gray-600">Coverage</p>
+                        <p id="coveragePercent" class="text-2xl font-bold text-gray-900">-</p>
+                    </div>
+                    <div class="p-3 bg-purple-100 rounded-full">
+                        <i data-lucide="target" class="w-6 h-6 text-purple-600"></i>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-white rounded-lg shadow-md p-6 card-hover">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium text-gray-600">Orphaned Endpoints</p>
+                        <p id="orphanedCount" class="text-2xl font-bold text-gray-900">-</p>
+                    </div>
+                    <div class="p-3 bg-red-100 rounded-full">
+                        <i data-lucide="alert-triangle" class="w-6 h-6 text-red-600"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts Section -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+            <!-- Coverage Chart -->
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">📊 API Coverage Analysis</h3>
+                <canvas id="coverageChart" width="400" height="200"></canvas>
+            </div>
+            
+            <!-- HTTP Methods Chart -->
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">🔧 HTTP Methods Distribution</h3>
+                <canvas id="methodsChart" width="400" height="200"></canvas>
+            </div>
+        </div>
+
+        <!-- Route Details Section -->
+        <div class="bg-white rounded-lg shadow-md">
+            <div class="p-6 border-b border-gray-200">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-lg font-semibold text-gray-900">🗺️ Route Details</h3>
+                    <div class="flex space-x-4">
+                        <label class="flex items-center">
+                            <input type="checkbox" id="filterMatched" class="mr-2" checked>
+                            <span class="status-indicator status-matched"></span>
+                            <span class="text-sm">Matched</span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="checkbox" id="filterBackendOnly" class="mr-2" checked>
+                            <span class="status-indicator status-backend-only"></span>
+                            <span class="text-sm">Backend Only</span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="checkbox" id="filterFrontendOnly" class="mr-2" checked>
+                            <span class="status-indicator status-frontend-only"></span>
+                            <span class="text-sm">Frontend Only</span>
+                        </label>
+                    </div>
+                </div>
+                <div class="mt-4">
+                    <input type="text" id="searchInput" placeholder="Search routes..." 
+                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                </div>
+            </div>
+            
+            <div class="p-6">
+                <div id="routesList" class="space-y-4">
+                    <!-- Routes will be populated here -->
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        let apiData = null;
+        
+        // Load API mapping data
+        async function loadApiData() {
+            try {
+                const response = await fetch('./api_route_map.json');
+                apiData = await response.json();
+                initializeDashboard();
+            } catch (error) {
+                console.error('Error loading API data:', error);
+                document.getElementById('routesList').innerHTML = 
+                    '<div class="text-center text-red-600">Error loading API route data. Make sure api_route_map.json exists.</div>';
+            }
+        }
+        
+        function initializeDashboard() {
+            if (!apiData) return;
+            
+            // Update summary cards
+            updateSummaryCards();
+            
+            // Initialize charts
+            initializeCharts();
+            
+            // Populate routes list
+            populateRoutesList();
+            
+            // Set up event listeners
+            setupEventListeners();
+            
+            // Update timestamp
+            document.getElementById('lastUpdated').textContent = 
+                new Date(apiData.metadata.generated_at).toLocaleString();
+        }
+        
+        function updateSummaryCards() {
+            const coverage = apiData.coverage_analysis;
+            
+            document.getElementById('backendCount').textContent = coverage.total_backend_routes;
+            document.getElementById('frontendCount').textContent = coverage.total_frontend_usage;
+            document.getElementById('coveragePercent').textContent = coverage.coverage_percentage.toFixed(1) + '%';
+            document.getElementById('orphanedCount').textContent = apiData.orphaned_frontend_endpoints.length;
+        }
+        
+        function initializeCharts() {
+            // Coverage Chart
+            const coverageCtx = document.getElementById('coverageChart').getContext('2d');
+            const coverage = apiData.coverage_analysis;
+            
+            new Chart(coverageCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Matched', 'Backend Only', 'Frontend Only'],
+                    datasets: [{
+                        data: [
+                            coverage.matched_endpoints,
+                            coverage.backend_only.length,
+                            coverage.frontend_only.length
+                        ],
+                        backgroundColor: ['#10b981', '#f59e0b', '#ef4444'],
+                        borderWidth: 2,
+                        borderColor: '#ffffff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+            
+            // Methods Chart
+            const methodsCtx = document.getElementById('methodsChart').getContext('2d');
+            const methodCounts = {};
+            
+            apiData.backend_routes.forEach(route => {
+                methodCounts[route.method] = (methodCounts[route.method] || 0) + 1;
+            });
+            
+            new Chart(methodsCtx, {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(methodCounts),
+                    datasets: [{
+                        label: 'Routes',
+                        data: Object.values(methodCounts),
+                        backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'],
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        function populateRoutesList() {
+            const routesList = document.getElementById('routesList');
+            const allRoutes = [];
+            
+            // Add backend routes
+            apiData.route_details.forEach(route => {
+                allRoutes.push({
+                    ...route,
+                    type: route.is_used_in_frontend ? 'matched' : 'backend-only'
+                });
+            });
+            
+            // Add orphaned frontend routes
+            apiData.orphaned_frontend_endpoints.forEach(endpoint => {
+                allRoutes.push({
+                    path: endpoint.path,
+                    method: 'UNKNOWN',
+                    handler: 'N/A',
+                    backend_file: 'N/A',
+                    frontend_usage: endpoint.usage,
+                    is_used_in_frontend: true,
+                    usage_count: endpoint.usage.length,
+                    type: 'frontend-only'
+                });
+            });
+            
+            renderRoutes(allRoutes);
+        }
+        
+        function renderRoutes(routes) {
+            const routesList = document.getElementById('routesList');
+            
+            if (routes.length === 0) {
+                routesList.innerHTML = '<div class="text-center text-gray-500">No routes match the current filters.</div>';
+                return;
+            }
+            
+            routesList.innerHTML = routes.map(route => {
+                const statusClass = {
+                    'matched': 'status-matched',
+                    'backend-only': 'status-backend-only',
+                    'frontend-only': 'status-frontend-only'
+                }[route.type];
+                
+                const methodClass = `method-${route.method.toLowerCase()}`;
+                
+                return `
+                    <div class="route-item border border-gray-200 rounded-lg p-4 hover:bg-gray-50" data-type="${route.type}">
+                        <div class="flex items-start justify-between">
+                            <div class="flex-1">
+                                <div class="flex items-center mb-2">
+                                    <span class="status-indicator ${statusClass}"></span>
+                                    <span class="method-badge ${methodClass}">${route.method}</span>
+                                    <code class="ml-3 text-sm font-mono bg-gray-100 px-2 py-1 rounded">${route.path}</code>
+                                </div>
+                                
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-600">
+                                    <div>
+                                        <strong>Handler:</strong> ${route.handler || 'N/A'}<br>
+                                        <strong>Backend File:</strong> ${route.backend_file || 'N/A'}
+                                    </div>
+                                    <div>
+                                        <strong>Frontend Usage:</strong> ${route.usage_count || 0} file(s)<br>
+                                        ${route.frontend_usage ? `
+                                            <details class="mt-2">
+                                                <summary class="cursor-pointer text-blue-600 hover:text-blue-800">View Usage Details</summary>
+                                                <ul class="mt-2 ml-4 space-y-1">
+                                                    ${route.frontend_usage.map(usage => `
+                                                        <li class="text-xs">
+                                                            <span class="inline-block w-16 text-gray-500">${usage.type}:</span>
+                                                            <code>${usage.file}</code>
+                                                        </li>
+                                                    `).join('')}
+                                                </ul>
+                                            </details>
+                                        ` : ''}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        function setupEventListeners() {
+            // Filter checkboxes
+            const filterCheckboxes = ['filterMatched', 'filterBackendOnly', 'filterFrontendOnly'];
+            filterCheckboxes.forEach(id => {
+                document.getElementById(id).addEventListener('change', filterRoutes);
+            });
+            
+            // Search input
+            document.getElementById('searchInput').addEventListener('input', filterRoutes);
+        }
+        
+        function filterRoutes() {
+            const showMatched = document.getElementById('filterMatched').checked;
+            const showBackendOnly = document.getElementById('filterBackendOnly').checked;
+            const showFrontendOnly = document.getElementById('filterFrontendOnly').checked;
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            
+            const routeItems = document.querySelectorAll('.route-item');
+            
+            routeItems.forEach(item => {
+                const type = item.dataset.type;
+                const text = item.textContent.toLowerCase();
+                
+                const typeMatch = (
+                    (type === 'matched' && showMatched) ||
+                    (type === 'backend-only' && showBackendOnly) ||
+                    (type === 'frontend-only' && showFrontendOnly)
+                );
+                
+                const searchMatch = !searchTerm || text.includes(searchTerm);
+                
+                item.style.display = (typeMatch && searchMatch) ? 'block' : 'none';
+            });
+        }
+        
+        // Initialize Lucide icons
+        lucide.createIcons();
+        
+        // Load data when page loads
+        loadApiData();
+    </script>
+</body>
+</html>

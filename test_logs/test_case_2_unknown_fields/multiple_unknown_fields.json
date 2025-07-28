@@ -1,0 +1,6 @@
+{
+  "custom_metric": "value1",
+  "vendor_specific_id": "ABC123",
+  "proprietary_data": "internal_use_only",
+  "legacy_field": "deprecated_value"
+}

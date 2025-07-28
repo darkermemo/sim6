@@ -1,5 +1,5 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { Plus, Trash2, Search, Filter, Server, Globe, Monitor, FileCode, Users, BarChart3, Activity, Edit, Eye, AlertTriangle } from 'lucide-react';
+import { useState, useMemo, useEffect } from 'react';
+import { Plus, Trash2, Search, Server, Globe, Monitor, FileCode, Users, BarChart3, Activity, Eye, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
@@ -63,7 +63,7 @@ export function EnhancedLogSourceManagement() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [selectedSource, setSelectedSource] = useState<LogSource | null>(null);
-  const [selectedGroup, setSelectedGroup] = useState<LogSourceGroup | null>(null);
+  const [_selectedGroup, setSelectedGroup] = useState<LogSourceGroup | null>(null);
   const [isCreateSourceOpen, setIsCreateSourceOpen] = useState(false);
   const [isCreateGroupOpen, setIsCreateGroupOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -71,7 +71,7 @@ export function EnhancedLogSourceManagement() {
   // State for API data
   const [logSources, setLogSources] = useState<LogSource[]>([]);
   const [logSourceGroups, setLogSourceGroups] = useState<LogSourceGroup[]>([]);
-  const [stats, setStats] = useState<LogSourceStats[]>([]);
+  const [_stats, setStats] = useState<LogSourceStats[]>([]);
   const [overallStats, setOverallStats] = useState<LogSourceOverallStats | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -788,28 +788,28 @@ export function EnhancedLogSourceManagement() {
             </SheetHeader>
             <div className="mt-6 space-y-4">
               <div>
-                <label className="text-sm font-medium text-muted-foreground">Source ID</label>
-                <div className="font-mono text-sm">{selectedSource.id}</div>
+                <label htmlFor="source-id-display" className="text-sm font-medium text-muted-foreground">Source ID</label>
+                <div id="source-id-display" className="font-mono text-sm">{selectedSource.id}</div>
               </div>
               <div>
-                <label className="text-sm font-medium text-muted-foreground">Type</label>
-                <div>{selectedSource.type} - {selectedSource.subtype}</div>
+                <label htmlFor="source-type-display" className="text-sm font-medium text-muted-foreground">Type</label>
+                <div id="source-type-display">{selectedSource.type} - {selectedSource.subtype}</div>
               </div>
               <div>
-                <label className="text-sm font-medium text-muted-foreground">Status</label>
-                <div>
+                <label htmlFor="source-status-display" className="text-sm font-medium text-muted-foreground">Status</label>
+                <div id="source-status-display">
                   <Badge variant={getStatusBadgeVariant(selectedSource.status)}>
                     {selectedSource.status}
                   </Badge>
                 </div>
               </div>
               <div>
-                <label className="text-sm font-medium text-muted-foreground">Events Per Second</label>
-                <div className="font-mono">{selectedSource.eps.toFixed(2)}</div>
+                <label htmlFor="source-eps-display" className="text-sm font-medium text-muted-foreground">Events Per Second</label>
+                <div id="source-eps-display" className="font-mono">{selectedSource.eps.toFixed(2)}</div>
               </div>
               <div>
-                <label className="text-sm font-medium text-muted-foreground">Total Events</label>
-                <div className="font-mono">{selectedSource.event_count.toLocaleString()}</div>
+                <label htmlFor="source-events-display" className="text-sm font-medium text-muted-foreground">Total Events</label>
+                <div id="source-events-display" className="font-mono">{selectedSource.event_count.toLocaleString()}</div>
               </div>
             </div>
           </SheetContent>

@@ -191,8 +191,10 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ userRole }) => {
       {/* Search */}
       <Card className="p-4">
         <div className="relative">
+          <label htmlFor="tenant-search" className="sr-only">Search tenants</label>
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <input
+            id="tenant-search"
             type="text"
             placeholder="Search tenants..."
             value={searchTerm}
@@ -247,8 +249,9 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ userRole }) => {
           </SheetHeader>
           <div className="space-y-4 mt-6">
             <div>
-              <label className="block text-sm font-medium mb-2">Tenant Name</label>
+              <label htmlFor="create-tenant-name" className="block text-sm font-medium mb-2">Tenant Name</label>
               <input
+                id="create-tenant-name"
                 type="text"
                 value={formData.tenant_name}
                 onChange={(e) => setFormData({ ...formData, tenant_name: e.target.value })}
@@ -279,8 +282,9 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ userRole }) => {
           </SheetHeader>
           <div className="space-y-4 mt-6">
             <div>
-              <label className="block text-sm font-medium mb-2">Tenant Name</label>
+              <label htmlFor="edit-tenant-name" className="block text-sm font-medium mb-2">Tenant Name</label>
               <input
+                id="edit-tenant-name"
                 type="text"
                 value={formData.tenant_name}
                 onChange={(e) => setFormData({ ...formData, tenant_name: e.target.value })}
@@ -289,8 +293,9 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ userRole }) => {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-2">Status</label>
+              <label htmlFor="edit-tenant-status" className="block text-sm font-medium mb-2">Status</label>
               <select
+                id="edit-tenant-status"
                 value={formData.is_active}
                 onChange={(e) => setFormData({ ...formData, is_active: parseInt(e.target.value) })}
                 className="w-full px-3 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"

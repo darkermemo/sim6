@@ -21,6 +21,7 @@ interface MultiSelectProps {
   disabled?: boolean;
   className?: string;
   isLoading?: boolean;
+  'aria-labelledby'?: string;
 }
 
 export function MultiSelect({
@@ -32,7 +33,8 @@ export function MultiSelect({
   maxDisplayed = 3,
   disabled = false,
   className,
-  isLoading = false
+  isLoading = false,
+  'aria-labelledby': ariaLabelledBy
 }: MultiSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -96,6 +98,7 @@ export function MultiSelect({
           isOpen && 'ring-2 ring-ring ring-offset-2'
         )}
         onClick={() => !disabled && setIsOpen(!isOpen)}
+        aria-labelledby={ariaLabelledBy}
       >
         <div className="flex flex-1 flex-wrap items-center gap-1">
           {selectedOptions.length === 0 ? (

@@ -1,0 +1,22 @@
+{
+  "name": "mixed_known_unknown",
+  "description": "Mix of known aliases and unknown fields",
+  "data": {
+    "src_ip": "172.16.0.10",
+    "hostname": "mixed-server",
+    "unknown_field_1": "should_be_additional",
+    "custom_property": "vendor_specific",
+    "dst_ip": "203.0.113.1",
+    "mystery_field": "unknown_value"
+  },
+  "expected_mappings": {
+    "source.ip": "172.16.0.10",
+    "host.name": "mixed-server",
+    "destination.ip": "203.0.113.1"
+  },
+  "expected_additional_fields": {
+    "unknown_field_1": "should_be_additional",
+    "custom_property": "vendor_specific",
+    "mystery_field": "unknown_value"
+  }
+}

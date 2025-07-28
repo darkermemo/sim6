@@ -84,23 +84,25 @@ const Dashboard: React.FC = () => {
       <Card title="Filters">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div>
-            <label className="block text-sm font-medium mb-1">From</label>
+            <label htmlFor="filter-from" className="block text-sm font-medium mb-1">From</label>
             <Input
+              id="filter-from"
               type="datetime-local"
               value={filters.from || ''}
               onChange={(e) => handleFilterChange('from', e.target.value)}
             />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">To</label>
+            <label htmlFor="filter-to" className="block text-sm font-medium mb-1">To</label>
             <Input
+              id="filter-to"
               type="datetime-local"
               value={filters.to || ''}
               onChange={(e) => handleFilterChange('to', e.target.value)}
             />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Severity</label>
+            <label htmlFor="filter-severity" className="block text-sm font-medium mb-1">Severity</label>
             <Select value={filters.severity || 'all'} onValueChange={(value) => handleFilterChange('severity', value === 'all' ? '' : value)}>
               <SelectTrigger>
                 <SelectValue placeholder="All severities" />
@@ -115,8 +117,9 @@ const Dashboard: React.FC = () => {
             </Select>
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Limit</label>
+            <label htmlFor="filter-limit" className="block text-sm font-medium mb-1">Limit</label>
             <Input
+              id="filter-limit"
               type="number"
               value={filters.limit || 10}
               onChange={(e) => handleFilterChange('limit', parseInt(e.target.value) || 10)}

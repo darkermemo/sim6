@@ -9,16 +9,14 @@ description = "High-throughput ClickHouse log ingestion pipeline with native com
 name = "ingestion_server"
 path = "src/main.rs"
 
-[[bin]]
-name = "massive_log_generator"
-path = "src/bin/massive_log_generator.rs"
+
 
 [dependencies]
 # HTTP Server
 axum = { version = "0.7", features = ["http2", "tokio", "tower-log"] }
 tokio = { version = "1.0", features = ["full"] }
 tower = { version = "0.4", features = ["full"] }
-tower-http = { version = "0.5", features = ["compression-gzip", "cors", "trace"] }
+tower-http = { version = "0.5", features = ["compression-gzip", "decompression-gzip", "cors", "trace", "timeout"] }
 hyper = { version = "1.0", features = ["full"] }
 
 # ClickHouse
@@ -31,6 +29,7 @@ serde_json = "1.0"
 # Configuration
 config = "0.14"
 toml = "0.8"
+url = { version = "2.4", features = ["serde"] }
 
 # Async and concurrency
 tokio-util = { version = "0.7", features = ["codec"] }
@@ -67,6 +66,8 @@ clap = { version = "4.4", features = ["derive"] }
 
 # Utilities
 uuid = { version = "1.6", features = ["v4", "serde"] }
+regex = "1.10"
+serde_yaml = "0.9"
 rand = "0.8"
 bytes = "1.5"
 

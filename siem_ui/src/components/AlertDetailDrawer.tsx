@@ -213,13 +213,13 @@ export function AlertDetailDrawer() {
                   {/* Status and Assignee */}
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <label className="text-sm font-medium text-gray-900 dark:text-gray-100">Status</label>
+                      <label htmlFor="alert-status-select" className="text-sm font-medium text-gray-900 dark:text-gray-100">Status</label>
                       <Select 
                         value={alertDetail.status} 
                         onValueChange={handleStatusChange}
                         disabled={isUpdatingStatus}
                       >
-                        <SelectTrigger>
+                        <SelectTrigger id="alert-status-select">
                           <SelectValue placeholder="Select status" />
                         </SelectTrigger>
                         <SelectContent>
@@ -232,9 +232,9 @@ export function AlertDetailDrawer() {
                     </div>
 
                     <div className="space-y-2">
-                      <label className="text-sm font-medium text-gray-900 dark:text-gray-100">Assignee</label>
+                      <label htmlFor="alert-assignee-select" className="text-sm font-medium text-gray-900 dark:text-gray-100">Assignee</label>
                       <Select onValueChange={handleAssigneeChange}>
-                        <SelectTrigger>
+                        <SelectTrigger id="alert-assignee-select">
                           <SelectValue placeholder="Assign to..." />
                         </SelectTrigger>
                         <SelectContent>
@@ -248,11 +248,11 @@ export function AlertDetailDrawer() {
 
                   {/* MITRE Tags */}
                   <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-900 dark:text-gray-100 flex items-center">
+                    <label htmlFor="mitre-tags-section" className="text-sm font-medium text-gray-900 dark:text-gray-100 flex items-center">
                       <Shield className="h-4 w-4 mr-2" />
                       MITRE ATT&CK Techniques
                     </label>
-                    <div className="flex flex-wrap gap-2">
+                    <div id="mitre-tags-section" className="flex flex-wrap gap-2">
                       {alertDetail.mitre_tags.length > 0 ? (
                         alertDetail.mitre_tags.map((tag, index) => (
                           <Badge key={index} variant="outline">
@@ -267,8 +267,8 @@ export function AlertDetailDrawer() {
 
                   {/* Key-Value Details */}
                   <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-900 dark:text-gray-100">Alert Details</label>
-                    <div className="space-y-3 bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+                    <label htmlFor="alert-details-section" className="text-sm font-medium text-gray-900 dark:text-gray-100">Alert Details</label>
+                    <div id="alert-details-section" className="space-y-3 bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
                       {[
                         { label: 'Source IP', value: alertDetail.src_ip, icon: <Hash className="h-4 w-4" /> },
                         { label: 'Destination IP', value: alertDetail.dest_ip, icon: <Hash className="h-4 w-4" /> },
@@ -311,12 +311,14 @@ export function AlertDetailDrawer() {
               <TabsContent value="raw" className="flex-1">
                 {alertDetail.raw ? (
                   <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-900 dark:text-gray-100">Raw Event Data</label>
-                    <MonacoViewer 
-                      value={alertDetail.raw} 
-                      language="json" 
-                      height="calc(100vh - 300px)"
-                    />
+                    <label htmlFor="raw-event-data" className="text-sm font-medium text-gray-900 dark:text-gray-100">Raw Event Data</label>
+                    <div id="raw-event-data">
+                      <MonacoViewer 
+                        value={alertDetail.raw} 
+                        language="json" 
+                        height="calc(100vh - 300px)"
+                      />
+                    </div>
                   </div>
                 ) : (
                   <SkeletonRawTab />
@@ -340,11 +342,12 @@ export function AlertDetailDrawer() {
                   <div className="flex-1 flex flex-col space-y-4">
                     {/* Add Note Form */}
                     <div className="space-y-2">
-                      <label className="text-sm font-medium text-gray-900 dark:text-gray-100 flex items-center">
+                      <label htmlFor="add-note-textarea" className="text-sm font-medium text-gray-900 dark:text-gray-100 flex items-center">
                         <MessageSquare className="h-4 w-4 mr-2" />
                         Add Note
                       </label>
                       <textarea
+                        id="add-note-textarea"
                         value={newNote}
                         onChange={(e) => setNewNote(e.target.value)}
                         placeholder="Add your investigation notes..."
@@ -400,4 +403,4 @@ export function AlertDetailDrawer() {
       </SheetContent>
     </Sheet>
   );
-} 
+}

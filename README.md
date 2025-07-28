@@ -46,6 +46,17 @@ graph TD
     H -->|Yes| J[PR Ready for Review]
 ```
 
+## 🚀 Deployment Mode
+
+**This SIEM system runs in Docker-free mode** with all services as native processes.
+
+📖 **See [DEPLOYMENT_MODE.md](./DEPLOYMENT_MODE.md) for complete deployment architecture details**
+
+- ✅ All services compiled as native binaries
+- ✅ No Docker/containers required
+- ✅ Direct process management
+- ✅ Optimal performance and resource usage
+
 ## 🏗️ Architecture
 
 ### Core Components

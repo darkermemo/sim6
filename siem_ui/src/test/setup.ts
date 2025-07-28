@@ -14,7 +14,7 @@ Object.defineProperty(import.meta, 'env', {
 });
 
 // Mock fetch globally
-(globalThis as any).fetch = vi.fn();
+(globalThis as unknown as { fetch: typeof fetch }).fetch = vi.fn();
 
 // Mock window.matchMedia
 Object.defineProperty(window, 'matchMedia', {
@@ -32,14 +32,14 @@ Object.defineProperty(window, 'matchMedia', {
 });
 
 // Mock ResizeObserver
-(globalThis as any).ResizeObserver = vi.fn().mockImplementation(() => ({
+(globalThis as unknown as { ResizeObserver: typeof ResizeObserver }).ResizeObserver = vi.fn().mockImplementation(() => ({
   observe: vi.fn(),
   unobserve: vi.fn(),
   disconnect: vi.fn(),
 }));
 
 // Mock IntersectionObserver
-(globalThis as any).IntersectionObserver = vi.fn().mockImplementation(() => ({
+(globalThis as unknown as { IntersectionObserver: typeof IntersectionObserver }).IntersectionObserver = vi.fn().mockImplementation(() => ({
   observe: vi.fn(),
   unobserve: vi.fn(),
   disconnect: vi.fn(),

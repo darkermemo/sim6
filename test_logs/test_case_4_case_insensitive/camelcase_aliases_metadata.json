@@ -1,0 +1,17 @@
+{
+  "name": "camelcase_aliases",
+  "description": "CamelCase field names",
+  "data": {
+    "SourceIp": "172.16.0.1",
+    "DestinationIp": "8.8.8.8",
+    "ComputerName": "WS-01",
+    "ProcessId": "5678"
+  },
+  "expected_mappings": {
+    "source.ip": "172.16.0.1",
+    "destination.ip": "8.8.8.8",
+    "host.name": "WS-01",
+    "process.pid": "5678"
+  },
+  "case_insensitive_test": true
+}

@@ -88,7 +88,7 @@ export interface CreateAlertNoteRequest {
 
 export interface SSEEvent {
   type: 'note' | 'heartbeat';
-  payload?: any;
+  payload?: unknown;
 }
 
 export interface DashboardResponse {
@@ -309,7 +309,7 @@ export interface TestRuleRequest {
 }
 
 export interface TestRuleResponse {
-  matches: any[];
+  matches: EventSearchResult[];
   total_matches: number;
   query_time_ms: number;
   error?: string;

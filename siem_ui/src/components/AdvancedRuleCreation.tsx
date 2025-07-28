@@ -657,10 +657,11 @@ export function AdvancedRuleCreation({ isOpen, onClose, onSuccess }: AdvancedRul
                 </div>
                 <div className="space-y-4">
                   <div>
-                    <label className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                    <label htmlFor="rule-name" className="text-sm font-medium text-gray-900 dark:text-gray-100">
                       Rule Name *
                     </label>
                     <Input
+                      id="rule-name"
                       value={formData.rule_name}
                       onChange={(e) => setFormData(prev => ({ ...prev, rule_name: e.target.value }))}
                       placeholder="Enter descriptive rule name"
@@ -669,10 +670,11 @@ export function AdvancedRuleCreation({ isOpen, onClose, onSuccess }: AdvancedRul
                   </div>
                   
                   <div>
-                    <label className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                    <label htmlFor="rule-description" className="text-sm font-medium text-gray-900 dark:text-gray-100">
                       Description *
                     </label>
                     <Textarea
+                      id="rule-description"
                       value={formData.description}
                       onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
                       placeholder="Detailed description of what this rule detects"
@@ -682,7 +684,7 @@ export function AdvancedRuleCreation({ isOpen, onClose, onSuccess }: AdvancedRul
                   </div>
                   
                   <div>
-                    <label className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                    <label htmlFor="rule-severity" className="text-sm font-medium text-gray-900 dark:text-gray-100">
                       Severity
                     </label>
                     <Select
@@ -724,54 +726,72 @@ export function AdvancedRuleCreation({ isOpen, onClose, onSuccess }: AdvancedRul
                       {queryFilters.map((filter, index) => (
                         <div key={filter.id} className="flex items-center gap-2 p-3 border rounded-lg">
                           {index > 0 && (
-                            <Select
-                            value={filter.logicalOperator}
-                            onValueChange={(value) => updateFilter(filter.id, 'logicalOperator', value)}
-                          >
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="AND">AND</SelectItem>
-                              <SelectItem value="OR">OR</SelectItem>
-                            </SelectContent>
-                          </Select>
+                            <div className="flex flex-col gap-1">
+                              <label htmlFor={`logical-operator-${filter.id}`} className="text-xs font-medium text-gray-700 dark:text-gray-300">
+                                Logic
+                              </label>
+                              <Select
+                                value={filter.logicalOperator}
+                                onValueChange={(value) => updateFilter(filter.id, 'logicalOperator', value)}
+                              >
+                                <SelectTrigger id={`logical-operator-${filter.id}`}>
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="AND">AND</SelectItem>
+                                  <SelectItem value="OR">OR</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
                           )}
                           
-                          <Select
-                            value={filter.field}
-                            onValueChange={(value) => handleFieldChange(filter.id, value)}
-                          >
-                            <SelectTrigger className="flex-1">
-                              <SelectValue placeholder="Select Field" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {CIM_FIELDS.map(field => (
-                                <SelectItem key={field.value} value={field.value} title={field.description}>
-                                  {field.label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          <div className="flex flex-col gap-1 flex-1">
+                            <label htmlFor={`field-${filter.id}`} className="text-xs font-medium text-gray-700 dark:text-gray-300">
+                              Field
+                            </label>
+                            <Select
+                              value={filter.field}
+                              onValueChange={(value) => handleFieldChange(filter.id, value)}
+                            >
+                              <SelectTrigger id={`field-${filter.id}`} className="flex-1">
+                                <SelectValue placeholder="Select Field" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {CIM_FIELDS.map(field => (
+                                  <SelectItem key={field.value} value={field.value} title={field.description}>
+                                    {field.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
                           
-                          <Select
-                            value={filter.operator}
-                            onValueChange={(value) => updateFilter(filter.id, 'operator', value)}
-                          >
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {OPERATORS.map(op => (
-                                <SelectItem key={op.value} value={op.value}>
-                                  {op.label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          <div className="flex flex-col gap-1">
+                            <label htmlFor={`operator-${filter.id}`} className="text-xs font-medium text-gray-700 dark:text-gray-300">
+                              Operator
+                            </label>
+                            <Select
+                              value={filter.operator}
+                              onValueChange={(value) => updateFilter(filter.id, 'operator', value)}
+                            >
+                              <SelectTrigger id={`operator-${filter.id}`}>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {OPERATORS.map(op => (
+                                  <SelectItem key={op.value} value={op.value}>
+                                    {op.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
                           
                           {!['IS NULL', 'IS NOT NULL'].includes(filter.operator) && (
-                            <div className="flex-1">
+                            <div className="flex flex-col gap-1 flex-1">
+                              <label id={`value-label-${filter.id}`} className="text-xs font-medium text-gray-700 dark:text-gray-300">
+                                Value
+                              </label>
                               {filter.field && fieldValues[filter.field] && fieldValues[filter.field].length > 0 ? (
                                 <MultiSelect
                                   options={fieldValues[filter.field].map(item => ({
@@ -782,9 +802,11 @@ export function AdvancedRuleCreation({ isOpen, onClose, onSuccess }: AdvancedRul
                                   onChange={(values) => updateFilter(filter.id, 'value', values)}
                                   placeholder="Select values..."
                                   isLoading={isLoadingFieldValues}
+                                  aria-labelledby={`value-label-${filter.id}`}
                                 />
                               ) : (
                                 <Input
+                                  id={`value-${filter.id}`}
                                   value={Array.isArray(filter.value) ? filter.value.join(', ') : filter.value}
                                   onChange={(e) => updateFilter(filter.id, 'value', e.target.value)}
                                   placeholder={filter.field ? (isLoadingFieldValues ? 'Loading values...' : 'Enter value or load from database') : 'Select a field first'}
@@ -819,10 +841,11 @@ export function AdvancedRuleCreation({ isOpen, onClose, onSuccess }: AdvancedRul
                     </div>
                     
                     <div>
-                      <label className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                      <label htmlFor="generated-sql-query" className="text-sm font-medium text-gray-900 dark:text-gray-100">
                         Generated SQL Query
                       </label>
                       <Textarea
+                        id="generated-sql-query"
                         value={formData.query}
                         readOnly
                         className="mt-1 bg-gray-50 dark:bg-gray-800 font-mono text-sm"
@@ -834,10 +857,11 @@ export function AdvancedRuleCreation({ isOpen, onClose, onSuccess }: AdvancedRul
                   {/* Raw SQL Tab */}
                   <TabsContent value="raw-sql" className="space-y-4">
                     <div>
-                      <label className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                      <label htmlFor="clickhouse-sql-query" className="text-sm font-medium text-gray-900 dark:text-gray-100">
                         ClickHouse SQL Query *
                       </label>
                       <Textarea
+                        id="clickhouse-sql-query"
                         value={formData.query}
                         onChange={(e) => {
                           setFormData(prev => ({ ...prev, query: e.target.value }));
@@ -867,10 +891,11 @@ export function AdvancedRuleCreation({ isOpen, onClose, onSuccess }: AdvancedRul
                   {/* Sigma Import Tab */}
                   <TabsContent value="sigma" className="space-y-4">
                     <div>
-                      <label className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                      <label htmlFor="sigma-rule-yaml" className="text-sm font-medium text-gray-900 dark:text-gray-100">
                         Sigma Rule YAML
                       </label>
                       <Textarea
+                        id="sigma-rule-yaml"
                         value={sigmaYaml}
                         onChange={(e) => setSigmaYaml(e.target.value)}
                         placeholder={`title: Example Sigma Rule
@@ -951,10 +976,11 @@ level: high`}
                   {formData.is_stateful === 1 && (
                     <div className="space-y-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
                       <div>
-                        <label className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                        <label htmlFor="key-prefix" className="text-sm font-medium text-gray-900 dark:text-gray-100">
                           Key Prefix
                         </label>
                         <Input
+                          id="key-prefix"
                           value={statefulConfig.key_prefix}
                           onChange={(e) => setStatefulConfig(prev => ({ ...prev, key_prefix: e.target.value }))}
                           placeholder="e.g., brute_force"
@@ -963,10 +989,11 @@ level: high`}
                       </div>
                       
                       <div>
-                        <label className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                        <label htmlFor="aggregate-on" className="text-sm font-medium text-gray-900 dark:text-gray-100">
                           Aggregate On (comma-separated)
                         </label>
                         <Input
+                          id="aggregate-on"
                           value={statefulConfig.aggregate_on.join(', ')}
                           onChange={(e) => setStatefulConfig(prev => ({ 
                             ...prev, 
@@ -979,10 +1006,11 @@ level: high`}
                       
                       <div className="grid grid-cols-2 gap-3">
                         <div>
-                          <label className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                          <label htmlFor="threshold" className="text-sm font-medium text-gray-900 dark:text-gray-100">
                             Threshold
                           </label>
                           <Input
+                            id="threshold"
                             type="number"
                             value={statefulConfig.threshold}
                             onChange={(e) => setStatefulConfig(prev => ({ ...prev, threshold: parseInt(e.target.value) || 1 }))}
@@ -991,10 +1019,11 @@ level: high`}
                         </div>
                         
                         <div>
-                          <label className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                          <label htmlFor="window-seconds" className="text-sm font-medium text-gray-900 dark:text-gray-100">
                             Window (seconds)
                           </label>
                           <Input
+                            id="window-seconds"
                             type="number"
                             value={statefulConfig.window_seconds}
                             onChange={(e) => setStatefulConfig(prev => ({ ...prev, window_seconds: parseInt(e.target.value) || 3600 }))}

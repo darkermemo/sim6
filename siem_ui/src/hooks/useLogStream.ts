@@ -6,7 +6,7 @@ import { useAuthStore } from '../stores/authStore';
 
 // Extended EventSource interface to include our custom properties
 interface ExtendedEventSource extends EventSource {
-  _connectionCheck?: number;
+  _connectionCheck?: NodeJS.Timeout | number;
 }
 
 interface UseLogStreamResult {
@@ -41,7 +41,7 @@ export const useLogStream = (options: UseLogStreamOptions = {}): UseLogStreamRes
   const filtersRef = useRef(filters);
   const timeRangeRef = useRef(timeRange);
   const freeTextRef = useRef(freeText);
-  const sortConfigRef = useRef(sortConfig);
+  const _sortConfigRef = useRef(sortConfig);
   const eventSourceRef = useRef<ExtendedEventSource | null>(null);
   const isStreamingRef = useRef(false);
   const isRefreshingRef = useRef(false);

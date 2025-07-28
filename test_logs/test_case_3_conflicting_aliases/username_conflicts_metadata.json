@@ -1,0 +1,14 @@
+{
+  "name": "username_conflicts",
+  "description": "Multiple user name aliases",
+  "data": {
+    "user": "admin",
+    "username": "administrator",
+    "User": "ADMIN",
+    "SubjectUserName": "domain\\admin"
+  },
+  "expected_mappings": {
+    "user.name": "admin"
+  },
+  "priority_test": true
+}

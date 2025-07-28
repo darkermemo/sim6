@@ -1,0 +1,9 @@
+{
+  "srcip": "10.0.0.100",
+  "dstip": "8.8.8.8",
+  "hostname": "web-server-01",
+  "username": "admin",
+  "protocol": "https",
+  "src_port": "443",
+  "dst_port": "80"
+}

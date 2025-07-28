@@ -60,7 +60,20 @@ export const useAlerts = (): UseAlertsResult => {
 
       const data = await response.json();
       // Handle both direct array response and wrapped response
-      setAlerts(Array.isArray(data) ? data : (data.data || []));
+      const alertsArray = Array.isArray(data) ? data : (data.data || []);
+      
+      // Validate and sanitize alert data
+      const validatedAlerts = alertsArray.filter((alert: any) => {
+        return alert && typeof alert === 'object' && alert.alert_id;
+      }).map((alert: any) => ({
+        ...alert,
+        alert_id: alert.alert_id || 'unknown',
+        rule_name: alert.rule_name || 'Unknown Rule',
+        severity: alert.severity || 'low',
+        status: alert.status || 'open'
+      }));
+      
+      setAlerts(validatedAlerts);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch alerts');
     } finally {

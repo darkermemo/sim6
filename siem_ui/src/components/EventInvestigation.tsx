@@ -66,7 +66,7 @@ export function EventInvestigation({
   const loading = propLoading !== undefined ? propLoading : hookLoading;
   const error = propError !== undefined ? propError : hookError;
   const totalCount = propTotalCount !== undefined ? propTotalCount : hookTotalCount;
-  const hasMore = propHasMore !== undefined ? propHasMore : hookHasMore;
+  const _hasMore = propHasMore !== undefined ? propHasMore : hookHasMore;
   const refresh = propRefresh || hookRefresh;
   
   // Display state
@@ -90,7 +90,7 @@ export function EventInvestigation({
   };
 
   // Get severity badge variant
-  const getSeverityVariant = (severity: string) => {
+  const _getSeverityVariant = (severity: string) => {
     switch (severity?.toLowerCase()) {
       case 'critical':
         return 'critical';

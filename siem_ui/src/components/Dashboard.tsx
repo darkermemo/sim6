@@ -160,7 +160,7 @@ export function Dashboard() {
   }, [data]);
 
   // Calculate pagination info
-  const totalPages = Math.ceil((data?.recentAlerts?.length || 0) / 10);
+  const totalPages = Math.ceil((data?.recent_alerts?.length || 0) / 10);
 
   // Show error toast if API call fails - Memoize toast to prevent infinite loops
   const showErrorToast = useCallback(() => {
@@ -222,7 +222,7 @@ export function Dashboard() {
             {isLoading ? (
               <ChartSkeleton title="Alerts by Severity Over Time" />
             ) : (
-              <AlertsOverTimeChart data={data?.alertsOverTime} />
+              <AlertsOverTimeChart data={data?.alerts_over_time} />
             )}
           </div>
           
@@ -230,14 +230,14 @@ export function Dashboard() {
             {isLoading ? (
               <ChartSkeleton title="Top Log Sources" />
             ) : (
-              <TopSourcesChart data={data?.topLogSources} />
+              <TopSourcesChart data={data?.top_log_sources} />
             )}
           </div>
 
           {/* Row 4: Recent Alerts Table (Full Width) */}
           <div className="dashboard-table">
             <RecentAlertsList
-              alerts={data?.recentAlerts}
+              alerts={data?.recent_alerts}
               isLoading={isLoading}
               currentPage={currentPage}
               totalPages={totalPages}

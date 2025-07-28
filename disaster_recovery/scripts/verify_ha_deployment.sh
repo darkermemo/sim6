@@ -203,7 +203,10 @@ test_api_failover() {
     info "Testing failover by stopping API on port $api_to_stop"
     
     # Stop one API instance (simulate using docker if available)
-    local container_id=$(docker ps --filter "publish=$api_to_stop" --format "{{.ID}}" 2>/dev/null | head -1)
+    local container_id=""
+    if command -v docker &>/dev/null && docker info &>/dev/null 2>&1; then
+        container_id=$(docker ps --filter "publish=$api_to_stop" --format "{{.ID}}" 2>/dev/null | head -1)
+    fi
     
     if [ -n "$container_id" ]; then
         info "Stopping container $container_id (port $api_to_stop)"
@@ -569,7 +572,14 @@ main() {
     
     # Check prerequisites
     command -v curl >/dev/null 2>&1 || { error "curl is required but not installed"; exit 1; }
-    command -v docker >/dev/null 2>&1 || warn "docker not available, some tests will be skipped"
+    
+    # Check Docker availability (graceful check for Docker-free deployments)
+    if command -v docker &>/dev/null && docker info &>/dev/null 2>&1; then
+        info "Docker available for container-based tests"
+    else
+        warn "Docker not available (but not required for native deployments) - container tests will be skipped"
+    fi
+    
     command -v clickhouse-client >/dev/null 2>&1 || warn "clickhouse-client not available, database tests will be skipped"
     command -v kafka-topics.sh >/dev/null 2>&1 || warn "kafka tools not available, Kafka tests will be skipped"
     
@@ -643,4 +653,4 @@ EOF
 esac
 
 # Execute main function
-main "$@" 
+main "$@"

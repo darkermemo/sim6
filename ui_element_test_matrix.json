@@ -1,5 +1,5 @@
 {
-  "timestamp": "2025-07-23T19:13:33.360Z",
+  "timestamp": "2025-07-28T20:38:58.743Z",
   "summary": {
     "totalPages": 12,
     "totalElements": 120,
@@ -9,76 +9,64 @@
   },
   "pages": {
     "dashboard": {
-      "status": "pass",
-      "httpCode": 200,
-      "url": "http://localhost:3004/",
-      "loadTime": 1753298013344
+      "status": "fail",
+      "error": "fetch failed",
+      "url": "http://localhost:3004/"
     },
     "alerts": {
-      "status": "pass",
-      "httpCode": 200,
-      "url": "http://localhost:3004/alerts",
-      "loadTime": 1753298013347
+      "status": "fail",
+      "error": "fetch failed",
+      "url": "http://localhost:3004/alerts"
     },
     "cases": {
-      "status": "pass",
-      "httpCode": 200,
-      "url": "http://localhost:3004/cases",
-      "loadTime": 1753298013349
+      "status": "fail",
+      "error": "fetch failed",
+      "url": "http://localhost:3004/cases"
     },
     "rules": {
-      "status": "pass",
-      "httpCode": 200,
-      "url": "http://localhost:3004/rules",
-      "loadTime": 1753298013350
+      "status": "fail",
+      "error": "fetch failed",
+      "url": "http://localhost:3004/rules"
     },
     "log-sources": {
-      "status": "pass",
-      "httpCode": 200,
-      "url": "http://localhost:3004/log-sources",
-      "loadTime": 1753298013352
+      "status": "fail",
+      "error": "fetch failed",
+      "url": "http://localhost:3004/log-sources"
     },
     "users": {
-      "status": "pass",
-      "httpCode": 200,
-      "url": "http://localhost:3004/users",
-      "loadTime": 1753298013353
+      "status": "fail",
+      "error": "fetch failed",
+      "url": "http://localhost:3004/users"
     },
     "parsers": {
-      "status": "pass",
-      "httpCode": 200,
-      "url": "http://localhost:3004/parsers",
-      "loadTime": 1753298013354
+      "status": "fail",
+      "error": "fetch failed",
+      "url": "http://localhost:3004/parsers"
     },
     "interactive-parser": {
-      "status": "pass",
-      "httpCode": 200,
-      "url": "http://localhost:3004/interactive-parser",
-      "loadTime": 1753298013355
+      "status": "fail",
+      "error": "fetch failed",
+      "url": "http://localhost:3004/interactive-parser"
     },
     "events": {
-      "status": "pass",
-      "httpCode": 200,
-      "url": "http://localhost:3004/events",
-      "loadTime": 1753298013356
+      "status": "fail",
+      "error": "fetch failed",
+      "url": "http://localhost:3004/events"
     },
     "agent-fleet": {
-      "status": "pass",
-      "httpCode": 200,
-      "url": "http://localhost:3004/agent-fleet",
-      "loadTime": 1753298013357
+      "status": "fail",
+      "error": "fetch failed",
+      "url": "http://localhost:3004/agent-fleet"
     },
     "vendor-mapping": {
-      "status": "pass",
-      "httpCode": 200,
-      "url": "http://localhost:3004/vendor-mapping",
-      "loadTime": 1753298013358
+      "status": "fail",
+      "error": "fetch failed",
+      "url": "http://localhost:3004/vendor-mapping"
     },
     "admin": {
-      "status": "pass",
-      "httpCode": 200,
-      "url": "http://localhost:3004/admin",
-      "loadTime": 1753298013359
+      "status": "fail",
+      "error": "fetch failed",
+      "url": "http://localhost:3004/admin"
     }
   },
   "testMatrix": {

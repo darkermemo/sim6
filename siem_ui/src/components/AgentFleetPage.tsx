@@ -12,8 +12,7 @@ import {
   Settings, 
   Trash2,
   Circle,
-  AlertTriangle,
-  CheckCircle
+  AlertTriangle
 } from 'lucide-react';
 import {
   Select,
@@ -270,7 +269,7 @@ const AgentFleetPage: React.FC<AgentFleetPageProps> = ({ userRole, onNavigate })
     {
       key: 'status',
       label: 'Status',
-      render: (value: string, row: FleetAgent) => (
+      render: (_: string, row: FleetAgent) => (
         <div className="flex items-center space-x-2">
           {getStatusIcon(row.status)}
           <span className="text-sm">{row.status}</span>
@@ -280,7 +279,7 @@ const AgentFleetPage: React.FC<AgentFleetPageProps> = ({ userRole, onNavigate })
     {
       key: 'asset_name',
       label: 'Asset Name / IP',
-      render: (value: string, row: FleetAgent) => (
+      render: (_: string, row: FleetAgent) => (
         <div>
           <div className="font-medium">{row.asset_name}</div>
           <div className="text-sm text-muted-foreground">{row.asset_ip}</div>
@@ -290,35 +289,35 @@ const AgentFleetPage: React.FC<AgentFleetPageProps> = ({ userRole, onNavigate })
     {
       key: 'last_seen',
       label: 'Last Seen',
-      render: (value: number, row: FleetAgent) => (
+      render: (_: number, row: FleetAgent) => (
         <span className="text-sm">{formatLastSeen(row.last_seen)}</span>
       ),
     },
     {
       key: 'agent_version',
       label: 'Agent Version',
-      render: (value: string, row: FleetAgent) => (
+      render: (_: string, row: FleetAgent) => (
         <span className="text-sm font-mono">{row.agent_version}</span>
       ),
     },
     {
       key: 'policy_name',
       label: 'Policy',
-      render: (value: string, row: FleetAgent) => (
+      render: (_: string, row: FleetAgent) => (
         <span className="text-sm">{row.policy_name || 'None'}</span>
       ),
     },
     {
       key: 'metrics',
       label: 'Buffer Size',
-      render: (value: any, row: FleetAgent) => (
+      render: (_: any, row: FleetAgent) => (
         <span className="text-sm">{row.metrics?.logs_in_buffer || 0} logs</span>
       ),
     },
     {
       key: 'actions',
       label: 'Actions',
-      render: (value: any, row: FleetAgent) => (
+      render: (_: any, row: FleetAgent) => (
         <div className="relative">
           <Button 
             variant="ghost" 
@@ -421,8 +420,10 @@ const AgentFleetPage: React.FC<AgentFleetPageProps> = ({ userRole, onNavigate })
       <Card className="p-4">
         <div className="flex items-center space-x-4">
           <div className="relative flex-1">
+            <label htmlFor="search-input" className="sr-only">Search by asset name or IP</label>
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <input
+              id="search-input"
               type="text"
               placeholder="Search by asset name or IP..."
               value={searchTerm}
@@ -432,8 +433,9 @@ const AgentFleetPage: React.FC<AgentFleetPageProps> = ({ userRole, onNavigate })
           </div>
           <div className="flex items-center space-x-2">
             <Filter className="h-4 w-4 text-muted-foreground" />
+            <label htmlFor="status-filter" className="sr-only">Filter by status</label>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[150px]">
+              <SelectTrigger id="status-filter" className="w-[150px]">
                 <SelectValue placeholder="Filter by status" />
               </SelectTrigger>
               <SelectContent>
@@ -466,9 +468,9 @@ const AgentFleetPage: React.FC<AgentFleetPageProps> = ({ userRole, onNavigate })
           </SheetHeader>
           <div className="space-y-4 mt-6">
             <div>
-              <label className="block text-sm font-medium mb-2">Operating System</label>
+              <label htmlFor="os-select" className="block text-sm font-medium mb-2">Operating System</label>
               <Select value={selectedOS} onValueChange={setSelectedOS}>
-                <SelectTrigger>
+                <SelectTrigger id="os-select">
                   <SelectValue placeholder="Select OS" />
                 </SelectTrigger>
                 <SelectContent>
@@ -479,9 +481,9 @@ const AgentFleetPage: React.FC<AgentFleetPageProps> = ({ userRole, onNavigate })
               </Select>
             </div>
             <div>
-              <label className="block text-sm font-medium mb-2">Architecture</label>
+              <label htmlFor="arch-select" className="block text-sm font-medium mb-2">Architecture</label>
               <Select value={selectedArch} onValueChange={setSelectedArch}>
-                <SelectTrigger>
+                <SelectTrigger id="arch-select">
                   <SelectValue placeholder="Select architecture" />
                 </SelectTrigger>
                 <SelectContent>
@@ -513,9 +515,9 @@ const AgentFleetPage: React.FC<AgentFleetPageProps> = ({ userRole, onNavigate })
           </SheetHeader>
           <div className="space-y-4 mt-6">
             <div>
-              <label className="block text-sm font-medium mb-2">Policy</label>
+              <label htmlFor="policy-select" className="block text-sm font-medium mb-2">Policy</label>
               <Select value={selectedPolicyId} onValueChange={setSelectedPolicyId}>
-                <SelectTrigger>
+                <SelectTrigger id="policy-select">
                   <SelectValue placeholder="Select policy" />
                 </SelectTrigger>
                 <SelectContent>

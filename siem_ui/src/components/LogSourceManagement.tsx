@@ -187,9 +187,11 @@ export function LogSourceManagement() {
         <div className="flex items-center gap-4 flex-wrap">
           {/* Search */}
           <div className="relative flex-1 min-w-64">
+            <label htmlFor="log-source-search" className="sr-only">Search log sources</label>
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <input
               type="text"
+              id="log-source-search"
               placeholder="Search by name or IP address..."
               value={filters.search}
               onChange={handleSearchChange}
@@ -198,15 +200,19 @@ export function LogSourceManagement() {
           </div>
 
           {/* Source Type Filter */}
-          <Select 
-            value={filters.source_type || 'all'} 
-            onValueChange={handleSourceTypeChange}
-          >
-            <option value="all">All Types</option>
-            {getValidLogSourceTypes().map((type: LogSourceType) => (
-              <option key={type} value={type}>{type}</option>
-            ))}
-          </Select>
+          <div>
+            <span className="sr-only">Filter by source type</span>
+            <Select 
+              value={filters.source_type || 'all'} 
+              onValueChange={handleSourceTypeChange}
+              aria-label="Filter by source type"
+            >
+              <option value="all">All Types</option>
+              {getValidLogSourceTypes().map((type: LogSourceType) => (
+                <option key={type} value={type}>{type}</option>
+              ))}
+            </Select>
+          </div>
 
           {/* Filter Toggle for Mobile */}
           <Sheet open={isFilterOpen} onOpenChange={setIsFilterOpen}>
@@ -226,8 +232,9 @@ export function LogSourceManagement() {
               </SheetHeader>
               <div className="space-y-4 mt-6">
                 <div>
-                  <label className="text-sm font-medium mb-2 block">Search</label>
+                  <label htmlFor="log-source-search" className="text-sm font-medium mb-2 block">Search</label>
                                      <input
+                     id="log-source-search"
                      type="text"
                      placeholder="Search by name or IP..."
                      value={filters.search}
@@ -236,8 +243,9 @@ export function LogSourceManagement() {
                    />
                 </div>
                 <div>
-                  <label className="text-sm font-medium mb-2 block">Source Type</label>
-                  <Select 
+                  <label htmlFor="log-source-type-select" className="text-sm font-medium mb-2 block">Source Type</label>
+                  <div id="log-source-type-select">
+                    <Select 
                     value={filters.source_type || 'all'} 
                     onValueChange={handleSourceTypeChange}
                   >
@@ -246,6 +254,7 @@ export function LogSourceManagement() {
                        <option key={type} value={type}>{type}</option>
                      ))}
                   </Select>
+                  </div>
                 </div>
               </div>
             </SheetContent>
@@ -370,4 +379,4 @@ export function LogSourceManagement() {
       )}
     </div>
   );
-} 
+}

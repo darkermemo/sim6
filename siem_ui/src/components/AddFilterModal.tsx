@@ -70,73 +70,80 @@ export const AddFilterModal: React.FC<AddFilterModalProps> = ({
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           {/* Field Selection */}
           <div>
-            <label className="block text-sm font-medium text-primary-text mb-2">
-              Field
-            </label>
-            <div className="space-y-2">
-              <div className="flex items-center space-x-2">
-                <input
-                  type="radio"
-                  id="common-field"
-                  name="field-type"
-                  checked={!useCustomField}
-                  onChange={() => setUseCustomField(false)}
-                  className="text-blue-600"
-                />
-                <label htmlFor="common-field" className="text-sm text-primary-text">
-                  Common fields
-                </label>
+            <fieldset>
+              <legend className="block text-sm font-medium text-primary-text mb-2">
+                Field
+              </legend>
+              <div className="space-y-2">
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="radio"
+                    id="common-field"
+                    name="field-type"
+                    checked={!useCustomField}
+                    onChange={() => setUseCustomField(false)}
+                    className="text-blue-600"
+                  />
+                  <label htmlFor="common-field" className="text-sm text-primary-text">
+                    Common fields
+                  </label>
+                </div>
+                
+                {!useCustomField && (
+                  <select
+                    id="field-select"
+                    value={field}
+                    onChange={(e) => setField(e.target.value)}
+                    className="w-full px-3 py-2 border border-border bg-background text-primary-text rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    required
+                    aria-label="Select common field"
+                  >
+                    <option value="">Select a field...</option>
+                    {COMMON_FIELDS.map((f) => (
+                      <option key={f.value} value={f.value}>
+                        {f.label}
+                      </option>
+                    ))}
+                  </select>
+                )}
+                
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="radio"
+                    id="custom-field"
+                    name="field-type"
+                    checked={useCustomField}
+                    onChange={() => setUseCustomField(true)}
+                    className="text-blue-600"
+                  />
+                  <label htmlFor="custom-field" className="text-sm text-primary-text">
+                    Custom field
+                  </label>
+                </div>
+                
+                {useCustomField && (
+                  <input
+                    type="text"
+                    id="custom-field-input"
+                    value={customField}
+                    onChange={(e) => setCustomField(e.target.value)}
+                    placeholder="Enter field name..."
+                    className="w-full px-3 py-2 border border-border bg-background text-primary-text rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    required
+                    aria-label="Enter custom field name"
+                  />
+                )}
               </div>
-              
-              {!useCustomField && (
-                <select
-                  value={field}
-                  onChange={(e) => setField(e.target.value)}
-                  className="w-full px-3 py-2 border border-border bg-background text-primary-text rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  required
-                >
-                  <option value="">Select a field...</option>
-                  {COMMON_FIELDS.map((f) => (
-                    <option key={f.value} value={f.value}>
-                      {f.label}
-                    </option>
-                  ))}
-                </select>
-              )}
-              
-              <div className="flex items-center space-x-2">
-                <input
-                  type="radio"
-                  id="custom-field"
-                  name="field-type"
-                  checked={useCustomField}
-                  onChange={() => setUseCustomField(true)}
-                  className="text-blue-600"
-                />
-                <label htmlFor="custom-field" className="text-sm text-primary-text">
-                  Custom field
-                </label>
-              </div>
-              
-              {useCustomField && (
-                <input
-                  type="text"
-                  value={customField}
-                  onChange={(e) => setCustomField(e.target.value)}
-                  placeholder="Enter field name..."
-                  className="w-full px-3 py-2 border border-border bg-background text-primary-text rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  required
-                />
-              )}
-            </div>
+            </fieldset>
           </div>
 
           {/* Operator Selection */}
           <div>
-            <label className="block text-sm font-medium text-primary-text mb-2">
+            <label htmlFor="operator-select" className="block text-sm font-medium text-primary-text mb-2">
               Operator
             </label>
             <select
+              id="operator-select"
               value={operator}
               onChange={(e) => setOperator(e.target.value)}
               className="w-full px-3 py-2 border border-border bg-background text-primary-text rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -152,11 +159,12 @@ export const AddFilterModal: React.FC<AddFilterModalProps> = ({
 
           {/* Value Input */}
           <div>
-            <label className="block text-sm font-medium text-primary-text mb-2">
+            <label htmlFor="value-input" className="block text-sm font-medium text-primary-text mb-2">
               Value
             </label>
             <input
               type="text"
+              id="value-input"
               value={value}
               onChange={(e) => setValue(e.target.value)}
               placeholder="Enter value..."

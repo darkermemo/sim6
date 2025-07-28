@@ -183,8 +183,10 @@ const ParserManagement: React.FC<ParserManagementProps> = ({ userRole }) => {
       {/* Search */}
       <Card className="p-4">
         <div className="relative">
+          <label htmlFor="parser-search" className="sr-only">Search parsers</label>
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <input
+            id="parser-search"
             type="text"
             placeholder="Search parsers..."
             value={searchTerm}
@@ -253,8 +255,9 @@ const ParserManagement: React.FC<ParserManagementProps> = ({ userRole }) => {
           </SheetHeader>
           <div className="space-y-4 mt-6">
             <div>
-              <label className="block text-sm font-medium mb-2">Parser Name</label>
+              <label htmlFor="parser-name" className="block text-sm font-medium mb-2">Parser Name</label>
               <input
+                id="parser-name"
                 type="text"
                 value={formData.parser_name}
                 onChange={(e) => setFormData({ ...formData, parser_name: e.target.value })}
@@ -263,8 +266,9 @@ const ParserManagement: React.FC<ParserManagementProps> = ({ userRole }) => {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-2">Parser Type</label>
+              <label htmlFor="parser-type" className="block text-sm font-medium mb-2">Parser Type</label>
               <select
+                id="parser-type"
                 value={formData.parser_type}
                 onChange={(e) => setFormData({ ...formData, parser_type: e.target.value as 'Grok' | 'Regex' })}
                 className="w-full px-3 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -274,8 +278,9 @@ const ParserManagement: React.FC<ParserManagementProps> = ({ userRole }) => {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium mb-2">Pattern</label>
+              <label htmlFor="parser-pattern" className="block text-sm font-medium mb-2">Pattern</label>
               <textarea
+                id="parser-pattern"
                 value={formData.pattern}
                 onChange={(e) => setFormData({ ...formData, pattern: e.target.value })}
                 placeholder={formData.parser_type === 'Grok' ? 'Enter Grok pattern (e.g., %{TIMESTAMP_ISO8601:timestamp} %{LOGLEVEL:level})' : 'Enter Regex pattern'}
@@ -307,35 +312,35 @@ const ParserManagement: React.FC<ParserManagementProps> = ({ userRole }) => {
           {selectedParser && (
             <div className="space-y-4 mt-6">
               <div>
-                <label className="block text-sm font-medium mb-2">Parser Name</label>
-                <div className="px-3 py-2 bg-gray-50 border border-border rounded-md">
+                <label htmlFor="parser-name-display" className="block text-sm font-medium mb-2">Parser Name</label>
+                <div id="parser-name-display" className="px-3 py-2 bg-gray-50 border border-border rounded-md">
                   {selectedParser.parser_name}
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium mb-2">Parser Type</label>
-                <div className="px-3 py-2 bg-gray-50 border border-border rounded-md">
+                <label htmlFor="parser-type-display" className="block text-sm font-medium mb-2">Parser Type</label>
+                <div id="parser-type-display" className="px-3 py-2 bg-gray-50 border border-border rounded-md">
                   <Badge variant={selectedParser.parser_type === 'Grok' ? 'default' : 'secondary'}>
                     {selectedParser.parser_type}
                   </Badge>
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium mb-2">Pattern</label>
-                <div className="px-3 py-2 bg-gray-50 border border-border rounded-md font-mono text-sm whitespace-pre-wrap max-h-64 overflow-y-auto">
+                <label htmlFor="parser-pattern-display" className="block text-sm font-medium mb-2">Pattern</label>
+                <div id="parser-pattern-display" className="px-3 py-2 bg-gray-50 border border-border rounded-md font-mono text-sm whitespace-pre-wrap max-h-64 overflow-y-auto">
                   {selectedParser.pattern}
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium mb-2">Created At</label>
-                  <div className="px-3 py-2 bg-gray-50 border border-border rounded-md text-sm">
+                  <label htmlFor="parser-created-display" className="block text-sm font-medium mb-2">Created At</label>
+                  <div id="parser-created-display" className="px-3 py-2 bg-gray-50 border border-border rounded-md text-sm">
                     {new Date(selectedParser.created_at * 1000).toLocaleString()}
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-2">Updated At</label>
-                  <div className="px-3 py-2 bg-gray-50 border border-border rounded-md text-sm">
+                  <label htmlFor="parser-updated-display" className="block text-sm font-medium mb-2">Updated At</label>
+                  <div id="parser-updated-display" className="px-3 py-2 bg-gray-50 border border-border rounded-md text-sm">
                     {new Date(selectedParser.updated_at * 1000).toLocaleString()}
                   </div>
                 </div>

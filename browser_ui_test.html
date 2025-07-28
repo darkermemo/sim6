@@ -79,11 +79,11 @@
         <div class="test-section">
             <h2>🌐 Server Status</h2>
             <div class="test-item">
-                <span>UI Server (http://localhost:3004/)</span>
+                <span>UI Server (http://localhost:3000/)</span>
                 <span id="ui-status" class="status pending">Checking...</span>
             </div>
             <div class="test-item">
-                <span>API Server (http://localhost:8080/)</span>
+                <span>API Server (http://localhost:8081/)</span>
                 <span id="api-status" class="status pending">Checking...</span>
             </div>
             <button class="test-button" onclick="checkServers()">Check Servers</button>
@@ -183,7 +183,7 @@
             
             // Check UI Server
             try {
-                const uiResponse = await fetch('http://localhost:3004/', { mode: 'no-cors' });
+                const uiResponse = await fetch('http://localhost:3000/', { mode: 'no-cors' });
                 updateStatus('ui-status', 'pass', 'Online');
                 testResults.servers.ui = true;
                 log('UI Server: Online', 'success');
@@ -195,7 +195,7 @@
 
             // Check API Server
             try {
-                const apiResponse = await fetch('http://localhost:8080/health');
+                const apiResponse = await fetch('http://localhost:8081/health');
                 if (apiResponse.ok) {
                     updateStatus('api-status', 'pass', 'Online');
                     testResults.servers.api = true;
@@ -260,7 +260,7 @@
             
             try {
                 // Since we can't directly navigate in this context, we'll test if the UI server responds
-                const response = await fetch(`http://localhost:3004/`, { mode: 'no-cors' });
+                const response = await fetch(`http://localhost:3000/`, { mode: 'no-cors' });
                 updateStatus(statusId, 'pass', 'Accessible');
                 testResults.pages[page.path] = { status: 'pass', error: null };
                 log(`✅ ${page.name}: Accessible`, 'success');
@@ -288,7 +288,7 @@
             log(`Testing API: ${api.name}`, 'info');
             
             try {
-                const response = await fetch(`http://localhost:8080${api.url}`, {
+                const response = await fetch(`http://localhost:8081${api.url}`, {
                     method: api.method,
                     headers: {
                         'Content-Type': 'application/json'
@@ -328,7 +328,7 @@
         }
 
         function openUIInNewTab() {
-            window.open('http://localhost:3004/', '_blank');
+            window.open('http://localhost:3000/', '_blank');
             log('Opened UI in new tab for manual testing', 'info');
         }
 

@@ -1,0 +1,81 @@
+{
+  "routes": [
+    {
+      "method": "GET",
+      "path": "/health",
+      "handler": "health_check",
+      "file": "siem_clickhouse_ingestion/src/receiver.rs",
+      "line": 215,
+      "context": [
+        "",
+        "Router::new()",
+        ".route(\"/health\", get(health_check))",
+        ".route(\"/metrics\", get(metrics_handler))",
+        ".route(\"/tenants/:tenant_id\", get(tenant_info))"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/health",
+      "handler": "health_check",
+      "file": "siem_unified_pipeline/src/handlers.rs",
+      "line": 144,
+      "context": [
+        "Router::new()",
+        "// Health and status endpoints",
+        ".route(\"/health\", get(health_check))",
+        ".route(\"/health/detailed\", get(detailed_health_check))",
+        ".route(\"/status\", get(system_status))"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/metrics",
+      "handler": "metrics_handler",
+      "file": "siem_clickhouse_ingestion/src/receiver.rs",
+      "line": 216,
+      "context": [
+        "Router::new()",
+        ".route(\"/health\", get(health_check))",
+        ".route(\"/metrics\", get(metrics_handler))",
+        ".route(\"/tenants/:tenant_id\", get(tenant_info))",
+        ".route(\"/ingest/:tenant_id\", post(ingest_logs))"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/metrics",
+      "handler": "get_metrics",
+      "file": "siem_unified_pipeline/src/handlers.rs",
+      "line": 150,
+      "context": [
+        "",
+        "// Metrics endpoints",
+        ".route(\"/metrics\", get(get_metrics))",
+        ".route(\"/metrics/prometheus\", get(get_prometheus_metrics))",
+        ".route(\"/metrics/components\", get(get_component_metrics))"
+      ]
+    }
+  ],
+  "analysis": {
+    "total_routes": 4,
+    "methods": {
+      "GET": 4
+    },
+    "paths": {
+      "/health": 2,
+      "/metrics": 2
+    },
+    "handlers": {
+      "health_check": 2,
+      "metrics_handler": 1,
+      "get_metrics": 1
+    },
+    "files": {
+      "siem_clickhouse_ingestion/src/receiver.rs": 2,
+      "siem_unified_pipeline/src/handlers.rs": 2
+    }
+  },
+  "generated_at": "/Users/yasseralmohammed/sim6",
+  "scan_timestamp": "auto-generated"
+}

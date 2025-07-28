@@ -85,6 +85,17 @@ export function Rules() {
     }
   };
 
+  // Handle rule editing
+  const handleEditRule = (_ruleId: string) => {
+    // TODO: Implement rule editing functionality
+    // This could open an edit modal or navigate to an edit page
+    toast({
+      title: 'Edit Rule',
+      description: 'Rule editing functionality will be implemented soon',
+      variant: 'default',
+    });
+  };
+
   // Handle row click
   const handleRowClick = (ruleId: string) => {
     openRuleDrawer(ruleId);
@@ -133,8 +144,10 @@ export function Rules() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Search */}
             <div className="relative">
+              <label htmlFor="rules-search" className="sr-only">Search rules</label>
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-secondary-text" />
               <input
+                id="rules-search"
                 type="text"
                 placeholder="Search rules..."
                 value={searchQuery}
@@ -147,22 +160,25 @@ export function Rules() {
             </div>
 
             {/* Status Filter */}
-            <Select
-              value={statusFilter}
-              onValueChange={(value) => {
-                setStatusFilter(value);
-                setCurrentPage(1);
-              }}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="inactive">Inactive</SelectItem>
-              </SelectContent>
-            </Select>
+            <div>
+              <label htmlFor="status-filter" className="sr-only">Filter by status</label>
+              <Select
+                value={statusFilter}
+                onValueChange={(value) => {
+                  setStatusFilter(value);
+                  setCurrentPage(1);
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="inactive">Inactive</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
             {/* Results count */}
             <div className="flex items-center text-sm text-secondary-text">
@@ -274,7 +290,7 @@ export function Rules() {
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={stopPropagation(() => console.log('Edit rule', rule.rule_id))}
+                              onClick={stopPropagation(() => handleEditRule(rule.rule_id))}
                               className="flex items-center space-x-1"
                             >
                               <Edit3 className="h-3 w-3" />
@@ -330,4 +346,4 @@ export function Rules() {
       </div>
     </div>
   );
-} 
+}

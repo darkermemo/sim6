@@ -1,0 +1,13 @@
+{
+  "name": "windows_security_log_style",
+  "description": "Windows Security Event Log style",
+  "data": {
+    "EventID": "4624",
+    "ComputerName": "DC-01.corp.local",
+    "SubjectUserName": "admin",
+    "TargetUserName": "john.doe",
+    "IpAddress": "192.168.1.100",
+    "LogonType": "3",
+    "AuthenticationPackageName": "NTLM"
+  }
+}
