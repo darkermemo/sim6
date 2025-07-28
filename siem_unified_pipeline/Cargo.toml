@@ -210,20 +210,4 @@ ignored = ["tikv-jemallocator"]
 vergen = { version = "8.2", features = ["build", "cargo", "git", "gitcl", "rustc"] }
 
 # Example configurations
-[[example]]
-name = "basic_pipeline"
-path = "examples/basic_pipeline.rs"
-
-[[example]]
-name = "custom_parser"
-path = "examples/custom_parser.rs"
-
-[[example]]
-name = "kafka_integration"
-path = "examples/kafka_integration.rs"
-
-
-
-[[example]]
-name = "real_time_analytics"
-path = "examples/real_time_analytics.rs"
+# Examples removed - files not present

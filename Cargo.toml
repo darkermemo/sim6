@@ -9,9 +9,7 @@ description = "Comprehensive schema validator for SIEM platform ensuring consist
 name = "schema_validator"
 path = "schema_validator.rs"
 
-[[bin]]
-name = "schema_validator_v2"
-path = "src/schema_validator_v2.rs"
+
 
 [[bin]]
 name = "schema_validator_v3"

@@ -1,0 +1,41 @@
+# Source-specific alias overrides configuration
+# This file allows administrators to define per-source field mappings
+# that override both global and parser-specific aliases.
+#
+# Format:
+# source_name:
+#   alias_field: canonical_field
+#
+# Example configurations:
+
+# Fortinet firewall logs - map remote_ip to source.ip
+fortinet:
+  remote_ip: source.ip
+  remote_port: source.port
+  local_ip: destination.ip
+  local_port: destination.port
+
+# Zeek network logs - map remote_ip to destination.ip
+zeek:
+  remote_ip: destination.ip
+  remote_port: destination.port
+  local_ip: source.ip
+  local_port: source.port
+
+# Windows event logs - custom mappings
+windows:
+  logon_user: user.name
+  target_user: user.target.name
+  workstation: host.name
+
+# Cisco ASA logs
+cisco_asa:
+  outside_ip: source.ip
+  inside_ip: destination.ip
+  outside_port: source.port
+  inside_port: destination.port
+
+# Example of overriding a common field for specific sources
+palo_alto:
+  app: network.application
+  category: event.category
