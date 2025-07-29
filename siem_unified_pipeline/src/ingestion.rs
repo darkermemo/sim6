@@ -5,7 +5,7 @@ use tokio::sync::{mpsc, RwLock};
 use tokio::time::{interval, Duration};
 use tokio::fs::File;
 use tokio::io::{AsyncBufReadExt, BufReader};
-use tokio::net::{TcpListener, UdpSocket};
+use tokio::net::UdpSocket;
 use tracing::{info, warn, error, debug};
 use uuid::Uuid;
 use serde::{Deserialize, Serialize};
@@ -714,7 +714,7 @@ impl IngestionManager {
         let mut total_events = 0;
         let mut total_errors = 0;
         
-        for (_, source_stats) in &stats {
+        for source_stats in stats.values() {
             total_sources += 1;
             total_events += source_stats.events_received;
             total_errors += source_stats.errors;

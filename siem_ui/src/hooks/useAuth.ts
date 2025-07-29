@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useAuthStore } from '../stores/authStore';
 import type { LoginRequest, AuthResponse, RefreshRequest } from '../types/api';
 
 interface AuthState {
@@ -10,6 +11,20 @@ interface AuthState {
 }
 
 export const useAuth = () => {
+  const {
+    accessToken,
+    refreshToken,
+    tenantId,
+    isAuthenticated,
+    isLoading,
+    error,
+    setTokens,
+    clearTokens,
+    setLoading,
+    setError
+  } = useAuthStore();
+
+  // Legacy state for backward compatibility
   const [authState, setAuthState] = useState<AuthState>({
     isAuthenticated: false,
     token: null,
@@ -19,25 +34,19 @@ export const useAuth = () => {
   });
 
   useEffect(() => {
-    // Check for existing token in localStorage
-    const token = localStorage.getItem('access_token');
-    const tenantId = localStorage.getItem('tenant_id');
-    
-    if (token && tenantId) {
-      setAuthState({
-        isAuthenticated: true,
-        token,
-        tenantId,
-        loading: false,
-        error: null,
-      });
-    } else {
-      setAuthState(prev => ({ ...prev, loading: false }));
-    }
-  }, []);
+    // Sync with secure storage state
+    setAuthState({
+      isAuthenticated,
+      token: accessToken,
+      tenantId,
+      loading: isLoading,
+      error,
+    });
+  }, [accessToken, tenantId, isAuthenticated, isLoading, error]);
 
   const login = async (credentials: LoginRequest): Promise<boolean> => {
-    setAuthState(prev => ({ ...prev, loading: true, error: null }));
+    setLoading(true);
+    setError(null);
     
     try {
       const response = await fetch(`${import.meta.env.VITE_API_BASE || 'http://localhost:8080'}/api/v1/auth/login`, {
@@ -55,48 +64,29 @@ export const useAuth = () => {
 
       const data: AuthResponse = await response.json();
       
-      // Store tokens
-      localStorage.setItem('access_token', data.access_token);
-      localStorage.setItem('refresh_token', data.refresh_token);
-      localStorage.setItem('tenant_id', data.tenant_id);
-
-      setAuthState({
-        isAuthenticated: true,
-        token: data.access_token,
-        tenantId: data.tenant_id,
-        loading: false,
-        error: null,
+      // Store tokens securely using encrypted storage
+      setTokens({
+        access_token: data.access_token,
+        refresh_token: data.refresh_token,
+        tenant_id: data.tenant_id,
       });
 
+      setLoading(false);
       return true;
     } catch (error) {
-      setAuthState(prev => ({
-        ...prev,
-        loading: false,
-        error: error instanceof Error ? error.message : 'Login failed',
-      }));
+      setError(error instanceof Error ? error.message : 'Login failed');
+      setLoading(false);
       return false;
     }
   };
 
   const logout = () => {
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('refresh_token');
-    localStorage.removeItem('tenant_id');
-    
-    setAuthState({
-      isAuthenticated: false,
-      token: null,
-      tenantId: null,
-      loading: false,
-      error: null,
-    });
+    // Clear tokens from secure storage
+    clearTokens();
   };
 
-  const refreshToken = async (): Promise<boolean> => {
-    const refreshTokenValue = localStorage.getItem('refresh_token');
-    
-    if (!refreshTokenValue) {
+  const refreshTokenFn = async (): Promise<boolean> => {
+    if (!refreshToken) {
       logout();
       return false;
     }
@@ -107,7 +97,7 @@ export const useAuth = () => {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ refresh_token: refreshTokenValue } as RefreshRequest),
+        body: JSON.stringify({ refresh_token: refreshToken } as RefreshRequest),
       });
 
       if (!response.ok) {
@@ -117,13 +107,12 @@ export const useAuth = () => {
 
       const data = await response.json();
       
-      localStorage.setItem('access_token', data.access_token);
-      
-      setAuthState(prev => ({
-        ...prev,
-        token: data.access_token,
-        tenantId: data.tenant_id,
-      }));
+      // Update tokens securely
+      setTokens({
+        access_token: data.access_token,
+        refresh_token: data.refresh_token || refreshToken,
+        tenant_id: data.tenant_id || tenantId || '',
+      });
 
       return true;
     } catch (error) {
@@ -136,6 +125,6 @@ export const useAuth = () => {
     ...authState,
     login,
     logout,
-    refreshToken,
+    refreshToken: refreshTokenFn,
   };
 };

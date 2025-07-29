@@ -140,17 +140,21 @@ pub struct Alert {
 
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::Type)]
 #[sqlx(type_name = "alert_severity", rename_all = "lowercase")]
+#[derive(Default)]
 pub enum AlertSeverity {
     Critical,
     High,
     Medium,
     Low,
+    #[default]
     Info,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::Type)]
 #[sqlx(type_name = "alert_status", rename_all = "lowercase")]
+#[derive(Default)]
 pub enum AlertStatus {
+    #[default]
     Open,
     InProgress,
     Resolved,
@@ -244,10 +248,12 @@ pub struct User {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, sqlx::Type)]
 #[sqlx(type_name = "user_role", rename_all = "lowercase")]
+#[derive(Default)]
 pub enum UserRole {
     Admin,
     Analyst,
     Investigator,
+    #[default]
     Viewer,
     ApiUser,
 }
@@ -309,10 +315,12 @@ pub enum DataSourceType {
 
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::Type)]
 #[sqlx(type_name = "health_status", rename_all = "lowercase")]
+#[derive(Default)]
 pub enum HealthStatus {
     Healthy,
     Degraded,
     Unhealthy,
+    #[default]
     Unknown,
 }
 
@@ -431,8 +439,10 @@ pub struct TimeRange {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Default)]
 pub enum SortOrder {
     Asc,
+    #[default]
     Desc,
 }
 
@@ -645,32 +655,7 @@ impl std::fmt::Display for UserRole {
 }
 
 // Default implementations
-impl Default for AlertSeverity {
-    fn default() -> Self {
-        AlertSeverity::Info
-    }
-}
 
-impl Default for AlertStatus {
-    fn default() -> Self {
-        AlertStatus::Open
-    }
-}
 
-impl Default for UserRole {
-    fn default() -> Self {
-        UserRole::Viewer
-    }
-}
 
-impl Default for HealthStatus {
-    fn default() -> Self {
-        HealthStatus::Unknown
-    }
-}
 
-impl Default for SortOrder {
-    fn default() -> Self {
-        SortOrder::Desc
-    }
-}

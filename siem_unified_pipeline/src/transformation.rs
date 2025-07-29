@@ -5,9 +5,8 @@ use tracing::{info, warn, error, debug};
 use serde::{Deserialize, Serialize};
 use regex::Regex;
 use chrono::{DateTime, Utc};
-use uuid::Uuid;
 
-use crate::config::{PipelineConfig, TransformationPipeline, TransformationStep};
+use crate::config::{PipelineConfig, TransformationStep};
 use crate::error::{Result, PipelineError};
 use crate::pipeline::{PipelineEvent, ProcessingStage};
 
@@ -195,7 +194,7 @@ impl TransformationManager {
         // Initialize stats for each transformation pipeline
         {
             let mut stats_guard = manager.stats.write().await;
-            for (pipeline_name, _) in &config.transformations {
+            for pipeline_name in config.transformations.keys() {
                 stats_guard.insert(pipeline_name.clone(), TransformationStats {
                     pipeline_name: pipeline_name.clone(),
                     events_processed: 0,
@@ -410,7 +409,7 @@ impl TransformationManager {
         let mut avg_processing_time = 0.0;
         let mut active_pipelines = 0;
         
-        for (_, pipeline_stats) in &stats {
+        for pipeline_stats in stats.values() {
             total_processed += pipeline_stats.events_processed;
             total_failed += pipeline_stats.events_failed;
             avg_processing_time += pipeline_stats.processing_time_ms;
@@ -616,6 +615,12 @@ impl EventParser for WindowsEventParser {
 }
 
 // Enricher implementations
+impl Default for GeoIpEnricher {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl GeoIpEnricher {
     pub fn new() -> Self {
         GeoIpEnricher {}
@@ -649,6 +654,12 @@ impl EventEnricher for GeoIpEnricher {
 // Implement other components...
 // (Additional implementations would follow similar patterns)
 
+impl Default for ThreatIntelEnricher {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ThreatIntelEnricher {
     pub fn new() -> Self {
         ThreatIntelEnricher {}
@@ -677,6 +688,12 @@ impl EventEnricher for ThreatIntelEnricher {
     }
 }
 
+impl Default for AssetEnricher {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl AssetEnricher {
     pub fn new() -> Self {
         AssetEnricher {
@@ -698,6 +715,12 @@ impl EventEnricher for AssetEnricher {
     
     fn name(&self) -> &str {
         "asset"
+    }
+}
+
+impl Default for UserEnricher {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

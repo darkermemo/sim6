@@ -4,13 +4,18 @@ use tokio::sync::RwLock;
 use tracing::{info, warn, error, debug};
 use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc};
-use uuid::Uuid;
 use clickhouse::{Client as ClickHouseClient, Row};
 use rdkafka::producer::{FutureProducer, FutureRecord};
 use rdkafka::config::ClientConfig;
-use redis::{Client as RedisClient, Commands, Connection};
+use redis::{Client as RedisClient, Commands};
 use tokio::fs::OpenOptions;
 use tokio::io::AsyncWriteExt;
+use reqwest::Client as HttpClient;
+
+#[cfg(feature = "aws")]
+use aws_sdk_s3::Client as S3Client;
+#[cfg(feature = "aws")]
+use aws_config::BehaviorVersion;
 
 use crate::config::{PipelineConfig, DataDestination, DestinationType};
 use crate::error::{Result, PipelineError};
@@ -65,6 +70,9 @@ pub struct StorageManager {
     kafka_producers: Arc<RwLock<HashMap<String, FutureProducer>>>,
     redis_clients: Arc<RwLock<HashMap<String, RedisClient>>>,
     file_handles: Arc<RwLock<HashMap<String, tokio::fs::File>>>,
+    #[cfg(feature = "aws")]
+    s3_clients: Arc<RwLock<HashMap<String, S3Client>>>,
+    http_clients: Arc<RwLock<HashMap<String, HttpClient>>>,
 }
 
 #[async_trait::async_trait]
@@ -105,6 +113,9 @@ impl StorageManager {
             kafka_producers: Arc::new(RwLock::new(HashMap::new())),
             redis_clients: Arc::new(RwLock::new(HashMap::new())),
             file_handles: Arc::new(RwLock::new(HashMap::new())),
+            #[cfg(feature = "aws")]
+            s3_clients: Arc::new(RwLock::new(HashMap::new())),
+            http_clients: Arc::new(RwLock::new(HashMap::new())),
         };
         
         // Initialize connections for each destination
@@ -148,13 +159,12 @@ impl StorageManager {
             DestinationType::File { .. } => {
                 self.initialize_file(dest_name, dest_config).await?
             }
+            #[cfg(feature = "aws")]
             DestinationType::S3 { .. } => {
-                // TODO: Implement S3 initialization
-                warn!("S3 destination type not yet implemented");
+                self.initialize_s3(dest_name, dest_config).await?
             }
             DestinationType::Http { .. } => {
-                // TODO: Implement HTTP destination initialization
-                warn!("HTTP destination type not yet implemented");
+                self.initialize_http(dest_name, dest_config).await?
             }
             DestinationType::Custom { .. } => {
                 // TODO: Implement custom destination initialization
@@ -340,12 +350,10 @@ impl StorageManager {
                 self.store_to_file(event, destination, dest_config).await
             }
             DestinationType::S3 { .. } => {
-                // TODO: Implement S3 storage
-                Err(PipelineError::internal("S3 storage not yet implemented"))
+                self.store_to_s3(event, destination, dest_config).await
             }
             DestinationType::Http { .. } => {
-                // TODO: Implement HTTP storage
-                Err(PipelineError::internal("HTTP storage not yet implemented"))
+                self.store_to_http(event, destination, dest_config).await
             }
             DestinationType::Custom { .. } => {
                 // TODO: Implement custom storage
@@ -457,7 +465,7 @@ impl StorageManager {
         
         // Add to real-time stream for UI
         let stream_key = format!("siem:stream:{}", event.source);
-        conn.xadd(&stream_key, "*", &[("event", &event_json)])
+        conn.xadd::<_, _, _, _, ()>(&stream_key, "*", &[("event", &event_json)])
             .map_err(|e| PipelineError::connection(format!("Redis XADD failed: {}", e)))?;
         
         // Trim stream to keep only recent events (last 10000)
@@ -485,9 +493,148 @@ impl StorageManager {
         
         Ok(line.len() as u64)
     }
-    
 
-    
+    #[cfg(feature = "aws")]
+    async fn initialize_s3(&self, dest_name: &str, dest_config: &DataDestination) -> Result<()> {
+        info!("Initializing S3 destination: {}", dest_name);
+        
+        let config = aws_config::defaults(BehaviorVersion::latest()).load().await;
+        let client = S3Client::new(&config);
+        
+        // Test connection by listing buckets (or attempting to access the specified bucket)
+        if let DestinationType::S3 { bucket, .. } = &dest_config.destination_type {
+            match client.head_bucket().bucket(bucket).send().await {
+                Ok(_) => {
+                    info!("S3 bucket '{}' is accessible", bucket);
+                    self.update_connection_status(dest_name, ConnectionStatus::Connected).await;
+                }
+                Err(e) => {
+                    warn!("S3 bucket '{}' access test failed: {}", bucket, e);
+                    self.update_connection_status(dest_name, ConnectionStatus::Error(e.to_string())).await;
+                }
+            }
+        }
+        
+        let mut clients_guard = self.s3_clients.write().await;
+        clients_guard.insert(dest_name.to_string(), client);
+        
+        Ok(())
+    }
+
+    async fn initialize_http(&self, dest_name: &str, dest_config: &DataDestination) -> Result<()> {
+        info!("Initializing HTTP destination: {}", dest_name);
+        
+        let client = HttpClient::new();
+        
+        // Test connection by making a HEAD request to the endpoint
+        if let DestinationType::Http { endpoint, .. } = &dest_config.destination_type {
+            match client.head(endpoint).send().await {
+                Ok(response) => {
+                    if response.status().is_success() {
+                        info!("HTTP endpoint '{}' is accessible", endpoint);
+                        self.update_connection_status(dest_name, ConnectionStatus::Connected).await;
+                    } else {
+                        warn!("HTTP endpoint '{}' returned status: {}", endpoint, response.status());
+                        self.update_connection_status(dest_name, ConnectionStatus::Error(format!("HTTP {}", response.status()))).await;
+                    }
+                }
+                Err(e) => {
+                    warn!("HTTP endpoint '{}' connection test failed: {}", endpoint, e);
+                    self.update_connection_status(dest_name, ConnectionStatus::Error(e.to_string())).await;
+                }
+            }
+        }
+        
+        let mut clients_guard = self.http_clients.write().await;
+        clients_guard.insert(dest_name.to_string(), client);
+        
+        Ok(())
+    }
+
+    #[cfg(feature = "aws")]
+    async fn store_to_s3(&self, event: &PipelineEvent, destination: &str, dest_config: &DataDestination) -> Result<u64> {
+        let clients_guard = self.s3_clients.read().await;
+        let client = clients_guard.get(destination)
+            .ok_or_else(|| PipelineError::not_found(format!("S3 client for '{}' not found", destination)))?;
+        
+        let (bucket, key_prefix) = match &dest_config.destination_type {
+            DestinationType::S3 { bucket, prefix, .. } => (bucket, prefix.as_str()),
+            _ => return Err(PipelineError::configuration("Invalid destination type for S3")),
+        };
+        
+        // Convert event to JSON
+        let event_json = serde_json::to_string(&event)
+            .map_err(|e| PipelineError::serialization(format!("Failed to serialize event: {}", e)))?;
+        
+        // Generate S3 key with timestamp and event ID
+        let timestamp = event.timestamp.format("%Y/%m/%d/%H");
+        let key = format!("{}/{}/{}.json", key_prefix, timestamp, event.id);
+        
+        // Upload to S3
+        client.put_object()
+            .bucket(bucket)
+            .key(&key)
+            .body(aws_sdk_s3::primitives::ByteStream::from(event_json.clone().into_bytes()))
+            .content_type("application/json")
+            .send()
+            .await
+            .map_err(|e| PipelineError::storage(format!("S3 upload failed: {}", e)))?;
+        
+        debug!("Event {} stored to S3 bucket '{}' with key '{}'", event.id, bucket, key);
+        
+        Ok(event_json.len() as u64)
+    }
+
+    async fn store_to_http(&self, event: &PipelineEvent, destination: &str, dest_config: &DataDestination) -> Result<u64> {
+        let clients_guard = self.http_clients.read().await;
+        let client = clients_guard.get(destination)
+            .ok_or_else(|| PipelineError::not_found(format!("HTTP client for '{}' not found", destination)))?;
+        
+        let (endpoint_url, method, headers) = match &dest_config.destination_type {
+            DestinationType::Http { endpoint, method, headers, .. } => {
+                (endpoint, method.as_str(), headers)
+            }
+            _ => return Err(PipelineError::configuration("Invalid destination type for HTTP")),
+        };
+        
+        // Convert event to JSON
+        let event_json = serde_json::to_string(&event)
+            .map_err(|e| PipelineError::serialization(format!("Failed to serialize event: {}", e)))?;
+        
+        // Build HTTP request
+        let mut request = match method.to_uppercase().as_str() {
+            "POST" => client.post(endpoint_url),
+            "PUT" => client.put(endpoint_url),
+            "PATCH" => client.patch(endpoint_url),
+            _ => return Err(PipelineError::configuration(format!("Unsupported HTTP method: {}", method))),
+        };
+        
+        // Add headers if specified
+        for (key, value) in headers {
+            request = request.header(key, value);
+        }
+        
+        // Set content type and send request
+        let response = request
+            .header("Content-Type", "application/json")
+            .body(event_json.clone())
+            .send()
+            .await
+            .map_err(|e| PipelineError::http(format!("HTTP request failed: {}", e)))?;
+        
+        if !response.status().is_success() {
+            return Err(PipelineError::storage(format!(
+                "HTTP endpoint returned error status: {} - {}", 
+                response.status(),
+                response.text().await.unwrap_or_default()
+            )));
+        }
+        
+        debug!("Event {} sent to HTTP endpoint '{}' with status {}", event.id, endpoint_url, response.status());
+        
+        Ok(event_json.len() as u64)
+    }
+
     fn convert_to_siem_event(&self, event: &PipelineEvent) -> Result<SiemEvent> {
         let source_ip = event.metadata.get("source_ip").unwrap_or(&"0.0.0.0".to_string()).clone();
         let source_port: u16 = event.metadata.get("source_port")
@@ -574,7 +721,7 @@ impl StorageManager {
         let mut total_destinations = 0;
         let mut avg_storage_time = 0.0;
         
-        for (_, dest_stats) in &stats {
+        for dest_stats in stats.values() {
             total_destinations += 1;
             total_stored += dest_stats.events_stored;
             total_errors += dest_stats.errors;

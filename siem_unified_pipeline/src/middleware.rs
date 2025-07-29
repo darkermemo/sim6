@@ -1,15 +1,14 @@
 use axum::{
     extract::{Request, State},
-    http::{HeaderMap, HeaderValue, Method, StatusCode},
+    http::{HeaderValue, Method, StatusCode},
     middleware::Next,
-    response::{IntoResponse, Response},
+    response::Response,
 };
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::sync::RwLock;
-use tracing::{info, warn, error, debug, Span};
-use chrono::{DateTime, Utc};
+use tracing::{warn, debug};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use tower_http::cors::{CorsLayer, Any};
@@ -232,11 +231,11 @@ pub async fn request_id_middleware(mut request: Request, next: Next) -> Response
         uri = %request.uri(),
     );
     
-    let response = span.in_scope(|| async move {
-        next.run(request).await
-    }).await;
     
-    response
+    
+    span.in_scope(|| async move {
+        next.run(request).await
+    }).await
 }
 
 pub async fn rate_limiting_middleware(
@@ -253,7 +252,7 @@ pub async fn rate_limiting_middleware(
         
         let (limit, remaining, reset) = rate_limiter.get_rate_limit_info(&client_ip).await;
         
-        let mut response = Response::builder()
+        let response = Response::builder()
             .status(StatusCode::TOO_MANY_REQUESTS)
             .header("X-RateLimit-Limit", limit.to_string())
             .header("X-RateLimit-Remaining", remaining.to_string())

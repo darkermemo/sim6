@@ -163,17 +163,7 @@ jemalloc = ["tikv-jemallocator"]
 version = "0.5"
 optional = true
 
-[[bench]]
-name = "ingestion_benchmark"
-harness = false
 
-[[bench]]
-name = "transformation_benchmark"
-harness = false
-
-[[bench]]
-name = "routing_benchmark"
-harness = false
 
 [profile.release]
 opt-level = 3

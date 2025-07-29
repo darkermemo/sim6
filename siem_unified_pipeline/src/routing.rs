@@ -1,12 +1,12 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tracing::{info, warn, error, debug};
+use tracing::{info, warn, debug};
 use serde::{Deserialize, Serialize};
 use regex::Regex;
 use chrono::{DateTime, Utc};
 
-use crate::config::{PipelineConfig, DataDestination, DestinationType};
+use crate::config::PipelineConfig;
 use crate::error::{Result, PipelineError};
 use crate::pipeline::PipelineEvent;
 
@@ -101,7 +101,7 @@ impl RoutingManager {
         // Initialize destination stats
         {
             let mut dest_stats = manager.destination_stats.write().await;
-            for (dest_name, _) in &config.destinations {
+            for dest_name in config.destinations.keys() {
                 dest_stats.insert(dest_name.clone(), DestinationStats {
                     destination_name: dest_name.clone(),
                     events_received: 0,
@@ -613,6 +613,50 @@ impl RoutingManager {
         rules_guard.iter().find(|r| r.id == rule_id).cloned()
     }
     
+    pub async fn get_rule_by_name(&self, rule_name: &str) -> Option<RoutingRule> {
+        let rules_guard = self.rules.read().await;
+        rules_guard.iter().find(|r| r.name == rule_name).cloned()
+    }
+    
+    pub async fn update_rule_by_name(&self, rule_name: &str, updated_rule: RoutingRule) -> Result<()> {
+        info!("Updating routing rule by name: {}", rule_name);
+        
+        // Validate rule
+        self.validate_rule(&updated_rule)?;
+        
+        let mut rules_guard = self.rules.write().await;
+        
+        if let Some(rule) = rules_guard.iter_mut().find(|r| r.name == rule_name) {
+            *rule = updated_rule;
+            info!("Routing rule updated successfully");
+            Ok(())
+        } else {
+            Err(PipelineError::not_found(format!("Rule with name '{}' not found", rule_name)))
+        }
+    }
+    
+    pub async fn delete_rule_by_name(&self, rule_name: &str) -> Result<()> {
+        info!("Deleting routing rule by name: {}", rule_name);
+        
+        let mut rules_guard = self.rules.write().await;
+        
+        if let Some(pos) = rules_guard.iter().position(|r| r.name == rule_name) {
+            let rule_id = rules_guard[pos].id.clone();
+            rules_guard.remove(pos);
+            
+            // Remove stats
+            {
+                let mut stats_guard = self.routing_stats.write().await;
+                stats_guard.remove(&rule_id);
+            }
+            
+            info!("Routing rule deleted successfully");
+            Ok(())
+        } else {
+            Err(PipelineError::not_found(format!("Rule with name '{}' not found", rule_name)))
+        }
+    }
+    
     pub async fn get_routing_stats(&self) -> HashMap<String, RoutingStats> {
         let stats_guard = self.routing_stats.read().await;
         stats_guard.clone()
@@ -654,7 +698,7 @@ impl RoutingManager {
         let mut total_routed = 0;
         let mut active_rules = 0;
         
-        for (_, stats) in &routing_stats {
+        for stats in routing_stats.values() {
             total_matches += stats.matches;
             total_routed += stats.events_routed;
             if stats.last_match.is_some() {
@@ -665,7 +709,7 @@ impl RoutingManager {
         let mut healthy_destinations = 0;
         let mut total_destinations = 0;
         
-        for (_, stats) in &destination_stats {
+        for stats in destination_stats.values() {
             total_destinations += 1;
             if matches!(stats.health_status, DestinationHealth::Healthy) {
                 healthy_destinations += 1;

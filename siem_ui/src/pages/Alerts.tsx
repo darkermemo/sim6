@@ -49,9 +49,12 @@ const Alerts: React.FC = () => {
   const filteredAlerts = alerts.filter((alert: Alert) => {
     const matchesStatus = statusFilter === 'all' || alert.status.toLowerCase() === statusFilter;
     const matchesSeverity = severityFilter === 'all' || alert.severity.toLowerCase() === severityFilter;
+    // Handle both 'id' and 'alert_id' field names from backend with defensive null checks
+    const alertId = alert.alert_id || alert.id || '';
+    const ruleName = alert.rule_name || '';
     const matchesSearch = searchTerm === '' || 
-      alert.rule_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      alert.alert_id.toLowerCase().includes(searchTerm.toLowerCase());
+      ruleName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      alertId.toLowerCase().includes(searchTerm.toLowerCase());
     
     return matchesStatus && matchesSeverity && matchesSearch;
   });
@@ -193,39 +196,54 @@ const Alerts: React.FC = () => {
               </tr>
             </thead>
             <tbody className="bg-card divide-y divide-border">
-              {filteredAlerts.map((alert) => (
-                <tr key={alert.alert_id} className="hover:bg-border">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-mono">
-                    {alert.alert_id ? alert.alert_id.substring(0, 8) + '...' : 'N/A'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    {alert.rule_name}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <Badge className={getSeverityColor(alert.severity)}>
-                      {alert.severity}
-                    </Badge>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <Badge className={getStatusColor(alert.status)}>
-                      {alert.status}
-                    </Badge>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {new Date(alert.alert_timestamp * 1000).toLocaleString()}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <Button
-                      size="sm"
-                      onClick={() => openAlertDrawer(alert.alert_id)}
-                      className="flex items-center gap-1"
-                    >
-                      <Eye className="h-4 w-4" />
-                      View
-                    </Button>
-                  </td>
-                </tr>
-              ))}
+              {filteredAlerts.map((alert) => {
+                // Handle both 'id' and 'alert_id' field names with defensive null checks
+                const alertId = alert.alert_id || alert.id || 'unknown';
+                const ruleName = alert.rule_name || 'Unknown Rule';
+                const severity = alert.severity || 'unknown';
+                const status = alert.status || 'unknown';
+                const timestamp = alert.alert_timestamp || Date.now() / 1000;
+                
+                // Log missing alert_id for debugging
+                if (alertId === 'unknown') {
+                  console.warn('Alert missing ID field:', alert);
+                }
+                
+                return (
+                  <tr key={alertId} className="hover:bg-border">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-mono">
+                      {alertId !== 'unknown' ? alertId.substring(0, 8) + '...' : 'N/A'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                      {ruleName}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <Badge className={getSeverityColor(severity)}>
+                        {severity}
+                      </Badge>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <Badge className={getStatusColor(status)}>
+                        {status}
+                      </Badge>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {new Date(timestamp * 1000).toLocaleString()}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <Button
+                        size="sm"
+                        onClick={() => openAlertDrawer(alertId)}
+                        className="flex items-center gap-1"
+                        disabled={alertId === 'unknown'}
+                      >
+                        <Eye className="h-4 w-4" />
+                        View
+                      </Button>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
           

@@ -1,0 +1,119 @@
+name: API Endpoint Verification
+
+on:
+  pull_request:
+    branches: [ main, develop ]
+  push:
+    branches: [ main, develop ]
+
+jobs:
+  api-tests:
+    runs-on: ubuntu-latest
+    
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Setup Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        override: true
+        components: rustfmt, clippy
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: 'comprehensive_api_test.js'
+    
+    - name: Cache Rust dependencies
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+          siem_unified_pipeline/target
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+    
+    - name: Build backend
+      working-directory: ./siem_unified_pipeline
+      run: |
+        cargo build --release
+    
+    - name: Start backend server
+      working-directory: ./siem_unified_pipeline
+      run: |
+        cargo run --release -- server --port 8082 &
+        echo $! > backend.pid
+        # Wait for server to start
+        sleep 10
+        # Verify server is running
+        curl -f http://localhost:8082/api/v1/health || exit 1
+    
+    - name: Run API endpoint tests
+      run: |
+        node comprehensive_api_test.js
+    
+    - name: Upload test results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: api-test-results
+        path: api_test_report.json
+    
+    - name: Comment PR with test results
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const fs = require('fs');
+          try {
+            const report = JSON.parse(fs.readFileSync('api_test_report.json', 'utf8'));
+            const summary = `## 🧪 API Endpoint Test Results\n\n` +
+              `- **Total Tests**: ${report.summary.total}\n` +
+              `- **Passed**: ${report.summary.passed} ✅\n` +
+              `- **Failed**: ${report.summary.failed} ❌\n` +
+              `- **Success Rate**: ${report.summary.success_rate}%\n\n` +
+              (report.summary.failed > 0 ? 
+                `### ❌ Failed Tests:\n${report.tests.filter(t => t.status === 'FAILED').map(t => `- ${t.name}: ${t.error}`).join('\n')}` : 
+                `### 🎉 All tests passed!`);
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: summary
+            });
+          } catch (error) {
+            console.error('Failed to read test report:', error);
+          }
+    
+    - name: Fail if tests failed
+      run: |
+        if [ -f api_test_report.json ]; then
+          FAILED=$(node -e "const report = require('./api_test_report.json'); console.log(report.summary.failed);")
+          if [ "$FAILED" != "0" ]; then
+            echo "❌ $FAILED API tests failed"
+            exit 1
+          fi
+        fi
+    
+    - name: Cleanup
+      if: always()
+      run: |
+        if [ -f backend.pid ]; then
+          kill $(cat backend.pid) || true
+        fi

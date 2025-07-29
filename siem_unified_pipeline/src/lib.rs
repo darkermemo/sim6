@@ -106,6 +106,7 @@ pub mod models;
 pub mod database;
 pub mod auth;
 pub mod error;
+pub mod schemas;
 
 // Re-export commonly used types and traits
 pub use config::PipelineConfig;
@@ -537,7 +538,7 @@ mod tests {
         assert_eq!(data, decoded.as_slice());
         
         // Test compression/decompression
-        let original = b"This is a test string for compression";
+        let original = b"This is a test string for compression that is long enough to actually compress well. Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.";
         let compressed = compress_gzip(original).unwrap();
         let decompressed = decompress_gzip(&compressed).unwrap();
         assert_eq!(original, decompressed.as_slice());

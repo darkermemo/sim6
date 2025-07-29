@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tracing::{info, warn, error, debug};
+use tracing::{info, error, debug};
 use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc, Duration};
 use std::time::Instant;

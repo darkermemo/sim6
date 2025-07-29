@@ -19,13 +19,27 @@
       "path": "/health",
       "handler": "health_check",
       "file": "siem_unified_pipeline/src/handlers.rs",
-      "line": 144,
+      "line": 143,
       "context": [
-        "Router::new()",
+        "let api_v1_router = Router::new()",
         "// Health and status endpoints",
         ".route(\"/health\", get(health_check))",
         ".route(\"/health/detailed\", get(detailed_health_check))",
         ".route(\"/status\", get(system_status))"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/health",
+      "handler": "health_check",
+      "file": "siem_unified_pipeline/src/handlers.rs",
+      "line": 288,
+      "context": [
+        ".nest(\"/api/v1\", api_v1_router)",
+        "// Keep legacy routes for backward compatibility",
+        ".route(\"/health\", get(health_check))",
+        ".route(\"/metrics\", get(get_metrics))",
+        ".route(\"/events/ingest\", post(ingest_single_event))"
       ]
     },
     {
@@ -47,7 +61,7 @@
       "path": "/metrics",
       "handler": "get_metrics",
       "file": "siem_unified_pipeline/src/handlers.rs",
-      "line": 150,
+      "line": 149,
       "context": [
         "",
         "// Metrics endpoints",
@@ -55,25 +69,39 @@
         ".route(\"/metrics/prometheus\", get(get_prometheus_metrics))",
         ".route(\"/metrics/components\", get(get_component_metrics))"
       ]
+    },
+    {
+      "method": "GET",
+      "path": "/metrics",
+      "handler": "get_metrics",
+      "file": "siem_unified_pipeline/src/handlers.rs",
+      "line": 289,
+      "context": [
+        "// Keep legacy routes for backward compatibility",
+        ".route(\"/health\", get(health_check))",
+        ".route(\"/metrics\", get(get_metrics))",
+        ".route(\"/events/ingest\", post(ingest_single_event))",
+        ".route(\"/events/search\", get(search_events))"
+      ]
     }
   ],
   "analysis": {
-    "total_routes": 4,
+    "total_routes": 6,
     "methods": {
-      "GET": 4
+      "GET": 6
     },
     "paths": {
-      "/health": 2,
-      "/metrics": 2
+      "/health": 3,
+      "/metrics": 3
     },
     "handlers": {
-      "health_check": 2,
+      "health_check": 3,
       "metrics_handler": 1,
-      "get_metrics": 1
+      "get_metrics": 2
     },
     "files": {
       "siem_clickhouse_ingestion/src/receiver.rs": 2,
-      "siem_unified_pipeline/src/handlers.rs": 2
+      "siem_unified_pipeline/src/handlers.rs": 4
     }
   },
   "generated_at": "/Users/yasseralmohammed/sim6",

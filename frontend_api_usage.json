@@ -333,23 +333,23 @@
         "type": "hook",
         "context": [
           {
-            "line": 93,
+            "line": 106,
             "context": "setError(null);\n      \n      const response = await fetch(`/api/v1/alerts/${alertId}`, {\n        headers: getAuthHeaders(),\n      });"
           },
           {
-            "line": 112,
+            "line": 125,
             "context": "const updateStatus = async (status: string): Promise<boolean> => {\n    try {\n      const response = await fetch(`/api/v1/alerts/${alertId}/status`, {\n        method: 'PUT',\n        headers: getAuthHeaders(),"
           },
           {
-            "line": 132,
+            "line": 145,
             "context": "const updateAssignee = async (assigneeId: string | null): Promise<boolean> => {\n    try {\n      const response = await fetch(`/api/v1/alerts/${alertId}/assignee`, {\n        method: 'PUT',\n        headers: getAuthHeaders(),"
           },
           {
-            "line": 176,
+            "line": 189,
             "context": "setError(null);\n      \n      const response = await fetch(`/api/v1/alerts/${alertId}/notes`, {\n        headers: getAuthHeaders(),\n      });"
           },
           {
-            "line": 195,
+            "line": 208,
             "context": "const addNote = async (content: string): Promise<boolean> => {\n    try {\n      const response = await fetch(`/api/v1/alerts/${alertId}/notes`, {\n        method: 'POST',\n        headers: getAuthHeaders(),"
           }
         ]
@@ -375,11 +375,11 @@
         "type": "hook",
         "context": [
           {
-            "line": 176,
+            "line": 189,
             "context": "setError(null);\n      \n      const response = await fetch(`/api/v1/alerts/${alertId}/notes`, {\n        headers: getAuthHeaders(),\n      });"
           },
           {
-            "line": 195,
+            "line": 208,
             "context": "const addNote = async (content: string): Promise<boolean> => {\n    try {\n      const response = await fetch(`/api/v1/alerts/${alertId}/notes`, {\n        method: 'POST',\n        headers: getAuthHeaders(),"
           }
         ]
@@ -545,7 +545,7 @@
         "type": "hook",
         "context": [
           {
-            "line": 112,
+            "line": 125,
             "context": "const updateStatus = async (status: string): Promise<boolean> => {\n    try {\n      const response = await fetch(`/api/v1/alerts/${alertId}/status`, {\n        method: 'PUT',\n        headers: getAuthHeaders(),"
           }
         ]
@@ -659,23 +659,23 @@
             "context": "setError(null);\n      \n      const response = await fetch('/api/v1/alerts', {\n        headers: getAuthHeaders(),\n      });"
           },
           {
-            "line": 93,
+            "line": 106,
             "context": "setError(null);\n      \n      const response = await fetch(`/api/v1/alerts/${alertId}`, {\n        headers: getAuthHeaders(),\n      });"
           },
           {
-            "line": 112,
+            "line": 125,
             "context": "const updateStatus = async (status: string): Promise<boolean> => {\n    try {\n      const response = await fetch(`/api/v1/alerts/${alertId}/status`, {\n        method: 'PUT',\n        headers: getAuthHeaders(),"
           },
           {
-            "line": 132,
+            "line": 145,
             "context": "const updateAssignee = async (assigneeId: string | null): Promise<boolean> => {\n    try {\n      const response = await fetch(`/api/v1/alerts/${alertId}/assignee`, {\n        method: 'PUT',\n        headers: getAuthHeaders(),"
           },
           {
-            "line": 176,
+            "line": 189,
             "context": "setError(null);\n      \n      const response = await fetch(`/api/v1/alerts/${alertId}/notes`, {\n        headers: getAuthHeaders(),\n      });"
           },
           {
-            "line": 195,
+            "line": 208,
             "context": "const addNote = async (content: string): Promise<boolean> => {\n    try {\n      const response = await fetch(`/api/v1/alerts/${alertId}/notes`, {\n        method: 'POST',\n        headers: getAuthHeaders(),"
           }
         ]
@@ -697,7 +697,7 @@
         "type": "hook",
         "context": [
           {
-            "line": 132,
+            "line": 145,
             "context": "const updateAssignee = async (assigneeId: string | null): Promise<boolean> => {\n    try {\n      const response = await fetch(`/api/v1/alerts/${alertId}/assignee`, {\n        method: 'PUT',\n        headers: getAuthHeaders(),"
           }
         ]
@@ -1360,23 +1360,23 @@
           "type": "hook",
           "context": [
             {
-              "line": 93,
+              "line": 106,
               "context": "setError(null);\n      \n      const response = await fetch(`/api/v1/alerts/${alertId}`, {\n        headers: getAuthHeaders(),\n      });"
             },
             {
-              "line": 112,
+              "line": 125,
               "context": "const updateStatus = async (status: string): Promise<boolean> => {\n    try {\n      const response = await fetch(`/api/v1/alerts/${alertId}/status`, {\n        method: 'PUT',\n        headers: getAuthHeaders(),"
             },
             {
-              "line": 132,
+              "line": 145,
               "context": "const updateAssignee = async (assigneeId: string | null): Promise<boolean> => {\n    try {\n      const response = await fetch(`/api/v1/alerts/${alertId}/assignee`, {\n        method: 'PUT',\n        headers: getAuthHeaders(),"
             },
             {
-              "line": 176,
+              "line": 189,
               "context": "setError(null);\n      \n      const response = await fetch(`/api/v1/alerts/${alertId}/notes`, {\n        headers: getAuthHeaders(),\n      });"
             },
             {
-              "line": 195,
+              "line": 208,
               "context": "const addNote = async (content: string): Promise<boolean> => {\n    try {\n      const response = await fetch(`/api/v1/alerts/${alertId}/notes`, {\n        method: 'POST',\n        headers: getAuthHeaders(),"
             }
           ]
@@ -1402,11 +1402,11 @@
           "type": "hook",
           "context": [
             {
-              "line": 176,
+              "line": 189,
               "context": "setError(null);\n      \n      const response = await fetch(`/api/v1/alerts/${alertId}/notes`, {\n        headers: getAuthHeaders(),\n      });"
             },
             {
-              "line": 195,
+              "line": 208,
               "context": "const addNote = async (content: string): Promise<boolean> => {\n    try {\n      const response = await fetch(`/api/v1/alerts/${alertId}/notes`, {\n        method: 'POST',\n        headers: getAuthHeaders(),"
             }
           ]
@@ -1456,7 +1456,7 @@
           "type": "hook",
           "context": [
             {
-              "line": 112,
+              "line": 125,
               "context": "const updateStatus = async (status: string): Promise<boolean> => {\n    try {\n      const response = await fetch(`/api/v1/alerts/${alertId}/status`, {\n        method: 'PUT',\n        headers: getAuthHeaders(),"
             }
           ]
@@ -1560,23 +1560,23 @@
               "context": "setError(null);\n      \n      const response = await fetch('/api/v1/alerts', {\n        headers: getAuthHeaders(),\n      });"
             },
             {
-              "line": 93,
+              "line": 106,
               "context": "setError(null);\n      \n      const response = await fetch(`/api/v1/alerts/${alertId}`, {\n        headers: getAuthHeaders(),\n      });"
             },
             {
-              "line": 112,
+              "line": 125,
               "context": "const updateStatus = async (status: string): Promise<boolean> => {\n    try {\n      const response = await fetch(`/api/v1/alerts/${alertId}/status`, {\n        method: 'PUT',\n        headers: getAuthHeaders(),"
             },
             {
-              "line": 132,
+              "line": 145,
               "context": "const updateAssignee = async (assigneeId: string | null): Promise<boolean> => {\n    try {\n      const response = await fetch(`/api/v1/alerts/${alertId}/assignee`, {\n        method: 'PUT',\n        headers: getAuthHeaders(),"
             },
             {
-              "line": 176,
+              "line": 189,
               "context": "setError(null);\n      \n      const response = await fetch(`/api/v1/alerts/${alertId}/notes`, {\n        headers: getAuthHeaders(),\n      });"
             },
             {
-              "line": 195,
+              "line": 208,
               "context": "const addNote = async (content: string): Promise<boolean> => {\n    try {\n      const response = await fetch(`/api/v1/alerts/${alertId}/notes`, {\n        method: 'POST',\n        headers: getAuthHeaders(),"
             }
           ]
@@ -1588,7 +1588,7 @@
           "type": "hook",
           "context": [
             {
-              "line": 132,
+              "line": 145,
               "context": "const updateAssignee = async (assigneeId: string | null): Promise<boolean> => {\n    try {\n      const response = await fetch(`/api/v1/alerts/${alertId}/assignee`, {\n        method: 'PUT',\n        headers: getAuthHeaders(),"
             }
           ]

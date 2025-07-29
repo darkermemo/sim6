@@ -1,12 +1,11 @@
-use sqlx::{Pool, Postgres, Row, Transaction};
+use sqlx::{Pool, Postgres, Row};
 use sqlx::postgres::{PgPoolOptions, PgRow};
 use anyhow::{Result, Context};
 use chrono::{DateTime, Utc};
 use uuid::Uuid;
 use std::collections::HashMap;
 use std::time::Duration;
-use tracing::{info, warn, error, debug};
-use serde_json::Value;
+use tracing::{info, error, debug};
 
 use crate::models::*;
 use crate::models::PendingMfaSetup;
@@ -83,8 +82,8 @@ impl DatabaseManager {
         "#;
 
         sqlx::query(query)
-            .bind(&event.id)
-            .bind(&event.timestamp)
+            .bind(event.id)
+            .bind(event.timestamp)
             .bind(&event.source)
             .bind(&event.source_type)
             .bind(&event.severity)
@@ -94,13 +93,13 @@ impl DatabaseManager {
             .bind(&event.message)
             .bind(&event.raw_message)
             .bind(&event.source_ip)
-            .bind(event.source_port as i32)
+            .bind(event.source_port)
             .bind(&event.protocol)
             .bind(&event.tags)
             .bind(&event.fields)
             .bind(&event.processing_stage)
-            .bind(&event.created_at)
-            .bind(&event.updated_at)
+            .bind(event.created_at)
+            .bind(event.updated_at)
             .execute(&self.pool)
             .await
             .map_err(|e| PipelineError::database(format!("Failed to insert event: {}", e)))?;
@@ -126,8 +125,8 @@ impl DatabaseManager {
             "#;
 
             sqlx::query(query)
-                .bind(&event.id)
-                .bind(&event.timestamp)
+                .bind(event.id)
+                .bind(event.timestamp)
                 .bind(&event.source)
                 .bind(&event.source_type)
                 .bind(&event.severity)
@@ -137,13 +136,13 @@ impl DatabaseManager {
                 .bind(&event.message)
                 .bind(&event.raw_message)
                 .bind(&event.source_ip)
-                .bind(event.source_port as i32)
+                .bind(event.source_port)
                 .bind(&event.protocol)
                 .bind(&event.tags)
                 .bind(&event.fields)
                 .bind(&event.processing_stage)
-                .bind(&event.created_at)
-                .bind(&event.updated_at)
+                .bind(event.created_at)
+                .bind(event.updated_at)
                 .execute(&mut *tx)
                 .await
                 .map_err(|e| PipelineError::database(format!("Failed to insert event in batch: {}", e)))?;
@@ -275,29 +274,29 @@ impl DatabaseManager {
         "#;
 
         sqlx::query(query)
-            .bind(&alert.id)
+            .bind(alert.id)
             .bind(&alert.title)
             .bind(&alert.description)
             .bind(&alert.severity)
             .bind(&alert.status)
             .bind(&alert.rule_name)
-            .bind(&alert.rule_id)
+            .bind(alert.rule_id)
             .bind(&alert.event_ids)
-            .bind(&alert.source_events_count)
+            .bind(alert.source_events_count)
             .bind(&alert.mitre_tactics)
             .bind(&alert.mitre_techniques)
             .bind(&alert.indicators)
             .bind(&alert.affected_assets)
             .bind(&alert.affected_users)
-            .bind(&alert.confidence_score)
-            .bind(&alert.risk_score)
-            .bind(&alert.false_positive_probability)
+            .bind(alert.confidence_score)
+            .bind(alert.risk_score)
+            .bind(alert.false_positive_probability)
             .bind(&alert.assigned_to)
-            .bind(&alert.escalation_level)
-            .bind(&alert.sla_deadline)
-            .bind(&alert.created_at)
-            .bind(&alert.updated_at)
-            .bind(&alert.resolved_at)
+            .bind(alert.escalation_level)
+            .bind(alert.sla_deadline)
+            .bind(alert.created_at)
+            .bind(alert.updated_at)
+            .bind(alert.resolved_at)
             .bind(&alert.resolution_notes)
             .execute(&self.pool)
             .await
@@ -326,10 +325,10 @@ impl DatabaseManager {
 
         sqlx::query(query)
             .bind(&status)
-            .bind(&resolved_at)
+            .bind(resolved_at)
             .bind(&resolution_notes)
             .bind(Utc::now())
-            .bind(&alert_id)
+            .bind(alert_id)
             .execute(&self.pool)
             .await
             .map_err(|e| PipelineError::database(format!("Failed to update alert status: {}", e)))?;
@@ -372,7 +371,7 @@ impl DatabaseManager {
         "#;
 
         sqlx::query(query)
-            .bind(&user.id)
+            .bind(user.id)
             .bind(&user.username)
             .bind(&user.email)
             .bind(&user.password_hash)
@@ -380,15 +379,15 @@ impl DatabaseManager {
             .bind(&user.department)
             .bind(&user.role)
             .bind(&user.permissions)
-            .bind(&user.is_active)
-            .bind(&user.last_login)
-            .bind(&user.failed_login_attempts)
-            .bind(&user.account_locked_until)
-            .bind(&user.password_changed_at)
-            .bind(&user.mfa_enabled)
+            .bind(user.is_active)
+            .bind(user.last_login)
+            .bind(user.failed_login_attempts)
+            .bind(user.account_locked_until)
+            .bind(user.password_changed_at)
+            .bind(user.mfa_enabled)
             .bind(&user.mfa_secret)
-            .bind(&user.created_at)
-            .bind(&user.updated_at)
+            .bind(user.created_at)
+            .bind(user.updated_at)
             .execute(&self.pool)
             .await
             .map_err(|e| PipelineError::database(format!("Failed to insert user: {}", e)))?;
@@ -472,26 +471,26 @@ impl DatabaseManager {
         "#;
 
         sqlx::query(query)
-            .bind(&rule.id)
+            .bind(rule.id)
             .bind(&rule.name)
             .bind(&rule.description)
             .bind(&rule.severity)
             .bind(&rule.rule_type)
             .bind(&rule.query)
             .bind(&rule.conditions)
-            .bind(&rule.enabled)
+            .bind(rule.enabled)
             .bind(&rule.author)
             .bind(&rule.version)
             .bind(&rule.mitre_tactics)
             .bind(&rule.mitre_techniques)
             .bind(&rule.tags)
             .bind(&rule.references)
-            .bind(&rule.false_positive_rate)
-            .bind(&rule.last_triggered)
-            .bind(&rule.trigger_count)
+            .bind(rule.false_positive_rate)
+            .bind(rule.last_triggered)
+            .bind(rule.trigger_count)
             .bind(&rule.suppression_rules)
-            .bind(&rule.created_at)
-            .bind(&rule.updated_at)
+            .bind(rule.created_at)
+            .bind(rule.updated_at)
             .execute(&self.pool)
             .await
             .map_err(|e| PipelineError::database(format!("Failed to insert detection rule: {}", e)))?;
@@ -539,20 +538,20 @@ impl DatabaseManager {
         "#;
 
         sqlx::query(query)
-            .bind(&source.id)
+            .bind(source.id)
             .bind(&source.name)
             .bind(&source.description)
             .bind(&source.source_type)
             .bind(&source.connection_config)
             .bind(&source.parsing_config)
-            .bind(&source.enabled)
+            .bind(source.enabled)
             .bind(&source.health_status)
-            .bind(&source.last_health_check)
-            .bind(&source.events_per_second)
-            .bind(&source.total_events_processed)
-            .bind(&source.error_count)
-            .bind(&source.created_at)
-            .bind(&source.updated_at)
+            .bind(source.last_health_check)
+            .bind(source.events_per_second)
+            .bind(source.total_events_processed)
+            .bind(source.error_count)
+            .bind(source.created_at)
+            .bind(source.updated_at)
             .execute(&self.pool)
             .await
             .map_err(|e| PipelineError::database(format!("Failed to insert data source: {}", e)))?;
@@ -581,22 +580,89 @@ impl DatabaseManager {
         "#;
 
         sqlx::query(query)
-            .bind(&log.id)
-            .bind(&log.user_id)
+            .bind(log.id)
+            .bind(log.user_id)
             .bind(&log.action)
             .bind(&log.resource_type)
             .bind(&log.resource_id)
             .bind(&log.details)
             .bind(&log.ip_address)
             .bind(&log.user_agent)
-            .bind(&log.success)
+            .bind(log.success)
             .bind(&log.error_message)
-            .bind(&log.created_at)
+            .bind(log.created_at)
             .execute(&self.pool)
             .await
             .map_err(|e| PipelineError::database(format!("Failed to insert audit log: {}", e)))?;
 
         Ok(())
+    }
+
+    pub async fn get_audit_logs(
+        &self,
+        start_time: Option<DateTime<Utc>>,
+        end_time: Option<DateTime<Utc>>,
+        level_filter: Option<&str>,
+        module_filter: Option<&str>,
+        limit: usize,
+    ) -> Result<Vec<AuditLog>, PipelineError> {
+        let mut query = "SELECT * FROM audit_logs WHERE 1=1".to_string();
+        let mut bind_count = 0;
+        
+        // Build dynamic query based on filters
+        if start_time.is_some() {
+            bind_count += 1;
+            query.push_str(&format!(" AND created_at >= ${}", bind_count));
+        }
+        
+        if end_time.is_some() {
+            bind_count += 1;
+            query.push_str(&format!(" AND created_at <= ${}", bind_count));
+        }
+        
+        if level_filter.is_some() {
+            bind_count += 1;
+            query.push_str(&format!(" AND action ILIKE ${}", bind_count));
+        }
+        
+        if module_filter.is_some() {
+            bind_count += 1;
+            query.push_str(&format!(" AND resource_type ILIKE ${}", bind_count));
+        }
+        
+        query.push_str(" ORDER BY created_at DESC");
+        
+        bind_count += 1;
+        query.push_str(&format!(" LIMIT ${}", bind_count));
+        
+        // Build and execute query with proper parameter binding
+        let mut sqlx_query = sqlx::query_as::<_, AuditLog>(&query);
+        
+        if let Some(start) = start_time {
+            sqlx_query = sqlx_query.bind(start);
+        }
+        
+        if let Some(end) = end_time {
+            sqlx_query = sqlx_query.bind(end);
+        }
+        
+        if let Some(level) = level_filter {
+            sqlx_query = sqlx_query.bind(format!("%{}%", level));
+        }
+        
+        if let Some(module) = module_filter {
+            sqlx_query = sqlx_query.bind(format!("%{}%", module));
+        }
+        
+        sqlx_query = sqlx_query.bind(limit as i64);
+        
+        let audit_logs = sqlx_query
+            .fetch_all(&self.pool)
+            .await
+            .map_err(|e| PipelineError::database(format!("Failed to fetch audit logs: {}", e)))?;
+
+        debug!("Retrieved {} audit logs", audit_logs.len());
+        Ok(audit_logs)
     }
 
     // Statistics operations
@@ -810,15 +876,15 @@ impl DatabaseManager {
         "#;
 
         sqlx::query(query)
-            .bind(&session.id)
-            .bind(&session.user_id)
+            .bind(session.id)
+            .bind(session.user_id)
             .bind(&session.session_token)
             .bind(&session.refresh_token)
             .bind(&session.ip_address)
             .bind(&session.user_agent)
-            .bind(&session.created_at)
-            .bind(&session.expires_at)
-            .bind(&session.last_activity)
+            .bind(session.created_at)
+            .bind(session.expires_at)
+            .bind(session.last_activity)
             .execute(&self.pool)
             .await
             .map_err(|e| PipelineError::database(format!("Failed to insert user session: {}", e)))?;

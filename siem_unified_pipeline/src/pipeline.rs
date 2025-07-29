@@ -4,9 +4,8 @@ use tokio::sync::{mpsc, RwLock};
 use tokio::time::{interval, Duration};
 use tracing::{info, warn, error, debug};
 use uuid::Uuid;
-use futures::future;
 
-use crate::config::{PipelineConfig, DataSource, TransformationPipeline, DataDestination};
+use crate::config::PipelineConfig;
 use crate::error::{Result, PipelineError};
 use crate::ingestion::IngestionManager;
 use crate::transformation::TransformationManager;
@@ -341,7 +340,7 @@ impl Pipeline {
     ) {
         info!("Starting parallel event processing with {} workers", worker_count);
         
-        let (batch_tx, mut batch_rx) = mpsc::unbounded_channel::<Vec<PipelineEvent>>();
+        let (batch_tx, batch_rx) = mpsc::unbounded_channel::<Vec<PipelineEvent>>();
         let batch_size = 1000;
         let batch_timeout = Duration::from_millis(100);
         
@@ -359,15 +358,12 @@ impl Pipeline {
                                 current_batch.push(event);
                                 
                                 // Send batch if full or timeout reached
-                                if current_batch.len() >= batch_size || 
-                                   last_batch_time.elapsed() >= batch_timeout {
-                                    if !current_batch.is_empty() {
-                                        if batch_tx_clone.send(current_batch.clone()).is_err() {
-                                            break;
-                                        }
-                                        current_batch.clear();
-                                        last_batch_time = std::time::Instant::now();
+                                if (current_batch.len() >= batch_size || last_batch_time.elapsed() >= batch_timeout) && !current_batch.is_empty() {
+                                    if batch_tx_clone.send(current_batch.clone()).is_err() {
+                                        break;
                                     }
+                                    current_batch.clear();
+                                    last_batch_time = std::time::Instant::now();
                                 }
                             }
                             None => {

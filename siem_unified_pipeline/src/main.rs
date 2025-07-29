@@ -9,7 +9,6 @@ use siem_unified_pipeline::prelude::*;
 use siem_unified_pipeline::{handlers, config::{DestinationType, SourceType}, pipeline::Pipeline, metrics::MetricsCollector};
 use std::path::PathBuf;
 use std::sync::Arc;
-use tokio::signal;
 use tracing::{error, info, warn};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 // use redis::AsyncCommands; // Unused import
@@ -211,33 +210,44 @@ async fn main() -> Result<()> {
 
     info!("Starting SIEM Unified Pipeline v{}", env!("CARGO_PKG_VERSION"));
 
-    // Load configuration
-    let config = load_config(cli.config.as_deref()).await?;
-
     // Execute command
     match cli.command {
         Commands::Server { host, port, workers, dev } => {
+            // Default to config.toml if no config file is specified
+            let config_path = cli.config.as_deref().or_else(|| {
+                if std::path::Path::new("config.toml").exists() {
+                    Some(std::path::Path::new("config.toml"))
+                } else {
+                    None
+                }
+            });
+            let config = load_config(config_path).await?;
             run_server(config, host, port, workers, dev, cli.metrics).await
         }
         Commands::Validate { config, strict } => {
             validate_config(config, strict).await
         }
         Commands::Ingest { file, format, output, batch_size, dry_run } => {
+            let config = load_config(cli.config.as_deref()).await?;
             run_ingestion(config, file, format, output, batch_size, dry_run).await
         }
         Commands::Transform { input, output, pipeline, enrich } => {
+            let config = load_config(cli.config.as_deref()).await?;
             run_transformation(config, input, output, pipeline, enrich).await
         }
         Commands::Route { input, rules, verbose } => {
+            let config = load_config(cli.config.as_deref()).await?;
             run_routing(config, input, rules, verbose).await
         }
         Commands::Config { output, template, force } => {
             generate_config(output, template, force).await
         }
         Commands::Database { action } => {
+            let config = load_config(cli.config.as_deref()).await?;
             run_database_command(config, action).await
         }
         Commands::Benchmark { bench_type, duration, workers, rate } => {
+            let config = load_config(cli.config.as_deref()).await?;
             run_benchmark(config, bench_type, duration, workers, rate).await
         }
         Commands::Health { url, timeout, detailed } => {
@@ -691,30 +701,4 @@ async fn check_health(
     }
     
     Ok(())
-}
-
-async fn shutdown_signal() {
-    let ctrl_c = async {
-        signal::ctrl_c()
-            .await
-            .expect("failed to install Ctrl+C handler");
-    };
-
-    #[cfg(unix)]
-    let terminate = async {
-        signal::unix::signal(signal::unix::SignalKind::terminate())
-            .expect("failed to install signal handler")
-            .recv()
-            .await;
-    };
-
-    #[cfg(not(unix))]
-    let terminate = std::future::pending::<()>();
-
-    tokio::select! {
-        _ = ctrl_c => {},
-        _ = terminate => {},
-    }
-
-    info!("Shutdown signal received");
 }

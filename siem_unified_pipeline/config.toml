@@ -106,11 +106,19 @@ enabled = true
 
 [destinations.redis_cache]
 enabled = true
-destination_type = { type = "Redis", connection_string = "redis://localhost:6379/0", key_pattern = "siem:events:{timestamp}:{source}", ttl = 3600 }
-config = { format = "Json", compression = "Gzip" }
 batch_size = 1000
 flush_interval = 5000
 retry_attempts = 3
+
+[destinations.redis_cache.destination_type]
+type = "Redis"
+connection_string = "redis://localhost:6379/0"
+key_pattern = "siem:events:{timestamp}:{source}"
+ttl = 3600
+
+[destinations.redis_cache.config]
+format = "Json"
+compression = "Gzip"
 
 
 

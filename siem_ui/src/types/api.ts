@@ -364,7 +364,8 @@ export interface EventSearchResponse {
 
 // Alert Management Types
 export interface Alert {
-  alert_id: string;
+  alert_id?: string; // Legacy field name
+  id?: string; // New field name from backend
   tenant_id: string;
   rule_id: string;
   rule_name: string;

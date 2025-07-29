@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 """
-Rust API Route Extractor
-Automatically extracts all /api/v1/* routes from Rust source files
-Supports Actix-web and Axum route patterns
+Rust Route Extractor for SIEM Pipeline
+Extracts API routes from Rust handlers.rs file with enhanced categorization
 """
 
-import os
 import re
 import json
+import os
 from pathlib import Path
 from typing import List, Dict, Any
+import datetime
 
 # Regex patterns for different routing frameworks
 route_patterns = [
