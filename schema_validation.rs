@@ -3,6 +3,7 @@
 
 use serde_json::{Value, Map};
 use std::collections::HashMap;
+use std::env;
 use reqwest;
 
 /// Schema validation errors
@@ -44,11 +45,23 @@ struct ColumnDef {
 /// Schema validator for SIEM tables
 struct SchemaValidator {
     clickhouse_url: String,
+    database_name: String,
 }
 
 impl SchemaValidator {
     fn new(clickhouse_url: String) -> Self {
-        Self { clickhouse_url }
+        let database_name = env::var("CLICKHOUSE_DB").unwrap_or_else(|_| "dev".to_string());
+        Self {
+            clickhouse_url,
+            database_name,
+        }
+    }
+    
+    fn new_with_db(clickhouse_url: String, database_name: String) -> Self {
+        Self { 
+            clickhouse_url,
+            database_name,
+        }
     }
 
     /// Validate all SIEM table schemas
@@ -174,7 +187,8 @@ impl SchemaValidator {
             },
         ];
 
-        self.validate_table_schema("dev.alerts", expected_columns).await
+        let table_name = format!("{}.alerts", &self.database_name);
+        self.validate_table_schema(&table_name, expected_columns).await
     }
 
     /// Validate alert_notes table schema
@@ -224,13 +238,15 @@ impl SchemaValidator {
             },
         ];
 
-        self.validate_table_schema("dev.alert_notes", expected_columns).await
+        let table_name = format!("{}.alert_notes", &self.database_name);
+        self.validate_table_schema(&table_name, expected_columns).await
     }
 
     /// Validate events table schema (if it exists)
     async fn validate_events_schema(&self) -> Result<(), Vec<SchemaError>> {
         // Check if events table exists first
-        let table_exists = self.check_table_exists("dev.events").await?;
+        let table_name = format!("{}.events", &self.database_name);
+        let table_exists = self.check_table_exists(&table_name).await?;
         if !table_exists {
             println!("ℹ️  Events table does not exist, skipping validation");
             return Ok(());
@@ -267,7 +283,8 @@ impl SchemaValidator {
             },
         ];
 
-        self.validate_table_schema("dev.events", expected_columns).await
+        let table_name = format!("{}.events", &self.database_name);
+        self.validate_table_schema(&table_name, expected_columns).await
     }
 
     /// Generic table schema validation

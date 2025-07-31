@@ -6,6 +6,7 @@
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::env;
 use std::fs;
 use std::process;
 
@@ -29,9 +30,10 @@ struct SchemaConfig {
 /// Expected schema configuration for all SIEM tables
 fn get_expected_schema() -> SchemaConfig {
     let mut tables = HashMap::new();
+    let database_name = env::var("CLICKHOUSE_DB").unwrap_or_else(|_| "dev".to_string());
     
     // Tenants table schema
-    tables.insert("dev.tenants".to_string(), TableSchema {
+    tables.insert(format!("{}.tenants", database_name), TableSchema {
         columns: vec![
             ColumnDefinition { name: "tenant_id".to_string(), column_type: "String".to_string(), required: true },
             ColumnDefinition { name: "tenant_name".to_string(), column_type: "String".to_string(), required: true },
@@ -41,7 +43,7 @@ fn get_expected_schema() -> SchemaConfig {
     });
     
     // Alerts table schema
-    tables.insert("dev.alerts".to_string(), TableSchema {
+    tables.insert(format!("{}.alerts", database_name), TableSchema {
         columns: vec![
             ColumnDefinition { name: "alert_id".to_string(), column_type: "String".to_string(), required: true },
             ColumnDefinition { name: "tenant_id".to_string(), column_type: "String".to_string(), required: true },
@@ -56,7 +58,7 @@ fn get_expected_schema() -> SchemaConfig {
     });
     
     // Events table schema
-    tables.insert("dev.events".to_string(), TableSchema {
+    tables.insert(format!("{}.events", database_name), TableSchema {
         columns: vec![
             ColumnDefinition { name: "event_id".to_string(), column_type: "String".to_string(), required: true },
             ColumnDefinition { name: "tenant_id".to_string(), column_type: "String".to_string(), required: true },
@@ -110,7 +112,9 @@ async fn validate_api_schema() -> Result<(), Box<dyn std::error::Error>> {
     // Validate alerts response structure
     if let Some(meta) = alerts_data.get("meta").and_then(|m| m.as_array()) {
         let expected_schema = get_expected_schema();
-        let alerts_schema = &expected_schema.tables["dev.alerts"];
+        let database_name = env::var("CLICKHOUSE_DB").unwrap_or_else(|_| "dev".to_string());
+        let table_key = format!("{}.alerts", database_name);
+        let alerts_schema = &expected_schema.tables[&table_key];
         
         for expected_col in &alerts_schema.columns {
             if expected_col.required {
@@ -170,15 +174,18 @@ mod tests {
     #[test]
     fn test_expected_schema_structure() {
         let schema = get_expected_schema();
+        let database_name = env::var("CLICKHOUSE_DB").unwrap_or_else(|_| "dev".to_string());
         
         // Verify tenants table has required columns
-        let tenants = &schema.tables["dev.tenants"];
+        let tenants_key = format!("{}.tenants", database_name);
+        let tenants = &schema.tables[&tenants_key];
         assert!(tenants.columns.iter().any(|c| c.name == "tenant_id"));
         assert!(tenants.columns.iter().any(|c| c.name == "is_active"));
         assert!(!tenants.columns.iter().any(|c| c.name == "status")); // Should not have status
         
         // Verify alerts table has required columns
-        let alerts = &schema.tables["dev.alerts"];
+        let alerts_key = format!("{}.alerts", database_name);
+        let alerts = &schema.tables[&alerts_key];
         assert!(alerts.columns.iter().any(|c| c.name == "alert_id"));
         assert!(alerts.columns.iter().any(|c| c.name == "status"));
         assert!(!alerts.columns.iter().any(|c| c.name == "assignee_id")); // Should not have assignee_id

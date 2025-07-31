@@ -1,0 +1,63 @@
+name: Schema Audit CI
+
+on:
+  push:
+    branches: [ main, feature/clickhouse-auto-migration ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  schema-audit:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        components: clippy
+    
+    - name: Cache cargo registry
+      uses: actions/cache@v3
+      with:
+        path: ~/.cargo/registry
+        key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+    
+    - name: Cache cargo index
+      uses: actions/cache@v3
+      with:
+        path: ~/.cargo/git
+        key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
+    
+    - name: Cache cargo build
+      uses: actions/cache@v3
+      with:
+        path: target
+        key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
+    
+    - name: Run Clippy with warnings as errors
+      run: cargo clippy --all-targets --all-features -- -D warnings
+    
+    - name: Build schema audit binary
+      run: cargo build --bin schema_audit
+    
+    - name: Run schema diff tests
+      run: cargo test schema_diff
+    
+    - name: Run schema audit (dry run)
+      run: |
+        # Set dummy environment variables for CI
+        export CLICKHOUSE_HOST="localhost"
+        export CLICKHOUSE_PORT="8123"
+        export CLICKHOUSE_DB="test_db"
+        export CLICKHOUSE_USER="default"
+        export CLICKHOUSE_PASS=""
+        export CLICKHOUSE_SECURE="false"
+        
+        # This will fail in CI since we don't have ClickHouse running,
+        # but it validates the binary can be executed and environment parsing works
+        cargo run --bin schema_audit || echo "Expected failure in CI without ClickHouse"

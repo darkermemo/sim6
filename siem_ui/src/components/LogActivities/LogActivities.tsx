@@ -151,7 +151,9 @@ const LogActivities: React.FC<LogActivitiesProps> = ({ className }) => {
 
   // Event handlers
   const handleFilterChange = useCallback((key: keyof FilterState, value: any) => {
-    setFilters(prev => ({ ...prev, [key]: value }));
+    // Convert 'all' to empty string for API compatibility
+    const processedValue = value === 'all' ? '' : value;
+    setFilters(prev => ({ ...prev, [key]: processedValue }));
     setCurrentPage(1); // Reset to first page when filters change
   }, []);
 
@@ -340,14 +342,14 @@ const LogActivities: React.FC<LogActivitiesProps> = ({ className }) => {
             <div className="space-y-2">
               <label className="text-sm font-medium">Event Outcome</label>
               <Select
-                value={filters.eventOutcome}
+                value={filters.eventOutcome || 'all'}
                 onValueChange={(value) => handleFilterChange('eventOutcome', value)}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select outcome" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All</SelectItem>
+                  <SelectItem value="all">All</SelectItem>
                   <SelectItem value="success">Success</SelectItem>
                   <SelectItem value="failure">Failure</SelectItem>
                   <SelectItem value="unknown">Unknown</SelectItem>

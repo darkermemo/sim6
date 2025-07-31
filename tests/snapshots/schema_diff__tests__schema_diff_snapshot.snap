@@ -1,0 +1,37 @@
+---
+source: tests/schema_diff.rs
+expression: diffs
+---
+[
+    SchemaDiff {
+        table: "events_test",
+        missing_in_db: [
+            RustField {
+                name: "tenant_id",
+                rust_type: "Uuid",
+                serde_name: None,
+                skip: false,
+            },
+        ],
+        extra_in_db: [],
+        type_mismatches: [
+            (
+                RustField {
+                    name: "count",
+                    rust_type: "u64",
+                    serde_name: Some(
+                        "legacy_count",
+                    ),
+                    skip: false,
+                },
+                ColumnMeta {
+                    table: "events_test",
+                    name: "legacy_count",
+                    type: "UInt32",
+                    default_kind: "",
+                    codec: None,
+                },
+            ),
+        ],
+    },
+]

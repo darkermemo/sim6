@@ -139,14 +139,14 @@ const EventsPage: React.FC = () => {
             <div className="space-y-2">
               <label className="text-sm font-medium">Severity</label>
               <Select
-                value={filters.severity || ''}
-                onValueChange={(value) => setFilters(prev => ({ ...prev, severity: value || undefined }))}
+                value={filters.severity || 'all'}
+                onValueChange={(value) => setFilters(prev => ({ ...prev, severity: value === 'all' ? undefined : value }))}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="All severities" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All severities</SelectItem>
+                  <SelectItem value="all">All severities</SelectItem>
                   <SelectItem value="critical">Critical</SelectItem>
                   <SelectItem value="high">High</SelectItem>
                   <SelectItem value="medium">Medium</SelectItem>
@@ -159,14 +159,14 @@ const EventsPage: React.FC = () => {
             <div className="space-y-2">
               <label className="text-sm font-medium">Source Type</label>
               <Select
-                value={filters.source_type || ''}
-                onValueChange={(value) => setFilters(prev => ({ ...prev, source_type: value || undefined }))}
+                value={filters.source_type || 'all'}
+                onValueChange={(value) => setFilters(prev => ({ ...prev, source_type: value === 'all' ? undefined : value }))}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="All source types" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All source types</SelectItem>
+                  <SelectItem value="all">All source types</SelectItem>
                   <SelectItem value="firewall">Firewall</SelectItem>
                   <SelectItem value="web_server">Web Server</SelectItem>
                   <SelectItem value="database">Database</SelectItem>

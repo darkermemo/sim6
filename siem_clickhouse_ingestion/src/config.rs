@@ -269,10 +269,15 @@ impl Config {
                 keepalive_timeout: default_keepalive_timeout(),
             },
             clickhouse: ClickHouseConfig {
-                url: "tcp://localhost:9000".parse()?,
-                database: "siem_logs".to_string(),
-                username: "default".to_string(),
-                password: "".to_string(),
+                url: std::env::var("CLICKHOUSE_URL")
+                    .unwrap_or_else(|_| "tcp://localhost:9000".to_string())
+                    .parse()?,
+                database: std::env::var("CLICKHOUSE_DATABASE")
+                    .unwrap_or_else(|_| "dev".to_string()),
+                username: std::env::var("CLICKHOUSE_USERNAME")
+                    .unwrap_or_else(|_| "default".to_string()),
+                password: std::env::var("CLICKHOUSE_PASSWORD")
+                    .unwrap_or_else(|_| "".to_string()),
                 compression: "lz4".to_string(),
                 pool_size: 50,
                 connection_timeout_secs: 10,
@@ -487,7 +492,7 @@ mod tests {
     fn test_default_config() {
         let config = Config::default();
         assert_eq!(config.server.bind_address.port(), 8080);
-        assert_eq!(config.clickhouse.database, "siem_logs");
+        assert_eq!(config.clickhouse.database, "dev");
         assert_eq!(config.performance.target_eps, 500_000);
         assert_eq!(config.clickhouse.batch.size, 1000);
         assert!(config.metrics.enabled);

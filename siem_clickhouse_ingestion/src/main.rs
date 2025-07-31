@@ -39,8 +39,8 @@ async fn main() -> Result<()> {
 
     info!("Starting SIEM ClickHouse Ingestion Pipeline");
 
-    // Load configuration
-    let config = Config::load()?;
+    // Load configuration with environment variable overrides
+    let config = Config::load_with_overrides()?;
     info!("Configuration loaded successfully");
     info!("Server will listen on: {}", config.server.bind_address);
     info!("ClickHouse URL: {}", config.clickhouse.url);

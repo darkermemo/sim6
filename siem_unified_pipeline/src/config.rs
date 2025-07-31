@@ -490,6 +490,7 @@ impl PipelineConfig {
         // Load from environment variables with SIEM_ prefix
         let mut config = Self::default();
         
+        // Server configuration
         if let Ok(host) = std::env::var("SIEM_SERVER_HOST") {
             config.server.host = host;
         }
@@ -498,6 +499,31 @@ impl PipelineConfig {
         }
         if let Ok(workers) = std::env::var("SIEM_SERVER_WORKERS") {
             config.server.workers = workers.parse().unwrap_or(num_cpus::get());
+        }
+        
+        // Database configuration
+        if let Ok(db_host) = std::env::var("SIEM_DATABASE_HOST") {
+            config.database.host = db_host;
+        }
+        if let Ok(db_port) = std::env::var("SIEM_DATABASE_PORT") {
+            config.database.port = db_port.parse().unwrap_or(5432);
+        }
+        if let Ok(db_name) = std::env::var("SIEM_DATABASE_NAME") {
+            config.database.database = db_name;
+        }
+        if let Ok(db_user) = std::env::var("SIEM_DATABASE_USER") {
+            config.database.username = db_user;
+        }
+        if let Ok(db_pass) = std::env::var("SIEM_DATABASE_PASSWORD") {
+            config.database.password = db_pass;
+        }
+        
+        // ClickHouse hot storage configuration
+        if let Ok(ch_url) = std::env::var("SIEM_CLICKHOUSE_URL") {
+            config.storage.hot_storage.clickhouse_url = ch_url;
+        }
+        if let Ok(ch_db) = std::env::var("SIEM_CLICKHOUSE_DATABASE") {
+            config.storage.hot_storage.database = ch_db;
         }
         
         config.validate()?;
@@ -561,7 +587,7 @@ impl Default for PipelineConfig {
             database: DatabaseConfig {
                 host: "localhost".to_string(),
                 port: 5432,
-                database: "siem".to_string(),
+                database: "dev".to_string(),
                 username: "siem_user".to_string(),
                 password: "siem_password".to_string(),
                 max_connections: 20,
@@ -589,7 +615,7 @@ impl Default for PipelineConfig {
                 },
                 hot_storage: HotStorageConfig {
                     clickhouse_url: "tcp://localhost:9000/default".to_string(),
-                    database: "siem".to_string(),
+                    database: "dev".to_string(),
                     retention_days: 30,
                 },
                 cold_storage: ColdStorageConfig {

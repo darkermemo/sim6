@@ -10,7 +10,7 @@ enable_cors = true
 [database]
 host = "localhost"
 port = 5432
-database = "siem"
+database = "dev"
 username = "siem_user"
 password = "siem_password"
 max_connections = 20
@@ -56,7 +56,7 @@ endpoint = "http://localhost:9000"
 
 [storage.hot_storage]
 clickhouse_url = "tcp://localhost:9000/default"
-database = "siem"
+database = "dev"
 retention_days = 30
 
 [storage.cold_storage]

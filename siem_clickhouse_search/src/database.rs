@@ -718,11 +718,12 @@ impl ClickHouseService {
         }
     }
 
-    /// Get events from dev.events table
+    /// Get events from events table
     pub async fn get_events(&self, filters: EventFilters) -> Result<Vec<Event>, Box<dyn std::error::Error + Send + Sync>> {
         let client = &self.client;
         
-        let mut query = "SELECT event_id, tenant_id, event_timestamp, source_ip, source_type, message, severity FROM dev.events".to_string();
+        let table_name = format!("{}.events", &self.config.clickhouse.database);
+        let mut query = format!("SELECT event_id, tenant_id, event_timestamp, source_ip, source_type, message, severity FROM {}", table_name);
         let mut conditions = Vec::new();
         
         // Add filters

@@ -231,7 +231,7 @@ impl Default for ClickHouseConfig {
     fn default() -> Self {
         Self {
             url: Url::parse("http://localhost:8123").unwrap(),
-            database: "siem".to_string(),
+            database: "dev".to_string(),
             username: "default".to_string(),
             password: "".to_string(),
             pool: PoolConfig::default(),

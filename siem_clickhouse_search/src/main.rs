@@ -361,7 +361,7 @@ max_memory_usage = 1073741824
 enable_optimization = true
 
 [clickhouse.tables]
-default_table = "dev.events"
+default_table = "events"
 tenant_table_pattern = "tenant_{tenant_id}.events"
 auto_create_tables = false
 

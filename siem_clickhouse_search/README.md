@@ -216,7 +216,7 @@ Key environment variables you can set:
 export CLICKHOUSE_URL="http://localhost:8123"
 export CLICKHOUSE_USERNAME="siem_user"
 export CLICKHOUSE_PASSWORD="secure_password_here"
-export CLICKHOUSE_DATABASE="siem"
+export CLICKHOUSE_DATABASE="dev"
 
 # Redis
 export REDIS_URL="redis://localhost:6379"

@@ -5,6 +5,7 @@ use sqlparser::ast::{Statement, TableFactor, Expr, SelectItem, SetExpr, Query};
 use sqlparser::dialect::ClickHouseDialect;
 use sqlparser::parser::Parser;
 use std::collections::{HashMap, HashSet};
+use std::env;
 use std::fs;
 use std::path::Path;
 use syn::{visit::Visit, LitStr, Macro, spanned::Spanned};
@@ -666,14 +667,16 @@ mod tests {
 
     #[test]
     fn test_sql_parsing() {
-        let mut validator = SchemaValidator::new();
-        let query = "SELECT id, name FROM dev.users WHERE active = 1";
-        let result = validator.parse_sql_query(query);
+        let validator = SchemaValidator::new();
+        let database_name = env::var("CLICKHOUSE_DB").unwrap_or_else(|_| "dev".to_string());
+        let query = format!("SELECT id, name FROM {}.users WHERE active = 1", database_name);
+        let result = validator.parse_sql_query(&query);
         assert!(result.is_ok());
         
         let sql_ref = result.unwrap();
         assert_eq!(sql_ref.query_type, "SELECT");
-        assert!(sql_ref.tables_referenced.contains(&"dev.users".to_string()));
+        let expected_table = format!("{}.users", database_name);
+        assert!(sql_ref.tables_referenced.contains(&expected_table));
     }
 
     #[test]

@@ -1,0 +1,147 @@
+name: CI Pipeline
+
+on:
+  pull_request:
+    branches: [ main, develop, stabilize/vertical-slice ]
+  push:
+    branches: [ main, develop, stabilize/vertical-slice ]
+
+jobs:
+  vertical-slice-test:
+    runs-on: ubuntu-latest
+    
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      
+      clickhouse:
+        image: clickhouse/clickhouse-server:23.8
+        ports:
+          - 8123:8123
+          - 9000:9000
+        options: >-
+          --health-cmd "wget --no-verbose --tries=1 --spider http://localhost:8123/ping || exit 1"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Setup Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: 1.79.0
+        override: true
+        components: rustfmt, clippy
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.14'
+        cache: 'pnpm'
+        cache-dependency-path: 'siem_ui/pnpm-lock.yaml'
+    
+    - name: Install pnpm
+      run: npm install -g pnpm@9
+    
+    - name: Cache Rust dependencies
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+          target
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+    
+    - name: Install frontend dependencies
+      run: |
+        cd siem_ui
+        pnpm install
+    
+    - name: Run version verification
+      run: scripts/verify-versions.sh
+    
+    - name: Frontend linting
+      run: |
+        cd siem_ui
+        pnpm lint
+    
+    - name: Frontend error detection
+      run: |
+        cd siem_ui
+        pnpm run error-detection
+    
+    - name: Build Rust components
+      run: |
+        cargo build --release
+    
+    - name: Set environment variables
+      run: |
+        echo "CLICKHOUSE_DATABASE=dev" >> $GITHUB_ENV
+        echo "CLICKHOUSE_URL=http://localhost:8123" >> $GITHUB_ENV
+        echo "API_URL=http://localhost:8080" >> $GITHUB_ENV
+        echo "INGESTOR_URL=http://localhost:8081" >> $GITHUB_ENV
+        echo "ADMIN_TOKEN=admin-token-12345-change-in-production" >> $GITHUB_ENV
+    
+    - name: Run smoke test
+      run: scripts/smoke-slice.sh
+      env:
+        CLICKHOUSE_DATABASE: dev
+    
+    - name: Install Playwright
+      run: |
+        cd siem_ui
+        pnpm exec playwright install chromium
+    
+    - name: Start frontend dev server
+      run: |
+        cd siem_ui
+        pnpm dev &
+        sleep 10
+    
+    - name: Start backend API server
+      run: |
+        cd siem_api
+        cargo run &
+        sleep 10
+    
+    - name: Run integration tests
+      run: |
+        cargo test --test integration_clickhouse_db_standardization -- --ignored
+      env:
+        CLICKHOUSE_DATABASE: dev
+        CLICKHOUSE_URL: http://localhost:8123
+        API_URL: http://localhost:8080
+        INGESTOR_URL: http://localhost:8081
+        ADMIN_TOKEN: admin-token-12345-change-in-production
+    
+    - name: Run Playwright E2E tests
+      run: |
+        cd siem_ui
+        pnpm exec playwright test --project=chromium ../e2e/runtime-slice.spec.ts
+      env:
+        CLICKHOUSE_DATABASE: dev
+        API_URL: http://localhost:8080
+        UI_URL: http://localhost:3000
+        INGESTOR_URL: http://localhost:8081
+        ADMIN_TOKEN: admin-token-12345-change-in-production
+    
+    - name: Run Playwright smoke test
+      run: |
+        cd tests
+        npx playwright test playwright_smoke_test.js
+      env:
+        CLICKHOUSE_DATABASE: dev
+        API_URL: http://localhost:8080
+        UI_URL: http://localhost:3000
+        INGESTOR_URL: http://localhost:8081
+        ADMIN_TOKEN: admin-token-12345-change-in-production

@@ -37,6 +37,7 @@ use crate::{
 };
 use std::time::{SystemTime, UNIX_EPOCH};
 use chrono::{DateTime, Utc};
+use uuid;
 
 /// Transform massive_log_gen format to LogEvent
 fn transform_massive_log_gen_to_log_event(log_value: Value, tenant_id: &str) -> Result<LogEvent> {
@@ -227,11 +228,12 @@ impl LogReceiver {
             .route("/health", get(health_check))
             .route("/api/v1/db/pool", get(db_pool_health))
             .route("/metrics", get(metrics_handler))
+            .route("/debug/:tid", get(|Path(tid): Path<String>| async move { format!("OK:{tid}") }))
             .route("/tenants/:tenant_id", get(tenant_info))
             .route("/ingest/:tenant_id", post(ingest_logs))
             .route("/ingest/:tenant_id/batch", post(ingest_logs_batch))
-            .layer(middleware)
             .with_state(self.state.clone())
+            .layer(middleware)
     }
 
     /// Check rate limits for a tenant
@@ -314,6 +316,7 @@ async fn tenant_info(
     Path(tenant_id): Path<String>,
     State(state): State<AppState>,
 ) -> Result<Json<TenantInfoResponse>, StatusCode> {
+    debug!("Received tenant info request for tenant: {}", tenant_id);
     let registry = state.tenant_registry.read().await;
     
     match registry.get_tenant(&tenant_id) {

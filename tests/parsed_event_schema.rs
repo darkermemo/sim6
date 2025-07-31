@@ -3,9 +3,8 @@
 //! This module contains comprehensive tests for the ParsedEvent struct to ensure
 //! proper deserialization, field mapping, and schema compliance with ECS/CIM/UDM standards.
 
-use chrono::{DateTime, Utc};
+use chrono::Utc;
 use serde_json::json;
-use std::collections::HashMap;
 
 // Import the ParsedEvent from the main crate
 use siem_schema_validator::parsed_event::ParsedEvent;

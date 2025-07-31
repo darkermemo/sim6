@@ -8,6 +8,7 @@
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::env;
 use std::fs;
 use std::path::Path;
 use std::process;
@@ -652,14 +653,17 @@ impl SchemaValidator {
 
     /// Validate for hardcoded database names
     fn validate_hardcoded_database_names(&mut self) {
+        let database_name = env::var("CLICKHOUSE_DB").unwrap_or_else(|_| "dev".to_string());
+        let hardcoded_pattern = format!("{}.", database_name);
+        
         for sql_ref in &self.sql_references {
-            if sql_ref.query.contains("dev.") {
+            if sql_ref.query.contains(&hardcoded_pattern) {
                 self.validation_errors.push(ValidationError {
                     error_type: "HardcodedDatabaseName".to_string(),
                     severity: "Warning".to_string(),
                     file_path: sql_ref.file_path.clone(),
                     line_number: sql_ref.line_number,
-                    message: "SQL query contains hardcoded database name 'dev.'".to_string(),
+                    message: format!("SQL query contains hardcoded database name '{}'", hardcoded_pattern),
                     suggestion: Some("Use environment variable or configuration for database name".to_string()),
                 });
             }
@@ -784,13 +788,16 @@ mod tests {
     #[test]
     fn test_sql_query_parsing() {
         let validator = SchemaValidator::new();
+        let database_name = env::var("CLICKHOUSE_DB").unwrap_or_else(|_| "dev".to_string());
         
-        let (table, op) = validator.parse_sql_query("SELECT * FROM dev.alerts WHERE tenant_id = 'test'");
-        assert_eq!(table, "dev.alerts");
+        let query1 = format!("SELECT * FROM {}.alerts WHERE tenant_id = 'test'", database_name);
+        let (table, op) = validator.parse_sql_query(&query1);
+        assert_eq!(table, format!("{}.alerts", database_name));
         assert_eq!(op, "SELECT");
         
-        let (table, op) = validator.parse_sql_query("INSERT INTO dev.tenants (tenant_id, tenant_name) VALUES ('test', 'Test')");
-        assert_eq!(table, "dev.tenants");
+        let query2 = format!("INSERT INTO {}.tenants (tenant_id, tenant_name) VALUES ('test', 'Test')", database_name);
+        let (table, op) = validator.parse_sql_query(&query2);
+        assert_eq!(table, format!("{}.tenants", database_name));
         assert_eq!(op, "INSERT");
     }
 
