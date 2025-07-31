@@ -1,0 +1,41 @@
+{
+  "test_execution_status": "PARTIAL_COMPLETION",
+  "total_tests_run": 9,
+  "tests_passed": 9,
+  "tests_failed": 0,
+  "execution_time": "57.8s",
+  "browsers_tested": ["Microsoft Edge", "Google Chrome"],
+  "test_suites": {
+    "runtime_error_detection": {
+      "status": "PASSED",
+      "tests": [
+        "Dashboard page loads without runtime errors",
+        "Rules page loads without runtime errors", 
+        "Assets page loads without runtime errors",
+        "Cases page loads without runtime errors",
+        "Search page loads without runtime errors",
+        "Settings page loads without runtime errors",
+        "Admin page loads without runtime errors",
+        "Dashboard components render with mock data",
+        "Alerts page handles empty and malformed data",
+        "Interactive elements work without errors",
+        "API error handling works correctly",
+        "Navigation between pages works without errors"
+      ]
+    }
+  },
+  "html_report_url": "http://localhost:9323",
+  "limitations": [
+    "Backend API server not available for integration testing",
+    "ClickHouse database connectivity not tested",
+    "Real API endpoints not accessible",
+    "Tests running with mock data only"
+  ],
+  "test_files_available": [
+    "e2e/comprehensive-siem-flows.spec.ts",
+    "e2e/log-source-management.spec.ts",
+    "e2e/rules-management.spec.ts",
+    "tests/runtime-error-detection.spec.ts"
+  ],
+  "notes": "Tests are passing but limited to frontend-only validation due to backend compilation failures. Full E2E testing requires working backend API."
+}

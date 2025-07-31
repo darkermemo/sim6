@@ -23,6 +23,47 @@ const UUIDSchema = z.string().refine(
 export const AlertSeveritySchema = z.enum(['critical', 'high', 'medium', 'low', 'info']);
 export const AlertStatusSchema = z.enum(['open', 'investigating', 'resolved', 'closed', 'false_positive']);
 
+// Event Detail schema - matches Rust EventDetail
+export const EventDetailSchema = z.object({
+  id: UUIDSchema,
+  timestamp: TimestampSchema,
+  source: z.string(),
+  source_type: z.string(),
+  severity: z.string(),
+  facility: z.string(),
+  hostname: z.string(),
+  process: z.string(),
+  message: z.string(),
+  raw_message: z.string(),
+  source_ip: z.string(),
+  source_port: z.number().int(),
+  protocol: z.string(),
+  tags: z.array(z.string()),
+  fields: z.record(z.string(), z.any()),
+  processing_stage: z.string(),
+  created_at: TimestampSchema,
+  updated_at: TimestampSchema
+}).transform((data) => ({
+  id: data.id,
+  timestamp: data.timestamp,
+  source: data.source,
+  sourceType: data.source_type,
+  severity: data.severity,
+  facility: data.facility,
+  hostname: data.hostname,
+  process: data.process,
+  message: data.message,
+  rawMessage: data.raw_message,
+  sourceIp: data.source_ip,
+  sourcePort: data.source_port,
+  protocol: data.protocol,
+  tags: data.tags,
+  fields: data.fields,
+  processingStage: data.processing_stage,
+  createdAt: data.created_at,
+  updatedAt: data.updated_at
+}));
+
 export const RecentAlertSchema = z.object({
   id: UUIDSchema,
   name: z.string().min(1),
@@ -45,8 +86,23 @@ export const AlertDetailSchema = RecentAlertSchema.extend({
   updated_at: TimestampSchema.optional()
 });
 
+// Event Search Response - matches Rust EventSearchResponse
+export const EventSearchResponseSchema = z.object({
+  total: z.number().int().min(0),
+  page: z.number().int().min(1),
+  page_size: z.number().int().min(1),
+  events: z.array(EventDetailSchema),
+  query_time_ms: z.number()
+}).transform((data) => ({
+  total: data.total,
+  page: data.page,
+  pageSize: data.page_size,
+  events: data.events,
+  queryTimeMs: data.query_time_ms
+}));
+
 export const AlertsResponseSchema = z.object({
-  alerts: z.array(RecentAlertSchema),
+  data: z.array(RecentAlertSchema).optional(),
   total: z.number().int().min(0),
   page: z.number().int().min(1).optional(),
   limit: z.number().int().min(1).optional()
@@ -56,23 +112,58 @@ export const AlertsResponseSchema = z.object({
 export const RuleStatusSchema = z.enum(['enabled', 'disabled', 'testing']);
 export const RuleTypeSchema = z.enum(['detection', 'correlation', 'threshold', 'anomaly']);
 
-export const RuleSchema = z.object({
-  rule_id: UUIDSchema,
-  name: z.string().min(1),
-  description: z.string().optional(),
-  type: RuleTypeSchema,
-  status: RuleStatusSchema,
-  severity: AlertSeveritySchema,
-  query: z.string().min(1),
+// Routing Rule schema - matches Rust RoutingRuleResponse
+export const RoutingRuleSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  description: z.string().nullable().optional(),
+  conditions: z.record(z.string(), z.any()),
+  actions: z.record(z.string(), z.any()),
+  enabled: z.boolean(),
+  priority: z.number().int(),
+  tags: z.array(z.string()),
   created_at: TimestampSchema,
-  updated_at: TimestampSchema.optional(),
-  created_by: z.string(),
-  tags: z.array(z.string()).optional(),
-  enabled: z.boolean()
+  updated_at: TimestampSchema,
+  tenant_id: UUIDSchema
+}).transform((data) => ({
+  id: data.id,
+  name: data.name,
+  description: data.description,
+  conditions: data.conditions,
+  actions: data.actions,
+  enabled: data.enabled,
+  priority: data.priority,
+  tags: data.tags,
+  createdAt: data.created_at,
+  updatedAt: data.updated_at,
+  tenantId: data.tenant_id
+}));
+
+export const RuleSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  description: z.string().optional(),
+  severity: AlertSeveritySchema,
+  enabled: z.boolean(),
+  lastTriggered: z.string().optional(),
+  timestamp: z.string(),
+  status: AlertStatusSchema,
+  source: z.string(),
+  type: z.string().optional(),
+  query: z.string().optional(),
+  created_at: z.string().optional(),
+  updated_at: z.string().optional(),
+  tags: z.array(z.string()).optional()
+});
+
+// Routing Rules List Response - matches Rust RoutingRulesListResponse
+export const RoutingRulesListResponseSchema = z.object({
+  rules: z.array(RoutingRuleSchema),
+  total: z.number().int().min(0)
 });
 
 export const RulesResponseSchema = z.object({
-  rules: z.array(RuleSchema),
+  data: z.array(RuleSchema).optional(),
   total: z.number().int().min(0),
   page: z.number().int().min(1).optional(),
   limit: z.number().int().min(1).optional()
@@ -144,13 +235,48 @@ export const DashboardStatsSchema = z.object({
 });
 
 export const DashboardResponseSchema = z.object({
-  stats: DashboardStatsSchema,
-  recent_alerts: z.array(RecentAlertSchema),
+  total: z.number().int().min(0),
+  data: z.array(RecentAlertSchema).optional(),
+  page: z.number().int().min(1).optional(),
+  limit: z.number().int().min(1).optional(),
+  stats: DashboardStatsSchema.optional(),
+  recent_alerts: z.array(RecentAlertSchema).optional(),
   alert_trends: z.array(z.object({
     date: z.string(),
     count: z.number().int().min(0),
     severity: AlertSeveritySchema.optional()
   })).optional()
+});
+
+// New DashboardV2 schema matching Rust /api/v1/dashboard endpoint
+export const AlertsOverTimeDataSchema = z.object({
+  ts: z.number().int(),
+  critical: z.number().int().min(0),
+  high: z.number().int().min(0),
+  medium: z.number().int().min(0),
+  low: z.number().int().min(0)
+});
+
+export const TopLogSourceDataSchema = z.object({
+  source_type: z.string(),
+  count: z.number().int().min(0)
+});
+
+export const RecentAlertV2Schema = z.object({
+  alert_id: UUIDSchema,
+  ts: z.number().int(),
+  title: z.string(),
+  severity: AlertSeveritySchema,
+  source_ip: z.string(),
+  dest_ip: z.string()
+});
+
+export const DashboardV2ResponseSchema = z.object({
+  total_events: z.number().int().min(0),
+  total_alerts: z.number().int().min(0),
+  alerts_over_time: z.array(AlertsOverTimeDataSchema),
+  top_log_sources: z.array(TopLogSourceDataSchema),
+  recent_alerts: z.array(RecentAlertV2Schema)
 });
 
 // Search schemas
@@ -281,6 +407,11 @@ export function safeValidateApiResponse<T>(
 /**
  * Type exports for TypeScript
  */
+// Type exports for all schemas
+export type EventDetail = z.infer<typeof EventDetailSchema>;
+export type EventSearchResponse = z.infer<typeof EventSearchResponseSchema>;
+export type RoutingRule = z.infer<typeof RoutingRuleSchema>;
+export type RoutingRulesListResponse = z.infer<typeof RoutingRulesListResponseSchema>;
 export type RecentAlert = z.infer<typeof RecentAlertSchema>;
 export type AlertDetail = z.infer<typeof AlertDetailSchema>;
 export type AlertsResponse = z.infer<typeof AlertsResponseSchema>;
@@ -292,6 +423,10 @@ export type Case = z.infer<typeof CaseSchema>;
 export type CasesResponse = z.infer<typeof CasesResponseSchema>;
 export type DashboardStats = z.infer<typeof DashboardStatsSchema>;
 export type DashboardResponse = z.infer<typeof DashboardResponseSchema>;
+export type AlertsOverTimeData = z.infer<typeof AlertsOverTimeDataSchema>;
+export type TopLogSourceData = z.infer<typeof TopLogSourceDataSchema>;
+export type RecentAlertV2 = z.infer<typeof RecentAlertV2Schema>;
+export type DashboardV2Response = z.infer<typeof DashboardV2ResponseSchema>;
 export type SearchResult = z.infer<typeof SearchResultSchema>;
 export type SearchResponse = z.infer<typeof SearchResponseSchema>;
 export type AuthTokens = z.infer<typeof AuthTokensSchema>;

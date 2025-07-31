@@ -11,6 +11,7 @@ use std::{
 };
 use tokio::sync::RwLock;
 use tracing::{debug, error, info, warn};
+use regex::Regex;
 
 use crate::{
     config::Config,
@@ -151,15 +152,19 @@ impl ClickHouseWriter {
     
     /// Ensure table exists with proper schema
     pub async fn ensure_table_exists(&self, table_name: &str) -> Result<()> {
+        // Validate table name to prevent SQL injection
+        let validated_table_name = Self::validate_table_name(table_name)
+            .context("Invalid table name")?;
+        
         // Check if we've already verified this table
         {
             let schemas = self.table_schemas.read().await;
-            if schemas.get(table_name).copied().unwrap_or(false) {
+            if schemas.get(&validated_table_name).copied().unwrap_or(false) {
                 return Ok(());
             }
         }
         
-        debug!("Ensuring table '{}' exists", table_name);
+        debug!("Ensuring table '{}' exists", validated_table_name);
         
         let create_table_sql = format!(
             r#"
@@ -176,7 +181,7 @@ impl ClickHouseWriter {
             ORDER BY (tenant_id, timestamp)
             SETTINGS index_granularity = 8192
             "#,
-            table_name = table_name
+            table_name = validated_table_name
         );
         
         let start_time = Instant::now();
@@ -184,22 +189,22 @@ impl ClickHouseWriter {
         match self.client.query(&create_table_sql).execute().await {
             Ok(_) => {
                 let duration = start_time.elapsed();
-                info!("Table '{}' ensured in {:?}", table_name, duration);
+                info!("Table '{}' ensured in {:?}", validated_table_name, duration);
                 
                 // Mark table as existing
                 let mut schemas = self.table_schemas.write().await;
-                schemas.insert(table_name.to_string(), true);
+                schemas.insert(validated_table_name.clone(), true);
                 
                 // Table creation successful - no specific metrics needed
                 
                 Ok(())
             }
             Err(e) => {
-                error!("Failed to ensure table '{}': {}", table_name, e);
+                error!("Failed to ensure table '{}': {}", validated_table_name, e);
                 
-                self.metrics.record_error("clickhouse_table_creation_failure", Some(table_name));
+                self.metrics.record_error("clickhouse_table_creation_failure", Some(&validated_table_name));
                 
-                Err(anyhow::anyhow!("Failed to create table '{}': {}", table_name, e))
+                Err(anyhow::anyhow!("Failed to create table '{}': {}", validated_table_name, e))
             }
         }
     }
@@ -418,25 +423,59 @@ impl ClickHouseWriter {
     
     /// Drop a table (use with caution)
     pub async fn drop_table(&self, table_name: &str) -> Result<()> {
-        warn!("Dropping table: {}", table_name);
+        // Validate table name to prevent SQL injection
+        let validated_table_name = Self::validate_table_name(table_name)
+            .context("Invalid table name")?;
         
-        let query = format!("DROP TABLE IF EXISTS {}", table_name);
+        warn!("Dropping table: {}", validated_table_name);
+        
+        let query = format!("DROP TABLE IF EXISTS {}", validated_table_name);
         
         match self.client.query(&query).execute().await {
             Ok(_) => {
-                info!("Successfully dropped table: {}", table_name);
+                info!("Successfully dropped table: {}", validated_table_name);
                 
                 // Remove from schema cache
                 let mut schemas = self.table_schemas.write().await;
-                schemas.remove(table_name);
+                schemas.remove(&validated_table_name);
                 
                 Ok(())
             }
             Err(e) => {
-                error!("Failed to drop table '{}': {}", table_name, e);
+                error!("Failed to drop table '{}': {}", validated_table_name, e);
                 Err(anyhow::anyhow!("Failed to drop table: {}", e))
             }
         }
+    }
+    
+    /// Validate table name to prevent SQL injection
+    fn validate_table_name(table_name: &str) -> Result<String> {
+        // Only allow alphanumeric characters, underscores, and dots
+        let valid_pattern = Regex::new(r"^[a-zA-Z0-9_\.]+$").unwrap();
+        
+        if table_name.is_empty() {
+            return Err(anyhow::anyhow!("Table name cannot be empty"));
+        }
+        
+        if table_name.len() > 64 {
+            return Err(anyhow::anyhow!("Table name too long (max 64 characters)"));
+        }
+        
+        if !valid_pattern.is_match(table_name) {
+            return Err(anyhow::anyhow!("Table name contains invalid characters"));
+        }
+        
+        // Prevent SQL keywords and dangerous patterns
+        let dangerous_keywords = ["DROP", "DELETE", "INSERT", "UPDATE", "CREATE", "ALTER", "TRUNCATE"];
+        let upper_table = table_name.to_uppercase();
+        
+        for keyword in &dangerous_keywords {
+            if upper_table.contains(keyword) {
+                return Err(anyhow::anyhow!("Table name contains dangerous SQL keyword"));
+            }
+        }
+        
+        Ok(table_name.to_string())
     }
 }
 

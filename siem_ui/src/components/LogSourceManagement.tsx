@@ -6,11 +6,12 @@ import { Badge } from '@/components/ui/Badge';
 // Using native input for now - Input component not available
 import { Select } from '@/components/ui/Select';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/Sheet';
-import { useLogSources, useDeleteLogSource, getLogSourceTypeBadgeVariant, getValidLogSourceTypes } from '@/hooks/api/useLogSources';
+import { useTypedLogSources, useDeleteLogSource, getLogSourceTypeBadgeVariant, getValidLogSourceTypes, type LogSource } from '@/hooks/api/useTypedLogSources';
+import { useAuthStore } from '@/stores/authStore';
 // import { useToast } from '@/hooks/useToast'; // Currently unused
 import { stopPropagation } from '@/lib/dom';
 import { LogSourceDetailDrawer } from './LogSourceDetailDrawer';
-import type { LogSource, LogSourceFilters, LogSourceType } from '@/types/api';
+import type { LogSourceFilters, LogSourceType } from '@/types/api';
 
 /**
  * LogSourceManagement - Admin interface for managing SIEM log sources
@@ -33,7 +34,7 @@ import type { LogSource, LogSourceFilters, LogSourceType } from '@/types/api';
 export function LogSourceManagement() {
   // Toast for error notifications - currently handled by useDeleteLogSource hook
   // const { toast } = useToast();
-  const { deleteLogSource, isDeleting } = useDeleteLogSource();
+  const deleteLogSourceMutation = useDeleteLogSource();
   
   // State for filters and UI
   const [filters, setFilters] = useState<LogSourceFilters>({
@@ -47,14 +48,18 @@ export function LogSourceManagement() {
   const [isFilterOpen, setIsFilterOpen] = useState(false);
 
   // Fetch log sources with conditional authentication
-  const { logSources, total, isLoading, error, mutate, isAuthenticated } = useLogSources(filters);
+  const { data, isLoading, error, refetch } = useTypedLogSources();
+  const { accessToken } = useAuthStore();
+  const isAuthenticated = !!accessToken;
+  
+  const logSources = data?.log_sources || [];
+  const total = data?.total || 0;
 
   // Memoize filtered results for performance
   const filteredLogSources = useMemo(() => {
-    return logSources.filter((source: LogSource) => {
+    return logSources.filter((source) => {
       const matchesSearch = !filters.search || 
-        source.source_name.toLowerCase().includes(filters.search.toLowerCase()) ||
-        source.source_ip.includes(filters.search);
+        source.source_name.toLowerCase().includes(filters.search.toLowerCase());
       
       const matchesType = !filters.source_type || source.source_type === filters.source_type;
       
@@ -81,7 +86,7 @@ export function LogSourceManagement() {
   // Handle create success
   const handleCreateSuccess = () => {
     setIsCreateDrawerOpen(false);
-    mutate(); // Refresh the list
+    refetch(); // Refresh the list
   };
 
   // Get icon for source type
@@ -140,7 +145,7 @@ export function LogSourceManagement() {
               ? 'You need Admin privileges to manage log sources.' 
               : 'Failed to load log sources. Please try again.'}
           </p>
-          <Button onClick={() => mutate()} variant="outline">
+          <Button onClick={() => refetch()} variant="outline">
             Retry
           </Button>
         </div>
@@ -208,9 +213,9 @@ export function LogSourceManagement() {
               aria-label="Filter by source type"
             >
               <option value="all">All Types</option>
-              {getValidLogSourceTypes().map((type: LogSourceType) => (
-                <option key={type} value={type}>{type}</option>
-              ))}
+              {getValidLogSourceTypes().map((type: string) => (
+                    <option key={type} value={type}>{type}</option>
+                  ))}
             </Select>
           </div>
 
@@ -250,9 +255,9 @@ export function LogSourceManagement() {
                     onValueChange={handleSourceTypeChange}
                   >
                     <option value="all">All Types</option>
-                                         {getValidLogSourceTypes().map((type: LogSourceType) => (
-                       <option key={type} value={type}>{type}</option>
-                     ))}
+                                         {getValidLogSourceTypes().map((type: string) => (
+                        <option key={type} value={type}>{type}</option>
+                      ))}
                   </Select>
                   </div>
                 </div>
@@ -312,7 +317,7 @@ export function LogSourceManagement() {
                   >
                     <td className="p-4">
                       <div className="flex items-center gap-3">
-                        {getSourceTypeIcon(source.source_type)}
+                        {getSourceTypeIcon(source.source_type as LogSourceType || 'Syslog')}
                         <div>
                           <div className="font-medium">{source.source_name}</div>
                           <div className="text-sm text-muted-foreground">
@@ -322,7 +327,7 @@ export function LogSourceManagement() {
                       </div>
                     </td>
                     <td className="p-4">
-                      <Badge variant={getLogSourceTypeBadgeVariant(source.source_type)}>
+                      <Badge variant={getLogSourceTypeBadgeVariant(source.source_type) as "default" | "secondary" | "success" | "warning" | "outline" | "critical" | "high" | "medium" | "low" | "info"}>
                         {source.source_type}
                       </Badge>
                     </td>
@@ -340,13 +345,13 @@ export function LogSourceManagement() {
                                return;
                              }
                              try {
-                               await deleteLogSource(source.source_id, source.source_name);
-                               mutate();
+                               await deleteLogSourceMutation.mutateAsync(source.source_id);
+                                refetch();
                              } catch (error) {
                                console.error('Failed to delete log source:', error);
                              }
                            })}
-                           disabled={isDeleting}
+                           disabled={deleteLogSourceMutation.isPending}
                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
                          >
                            <Trash2 className="h-4 w-4" />
@@ -363,10 +368,11 @@ export function LogSourceManagement() {
 
       {/* Create Log Source Drawer */}
       <LogSourceDetailDrawer
-        isOpen={isCreateDrawerOpen}
-        onClose={() => setIsCreateDrawerOpen(false)}
-        onSuccess={handleCreateSuccess}
-      />
+          isOpen={isCreateDrawerOpen}
+          onClose={() => setIsCreateDrawerOpen(false)}
+          onSuccess={handleCreateSuccess}
+          mode="create"
+        />
 
       {/* View Log Source Detail Drawer */}
       {selectedSource && (

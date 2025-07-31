@@ -5,7 +5,13 @@
 
 set -e
 
-API_URL="http://localhost:8080"
+# Load environment variables
+if [ -f ".env" ]; then
+    export $(grep -v '^#' .env | xargs)
+fi
+
+# Set defaults if not provided
+API_URL=${API_URL:-"http://localhost:8080"}
 
 # Colors for output
 RED='\033[0;31m'
@@ -379,4 +385,4 @@ else
         echo -e "${RED}❌ Critical issues found - require fixes before Phase 6.4${NC}"
         exit 1
     fi
-fi 
+fi

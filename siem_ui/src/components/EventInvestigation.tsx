@@ -39,7 +39,6 @@ export function EventInvestigation({
   loading: propLoading,
   error: propError,
   totalCount: propTotalCount,
-  hasMore: propHasMore,
   refresh: propRefresh
 }: EventInvestigationProps = {}) {
   const { toast } = useToast();
@@ -50,7 +49,6 @@ export function EventInvestigation({
     loading: hookLoading,
     error: hookError,
     totalCount: hookTotalCount,
-    hasMore: hookHasMore,
     refresh: hookRefresh
   } = useLogStream();
   
@@ -66,7 +64,7 @@ export function EventInvestigation({
   const loading = propLoading !== undefined ? propLoading : hookLoading;
   const error = propError !== undefined ? propError : hookError;
   const totalCount = propTotalCount !== undefined ? propTotalCount : hookTotalCount;
-  const _hasMore = propHasMore !== undefined ? propHasMore : hookHasMore;
+
   const refresh = propRefresh || hookRefresh;
   
   // Display state
@@ -89,23 +87,7 @@ export function EventInvestigation({
     setShowEventDetail(true);
   };
 
-  // Get severity badge variant
-  const _getSeverityVariant = (severity: string) => {
-    switch (severity?.toLowerCase()) {
-      case 'critical':
-        return 'critical';
-      case 'high':
-        return 'high';
-      case 'medium':
-        return 'medium';
-      case 'low':
-        return 'low';
-      case 'info':
-        return 'info';
-      default:
-        return 'default';
-    }
-  };
+
 
   // Handle export
   const handleExport = () => {

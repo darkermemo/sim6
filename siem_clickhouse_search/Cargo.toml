@@ -1,0 +1,95 @@
+[package]
+name = "siem_clickhouse_search"
+version = "0.1.0"
+edition = "2021"
+authors = ["SIEM Team"]
+description = "High-volume ClickHouse search service for SIEM log analysis with tenant isolation and performance optimization"
+
+[[bin]]
+name = "search_server"
+path = "src/main.rs"
+
+[dependencies]
+# HTTP Server
+axum = { version = "0.7", features = ["http2", "tokio", "tower-log"] }
+tokio = { version = "1.0", features = ["full"] }
+tower = { version = "0.4", features = ["full"] }
+tower-http = { version = "0.5", features = ["compression-gzip", "decompression-gzip", "cors", "trace", "timeout"] }
+hyper = { version = "1.0", features = ["full"] }
+
+# ClickHouse with connection pooling
+clickhouse = { version = "0.11", features = ["lz4"] }
+deadpool = "0.10"
+deadpool-runtime = "0.1"
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Configuration
+config = "0.14"
+toml = "0.8"
+url = { version = "2.4", features = ["serde"] }
+
+# Async and concurrency
+tokio-util = { version = "0.7", features = ["codec"] }
+futures = "0.3"
+arc-swap = "1.6"
+dashmap = "5.5"
+async-stream = "0.3"
+tokio-stream = "0.1"
+
+# Query building and SQL
+sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "postgres", "chrono", "uuid"] }
+
+# Metrics and monitoring
+prometheus = { version = "0.13", optional = true }
+axum-prometheus = { version = "0.4", optional = true }
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+log = "0.4"
+
+# Error handling
+anyhow = "1.0"
+thiserror = "1.0"
+
+# Time
+chrono = { version = "0.4", features = ["serde"] }
+
+# Security
+jsonwebtoken = "9.2"
+sha2 = "0.10"
+md5 = "0.7"
+
+# CLI
+clap = { version = "4.4", features = ["derive"] }
+
+# Utilities
+uuid = { version = "1.6", features = ["v4", "serde"] }
+regex = "1.10"
+serde_yaml = "0.9"
+rand = "0.8"
+bytes = "1.5"
+phf = { version = "0.11", features = ["macros"] }
+
+# HTTP client for testing
+reqwest = { version = "0.11", features = ["json", "gzip"] }
+
+# Redis for caching
+redis = { version = "0.24", features = ["tokio-comp", "connection-manager"] }
+
+[dev-dependencies]
+tokio-test = "0.4"
+
+[features]
+default = ["metrics"]
+metrics = ["prometheus", "axum-prometheus"]
+full = ["metrics"]
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = "abort"

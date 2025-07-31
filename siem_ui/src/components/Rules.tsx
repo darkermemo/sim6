@@ -86,12 +86,25 @@ export function Rules() {
   };
 
   // Handle rule editing
-  const handleEditRule = (_ruleId: string) => {
-    // TODO: Implement rule editing functionality
-    // This could open an edit modal or navigate to an edit page
+  const handleEditRule = (ruleId: string) => {
+    // Find the rule to edit
+    const ruleToEdit = rules?.find(rule => rule.id === ruleId);
+    if (!ruleToEdit) {
+      toast({
+        title: 'Error',
+        description: 'Rule not found',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
+    // Open the rule drawer for editing
+    openRuleDrawer(ruleToEdit.id);
+    // Store the rule data for editing
+    // The drawer will handle the editing interface
     toast({
       title: 'Edit Rule',
-      description: 'Rule editing functionality will be implemented soon',
+      description: `Editing rule: ${ruleToEdit.name}`,
       variant: 'default',
     });
   };
@@ -106,8 +119,13 @@ export function Rules() {
     return isActive ? 'success' : 'warning';
   };
 
-  const formatTimestamp = (timestamp: number) => {
-    return new Date(timestamp * 1000).toLocaleString('en-US', {
+  const formatTimestamp = (timestamp: string | number) => {
+    // Handle both string ISO dates and numeric timestamps
+    const date = typeof timestamp === 'string' 
+      ? new Date(timestamp) 
+      : new Date(timestamp * 1000);
+    
+    return date.toLocaleString('en-US', {
       year: 'numeric',
       month: '2-digit',
       day: '2-digit',
@@ -214,7 +232,7 @@ export function Rules() {
                       Rule Name
                     </th>
                     <th className="text-left py-3 px-4 text-sm font-medium text-secondary-text">
-                      Stateful
+                      Status
                     </th>
                     <th className="text-left py-3 px-4 text-sm font-medium text-secondary-text">
                       Created
@@ -234,21 +252,33 @@ export function Rules() {
                   ) : (
                     rules.map((rule: Rule) => (
                       <tr 
-                        key={rule.rule_id} 
+                        key={rule.id} 
                         className="border-b border-border hover:bg-card/50 transition-colors cursor-pointer"
-                        onClick={() => handleRowClick(rule.rule_id)}
+                        onClick={() => handleRowClick(rule.id)}
                       >
                         {/* Status Column */}
                         <td className="py-3 px-4">
-                          <div className="flex items-center space-x-2" onClick={stopPropagation()}>
+                          <div 
+                            className="flex items-center space-x-2" 
+                            onClick={stopPropagation()}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault();
+                                e.stopPropagation();
+                              }
+                            }}
+                            role="button"
+                            tabIndex={0}
+                            aria-label="Rule status controls"
+                          >
                             <Switch
-                              checked={rule.is_active}
-                              onChange={() => handleToggleRule(rule.rule_id, rule.is_active)}
+                              checked={rule.enabled}
+                              onChange={() => handleToggleRule(rule.id, rule.enabled)}
                               disabled={isToggling}
                               size="sm"
                             />
-                            <Badge variant={getStatusBadge(rule.is_active)}>
-                              {rule.is_active ? 'Active' : 'Inactive'}
+                            <Badge variant={getStatusBadge(rule.enabled)}>
+                              {rule.enabled ? 'Active' : 'Inactive'}
                             </Badge>
                           </div>
                         </td>
@@ -256,23 +286,23 @@ export function Rules() {
                         {/* Rule Name Column */}
                         <td className="py-3 px-4">
                           <div>
-                            <p className="font-medium text-primary-text">{rule.rule_name}</p>
+                            <p className="font-medium text-primary-text">{rule.name}</p>
                             <p className="text-sm text-secondary-text truncate max-w-xs">
-                              {rule.rule_description}
+                              {rule.description}
                             </p>
                           </div>
                         </td>
 
                         {/* Stateful Column */}
                         <td className="py-3 px-4">
-                          <Badge variant={rule.is_stateful ? 'warning' : 'default'}>
-                            {rule.is_stateful ? 'Yes' : 'No'}
+                          <Badge variant={rule.enabled ? 'default' : 'secondary'}>
+                            {rule.enabled ? 'Enabled' : 'Disabled'}
                           </Badge>
                         </td>
 
                         {/* Created Column */}
                         <td className="py-3 px-4 text-sm text-secondary-text font-mono">
-                          {formatTimestamp(rule.created_at)}
+                          {formatTimestamp(rule.createdAt)}
                         </td>
 
                         {/* Actions Column */}
@@ -281,7 +311,7 @@ export function Rules() {
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={stopPropagation(() => openRuleDrawer(rule.rule_id))}
+                              onClick={stopPropagation(() => openRuleDrawer(rule.id))}
                               className="flex items-center space-x-1"
                             >
                               <Eye className="h-3 w-3" />
@@ -290,7 +320,7 @@ export function Rules() {
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={stopPropagation(() => handleEditRule(rule.rule_id))}
+                              onClick={stopPropagation(() => handleEditRule(rule.id))}
                               className="flex items-center space-x-1"
                             >
                               <Edit3 className="h-3 w-3" />
@@ -299,7 +329,7 @@ export function Rules() {
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={stopPropagation(() => handleDeleteRule(rule.rule_id, rule.rule_name))}
+                              onClick={stopPropagation(() => handleDeleteRule(rule.id, rule.name))}
                               disabled={isDeleting}
                               className="flex items-center space-x-1 text-red-600 hover:text-red-700"
                             >

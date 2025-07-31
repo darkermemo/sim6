@@ -226,12 +226,12 @@ export const useAdmin = () => {
     }
   };
 
-  const assignRole = async (data: AssignRoleRequest): Promise<boolean> => {
+  const assignRole = async (userId: string, roleData: AssignRoleRequest): Promise<boolean> => {
     try {
-      const response = await fetch(`/api/v1/users/${data.user_id}/roles`, {
+      const response = await fetch(`/api/v1/users/${userId}/roles`, {
         method: 'POST',
         headers: getAuthHeaders(),
-        body: JSON.stringify({ role_id: data.role_id }),
+        body: JSON.stringify({ role_name: roleData.role_name }),
       });
 
       if (!response.ok) {

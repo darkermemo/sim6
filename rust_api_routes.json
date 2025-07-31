@@ -2,6 +2,39 @@
   "routes": [
     {
       "method": "GET",
+      "path": "/api/v1/version",
+      "handler": "version_info",
+      "file": "siem_api/src/health_handlers.rs",
+      "line": 1,
+      "context": [
+        "// Version endpoint for siem_api",
+        ".route(\"/version\", get(health_handlers::version_info))"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/health",
+      "handler": "health_check",
+      "file": "siem_api/src/health_handlers.rs",
+      "line": 1,
+      "context": [
+        "// Health endpoint for siem_api",
+        ".route(\"/health\", get(health_handlers::health_check))"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/metrics",
+      "handler": "get_metrics",
+      "file": "siem_api/src/health_handlers.rs",
+      "line": 1,
+      "context": [
+        "// Metrics endpoint for siem_api",
+        ".route(\"/metrics\", get(health_handlers::get_metrics))"
+      ]
+    },
+    {
+      "method": "GET",
       "path": "/health",
       "handler": "health_check",
       "file": "siem_clickhouse_ingestion/src/receiver.rs",

@@ -18,7 +18,7 @@ data_dir = "/tmp/vector"
 [sources.syslog_udp]
 type = "syslog"
 mode = "udp"
-address = "0.0.0.0:514"
+address = "0.0.0.0:5140"
 max_length = 102400
 
 # Syslog source (TCP)
@@ -47,11 +47,11 @@ max_line_bytes = 102400
 start_at_beginning = false
 ignore_older_secs = 86400
 
-# Docker container logs
-[sources.docker_logs]
-type = "docker_logs"
-include_labels = ["*"]
-exclude_labels = ["vector.exclude=true"]
+# Docker container logs - REMOVED (Docker-free deployment)
+# [sources.docker_logs]
+# type = "docker_logs"
+# include_labels = ["*"]
+# exclude_labels = ["vector.exclude=true"]
 
 # Journald logs (systemd)
 [sources.journald]
@@ -63,7 +63,7 @@ exclude_units = ["vector.service"]
 # HTTP source for webhook logs
 [sources.http_logs]
 type = "http_server"
-address = "0.0.0.0:8080"
+address = "0.0.0.0:8081"
 path = "/webhook"
 method = ["POST"]
 strict_path = true
@@ -161,27 +161,27 @@ if match(.message, r"(?i)\b(error|err)\b") {
 }
 '''
 
-# Parse and enrich Docker logs
-[transforms.parse_docker_logs]
-type = "remap"
-inputs = ["docker_logs"]
-source = '''
-.timestamp = .timestamp
-.source_type = "docker"
-.container_id = .container_id
-.container_name = .container_name
-.container_image = .image
-.message = .message
-.stream = .stream
-
-# Parse JSON logs if possible
-if starts_with(.message, "{") {
-  parsed_json, err = parse_json(.message)
-  if err == null {
-    . = merge(., parsed_json)
-  }
-}
-'''
+# Parse and enrich Docker logs - REMOVED (Docker-free deployment)
+# [transforms.parse_docker_logs]
+# type = "remap"
+# inputs = ["docker_logs"]
+# source = '''
+# .timestamp = .timestamp
+# .source_type = "docker"
+# .container_id = .container_id
+# .container_name = .container_name
+# .container_image = .image
+# .message = .message
+# .stream = .stream
+#
+# # Parse JSON logs if possible
+# if starts_with(.message, "{") {
+#   parsed_json, err = parse_json(.message)
+#   if err == null {
+#     . = merge(., parsed_json)
+#   }
+# }
+# '''
 
 # Parse and enrich journald logs
 [transforms.parse_journald_logs]
@@ -222,7 +222,7 @@ if .headers."content-type" == "application/json" {
 # Unified enrichment and normalization
 [transforms.enrich_events]
 type = "remap"
-inputs = ["parse_syslog", "parse_file_logs", "parse_docker_logs", "parse_journald_logs", "parse_http_logs"]
+inputs = ["parse_syslog", "parse_file_logs", "parse_journald_logs", "parse_http_logs"]
 source = '''
 # Add common fields
 .event_id = uuid_v4()

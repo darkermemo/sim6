@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Frontend Dashboard</title>
+</head>
+<body>
+    <h1>Testing Frontend Dashboard</h1>
+    <div id="result"></div>
+    
+    <script>
+        // Test the frontend dashboard functionality
+        async function testFrontendDashboard() {
+            const resultDiv = document.getElementById('result');
+            
+            try {
+                // Set a valid token in localStorage (this should be a real token)
+                localStorage.setItem('access_token', 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhZG1pbiIsImV4cCI6MTc2NzI3NjAwMCwiaWF0IjoxNzM1NzQwMDAwLCJyb2xlIjoiYWRtaW4iLCJ0ZW5hbnRfaWQiOiJ0ZW5hbnQxIn0.abc123');
+                
+                resultDiv.innerHTML = '<p>Token set in localStorage. Now testing API call...</p>';
+                
+                const response = await fetch('/api/v1/dashboard', {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                console.log('Response status:', response.status);
+                console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log('Dashboard data:', data);
+                    resultDiv.innerHTML = `
+                        <p>✅ API call successful!</p>
+                        <p>Status: ${response.status}</p>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `;
+                } else {
+                    const errorText = await response.text();
+                    console.log('Error response:', errorText);
+                    resultDiv.innerHTML = `
+                        <p>❌ API call failed</p>
+                        <p>Status: ${response.status}</p>
+                        <p>Error: ${errorText}</p>
+                    `;
+                }
+            } catch (error) {
+                console.error('Test error:', error);
+                resultDiv.innerHTML = `<p>❌ Test error: ${error.message}</p>`;
+            }
+        }
+        
+        // Run test when page loads
+        window.onload = testFrontendDashboard;
+    </script>
+</body>
+</html>

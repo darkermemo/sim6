@@ -19,7 +19,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Timeline, TimelineEvent } from '@/components/ui/Timeline';
 import { MonacoViewer } from '@/components/ui/MonacoViewer';
 import { SkeletonDrawer, SkeletonNotesTab, SkeletonRawTab, SkeletonTimelineTab } from '@/components/ui/SkeletonDrawer';
-import { AlertTriangle, User, Calendar, Hash, Terminal, Shield, Flag, MessageSquare, Plus } from 'lucide-react';
+import { AlertTriangle, User, Hash, Shield, Flag, MessageSquare, Plus } from 'lucide-react';
 
 /**
  * AlertDetailDrawer - Comprehensive slide-over panel for alert investigation
@@ -87,23 +87,23 @@ export function AlertDetailDrawer() {
     if (alertDetail) {
       // Alert creation event
       events.push({
-        id: `created-${alertDetail.alert_id}`,
+        id: `created-${alertDetail.id}`,
         type: 'created',
-        timestamp: new Date(alertDetail.created_at * 1000).toISOString(),
+        timestamp: new Date(alertDetail.created_at).toISOString(),
         title: 'Alert Created',
-        description: `${alertDetail.rule_name} rule triggered`,
-        user: 'SIEM System',
+        description: `Alert "${alertDetail.name}" was created`,
+        user: 'System'
       });
 
       // Add note events
       notes.forEach(note => {
         events.push({
-          id: note.note_id,
+          id: note.id,
           type: 'note_added',
-          timestamp: new Date(note.created_at * 1000).toISOString(),
+          timestamp: new Date(note.createdAt).toISOString(),
           title: 'Note Added',
           description: note.content.substring(0, 100) + (note.content.length > 100 ? '...' : ''),
-          user: note.author,
+          user: note.createdBy,
         });
       });
     }
@@ -147,16 +147,7 @@ export function AlertDetailDrawer() {
     }
   };
 
-  const formatTimestamp = (timestamp: number) => {
-    return new Date(timestamp * 1000).toLocaleString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false,
-    });
-  };
+
 
   return (
     <Sheet open={alertDrawerOpen} onOpenChange={(open) => !open && closeAlertDrawer()}>
@@ -176,17 +167,17 @@ export function AlertDetailDrawer() {
         ) : alertDetail ? (
           <div className="flex flex-col h-full">
             {/* Header */}
-            <SheetHeader className="border-b border-border pb-4 mb-6">
-              <div className="flex items-center justify-between">
+            <SheetHeader className="border-b border-border pb-4 mb-6" onClose={closeAlertDrawer}>
+              <div className="flex items-center justify-between pr-8">
                 <SheetTitle className="text-xl">
-                  {alertDetail.rule_name}
+                  {alertDetail.name}
                 </SheetTitle>
                 <Badge variant={getSeverityVariant(alertDetail.severity)}>
                   {alertDetail.severity}
                 </Badge>
               </div>
               <SheetDescription>
-                Alert ID: {alertDetail.alert_id} • Created {formatTimestamp(alertDetail.created_at)}
+                Alert ID: {alertDetail.id} • Created {new Date(alertDetail.created_at).toLocaleString()}
                 {sseConnected && <span className="ml-2 text-green-400">• Real-time</span>}
               </SheetDescription>
             </SheetHeader>
@@ -253,8 +244,8 @@ export function AlertDetailDrawer() {
                       MITRE ATT&CK Techniques
                     </label>
                     <div id="mitre-tags-section" className="flex flex-wrap gap-2">
-                      {alertDetail.mitre_tags.length > 0 ? (
-                        alertDetail.mitre_tags.map((tag, index) => (
+                      {alertDetail.tags && alertDetail.tags.length > 0 ? (
+                        alertDetail.tags.map((tag, index) => (
                           <Badge key={index} variant="outline">
                             {tag}
                           </Badge>
@@ -270,13 +261,10 @@ export function AlertDetailDrawer() {
                     <label htmlFor="alert-details-section" className="text-sm font-medium text-gray-900 dark:text-gray-100">Alert Details</label>
                     <div id="alert-details-section" className="space-y-3 bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
                       {[
-                        { label: 'Source IP', value: alertDetail.src_ip, icon: <Hash className="h-4 w-4" /> },
+                        { label: 'Source IP', value: alertDetail.source_ip, icon: <Hash className="h-4 w-4" /> },
                         { label: 'Destination IP', value: alertDetail.dest_ip, icon: <Hash className="h-4 w-4" /> },
                         { label: 'User', value: alertDetail.user, icon: <User className="h-4 w-4" /> },
-                        { label: 'Command Line', value: alertDetail.cmdline, icon: <Terminal className="h-4 w-4" /> },
-                        { label: 'File Hash', value: alertDetail.hash, icon: <Hash className="h-4 w-4" /> },
                         { label: 'Rule ID', value: alertDetail.rule_id, icon: <Flag className="h-4 w-4" /> },
-                        { label: 'Event ID', value: alertDetail.event_id, icon: <Calendar className="h-4 w-4" /> },
                       ].map((item, index) => (
                         <div key={index} className="flex justify-between items-center">
                           <div className="flex items-center text-sm font-medium text-gray-600 dark:text-gray-400">
@@ -309,12 +297,12 @@ export function AlertDetailDrawer() {
 
               {/* Raw Tab */}
               <TabsContent value="raw" className="flex-1">
-                {alertDetail.raw ? (
+                {alertDetail.raw_event ? (
                   <div className="space-y-2">
                     <label htmlFor="raw-event-data" className="text-sm font-medium text-gray-900 dark:text-gray-100">Raw Event Data</label>
                     <div id="raw-event-data">
                       <MonacoViewer 
-                        value={alertDetail.raw} 
+                        value={JSON.stringify(alertDetail.raw_event, null, 2)} 
                         language="json" 
                         height="calc(100vh - 300px)"
                       />
@@ -372,13 +360,13 @@ export function AlertDetailDrawer() {
                       {notes.length > 0 ? (
                         <div className="space-y-4">
                           {notes.map((note) => (
-                            <div key={note.note_id} className="border border-gray-200 dark:border-gray-700 rounded-md p-4 bg-gray-50 dark:bg-gray-800">
+                            <div key={note.id} className="border border-gray-200 dark:border-gray-700 rounded-md p-4 bg-gray-50 dark:bg-gray-800">
                               <div className="flex items-center justify-between mb-2">
                                 <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                                  {note.author}
+                                  {note.createdBy}
                                 </span>
                                 <span className="text-xs text-gray-600 dark:text-gray-400">
-                                  {formatTimestamp(note.created_at)}
+                                  {new Date(note.createdAt).toLocaleString()}
                                 </span>
                               </div>
                               <p className="text-sm text-gray-900 dark:text-gray-100 whitespace-pre-wrap">

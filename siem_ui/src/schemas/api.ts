@@ -10,21 +10,54 @@ export const BaseResponseSchema = z.object({
   error: z.string().optional()
 });
 
-// User schema
+// User schema - matches Rust UserInfo
 export const UserSchema = z.object({
-  id: z.string(),
+  id: z.string().uuid(),
   username: z.string(),
   email: z.string().email(),
-  role: z.string()
-});
+  full_name: z.string(),
+  role: z.string(),
+  permissions: z.array(z.string()),
+  mfa_enabled: z.boolean()
+}).transform((data) => ({
+  id: data.id,
+  username: data.username,
+  email: data.email,
+  fullName: data.full_name,
+  role: data.role,
+  permissions: data.permissions,
+  mfaEnabled: data.mfa_enabled
+}));
 
-// Authentication response schema
-export const AuthResponseSchema = BaseResponseSchema.extend({
-  data: z.object({
-    token: z.string(),
-    user: UserSchema
-  }).optional()
-});
+// Authentication response schema - matches Rust LoginResponse
+export const AuthResponseSchema = z.object({
+  access_token: z.string(),
+  refresh_token: z.string(),
+  expires_in: z.number(),
+  user: z.object({
+    id: z.string().uuid(),
+    username: z.string(),
+    email: z.string().email(),
+    full_name: z.string(),
+    role: z.string(),
+    permissions: z.array(z.string()),
+    mfa_enabled: z.boolean()
+  })
+}).transform((data) => ({
+  // Transform snake_case to camelCase for frontend
+  accessToken: data.access_token,
+  refreshToken: data.refresh_token,
+  expiresIn: data.expires_in,
+  user: {
+    id: data.user.id,
+    username: data.user.username,
+    email: data.user.email,
+    fullName: data.user.full_name,
+    role: data.user.role,
+    permissions: data.user.permissions,
+    mfaEnabled: data.user.mfa_enabled
+  }
+}));
 
 // Tenant schema
 export const TenantSchema = z.object({

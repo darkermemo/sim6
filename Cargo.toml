@@ -78,6 +78,17 @@ colored = { version = "2.0", optional = true }
 tokio = { version = "1.0", features = ["full"] }
 reqwest = { version = "0.11", features = ["json"] }
 
+# HTTP Server dependencies
+axum = { version = "0.7", features = ["http2", "tokio", "tower-log"] }
+tower-http = { version = "0.5", features = ["compression-gzip", "decompression-gzip", "cors", "trace", "timeout"] }
+
+# ClickHouse
+clickhouse = { version = "0.11", features = ["lz4"] }
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
 [dev-dependencies]
 tokio-test = "0.4"
 

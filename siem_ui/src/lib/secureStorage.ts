@@ -3,9 +3,13 @@ import CryptoJS from 'crypto-js';
 // Generate a key from user session data (this is a simple approach)
 // In production, you might want to use a more sophisticated key derivation
 const getEncryptionKey = (): string => {
-  // Use a combination of session data to create a key
-  const sessionId = sessionStorage.getItem('session-id') || crypto.randomUUID();
-  if (!sessionStorage.getItem('session-id')) {
+  // Use a more stable key or clear data if key changes
+  let sessionId = sessionStorage.getItem('session-id');
+  if (!sessionId) {
+    // If no session ID exists, clear any existing encrypted data
+    // as it would be unreadable with a new key
+    sessionStorage.removeItem('siem-auth-encrypted');
+    sessionId = crypto.randomUUID();
     sessionStorage.setItem('session-id', sessionId);
   }
   return sessionId;

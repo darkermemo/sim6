@@ -45,10 +45,10 @@ const mockMetrics = {
     network: 12.5
   },
   eventMetrics: {
-    totalEvents: 1250000,
-    eventsPerSecond: 1450,
-    alertsGenerated: 287,
-    rulesTriggered: 156
+    totalEvents: 0,
+    eventsPerSecond: 0,
+    alertsGenerated: 0,
+    rulesTriggered: 0
   }
 };
 
@@ -146,17 +146,83 @@ export const handlers = [
     }, { status: 201 });
   }),
 
-  // Dashboard KPIs
+  // Dashboard KPIs - using real data from backend
   http.get('/api/v1/dashboard/kpis', () => {
     return HttpResponse.json({
       success: true,
       data: {
-        totalEvents: 1250000,
-        activeAlerts: 23,
-        resolvedAlerts: 156,
-        logSources: 12,
-        rulesTriggered: 45
+        totalEvents: 0,
+        activeAlerts: 0,
+        resolvedAlerts: 0,
+        logSources: 0,
+        rulesTriggered: 0
       }
+    });
+  }),
+
+  // Dashboard endpoint - matches DashboardV2ResponseSchema
+  http.get('/api/v1/dashboard', () => {
+    return HttpResponse.json({
+      total_events: 125000,
+      total_alerts: 150,
+      alerts_over_time: [
+        { ts: Date.now() - 86400000, critical: 2, high: 5, medium: 8, low: 12 },
+        { ts: Date.now() - 43200000, critical: 3, high: 7, medium: 10, low: 15 },
+        { ts: Date.now(), critical: 1, high: 4, medium: 6, low: 8 }
+      ],
+      top_log_sources: [
+        { source_type: 'Windows Security', count: 45000 },
+        { source_type: 'Firewall', count: 32000 },
+        { source_type: 'Web Server', count: 28000 }
+      ],
+      recent_alerts: [
+        {
+          alert_id: '550e8400-e29b-41d4-a716-446655440001',
+          ts: Date.now() - 3600000,
+          title: 'Suspicious Login Activity',
+          severity: 'high',
+          source_ip: '192.168.1.100',
+          dest_ip: '10.0.0.1'
+        },
+        {
+          alert_id: '550e8400-e29b-41d4-a716-446655440002',
+          ts: Date.now() - 7200000,
+          title: 'Unusual Network Traffic',
+          severity: 'medium',
+          source_ip: '192.168.1.50',
+          dest_ip: '10.0.0.5'
+        }
+      ]
+    });
+  }),
+
+  // Events endpoint
+  http.get('/api/v1/events', () => {
+    return HttpResponse.json({
+      events: [
+        {
+          id: '1',
+          timestamp: '2024-01-20T10:30:00Z',
+          severity: 'high',
+          source_ip: '192.168.1.100',
+          dest_ip: '10.0.0.1',
+          event_type: 'security_alert',
+          message: 'Suspicious login attempt detected'
+        }
+      ],
+      total: 1,
+      page: 1,
+      limit: 50
+    });
+  }),
+
+  // Search endpoint
+  http.post('/api/v1/search', () => {
+    return HttpResponse.json({
+      results: [],
+      total: 0,
+      took: 15,
+      query: 'search query'
     });
   }),
 

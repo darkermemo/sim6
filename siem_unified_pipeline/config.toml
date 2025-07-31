@@ -1,6 +1,6 @@
 [server]
 host = "127.0.0.1"
-port = 8082
+port = 8083
 workers = 4
 max_connections = 1000
 request_timeout = 30
@@ -21,8 +21,8 @@ max_lifetime = 3600
 
 # Data Sources Configuration
 [sources.syslog_source]
-source_type = { type = "Syslog", port = 5141, protocol = "udp" }
-enabled = true
+source_type = { type = "Syslog", port = 5142, protocol = "udp" }
+enabled = false
 batch_size = 1000
 buffer_size = 10000
 retry_attempts = 3

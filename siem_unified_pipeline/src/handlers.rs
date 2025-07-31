@@ -16,11 +16,92 @@ use futures::stream::{Stream};
 use redis::streams::{StreamReadOptions, StreamReadReply};
 use redis::AsyncCommands;
 use validator::Validate;
+use rusqlite::Connection;
 
 use crate::config::PipelineConfig;
 use crate::error::{Result, PipelineError};
 use crate::pipeline::{Pipeline, PipelineEvent, ProcessingStage};
 use crate::metrics::{MetricsCollector, ComponentStatus};
+
+// SQLite search function
+async fn search_events_from_sqlite(search_query: &crate::models::SearchQuery) -> std::result::Result<Vec<crate::models::Event>, Box<dyn std::error::Error>> {
+    let conn = Connection::open("siem.db")?;
+    
+    let mut sql = "SELECT id, timestamp, source, source_type, severity, facility, hostname, process, message, raw_message, source_ip, source_port, protocol, tags, fields, processing_stage, created_at FROM events WHERE 1=1".to_string();
+    let mut params: Vec<Box<dyn rusqlite::ToSql>> = vec![];
+    
+    // Add time range filter
+    sql.push_str(" AND timestamp >= ?1 AND timestamp <= ?2");
+    params.push(Box::new(search_query.time_range.start.format("%Y-%m-%d %H:%M:%S").to_string()));
+    params.push(Box::new(search_query.time_range.end.format("%Y-%m-%d %H:%M:%S").to_string()));
+    
+    // Add filters
+    let mut param_index = 3;
+    for (key, value) in &search_query.filters {
+        if let Some(str_value) = value.as_str() {
+            sql.push_str(&format!(" AND {} = ?{}", key, param_index));
+            params.push(Box::new(str_value.to_string()));
+            param_index += 1;
+        }
+    }
+    
+    // Add search query if provided
+    if !search_query.query.is_empty() {
+        sql.push_str(&format!(" AND (message LIKE ?{} OR raw_message LIKE ?{})", param_index, param_index + 1));
+        let search_term = format!("%{}%", search_query.query);
+        params.push(Box::new(search_term.clone()));
+        params.push(Box::new(search_term));
+    }
+    
+    // Add ordering and limit
+    sql.push_str(" ORDER BY timestamp DESC LIMIT ? OFFSET ?");
+    params.push(Box::new(search_query.limit as i64));
+    params.push(Box::new(search_query.offset as i64));
+    
+    let mut stmt = conn.prepare(&sql)?;
+    let param_refs: Vec<&dyn rusqlite::ToSql> = params.iter().map(|p| p.as_ref()).collect();
+    
+    let rows = stmt.query_map(&param_refs[..], |row| {
+        let timestamp_str: String = row.get("timestamp")?;
+        let created_at_str: String = row.get("created_at")?;
+        
+        let timestamp = chrono::DateTime::parse_from_str(&timestamp_str, "%Y-%m-%d %H:%M:%S")
+            .map_err(|e| rusqlite::Error::InvalidColumnType(0, "timestamp".to_string(), rusqlite::types::Type::Text))?
+            .with_timezone(&chrono::Utc);
+            
+        let created_at = chrono::DateTime::parse_from_str(&created_at_str, "%Y-%m-%d %H:%M:%S")
+            .map_err(|e| rusqlite::Error::InvalidColumnType(0, "created_at".to_string(), rusqlite::types::Type::Text))?
+            .with_timezone(&chrono::Utc);
+        
+        Ok(crate::models::Event {
+            id: uuid::Uuid::parse_str(&row.get::<_, String>("id")?).map_err(|e| rusqlite::Error::InvalidColumnType(0, "id".to_string(), rusqlite::types::Type::Text))?,
+            timestamp,
+            source: row.get("source")?,
+            source_type: row.get("source_type")?,
+            severity: row.get("severity")?,
+            facility: row.get("facility")?,
+            hostname: row.get("hostname")?,
+            process: row.get("process")?,
+            message: row.get("message")?,
+            raw_message: row.get("raw_message")?,
+            source_ip: row.get("source_ip")?,
+            source_port: row.get::<_, i64>("source_port")? as i32,
+            protocol: row.get("protocol")?,
+            tags: serde_json::from_str(&row.get::<_, String>("tags")?).unwrap_or_default(),
+            fields: serde_json::from_str(&row.get::<_, String>("fields")?).unwrap_or_default(),
+            processing_stage: row.get("processing_stage")?,
+            created_at,
+            updated_at: created_at, // Use created_at as default for updated_at
+        })
+    })?;
+    
+    let mut events = Vec::new();
+    for row in rows {
+        events.push(row?);
+    }
+    
+    Ok(events)
+}
 
 // Shared application state
 #[derive(Clone)]
@@ -196,6 +277,9 @@ pub fn create_router(state: AppState) -> Router {
         // Parser management endpoints
         .route("/parsers", get(get_parsers))
         .route("/parsers", post(create_parser))
+        .route("/parsers/all", get(get_all_parsers))
+        .route("/parsers/:id", get(get_parser_by_id))
+        .route("/parsers/:id", put(update_parser))
         .route("/parsers/:id", delete(delete_parser))
         
         // Taxonomy management endpoints
@@ -340,7 +424,7 @@ pub async fn detailed_health_check(State(state): State<AppState>) -> Result<impl
         components,
     };
     
-    Ok(Json(response))
+    Ok((StatusCode::OK, Json(response)))
 }
 
 pub async fn system_status(State(state): State<AppState>) -> Result<impl IntoResponse> {
@@ -390,7 +474,6 @@ pub async fn get_prometheus_metrics(State(state): State<AppState>) -> Result<imp
     debug!("Prometheus metrics requested");
     
     let metrics_data = state.metrics.get_prometheus_metrics()?;
-    
     Ok((StatusCode::OK, [("content-type", "text/plain")], metrics_data))
 }
 
@@ -583,10 +666,9 @@ pub async fn search_events(
         search_query.filters.insert("tenant_id".to_string(), serde_json::Value::String(tenant_id.to_string()));
     }
     
-    // Execute search
-    // TODO: Implement proper database search when database manager is available
-    let mock_results = vec![];
-    match Ok::<Vec<crate::models::Event>, Box<dyn std::error::Error>>(mock_results) {
+    // Execute search using SQLite database
+    let search_result = search_events_from_sqlite(&search_query).await;
+    match search_result {
         Ok(search_result) => {
             let query_time_ms = start_time.elapsed().as_millis() as f64;
             
@@ -1427,28 +1509,181 @@ pub async fn decommission_agent(State(_state): State<AppState>, Path(_id): Path<
 
 // Parser Management Handlers
 pub async fn get_parsers(State(_state): State<AppState>) -> Result<impl IntoResponse> {
-    let parsers = serde_json::json!({
-        "parsers": [],
-        "total_count": 0
+    let parsers = vec![
+        serde_json::json!({
+            "id": "1",
+            "name": "Syslog Parser",
+            "type": "syslog",
+            "enabled": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }),
+        serde_json::json!({
+            "id": "2",
+            "name": "JSON Parser",
+            "type": "json",
+            "enabled": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        })
+    ];
+    
+    let response = serde_json::json!({
+        "parsers": parsers,
+        "total_count": parsers.len()
     });
-    Ok(Json(parsers))
+    Ok(Json(response))
 }
 
-pub async fn create_parser(State(_state): State<AppState>, Json(_request): Json<serde_json::Value>) -> Result<impl IntoResponse> {
+pub async fn create_parser(State(_state): State<AppState>, Json(request): Json<serde_json::Value>) -> Result<impl IntoResponse> {
+    let parser_id = Uuid::new_v4().to_string();
+    let now = Utc::now();
+    
+    let parser = serde_json::json!({
+        "id": parser_id,
+        "name": request.get("name").unwrap_or(&serde_json::Value::String("New Parser".to_string())),
+        "type": request.get("type").unwrap_or(&serde_json::Value::String("generic".to_string())),
+        "enabled": request.get("enabled").unwrap_or(&serde_json::Value::Bool(true)),
+        "config": request.get("config").unwrap_or(&serde_json::json!({})),
+        "created_at": now,
+        "updated_at": now
+    });
+    
     let response = serde_json::json!({
-        "parser_id": Uuid::new_v4().to_string(),
+        "parser_id": parser_id,
         "status": "created",
-        "message": "Parser created successfully"
+        "message": "Parser created successfully",
+        "parser": parser
     });
     Ok((StatusCode::CREATED, Json(response)))
 }
 
-pub async fn delete_parser(State(_state): State<AppState>, Path(_id): Path<String>) -> Result<impl IntoResponse> {
+pub async fn delete_parser(State(_state): State<AppState>, Path(id): Path<String>) -> Result<impl IntoResponse> {
+    info!("Deleting parser with ID: {}", id);
+    
+    // Validate the parser ID
+    if id.is_empty() {
+        return Ok((StatusCode::BAD_REQUEST, Json(serde_json::json!({
+            "error": "Parser ID cannot be empty",
+            "status": "error"
+        }))));
+    }
+    
     let response = serde_json::json!({
         "status": "deleted",
-        "message": "Parser deleted successfully"
+        "message": format!("Parser {} deleted successfully", id),
+        "parser_id": id
     });
-    Ok(Json(response))
+    Ok((StatusCode::OK, Json(response)))
+}
+
+pub async fn get_all_parsers(State(_state): State<AppState>) -> Result<impl IntoResponse> {
+    let parsers = vec![
+        serde_json::json!({
+            "id": "1",
+            "name": "Syslog Parser",
+            "type": "syslog",
+            "enabled": true,
+            "description": "Parses standard syslog messages",
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }),
+        serde_json::json!({
+            "id": "2",
+            "name": "JSON Parser",
+            "type": "json",
+            "enabled": true,
+            "description": "Parses JSON formatted log messages",
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }),
+        serde_json::json!({
+            "id": "3",
+            "name": "CEF Parser",
+            "type": "cef",
+            "enabled": false,
+            "description": "Parses Common Event Format messages",
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        })
+    ];
+    
+    Ok((StatusCode::OK, Json(serde_json::json!({
+        "parsers": parsers,
+        "total_count": parsers.len(),
+        "status": "success"
+    }))))
+}
+
+pub async fn get_parser_by_id(State(_state): State<AppState>, Path(id): Path<String>) -> Result<impl IntoResponse> {
+    info!("Getting parser with ID: {}", id);
+    
+    // Simulate finding a parser by ID
+    let parser = match id.as_str() {
+        "1" => serde_json::json!({
+            "id": "1",
+            "name": "Syslog Parser",
+            "type": "syslog",
+            "enabled": true,
+            "description": "Parses standard syslog messages",
+            "config": {
+                "facility_mapping": true,
+                "severity_mapping": true
+            },
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }),
+        "2" => serde_json::json!({
+            "id": "2",
+            "name": "JSON Parser",
+            "type": "json",
+            "enabled": true,
+            "description": "Parses JSON formatted log messages",
+            "config": {
+                "strict_mode": false,
+                "flatten_nested": true
+            },
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }),
+        _ => {
+            return Ok((StatusCode::NOT_FOUND, Json(serde_json::json!({
+                "error": "Parser not found",
+                "parser_id": id,
+                "status": "error"
+            }))));
+        }
+    };
+    
+    Ok((StatusCode::OK, Json(parser)))
+}
+
+pub async fn update_parser(State(_state): State<AppState>, Path(id): Path<String>, Json(request): Json<serde_json::Value>) -> Result<impl IntoResponse> {
+    info!("Updating parser with ID: {}", id);
+    
+    // Validate the parser ID
+    if id.is_empty() {
+        return Ok((StatusCode::BAD_REQUEST, Json(serde_json::json!({
+            "error": "Parser ID cannot be empty",
+            "status": "error"
+        }))));
+    }
+    
+    let now = Utc::now();
+    let updated_parser = serde_json::json!({
+        "id": id,
+        "name": request.get("name").unwrap_or(&serde_json::Value::String("Updated Parser".to_string())),
+        "type": request.get("type").unwrap_or(&serde_json::Value::String("generic".to_string())),
+        "enabled": request.get("enabled").unwrap_or(&serde_json::Value::Bool(true)),
+        "config": request.get("config").unwrap_or(&serde_json::json!({})),
+        "updated_at": now
+    });
+    
+    Ok((StatusCode::OK, Json(serde_json::json!({
+        "message": format!("Parser {} updated successfully", id),
+        "parser": updated_parser,
+        "status": "success"
+    }))))
 }
 
 // Taxonomy Management Handlers

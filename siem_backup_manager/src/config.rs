@@ -126,7 +126,6 @@ impl BackupConfig {
             },
             config_paths: vec![
                 PathBuf::from("/etc/siem"),
-                PathBuf::from("./docker-compose.yml"),
                 PathBuf::from("./haproxy.cfg"),
             ],
             metadata_path: PathBuf::from("/var/backups/siem/metadata"),
@@ -153,4 +152,4 @@ impl BackupConfig {
         
         Ok(())
     }
-} 
+}

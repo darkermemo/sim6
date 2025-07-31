@@ -1,21 +1,23 @@
 import { useState, useEffect } from 'react';
-import Dashboard from './pages/Dashboard';
+import { Dashboard } from './components/Dashboard';
 import Alerts from './pages/Alerts';
 import Cases from './pages/Cases';
 import Admin from './pages/Admin';
 import { Rules } from './components/Rules';
 import { LogSourceManagement } from './components/LogSourceManagement';
-import { EnhancedLogSourceManagement } from './components/EnhancedLogSourceManagement';
+
 import { UserManagement } from './components/UserManagement';
 import ParserManagement from './components/ParserManagement';
 import TenantMetricsDashboard from './components/TenantMetricsDashboard';
 import { InteractiveParserBuilder } from './components/InteractiveParserBuilder';
 import { EventInvestigation } from './components/EventInvestigation';
-import EnhancedEventInvestigationPage from './pages/EnhancedEventInvestigationPage';
+
+import DevEventsTable from './components/DevEventsTable';
 import { AlertDetailDrawer } from './components/AlertDetailDrawer';
 import { AdvancedRuleCreation } from './components/AdvancedRuleCreation';
 import { VendorMappingPage } from './pages/VendorMappingPage';
 import AgentFleetPage from './components/AgentFleetPage';
+import { TypedApiExample } from './components/TypedApiExample';
 import { AppLayout } from './components/AppLayout';
 import { Toaster } from './components/ui/Toaster';
 import { AuthGuard } from './components/AuthGuard';
@@ -31,12 +33,12 @@ import { useUiStore } from './stores/uiStore';
  * Critical Quality Gate Rule 6: Comprehensive Error Boundary (ErrorBoundary)
  */
 function App() {
-  type PageType = 'dashboard' | 'alerts' | 'cases' | 'admin' | 'rules' | 'log-sources' | 'enhanced-log-sources' | 'tenant-metrics' | 'users' | 'parsers' | 'interactive-parser' | 'events' | 'vendor-mapping' | 'log-activity' | 'agent-fleet';
+  type PageType = 'dashboard' | 'alerts' | 'cases' | 'admin' | 'rules' | 'log-sources' | 'enhanced-log-sources' | 'tenant-metrics' | 'users' | 'parsers' | 'interactive-parser' | 'events' | 'vendor-mapping' | 'log-activity' | 'agent-fleet' | 'typed-api-example' | 'dev-events';
   
   // Function to get page from URL path
   const getPageFromPath = (pathname: string): PageType => {
     const path = pathname.replace('/', '') || 'dashboard';
-    const validPages: PageType[] = ['dashboard', 'alerts', 'cases', 'admin', 'rules', 'log-sources', 'enhanced-log-sources', 'tenant-metrics', 'users', 'parsers', 'interactive-parser', 'events', 'vendor-mapping', 'log-activity', 'agent-fleet'];
+    const validPages: PageType[] = ['dashboard', 'alerts', 'cases', 'admin', 'rules', 'log-sources', 'enhanced-log-sources', 'tenant-metrics', 'users', 'parsers', 'interactive-parser', 'events', 'vendor-mapping', 'log-activity', 'agent-fleet', 'typed-api-example', 'dev-events'];
     return validPages.includes(path as PageType) ? (path as PageType) : 'dashboard';
   };
   
@@ -76,7 +78,7 @@ function App() {
       case 'log-sources':
         return <LogSourceManagement />;
       case 'enhanced-log-sources':
-        return <EnhancedLogSourceManagement />;
+        return <LogSourceManagement />;
       case 'tenant-metrics':
         return <TenantMetricsDashboard />;
       case 'users':
@@ -88,11 +90,15 @@ function App() {
       case 'events':
         return <EventInvestigation />;
       case 'log-activity':
-        return <EnhancedEventInvestigationPage />;
+        return <EventInvestigation />;
       case 'vendor-mapping':
         return <VendorMappingPage />;
       case 'agent-fleet':
         return <AgentFleetPage userRole={'Admin'} onNavigate={handleNavigate} />;
+      case 'typed-api-example':
+        return <TypedApiExample />;
+      case 'dev-events':
+        return <DevEventsTable />;
       default:
         return <Dashboard />;
     }

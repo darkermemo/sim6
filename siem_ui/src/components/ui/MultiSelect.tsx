@@ -98,7 +98,18 @@ export function MultiSelect({
           isOpen && 'ring-2 ring-ring ring-offset-2'
         )}
         onClick={() => !disabled && setIsOpen(!isOpen)}
-        aria-labelledby={ariaLabelledBy}
+        onKeyDown={(e) => {
+          if ((e.key === 'Enter' || e.key === ' ') && !disabled) {
+            e.preventDefault();
+            setIsOpen(!isOpen);
+          }
+        }}
+        role="combobox"
+          tabIndex={disabled ? -1 : 0}
+          aria-expanded={isOpen}
+          aria-haspopup="listbox"
+          aria-controls="multiselect-options"
+          aria-labelledby={ariaLabelledBy}
       >
         <div className="flex flex-1 flex-wrap items-center gap-1">
           {selectedOptions.length === 0 ? (
@@ -161,7 +172,7 @@ export function MultiSelect({
             />
           </div>
           
-          <div className="max-h-60 overflow-y-auto">
+          <div id="multiselect-options" className="max-h-60 overflow-y-auto" role="listbox">
             {isLoading ? (
               <div className="flex items-center justify-center py-4">
                 <div className="text-sm text-muted-foreground">Loading options...</div>
@@ -183,6 +194,16 @@ export function MultiSelect({
                       isSelected && 'bg-accent text-accent-foreground'
                     )}
                     onClick={() => handleToggleOption(option.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        handleToggleOption(option.value);
+                      }
+                    }}
+                    role="option"
+                    tabIndex={0}
+                    aria-selected={isSelected}
+                    aria-label={`${isSelected ? 'Deselect' : 'Select'} ${option.label}`}
                   >
                     <div className={cn(
                       'flex h-4 w-4 items-center justify-center rounded border',

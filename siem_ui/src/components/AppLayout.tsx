@@ -1,5 +1,5 @@
 import React from 'react';
-import { Menu, X, Home, Activity, Shield, FileText, Users, Settings, AlertTriangle, Briefcase, Server, Database, BarChart3 } from 'lucide-react';
+import { Menu, X, Home, Activity, Shield, FileText, Users, Settings, AlertTriangle, Briefcase, Server, Database, BarChart3, Code2, Table } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useUiStore } from '../stores/uiStore';
 
@@ -78,6 +78,18 @@ const navigationItems: NavigationItem[] = [
     description: 'Agent management and monitoring'
   },
   {
+    id: 'typed-api-example',
+    label: 'Typed API Demo',
+    icon: Code2,
+    description: 'Demonstration of type-safe API client with OpenAPI'
+  },
+  {
+    id: 'dev-events',
+    label: 'Dev Events',
+    icon: Table,
+    description: 'Query and analyze dev.events table data'
+  },
+  {
     id: 'admin',
     label: 'Admin',
     icon: Settings,
@@ -142,16 +154,25 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children, currentPage, onN
           <div 
             className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
             onClick={() => setSidebarOpen(false)}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape' || e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                setSidebarOpen(false);
+              }
+            }}
+            role="button"
+            tabIndex={0}
+            aria-label="Close sidebar"
           />
         )}
 
         {/* Sidebar */}
         <aside className={cn(
-          "fixed left-0 top-[73px] h-[calc(100vh-73px)] w-64 bg-card border-r border-border transform transition-transform duration-200 ease-in-out z-50",
+          "fixed left-0 top-[73px] h-[calc(100vh-73px)] w-64 bg-card border-r border-border transform transition-transform duration-200 ease-in-out z-50 overflow-y-auto",
           "lg:relative lg:top-0 lg:h-[calc(100vh-73px)] lg:translate-x-0",
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         )}>
-          <nav className="p-4 space-y-2">
+          <nav className="p-4 space-y-2 min-h-full">
             {navigationItems.map((item) => {
               const Icon = item.icon;
               const isActive = currentPage === item.id;
@@ -160,12 +181,19 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children, currentPage, onN
                 <button
                   key={item.id}
                   onClick={() => handleNavigate(item.id)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      handleNavigate(item.id);
+                    }
+                  }}
                   className={cn(
                     "w-full flex items-center space-x-3 px-3 py-2 rounded-md text-left transition-colors",
                     isActive
                       ? "bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300"
                       : "text-secondary-text hover:text-primary-text hover:bg-muted"
                   )}
+                  aria-label={`Navigate to ${item.label}`}
                 >
                   <Icon className={cn(
                     "h-5 w-5 flex-shrink-0",

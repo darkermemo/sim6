@@ -280,12 +280,11 @@ export function AdvancedRuleCreation({ isOpen, onClose, onSuccess }: AdvancedRul
 
   // Form State
   const [formData, setFormData] = useState<CreateRuleRequest>({
-    rule_name: '',
+    name: '',
     description: '',
-    query: '',
-    engine_type: 'scheduled',
-    is_stateful: 0,
-    stateful_config: ''
+    condition: '',
+    severity: 'medium',
+    enabled: true
   });
 
   const [severity, setSeverity] = useState<string>('Medium');
@@ -431,12 +430,11 @@ export function AdvancedRuleCreation({ isOpen, onClose, onSuccess }: AdvancedRul
     const template = RULE_TEMPLATES[templateKey as keyof typeof RULE_TEMPLATES];
     if (template) {
       setFormData({
-        rule_name: template.name,
+        name: template.name,
         description: template.description,
-        query: template.query,
-        engine_type: template.engine_type as 'scheduled' | 'real-time',
-        is_stateful: template.is_stateful ? 1 : 0,
-        stateful_config: (template as any).stateful_config ? JSON.stringify((template as any).stateful_config) : ''
+        condition: template.query,
+        severity: 'medium',
+        enabled: true
       });
       
       if ((template as any).stateful_config) {
@@ -469,12 +467,11 @@ export function AdvancedRuleCreation({ isOpen, onClose, onSuccess }: AdvancedRul
       
       // Populate form with Sigma rule data
       setFormData({
-        rule_name: result.rule.rule_name,
+        name: result.rule.rule_name,
         description: result.rule.rule_description,
-        query: result.rule.rule_query,
-        engine_type: result.complexity_analysis.engine_type as 'scheduled' | 'real-time',
-        is_stateful: result.rule.is_stateful,
-        stateful_config: (result.rule as any).stateful_config || ''
+        condition: result.rule.rule_query,
+        severity: 'medium',
+        enabled: true
       });
       
       setTestQuery(result.rule.rule_query);
@@ -545,7 +542,7 @@ export function AdvancedRuleCreation({ isOpen, onClose, onSuccess }: AdvancedRul
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
 
-    if (!formData.rule_name.trim() || !formData.description.trim() || !formData.query.trim()) {
+    if (!formData.name.trim() || !formData.description?.trim() || !formData.condition.trim()) {
       toast({
         title: 'Validation Error',
         description: 'Please fill in all required fields',
@@ -556,8 +553,7 @@ export function AdvancedRuleCreation({ isOpen, onClose, onSuccess }: AdvancedRul
 
     try {
       const ruleData = {
-        ...formData,
-        stateful_config: formData.is_stateful ? JSON.stringify(statefulConfig) : ''
+        ...formData
       };
 
       await createRule(ruleData);
@@ -582,12 +578,11 @@ export function AdvancedRuleCreation({ isOpen, onClose, onSuccess }: AdvancedRul
   useEffect(() => {
     if (isOpen) {
       setFormData({
-        rule_name: '',
+        name: '',
         description: '',
-        query: '',
-        engine_type: 'scheduled',
-        is_stateful: 0,
-        stateful_config: ''
+        condition: '',
+        severity: 'medium',
+        enabled: true
       });
       setSeverity('Medium');
       setQueryFilters([{ id: uuidv4(), field: '', operator: '=', value: '', logicalOperator: 'AND' }]);
@@ -662,8 +657,8 @@ export function AdvancedRuleCreation({ isOpen, onClose, onSuccess }: AdvancedRul
                     </label>
                     <Input
                       id="rule-name"
-                      value={formData.rule_name}
-                      onChange={(e) => setFormData(prev => ({ ...prev, rule_name: e.target.value }))}
+                      value={formData.name}
+                      onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
                       placeholder="Enter descriptive rule name"
                       className="mt-1"
                     />
@@ -846,7 +841,7 @@ export function AdvancedRuleCreation({ isOpen, onClose, onSuccess }: AdvancedRul
                       </label>
                       <Textarea
                         id="generated-sql-query"
-                        value={formData.query}
+                        value={formData.condition}
                         readOnly
                         className="mt-1 bg-gray-50 dark:bg-gray-800 font-mono text-sm"
                         rows={4}
@@ -862,9 +857,9 @@ export function AdvancedRuleCreation({ isOpen, onClose, onSuccess }: AdvancedRul
                       </label>
                       <Textarea
                         id="clickhouse-sql-query"
-                        value={formData.query}
+                        value={formData.condition}
                         onChange={(e) => {
-                          setFormData(prev => ({ ...prev, query: e.target.value }));
+                          setFormData(prev => ({ ...prev, condition: e.target.value }));
                           setTestQuery(e.target.value);
                         }}
                         placeholder="SELECT * FROM dev.events WHERE ..."
@@ -879,7 +874,7 @@ export function AdvancedRuleCreation({ isOpen, onClose, onSuccess }: AdvancedRul
                         <div className="text-sm text-blue-800 dark:text-blue-200">
                           <strong>Query Tips:</strong>
                           <ul className="mt-1 space-y-1 text-xs">
-                            <li>• Use "SELECT * FROM dev.events WHERE ..." as base</li>
+                            <li>• Use &quot;SELECT * FROM dev.events WHERE ...&quot; as base</li>
                             <li>• Tenant isolation is automatically added</li>
                             <li>• Available tables: dev.events, dev.alerts, dev.rules</li>
                           </ul>
@@ -942,8 +937,8 @@ level: high`}
                       Detection Engine
                     </label>
                     <Select
-                      value={formData.engine_type}
-                      onValueChange={(value) => setFormData(prev => ({ ...prev, engine_type: value as 'scheduled' | 'real-time' }))}
+                      value="scheduled"
+                      onValueChange={() => {/* Engine type is not part of CreateRuleRequest */}}
                     >
                       <SelectTrigger>
                         <SelectValue />
@@ -968,12 +963,13 @@ level: high`}
                       </div>
                     </div>
                     <Switch
-                      checked={formData.is_stateful === 1}
-                      onChange={(checked: boolean) => setFormData(prev => ({ ...prev, is_stateful: checked ? 1 : 0 }))}
+                      checked={false}
+                      onChange={() => {/* Stateful rules not supported in CreateRuleRequest */}}
+                      disabled
                     />
                   </div>
                   
-                  {formData.is_stateful === 1 && (
+                  {false && (
                     <div className="space-y-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
                       <div>
                         <label htmlFor="key-prefix" className="text-sm font-medium text-gray-900 dark:text-gray-100">

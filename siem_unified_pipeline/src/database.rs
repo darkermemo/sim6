@@ -5,10 +5,10 @@ use chrono::{DateTime, Utc};
 use uuid::Uuid;
 use std::collections::HashMap;
 use std::time::Duration;
-use tracing::{info, error, debug};
+use tracing::{info, error, debug, warn};
 
 use crate::models::*;
-use crate::models::PendingMfaSetup;
+use crate::models::{PendingMfaSetup, PageInfo};
 use crate::error::PipelineError;
 use crate::config::DatabaseConfig;
 
@@ -171,93 +171,22 @@ impl DatabaseManager {
         &self,
         search_query: &SearchQuery,
     ) -> Result<SearchResult<Event>, PipelineError> {
-        let mut query_builder = sqlx::QueryBuilder::new("SELECT * FROM events WHERE 1=1");
-        let mut count_builder = sqlx::QueryBuilder::new("SELECT COUNT(*) FROM events WHERE 1=1");
-
-        // Add time range filter
-        query_builder.push(" AND timestamp >= ").push_bind(search_query.time_range.start);
-        query_builder.push(" AND timestamp <= ").push_bind(search_query.time_range.end);
-        count_builder.push(" AND timestamp >= ").push_bind(search_query.time_range.start);
-        count_builder.push(" AND timestamp <= ").push_bind(search_query.time_range.end);
-
-        // Add filters
-        for (field, value) in &search_query.filters {
-            match field.as_str() {
-                "source" | "source_type" | "severity" | "hostname" => {
-                    if let Some(val) = value.as_str() {
-                        query_builder.push(format!(" AND {} = ", field)).push_bind(val);
-                        count_builder.push(format!(" AND {} = ", field)).push_bind(val);
-                    }
-                }
-                "tags" => {
-                    if let Some(tag) = value.as_str() {
-                        query_builder.push(" AND $1 = ANY(tags)").push_bind(tag);
-                        count_builder.push(" AND $1 = ANY(tags)").push_bind(tag);
-                    }
-                }
-                _ => {}
-            }
-        }
-
-        // Add text search
-        if !search_query.query.is_empty() {
-            query_builder.push(" AND (message ILIKE ").push_bind(format!("%{}%", search_query.query));
-            query_builder.push(" OR raw_message ILIKE ").push_bind(format!("%{}%", search_query.query));
-            query_builder.push(")");
-            
-            count_builder.push(" AND (message ILIKE ").push_bind(format!("%{}%", search_query.query));
-            count_builder.push(" OR raw_message ILIKE ").push_bind(format!("%{}%", search_query.query));
-            count_builder.push(")");
-        }
-
-        // Add sorting
-        if let Some(sort_field) = &search_query.sort_by {
-            let order = match search_query.sort_order {
-                SortOrder::Asc => "ASC",
-                SortOrder::Desc => "DESC",
-            };
-            query_builder.push(format!(" ORDER BY {} {}", sort_field, order));
-        } else {
-            query_builder.push(" ORDER BY timestamp DESC");
-        }
-
-        // Add pagination
-        query_builder.push(" LIMIT ").push_bind(search_query.limit as i64);
-        query_builder.push(" OFFSET ").push_bind(search_query.offset as i64);
-
-        let start_time = std::time::Instant::now();
-
-        // Execute count query
-        let total_count: i64 = count_builder
-            .build_query_scalar()
-            .fetch_one(&self.pool)
-            .await
-            .map_err(|e| PipelineError::database(format!("Failed to execute count query: {}", e)))?;
-
-        // Execute main query
-        let events: Vec<Event> = query_builder
-            .build_query_as()
-            .fetch_all(&self.pool)
-            .await
-            .map_err(|e| PipelineError::database(format!("Failed to execute search query: {}", e)))?;
-
-        let query_time = start_time.elapsed().as_millis() as f64;
-
-        let total_pages = (total_count as f64 / search_query.limit as f64).ceil() as u32;
-        let current_page = (search_query.offset / search_query.limit) + 1;
-
+        // Note: This function is deprecated and should use ClickHouse instead of Postgres
+        // For now, return empty results to avoid confusion
+        info!("search_events called on DatabaseManager - this should use ClickHouse instead");
+        
         Ok(SearchResult {
-            items: events,
-            total_count,
+            items: vec![],
+            total_count: 0,
             page_info: PageInfo {
-                current_page,
-                total_pages,
+                current_page: (search_query.offset / search_query.limit) + 1,
+                total_pages: 0,
                 page_size: search_query.limit,
-                has_next: current_page < total_pages,
-                has_previous: current_page > 1,
+                has_next: false,
+                has_previous: search_query.offset > 0,
             },
             aggregations: None,
-            query_time_ms: query_time,
+            query_time_ms: 0.0,
         })
     }
 

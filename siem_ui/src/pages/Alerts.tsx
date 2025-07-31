@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { useAlerts } from '../hooks/useAlerts';
 import { useUiStore } from '../stores/uiStore';
 import { Card } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
@@ -7,14 +6,18 @@ import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Select } from '../components/ui/Select';
 import { AlertTriangle, Eye } from 'lucide-react';
+import { useAlerts } from '../hooks/useAlerts';
 import type { Alert } from '../types/api';
 
 const Alerts: React.FC = () => {
+  // Use the proper useAlerts hook to fetch alerts data
   const { alerts, loading, error, refetch } = useAlerts();
   const { openAlertDrawer } = useUiStore();
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [severityFilter, setSeverityFilter] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState<string>('');
+
+  // refetch function is now provided by useAlerts hook
 
   const getSeverityColor = (severity: string) => {
     switch (severity.toLowerCase()) {
@@ -49,8 +52,7 @@ const Alerts: React.FC = () => {
   const filteredAlerts = alerts.filter((alert: Alert) => {
     const matchesStatus = statusFilter === 'all' || alert.status.toLowerCase() === statusFilter;
     const matchesSeverity = severityFilter === 'all' || alert.severity.toLowerCase() === severityFilter;
-    // Handle both 'id' and 'alert_id' field names from backend with defensive null checks
-    const alertId = alert.alert_id || alert.id || '';
+    const alertId = alert.alert_id || '';
     const ruleName = alert.rule_name || '';
     const matchesSearch = searchTerm === '' || 
       ruleName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -196,23 +198,25 @@ const Alerts: React.FC = () => {
               </tr>
             </thead>
             <tbody className="bg-card divide-y divide-border">
-              {filteredAlerts.map((alert) => {
-                // Handle both 'id' and 'alert_id' field names with defensive null checks
-                const alertId = alert.alert_id || alert.id || 'unknown';
+              {filteredAlerts.map((alert, index) => {
+                // Using correct field names from Alert interface
+                const alertId = alert.alert_id || alert.id || `alert-${index}`;
                 const ruleName = alert.rule_name || 'Unknown Rule';
                 const severity = alert.severity || 'unknown';
                 const status = alert.status || 'unknown';
-                const timestamp = alert.alert_timestamp || Date.now() / 1000;
                 
                 // Log missing alert_id for debugging
-                if (alertId === 'unknown') {
+                if (!alert.alert_id && !alert.id) {
                   console.warn('Alert missing ID field:', alert);
                 }
                 
+                // Use index to ensure unique keys even if alert IDs are duplicated
+                const uniqueKey = `${alertId}-${index}`;
+                
                 return (
-                  <tr key={alertId} className="hover:bg-border">
+                  <tr key={uniqueKey} className="hover:bg-border">
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-mono">
-                      {alertId !== 'unknown' ? alertId.substring(0, 8) + '...' : 'N/A'}
+                      {(alert.alert_id || alert.id) ? (alert.alert_id || alert.id || '').substring(0, 8) + '...' : 'N/A'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                       {ruleName}
@@ -228,14 +232,14 @@ const Alerts: React.FC = () => {
                       </Badge>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {new Date(timestamp * 1000).toLocaleString()}
+                      {new Date(alert.alert_timestamp * 1000).toLocaleString()}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <Button
                         size="sm"
-                        onClick={() => openAlertDrawer(alertId)}
+                        onClick={() => openAlertDrawer(alert.alert_id || alert.id || '')}
                         className="flex items-center gap-1"
-                        disabled={alertId === 'unknown'}
+                        disabled={!alert.alert_id && !alert.id}
                       >
                         <Eye className="h-4 w-4" />
                         View

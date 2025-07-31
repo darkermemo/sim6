@@ -43,6 +43,7 @@ const TenantManagement: React.FC<TenantManagementProps> = ({ userRole }) => {
   const fetchTenants = async () => {
     try {
       setLoading(true);
+      // TODO: Replace with typed API call when tenant API is implemented
       const token = localStorage.getItem('access_token');
       const response = await fetch('/api/v1/tenants', {
         headers: {

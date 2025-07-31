@@ -424,7 +424,7 @@ export function InteractiveParserBuilder() {
         throw new Error('Failed to create parser');
       }
 
-      const _result = await response.json();
+      await response.json();
 
       toast({
         title: 'Parser Saved',
@@ -538,6 +538,17 @@ export function InteractiveParserBuilder() {
             ref={logDisplayRef}
             className="min-h-16 p-4 border border-border rounded-md bg-muted/20 font-mono text-sm leading-relaxed cursor-text select-text"
             onMouseUp={handleTextSelection}
+            onKeyDown={(e) => {
+              // Allow text selection via keyboard for accessibility
+              if (e.key === 'Enter' || e.key === ' ') {
+                // Let default text selection behavior work
+                return;
+              }
+            }}
+            role="textbox"
+            tabIndex={0}
+            aria-label="Log text for field extraction - select text to create fields"
+            aria-readonly="true"
           >
             {generateHighlightedLog()}
           </div>
@@ -562,11 +573,10 @@ export function InteractiveParserBuilder() {
                     onChange={(e) => setFieldName(e.target.value)}
                     placeholder="e.g., source_ip"
                     className="w-full mt-1 px-2 py-1 border border-border rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    autoFocus
                   />
                 </div>
                 <div className="text-xs text-muted-foreground">
-                  Selected: "{popup.selectedText}"
+                  Selected: &quot;{popup.selectedText}&quot;
                 </div>
                 <div className="flex gap-2">
                   <Button type="submit" size="sm" className="text-xs">

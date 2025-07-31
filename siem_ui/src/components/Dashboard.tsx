@@ -1,251 +1,181 @@
-import React, { useState, useMemo, useCallback } from 'react';
-import { DashboardFilters } from './dashboard/DashboardFilters';
+import React, { useMemo, useCallback } from 'react';
 import { KpiCard } from './dashboard/KpiCard';
 import { AlertsOverTimeChart } from './dashboard/AlertsOverTimeChart';
 import { TopSourcesChart } from './dashboard/TopSourcesChart';
 import { RecentAlertsList } from './dashboard/RecentAlertsList';
 import { KpiCardSkeleton, ChartSkeleton } from '@/components/ui/Skeleton';
-import { useDashboardApi } from '@/hooks/useApi';
-import { useToast } from '@/hooks/useToast';
-import type { TimeRange } from './dashboard/TimeRangePicker';
-import type { SeverityLevel } from './dashboard/SeverityFilter';
+import { useDashboardV2 } from '@/hooks/api/useDashboardV2';
+import { Button } from '@/components/ui/Button';
+import { RefreshCw } from 'lucide-react';
 
 export function Dashboard() {
-  // Filter state
-  const [timeRange, setTimeRange] = useState<TimeRange>('last-24h');
-  const [selectedSeverities, setSelectedSeverities] = useState<SeverityLevel[]>(['Critical', 'High', 'Medium', 'Low']);
-  const [currentPage, setCurrentPage] = useState(1);
-  const { toast } = useToast();
-
-  // Convert filters to API format
-  const apiFilters = useMemo(() => {
-    const now = new Date();
-    let from: Date;
-    
-    switch (timeRange) {
-      case 'last-24h':
-        from = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-        break;
-      case 'last-7d':
-        from = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-        break;
-      case 'last-30d':
-        from = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-        break;
-      default:
-        from = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-    }
-
-    return {
-      from: from.toISOString(),
-      to: now.toISOString(),
-      severity: selectedSeverities.join(','),
-      page: currentPage,
-      limit: 10,
-    };
-  }, [timeRange, selectedSeverities, currentPage]);
-
-  // Fetch dashboard data
-  const {
-    data,
-    isLoading,
-    isRefreshing,
-    error,
-
-    refresh
-  } = useDashboardApi(apiFilters);
-
-  const handleTimeRangeChange = (range: TimeRange, customStart?: Date, customEnd?: Date) => {
-    setTimeRange(range);
-    setCurrentPage(1); // Reset to first page when filters change
-    console.log('Time range changed:', range, customStart, customEnd);
-  };
-
-  const handleSeveritiesChange = (severities: SeverityLevel[]) => {
-    setSelectedSeverities(severities);
-    setCurrentPage(1); // Reset to first page when filters change
-    console.log('Severities changed:', severities);
-  };
-
-  const handleRefresh = async () => {
-    try {
-      await refresh();
-      toast({
-        title: 'Dashboard Refreshed',
-        description: 'Data has been updated successfully',
-        variant: 'success',
-      });
-    } catch (error) {
-      toast({
-        title: 'Refresh Failed',
-        description: 'Failed to refresh dashboard data',
-        variant: 'destructive',
-      });
-    }
-  };
-
-  const handlePageChange = (page: number) => {
-    setCurrentPage(page);
-  };
-
-  // Transform API data for KPI cards
-  const kpiCardsData = useMemo(() => {
-    if (!data || !data.kpis || !data.trends) return [];
-
-    const { kpis, trends } = data;
-    
-    const getTrendString = (current: number, trend: number) => {
-      if (trend === 0) return undefined;
-      const percentage = ((trend / current) * 100).toFixed(1);
-      return trend > 0 ? `+${percentage}%` : `${percentage}%`;
-    };
-
-    const getTrendColor = (trend: number): 'positive' | 'negative' | 'neutral' => {
-      if (trend === 0) return 'neutral';
-      return trend > 0 ? 'negative' : 'positive'; // More events/alerts = negative trend
-    };
-
-    // Helper function to format bytes
-    const formatBytes = (bytes: number) => {
-      if (bytes === 0) return '0 B';
-      const k = 1024;
-      const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
-      const i = Math.floor(Math.log(bytes) / Math.log(k));
-      return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-    };
-
-    return [
-      {
-        title: 'Total Events (24h)',
-        value: (kpis.total_events_24h || 0).toLocaleString(),
-        trend: getTrendString(kpis.total_events_24h || 0, trends.total_events_24h || 0),
-        trendColor: getTrendColor(trends.total_events_24h || 0),
-      },
-      {
-        title: 'New Alerts (24h)',
-        value: (kpis.new_alerts_24h || 0).toLocaleString(),
-        trend: getTrendString(kpis.new_alerts_24h || 0, trends.new_alerts_24h || 0),
-        trendColor: getTrendColor(trends.new_alerts_24h || 0),
-      },
-      {
-        title: 'Cases Opened',
-        value: (kpis.cases_opened || 0).toLocaleString(),
-        trend: getTrendString(kpis.cases_opened || 0, trends.cases_opened || 0),
-        trendColor: ((trends.cases_opened || 0) > 0 ? 'negative' : 'positive') as 'positive' | 'negative' | 'neutral',
-      },
-      {
-        title: 'EPS (Live)',
-        value: `${(kpis.eps_live || 0).toLocaleString()}/s`,
-        trendColor: 'neutral' as const,
-      },
-      {
-        title: 'Queue Counter',
-        value: (kpis.queue_counter || 0).toLocaleString(),
-        trend: getTrendString(kpis.queue_counter || 0, trends.queue_counter || 0),
-        trendColor: getTrendColor(trends.queue_counter || 0),
-      },
-      {
-        title: 'Total Storage Used',
-        value: formatBytes(kpis.total_storage_bytes || 0),
-        trend: getTrendString(kpis.total_storage_bytes || 0, trends.total_storage_bytes || 0),
-        trendColor: getTrendColor(trends.total_storage_bytes || 0),
-      },
-      {
-        title: 'Filtered Logs Storage',
-        value: formatBytes(kpis.filtered_storage_bytes || 0),
-        trend: getTrendString(kpis.filtered_storage_bytes || 0, trends.filtered_storage_bytes || 0),
-        trendColor: getTrendColor(trends.filtered_storage_bytes || 0),
-      },
-    ];
-  }, [data]);
-
-  // Calculate pagination info
-  const totalPages = Math.ceil((data?.recent_alerts?.length || 0) / 10);
-
-  // Show error toast if API call fails - Memoize toast to prevent infinite loops
-  const showErrorToast = useCallback(() => {
-    toast({
-      title: 'Failed to Load Dashboard',
-      description: 'Unable to fetch dashboard data. Please try again.',
-      variant: 'destructive',
-    });
-  }, [toast]);
-
+  console.log('Dashboard component mounted');
+  
+  // Debug authentication state
   React.useEffect(() => {
-    if (error) {
-      showErrorToast();
-    }
-  }, [error, showErrorToast]);
+    const token = localStorage.getItem('access_token');
+    console.log('Dashboard mounted - token in localStorage:', token ? 'present' : 'missing');
+    console.log('Dashboard mounted - localStorage contents:', {
+      access_token: localStorage.getItem('access_token'),
+      refresh_token: localStorage.getItem('refresh_token'),
+      tenant_id: localStorage.getItem('tenant_id')
+    });
+  }, []);
 
-  return (
-    <div className="min-h-screen bg-background p-6">
-      <div className="mx-auto max-w-7xl space-y-6">
-        {/* Dashboard Header */}
-        <div className="space-y-2">
-          <h1 className="text-3xl font-bold text-primary-text">
-            SIEM Analytics Dashboard
-          </h1>
-          <p className="text-secondary-text">
-            Real-time security monitoring and threat detection overview
-          </p>
+  // Fetch dashboard data using the new V2 endpoint
+  const {
+    data: dashboardData,
+    isLoading: isDashboardLoading,
+    error: dashboardError,
+    mutate: mutateDashboard
+  } = useDashboardV2();
+  
+  console.log('Dashboard component - hook result:', { 
+    data: !!dashboardData, 
+    isLoading: isDashboardLoading, 
+    error: !!dashboardError 
+  });
+
+  // Handle refresh
+  const handleRefresh = useCallback(() => {
+    mutateDashboard();
+  }, [mutateDashboard]);
+
+  // Transform snake_case data for existing components
+  const transformedData = useMemo(() => {
+    if (!dashboardData) return null;
+    
+    // Transform alerts_over_time to match AlertsOverTimeData interface
+    const alertsOverTime = dashboardData.alerts_over_time.map(item => ({
+      hour: new Date(item.ts * 1000).toLocaleTimeString('en-US', { hour: '2-digit', hour12: false }),
+      critical: item.critical,
+      high: item.high,
+      medium: item.medium,
+      low: item.low
+    }));
+
+    // Transform top_log_sources to match TopLogSourceData interface
+    const topLogSources = dashboardData.top_log_sources.map(item => ({
+      source: item.source_type,
+      count: item.count,
+      value: item.count // Add value property for chart compatibility
+    }));
+
+    // Transform recent_alerts to match RecentAlert interface
+    const recentAlerts = dashboardData.recent_alerts.map(item => ({
+      id: item.alert_id,
+      severity: item.severity,
+      name: item.title,
+      timestamp: new Date(item.ts * 1000).toISOString(),
+      source_ip: item.source_ip,
+      dest_ip: item.dest_ip,
+      user: 'N/A', // Not provided in V2 response
+      status: 'New' // Default status since not provided in V2 response
+    }));
+    
+    return {
+      totalEvents: dashboardData.total_events,
+      totalAlerts: dashboardData.total_alerts,
+      alertsOverTime,
+      topLogSources,
+      recentAlerts
+    };
+  }, [dashboardData]);
+
+  if (isDashboardLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
         </div>
+        
+        <div className="grid gap-4 md:grid-cols-2">
+          <KpiCardSkeleton />
+          <KpiCardSkeleton />
+        </div>
+        
+        <div className="grid gap-4 md:grid-cols-2">
+          <ChartSkeleton title="Alerts by Severity Over Time" />
+          <ChartSkeleton title="Top Log Sources" />
+        </div>
+        
+        <ChartSkeleton title="Recent Alerts" />
+      </div>
+    );
+  }
 
-        {/* Dashboard Grid Layout */}
-        <div className="dashboard-grid">
-          {/* Row 1: Filters (Full Width) */}
-          <DashboardFilters
-            timeRange={timeRange}
-            onTimeRangeChange={handleTimeRangeChange}
-            selectedSeverities={selectedSeverities}
-            onSeveritiesChange={handleSeveritiesChange}
-            onRefresh={handleRefresh}
-            isRefreshing={isRefreshing}
-          />
-
-          {/* Row 2: KPI Cards (7 Cards, each spanning 2 columns) */}
-          {isLoading ? (
-            Array.from({ length: 7 }).map((_, index) => (
-              <div key={index} className="dashboard-kpi">
-                <KpiCardSkeleton />
-              </div>
-            ))
-          ) : (
-            kpiCardsData.map((kpi, index) => (
-              <div key={index} className="dashboard-kpi">
-                <KpiCard data={kpi} />
-              </div>
-            ))
-          )}
-
-          {/* Row 3: Main Charts (2 Charts, each spanning 6 columns) */}
-          <div className="dashboard-chart">
-            {isLoading ? (
-              <ChartSkeleton title="Alerts by Severity Over Time" />
-            ) : (
-              <AlertsOverTimeChart data={data?.alerts_over_time} />
-            )}
-          </div>
-          
-          <div className="dashboard-chart">
-            {isLoading ? (
-              <ChartSkeleton title="Top Log Sources" />
-            ) : (
-              <TopSourcesChart data={data?.top_log_sources} />
-            )}
-          </div>
-
-          {/* Row 4: Recent Alerts Table (Full Width) */}
-          <div className="dashboard-table">
-            <RecentAlertsList
-              alerts={data?.recent_alerts}
-              isLoading={isLoading}
-              currentPage={currentPage}
-              totalPages={totalPages}
-              onPageChange={handlePageChange}
-            />
-          </div>
+  if (dashboardError) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="text-center">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+            Dashboard data unavailable
+          </h2>
+          <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+            Unable to load dashboard data. Please try again later.
+          </p>
+          <Button
+            onClick={handleRefresh}
+            className="mt-4"
+            variant="outline"
+          >
+            <RefreshCw className="mr-2 h-4 w-4" />
+            Retry
+          </Button>
         </div>
       </div>
+    );
+  }
+
+  if (!transformedData) {
+    return null;
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+        <Button
+          onClick={handleRefresh}
+          variant="outline"
+          size="sm"
+        >
+          <RefreshCw className="mr-2 h-4 w-4" />
+          Refresh
+        </Button>
+      </div>
+
+      {/* KPI Cards */}
+      <div className="grid gap-4 md:grid-cols-2">
+        <KpiCard
+          data={{
+            title: "Total Events",
+            value: transformedData.totalEvents.toLocaleString()
+          }}
+        />
+        <KpiCard
+          data={{
+            title: "Total Alerts", 
+            value: transformedData.totalAlerts.toLocaleString()
+          }}
+        />
+      </div>
+
+      {/* Charts */}
+      <div className="grid gap-4 md:grid-cols-2">
+        <AlertsOverTimeChart
+          data={transformedData.alertsOverTime}
+        />
+        <TopSourcesChart
+          data={transformedData.topLogSources}
+        />
+      </div>
+
+      {/* Recent Alerts */}
+      <RecentAlertsList
+        alerts={transformedData.recentAlerts.slice(0, 10)}
+        isLoading={isDashboardLoading}
+      />
     </div>
   );
 }

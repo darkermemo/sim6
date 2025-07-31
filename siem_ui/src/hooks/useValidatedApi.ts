@@ -26,7 +26,7 @@ interface ApiConfig {
 }
 
 const defaultConfig: ApiConfig = {
-  baseUrl: '/api',
+  baseUrl: `${import.meta.env.VITE_API_BASE}/api/v1`,
   timeout: 10000,
   retries: 3
 };

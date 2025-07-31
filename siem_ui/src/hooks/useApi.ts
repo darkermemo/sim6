@@ -1,7 +1,6 @@
-import { useDashboard, useDashboardMutation } from './api/useDashboard';
+import { useDashboardV2 } from './api/useDashboardV2';
 import { useAsset, useAssets } from './api/useAsset';
 import { useUpdateAlertStatus, useBatchUpdateAlertStatus } from './api/useUpdateAlertStatus';
-import type { DashboardFilters } from '@/types/api';
 
 /**
  * Central API hook that provides access to all API methods
@@ -14,14 +13,9 @@ export function useApi() {
      */
     dashboard: {
       /**
-       * Fetch dashboard data with filters
+       * Fetch dashboard data (V2 API)
        */
-      useDashboard: (filters: DashboardFilters) => useDashboard(filters),
-      
-      /**
-       * Hook for optimistic dashboard updates
-       */
-      useMutation: () => useDashboardMutation(),
+      useDashboardV2: () => useDashboardV2(),
     },
 
     /**
@@ -31,12 +25,12 @@ export function useApi() {
       /**
        * Fetch single asset by IP (with debouncing)
        */
-      useAsset: (ip: string | null, enabled?: boolean) => useAsset(ip, enabled),
+      useAsset: (ip: string | null) => useAsset(ip),
       
       /**
        * Fetch multiple assets by IP
        */
-      useAssets: (ips: string[], enabled?: boolean) => useAssets(ips, enabled),
+      useAssets: (ips: string[]) => useAssets(ips),
     },
 
     /**
@@ -61,16 +55,10 @@ export function useApi() {
  */
 
 /**
- * Hook for dashboard operations
+ * Hook for dashboard operations (V2 API)
  */
-export function useDashboardApi(filters: DashboardFilters) {
-  const dashboard = useDashboard(filters);
-  const mutation = useDashboardMutation();
-  
-  return {
-    ...dashboard,
-    ...mutation,
-  };
+export function useDashboardApi() {
+  return useDashboardV2();
 }
 
 /**
@@ -91,6 +79,6 @@ export function useAlertApi() {
 /**
  * Hook for asset operations
  */
-export function useAssetApi(ip: string | null, enabled?: boolean) {
-  return useAsset(ip, enabled);
-} 
+export function useAssetApi(ip: string | null) {
+  return useAsset(ip);
+}

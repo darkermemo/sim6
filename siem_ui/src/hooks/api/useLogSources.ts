@@ -1,66 +1,128 @@
 import useSWR from 'swr';
-import { useState, useMemo } from 'react';
-import { useAuthStore } from '@/stores/authStore';
-import { logSourceApi } from '@/services/api';
-import { useToast } from '@/hooks/useToast';
-import type { 
-  LogSource, 
-  LogSourceListResponse, 
-  CreateLogSourceRequest, 
-  LogSourceFilters,
-  LogSourceType
-} from '@/types/api';
+import { useState } from 'react';
+import { validatedFetch } from '../useValidatedApi';
+import { useAuthStore } from '../../stores/authStore';
+import { useToast } from '../useToast';
+import { z } from 'zod';
+import type { LogSourceType } from '@/types/api';
+
+// Zod schema for log source
+const LogSourceSchema = z.object({
+  id: z.string().uuid(),
+  name: z.string(),
+  type: z.string(),
+  subtype: z.string().optional(),
+  parser_id: z.string().optional(),
+  tenant_id: z.string().optional(),
+  status: z.enum(['active', 'degraded', 'inactive']),
+  eps: z.number().default(0),
+  event_count: z.number().default(0),
+  host: z.string().optional(),
+  port: z.number().optional(),
+  config: z.record(z.string(), z.any()).optional(),
+  last_seen: z.union([z.string().datetime(), z.number()]).optional(),
+  created_at: z.union([z.string().datetime(), z.number()]),
+  updated_at: z.union([z.string().datetime(), z.number()]).optional(),
+  // Legacy fields for backward compatibility
+  source_id: z.string().optional(),
+  source_name: z.string().optional(),
+  source_type: z.string().optional(),
+  source_ip: z.string().optional(),
+}).transform((data) => ({
+  id: data.id,
+  name: data.name,
+  type: data.type,
+  subtype: data.subtype || '',
+  parser_id: data.parser_id || '',
+  tenant_id: data.tenant_id || '',
+  status: data.status,
+  eps: data.eps,
+  event_count: data.event_count,
+  host: data.host,
+  port: data.port,
+  config: data.config,
+  last_seen: typeof data.last_seen === 'number' ? data.last_seen : data.last_seen ? new Date(data.last_seen).getTime() : Date.now(),
+  created_at: typeof data.created_at === 'number' ? data.created_at : new Date(data.created_at).getTime(),
+  updated_at: data.updated_at ? (typeof data.updated_at === 'number' ? data.updated_at : new Date(data.updated_at).getTime()) : undefined,
+  // Legacy fields for backward compatibility
+  source_id: data.source_id,
+  source_name: data.source_name,
+  source_type: data.source_type,
+  source_ip: data.source_ip,
+}));
+
+const LogSourcesListSchema = z.array(LogSourceSchema);
+
+const CreateLogSourceRequestSchema = z.object({
+  name: z.string(),
+  type: z.string(),
+  host: z.string().optional(),
+  port: z.number().optional(),
+  config: z.record(z.string(), z.any()).optional(),
+});
+
+export type LogSource = z.infer<typeof LogSourceSchema>;
+export type CreateLogSourceRequest = z.infer<typeof CreateLogSourceRequestSchema>;
 
 /**
- * Hook for managing log sources with conditional fetching and CRUD operations
- * Requires Admin role for all operations
+ * Hook to fetch log sources
+ * Uses SWR for caching and automatic revalidation with Zod validation
  */
-export function useLogSources(filters?: LogSourceFilters) {
-  const { isAuthenticated, accessToken } = useAuthStore();
-  
-  // Stabilize SWR key to prevent infinite re-renders
-  const key = useMemo(() => {
-    return filters ? [`/api/v1/log_sources`, JSON.stringify(filters)] : '/api/v1/log_sources';
-  }, [filters?.page, filters?.limit, filters?.search, filters?.source_type]);
-
-  // Only fetch if authenticated (prevents 401 cascade failures)
-  const shouldFetch = isAuthenticated && accessToken;
-
-  const { data, error, isLoading, mutate } = useSWR<LogSourceListResponse>(
-    shouldFetch ? key : null,
-    shouldFetch ? () => logSourceApi.getLogSources(filters) : null,
+export function useLogSources() {
+  const {
+    data,
+    error,
+    isLoading,
+    isValidating,
+    mutate
+  } = useSWR<LogSource[]>(
+    'log-sources',
+    fetchLogSources,
     {
-      refreshInterval: shouldFetch ? 30000 : 0, // Refresh every 30 seconds if authenticated
-      errorRetryCount: shouldFetch ? 2 : 0,
-      errorRetryInterval: 10000,
-      shouldRetryOnError: (error) => {
-        // Don't retry on auth errors (prevents infinite loops)
-        if (error?.response?.status === 401 || error?.response?.status === 403) {
-          return false;
-        }
-        return true;
-      },
-      onError: (error) => {
-        console.error('Log sources API error:', error);
-        if (error?.response?.status === 401 || error?.response?.status === 403) {
-          const { clearTokens } = useAuthStore.getState();
-          clearTokens();
-        }
-      },
+      revalidateOnFocus: false,
+      revalidateOnReconnect: true,
+      errorRetryCount: 3,
+      errorRetryInterval: 5000,
     }
   );
 
-  const logSources = data?.log_sources || [];
-  const total = data?.total || 0;
-
   return {
-    logSources,
-    total,
+    /** Log sources array from API */
+    logSources: data || [],
+    /** Total count */
+    total: data?.length || 0,
+    /** Loading state - true during initial load */
     isLoading,
+    /** Validating state - true during background refresh */
+    isValidating,
+    /** Error object if request failed */
     error,
+    /** Whether data is empty/null */
+    isEmpty: !data || data.length === 0,
+    /** Manual refresh function */
     mutate,
-    isAuthenticated: shouldFetch,
+    /** Whether currently refreshing */
+    isRefreshing: isValidating && !!data,
+    /** Authentication status */
+    isAuthenticated: true,
   };
+}
+
+/**
+ * Fetch log sources from API with Zod validation
+ * Uses the updated VITE_API_BASE environment variable
+ */
+async function fetchLogSources(): Promise<LogSource[]> {
+  const token = localStorage.getItem('access_token');
+  return validatedFetch(
+    '/log-sources',
+    LogSourcesListSchema,
+    {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    }
+  );
 }
 
 /**
@@ -78,21 +140,46 @@ export function useCreateLogSource() {
 
     setIsCreating(true);
     try {
-      const response = await logSourceApi.createLogSource(logSourceData);
+      const response = await validatedFetch(
+          '/log-sources',
+          LogSourceSchema,
+          {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${accessToken}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(logSourceData),
+          }
+        );
       
       toast({
         title: 'Log Source Created',
-        description: `Log source "${logSourceData.source_name}" has been created successfully.`,
+        description: `Log source "${logSourceData.name}" has been created successfully.`,
         variant: 'default',
       });
 
       return {
-        source_id: response.source_id,
-        tenant_id: '', // Will be filled by backend
-        source_name: logSourceData.source_name,
-        source_type: logSourceData.source_type,
-        source_ip: logSourceData.source_ip,
-        created_at: Math.floor(Date.now() / 1000),
+        id: response.id,
+        name: logSourceData.name,
+        type: logSourceData.type,
+        subtype: '',
+        parser_id: '',
+        tenant_id: '',
+        status: 'active' as const,
+        eps: 0,
+        event_count: 0,
+        host: logSourceData.host,
+        port: logSourceData.port,
+        config: logSourceData.config,
+        last_seen: Date.now(),
+        created_at: Date.now(),
+        updated_at: undefined,
+        // Legacy fields for backward compatibility
+        source_id: undefined,
+        source_name: undefined,
+        source_type: undefined,
+        source_ip: undefined,
       };
     } catch (error: any) {
       const errorMessage = error?.response?.data?.error || 'Failed to create log source';
@@ -128,7 +215,16 @@ export function useDeleteLogSource() {
 
     setIsDeleting(true);
     try {
-      await logSourceApi.deleteLogSource(sourceId);
+      await validatedFetch(
+          `/log-sources/${sourceId}`,
+          z.any(),
+          {
+            method: 'DELETE',
+            headers: {
+              'Authorization': `Bearer ${accessToken}`,
+            },
+          }
+        );
       
       toast({
         title: 'Log Source Deleted',
@@ -160,7 +256,16 @@ export function useDeleteLogSource() {
 export function useLogSourceLookup() {
   const lookupByIp = async (ip: string) => {
     try {
-      return await logSourceApi.getLogSourceByIp(ip);
+      const response = await validatedFetch(
+          `/log-sources/lookup/${ip}`,
+          LogSourceSchema,
+          {
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            },
+          }
+        );
+      return response;
     } catch (error) {
       console.error('Log source lookup error:', error);
       throw error;
@@ -175,7 +280,7 @@ export function useLogSourceLookup() {
 /**
  * Utility function to get log source type badge variant
  */
-export function getLogSourceTypeBadgeVariant(sourceType: LogSourceType): 'default' | 'secondary' | 'outline' | 'success' {
+export function getLogSourceTypeBadgeVariant(sourceType: string): 'default' | 'secondary' | 'outline' | 'success' {
   switch (sourceType) {
     case 'Syslog':
       return 'default';
@@ -193,8 +298,8 @@ export function getLogSourceTypeBadgeVariant(sourceType: LogSourceType): 'defaul
 }
 
 /**
- * Utility function to get valid log source types
- */
-export function getValidLogSourceTypes(): LogSourceType[] {
-  return ['Syslog', 'JSON', 'Windows', 'Apache', 'Nginx'];
-} 
+   * Utility function to get valid log source types
+   */
+  export function getValidLogSourceTypes(): LogSourceType[] {
+    return ['Syslog', 'JSON', 'Windows', 'Apache', 'Nginx'];
+  }

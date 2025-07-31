@@ -351,7 +351,7 @@ test.describe('Rules Management', () => {
   });
 
   test.describe('Pagination', () => {
-    test('navigates between pages when multiple pages exist', async ({ page, browserName }) => {
+    test('navigates between pages when multiple pages exist', async ({ page }) => {
       // Skip this test if we don't have enough data
       const ruleCount = await page.locator('tbody tr').count();
       if (ruleCount <= 20) {
@@ -525,7 +525,7 @@ test.describe('Rules Management', () => {
       await expect(page.locator('[role="dialog"]')).toBeVisible();
       
       // Check timestamp format
-      const timestamps = page.locator('text=/\\d{1,2}\/\\d{1,2}\/\\d{4}/');
+      const timestamps = page.locator('text=/\\d{1,2}/\\d{1,2}/\\d{4}/');
       await expect(timestamps.first()).toBeVisible();
       
       // Check rule ID format (UUID)
@@ -554,4 +554,4 @@ test.describe('Rules Management', () => {
       await expect(page.locator('text=Stateful Configuration')).toBeVisible();
     });
   });
-}); 
+});

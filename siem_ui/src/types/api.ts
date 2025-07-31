@@ -88,7 +88,7 @@ export interface CreateAlertNoteRequest {
 
 export interface SSEEvent {
   type: 'note' | 'heartbeat';
-  payload?: unknown;
+  payload?: AlertNote;
 }
 
 export interface DashboardResponse {
@@ -145,26 +145,39 @@ export interface DashboardFilters {
 }
 
 // Rule Management Types
+export interface RuleCondition {
+  field: string;
+  operator: 'equals' | 'contains' | 'regex' | 'greater_than' | 'less_than' | 'in' | 'not_in';
+  value: string | number | string[];
+  logical_operator?: 'AND' | 'OR';
+}
+
+export interface RuleAction {
+  type: 'alert' | 'email' | 'webhook' | 'block' | 'quarantine';
+  parameters: Record<string, string | number | boolean>;
+  enabled: boolean;
+}
+
 export interface Rule {
-  rule_id: string;
-  tenant_id: string;
-  rule_name: string;
-  rule_description: string;
-  rule_query: string;
-  is_active: boolean;
-  is_stateful: number; // 0 or 1
-  stateful_config: string;
-  created_at: number;
-  updated_at?: number;
+  id: string;
+  name: string;
+  description: string | null | undefined;
+  conditions: Record<string, RuleCondition | RuleCondition[]>;
+  actions: Record<string, RuleAction | RuleAction[]>;
+  enabled: boolean;
+  priority: number;
+  tags: string[];
+  createdAt: string;
+  updatedAt: string;
+  tenantId: string;
 }
 
 export interface CreateRuleRequest {
-  rule_name: string;
-  description: string;
-  query: string;
-  is_stateful?: number;
-  stateful_config?: string;
-  engine_type?: 'scheduled' | 'real-time';
+  name: string;
+  description?: string;
+  condition: string;
+  severity: 'critical' | 'high' | 'medium' | 'low';
+  enabled: boolean;
 }
 
 export interface UpdateRuleRequest {
@@ -257,6 +270,9 @@ export interface CreateLogSourceRequest {
   type: string;
   subtype: string;
   parser_id: string;
+  source_name: string;
+  source_type: LogSourceType;
+  source_ip: string;
 }
 
 export interface UpdateLogSourceRequest {

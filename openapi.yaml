@@ -1,0 +1,740 @@
+openapi: 3.0.3
+info:
+  title: SIEM API
+  description: Security Information and Event Management API
+  contact:
+    name: SIEM Team
+    email: siem@company.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  version: 1.0.0
+servers:
+- url: http://localhost:8080/api
+  description: Local development server
+- url: https://api.siem.company.com/api
+  description: Production server
+paths:
+  /api/v1/log_sources:
+    get:
+      tags:
+      - log-sources
+      summary: List all log sources for the tenant
+      description: |-
+        Retrieves all log sources configured for the authenticated user's tenant.
+        Requires Admin role permissions.
+      operationId: list_log_sources
+      responses:
+        '200':
+          description: List of log sources
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LogSourceListResponse'
+        '403':
+          description: Insufficient permissions
+        '500':
+          description: Internal server error
+      security:
+      - bearer_auth: []
+    post:
+      tags:
+      - log-sources
+      summary: Create a new log source configuration
+      description: |-
+        Creates a new log source configuration for the authenticated tenant.
+        Requires Admin role permissions.
+      operationId: create_log_source
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateLogSourceRequest'
+        required: true
+      responses:
+        '201':
+          description: Log source created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateLogSourceResponse'
+        '400':
+          description: Invalid request data
+        '403':
+          description: Insufficient permissions
+        '409':
+          description: Log source with this IP already exists
+        '500':
+          description: Internal server error
+      security:
+      - bearer_auth: []
+  /api/v1/log_sources/by_ip/{ip}:
+    get:
+      tags:
+      - log-sources
+      summary: Look up log source by IP address
+      description: |-
+        Internal endpoint for consumer service to look up log source configuration by IP address.
+        No authentication required for internal service communication.
+      operationId: get_log_source_by_ip
+      parameters:
+      - name: ip
+        in: path
+        description: IP address to look up
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Log source found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LogSourceLookupResponse'
+        '404':
+          description: No log source found for this IP
+        '500':
+          description: Internal server error
+  /api/v1/log_sources/cache:
+    get:
+      tags:
+      - log-sources
+      summary: Get all log sources for caching
+      description: |-
+        Internal endpoint to retrieve all log sources for caching purposes.
+        Used by consumer and other internal services.
+      operationId: get_log_sources_cache
+      responses:
+        '200':
+          description: List of log sources for caching
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: array
+                  items:
+                    allOf:
+                    - type: string
+                    - type: string
+        '500':
+          description: Internal server error
+  /api/v1/log_sources/{source_id}:
+    delete:
+      tags:
+      - log-sources
+      summary: Delete a log source configuration
+      description: |-
+        Deletes a log source configuration by ID.
+        Requires Admin role permissions and the source must belong to the user's tenant.
+      operationId: delete_log_source
+      parameters:
+      - name: source_id
+        in: path
+        description: Log source ID to delete
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Log source deleted successfully
+        '403':
+          description: Insufficient permissions
+        '404':
+          description: Log source not found or access denied
+        '500':
+          description: Internal server error
+      security:
+      - bearer_auth: []
+  /api/v1/ueba/baselines:
+    get:
+      tags:
+      - ueba
+      summary: Get all baselines for a tenant (with pagination)
+      operationId: list_baselines
+      parameters:
+      - name: limit
+        in: query
+        description: 'Maximum number of results to return (default: 100, max: 1000)'
+        required: false
+        schema:
+          type: integer
+          format: int32
+          nullable: true
+          minimum: 0
+      - name: offset
+        in: query
+        description: Number of results to skip for pagination
+        required: false
+        schema:
+          type: integer
+          format: int32
+          nullable: true
+          minimum: 0
+      - name: entity_type
+        in: query
+        description: Filter by entity type
+        required: false
+        schema:
+          type: string
+          nullable: true
+      responses:
+        '200':
+          description: Baselines retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BaselinesListResponse'
+        '403':
+          description: Insufficient permissions
+        '500':
+          description: Internal server error
+      security:
+      - bearer_auth: []
+    post:
+      tags:
+      - ueba
+      summary: Create behavioral baselines (service-to-service endpoint)
+      operationId: create_baselines
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateBaselinesRequest'
+        required: true
+      responses:
+        '201':
+          description: Baselines created successfully
+        '403':
+          description: Service access required
+        '500':
+          description: Internal server error
+      security:
+      - bearer_auth: []
+  /api/v1/ueba/baselines/entity/{entity_id}:
+    get:
+      tags:
+      - ueba
+      summary: Get behavioral baseline for a specific entity
+      operationId: get_entity_baselines
+      parameters:
+      - name: entity_id
+        in: path
+        description: Entity ID to get baselines for
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Entity baselines retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EntityBaselinesResponse'
+        '403':
+          description: Insufficient permissions
+        '500':
+          description: Internal server error
+      security:
+      - bearer_auth: []
+components:
+  schemas:
+    BaselineResponse:
+      type: object
+      required:
+      - baseline
+      properties:
+        baseline:
+          $ref: '#/components/schemas/BehavioralBaseline'
+    BaselinesListResponse:
+      type: object
+      required:
+      - data
+      - count
+      properties:
+        count:
+          type: integer
+          minimum: 0
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/BehavioralBaseline'
+    BehavioralBaseline:
+      type: object
+      required:
+      - baseline_id
+      - tenant_id
+      - entity_id
+      - entity_type
+      - metric
+      - baseline_value_avg
+      - baseline_value_stddev
+      - sample_count
+      - calculation_period_days
+      - confidence_score
+      - last_updated
+      - created_at
+      properties:
+        baseline_id:
+          type: string
+        baseline_value_avg:
+          type: number
+          format: double
+        baseline_value_stddev:
+          type: number
+          format: double
+        calculation_period_days:
+          type: integer
+          format: int32
+          minimum: 0
+        confidence_score:
+          type: number
+          format: double
+        created_at:
+          type: integer
+          format: int32
+          minimum: 0
+        entity_id:
+          type: string
+        entity_type:
+          type: string
+        last_updated:
+          type: integer
+          format: int32
+          minimum: 0
+        metric:
+          type: string
+        sample_count:
+          type: integer
+          format: int32
+          minimum: 0
+        tenant_id:
+          type: string
+    Claims:
+      type: object
+      required:
+      - sub
+      - tid
+      - roles
+      - exp
+      properties:
+        exp:
+          type: integer
+          minimum: 0
+        roles:
+          type: array
+          items:
+            type: string
+        sub:
+          type: string
+        tid:
+          type: string
+    CreateBaselinesRequest:
+      type: object
+      required:
+      - baselines
+      properties:
+        baselines:
+          type: array
+          items:
+            $ref: '#/components/schemas/BehavioralBaseline'
+    CreateLogSourceGroupRequest:
+      type: object
+      required:
+      - name
+      - description
+      - log_source_ids
+      properties:
+        description:
+          type: string
+        log_source_ids:
+          type: array
+          items:
+            type: string
+        name:
+          type: string
+    CreateLogSourceRequest:
+      type: object
+      required:
+      - source_name
+      - source_type
+      - source_ip
+      properties:
+        source_ip:
+          type: string
+        source_name:
+          type: string
+        source_type:
+          type: string
+    CreateLogSourceResponse:
+      type: object
+      required:
+      - source_id
+      - message
+      properties:
+        message:
+          type: string
+        source_id:
+          type: string
+    EntityBaselinesResponse:
+      type: object
+      required:
+      - entity_id
+      - entity_type
+      - baselines
+      - count
+      properties:
+        baselines:
+          type: array
+          items:
+            $ref: '#/components/schemas/BehavioralBaseline'
+        count:
+          type: integer
+          minimum: 0
+        entity_id:
+          type: string
+        entity_type:
+          type: string
+    Event:
+      type: object
+      required:
+      - event_id
+      - tenant_id
+      - event_timestamp
+      - ingestion_timestamp
+      - source_ip
+      - source_type
+      - raw_event
+      - event_category
+      - event_outcome
+      - event_action
+      properties:
+        event_action:
+          type: string
+        event_category:
+          type: string
+        event_id:
+          type: string
+        event_outcome:
+          type: string
+        event_timestamp:
+          type: integer
+          format: int32
+          minimum: 0
+        ingestion_timestamp:
+          type: integer
+          format: int32
+          minimum: 0
+        log_source_id:
+          type: string
+          nullable: true
+        parse_error_msg:
+          type: string
+          nullable: true
+        parsing_status:
+          type: string
+          nullable: true
+        raw_event:
+          type: string
+        source_ip:
+          type: string
+        source_type:
+          type: string
+        tenant_id:
+          type: string
+    EventFilter:
+      type: object
+      required:
+      - field
+      - operator
+      - value
+      properties:
+        field:
+          type: string
+        operator:
+          type: string
+        value:
+          type: string
+    EventSearchRequest:
+      type: object
+      properties:
+        filters:
+          type: array
+          items:
+            $ref: '#/components/schemas/EventFilter'
+          nullable: true
+        free_text:
+          type: string
+          nullable: true
+        limit:
+          type: integer
+          format: int32
+          nullable: true
+          minimum: 0
+        offset:
+          type: integer
+          format: int32
+          nullable: true
+          minimum: 0
+        sort:
+          allOf:
+          - $ref: '#/components/schemas/SortConfig'
+          nullable: true
+        time_range:
+          allOf:
+          - $ref: '#/components/schemas/TimeRange'
+          nullable: true
+    EventSearchResponse:
+      type: object
+      required:
+      - events
+      - total_count
+      - has_more
+      properties:
+        events:
+          type: array
+          items:
+            $ref: '#/components/schemas/Event'
+        has_more:
+          type: boolean
+        total_count:
+          type: integer
+          format: int32
+          minimum: 0
+    IngestRequest:
+      type: object
+      required:
+      - events
+      properties:
+        events:
+          type: array
+          items:
+            $ref: '#/components/schemas/NewEventData'
+    LogSource:
+      type: object
+      required:
+      - source_id
+      - tenant_id
+      - source_name
+      - source_type
+      - source_ip
+      - created_at
+      properties:
+        created_at:
+          type: integer
+          format: int32
+          minimum: 0
+        source_id:
+          type: string
+        source_ip:
+          type: string
+        source_name:
+          type: string
+        source_type:
+          type: string
+        tenant_id:
+          type: string
+    LogSourceGroup:
+      type: object
+      required:
+      - group_id
+      - name
+      - description
+      - log_source_ids
+      - tenant_id
+      - created_at
+      - updated_at
+      properties:
+        created_at:
+          type: string
+        description:
+          type: string
+        group_id:
+          type: string
+        log_source_ids:
+          type: array
+          items:
+            type: string
+        name:
+          type: string
+        tenant_id:
+          type: string
+        updated_at:
+          type: string
+    LogSourceListResponse:
+      type: object
+      required:
+      - log_sources
+      - total
+      properties:
+        log_sources:
+          type: array
+          items:
+            $ref: '#/components/schemas/LogSource'
+        total:
+          type: integer
+          minimum: 0
+    LogSourceLookupResponse:
+      type: object
+      required:
+      - source_type
+      - source_name
+      properties:
+        source_name:
+          type: string
+        source_type:
+          type: string
+    LogSourceStats:
+      type: object
+      required:
+      - log_source_id
+      - event_count
+      - parse_failures
+      - parse_partials
+      - eps
+      - last_seen
+      properties:
+        eps:
+          type: number
+          format: float
+        event_count:
+          type: integer
+          format: int64
+          minimum: 0
+        last_seen:
+          type: string
+        log_source_id:
+          type: string
+        parse_failures:
+          type: integer
+          format: int64
+          minimum: 0
+        parse_partials:
+          type: integer
+          format: int64
+          minimum: 0
+    NewEventData:
+      type: object
+      required:
+      - source_ip
+      - raw_log
+      properties:
+        raw_log:
+          type: string
+        source_ip:
+          type: string
+    PaginationParams:
+      type: object
+      properties:
+        entity_type:
+          type: string
+          nullable: true
+        limit:
+          type: integer
+          format: int32
+          nullable: true
+          minimum: 0
+        offset:
+          type: integer
+          format: int32
+          nullable: true
+          minimum: 0
+    SortConfig:
+      type: object
+      required:
+      - field
+      - direction
+      properties:
+        direction:
+          type: string
+        field:
+          type: string
+    StatefulConfig:
+      type: object
+      required:
+      - key_prefix
+      - aggregate_on
+      - threshold
+      - window_seconds
+      properties:
+        aggregate_on:
+          type: array
+          items:
+            type: string
+        key_prefix:
+          type: string
+        threshold:
+          type: integer
+          format: int32
+          minimum: 0
+        window_seconds:
+          type: integer
+          format: int32
+          minimum: 0
+    TimeRange:
+      type: object
+      required:
+      - start_unix
+      - end_unix
+      properties:
+        end_unix:
+          type: integer
+          format: int32
+          minimum: 0
+        start_unix:
+          type: integer
+          format: int32
+          minimum: 0
+    UpdateLogSourceRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          nullable: true
+        parser_id:
+          type: string
+          nullable: true
+        status:
+          type: string
+          nullable: true
+  securitySchemes:
+    bearer_auth:
+      type: http
+      scheme: bearer
+tags:
+- name: auth
+  description: Authentication and authorization endpoints
+- name: events
+  description: Event ingestion and search endpoints
+- name: dashboard
+  description: Dashboard and metrics endpoints
+- name: fields
+  description: Field value endpoints for query building
+- name: admin
+  description: User and role management endpoints
+- name: rules
+  description: Detection rule management endpoints
+- name: alerts
+  description: Alert management endpoints
+- name: cases
+  description: Case management endpoints
+- name: tenants
+  description: Tenant management endpoints
+- name: log-sources
+  description: Log source configuration endpoints
+- name: taxonomy
+  description: Taxonomy mapping endpoints
+- name: assets
+  description: Asset management endpoints
+- name: parsers
+  description: Parser management endpoints
+- name: agents
+  description: Agent and fleet management endpoints
+- name: retention
+  description: Data retention policy endpoints
+- name: health
+  description: System health and audit endpoints
+- name: cloud-api
+  description: Cloud API source management endpoints
+- name: ueba
+  description: User and Entity Behavior Analytics endpoints

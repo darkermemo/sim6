@@ -506,7 +506,7 @@ interface AssignRoleModalProps {
   roles: Role[];
   onClose: () => void;
   onSuccess: () => void;
-  assignRole: (data: AssignRoleRequest) => Promise<any>;
+  assignRole: (userId: string, roleData: AssignRoleRequest) => Promise<any>;
 }
 
 const AssignRoleModal: React.FC<AssignRoleModalProps> = ({ 
@@ -529,7 +529,7 @@ const AssignRoleModal: React.FC<AssignRoleModalProps> = ({
 
     try {
       const selectedRole = roles.find(r => r.role_id === selectedRoleId);
-       const result = await assignRole({ role_name: selectedRole?.role_name || '' });
+       const result = await assignRole(userId, { role_name: selectedRole?.role_name || '' });
       if (result) {
         onSuccess();
       } else {

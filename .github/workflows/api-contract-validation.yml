@@ -1,0 +1,166 @@
+name: API Contract Validation
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'openapi.json'
+      - 'siem_ui/src/services/typedApi.ts'
+      - 'siem_ui/src/generated/api-types.ts'
+      - 'siem_ui/scripts/generate-api-client.cjs'
+      - '.github/workflows/api-contract-validation.yml'
+
+jobs:
+  validate-openapi-schema:
+    name: Validate OpenAPI Schema
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: siem_ui/package-lock.json
+        
+    - name: Install dependencies
+      working-directory: ./siem_ui
+      run: npm ci
+      
+    - name: Install OpenAPI validation tools
+      run: |
+        npm install -g @apidevtools/swagger-parser
+        npm install -g @redocly/cli
+        
+    - name: Validate OpenAPI schema syntax
+      run: |
+        swagger-parser validate openapi.json
+        
+    - name: Lint OpenAPI schema with Redocly
+      run: |
+        redocly lint openapi.json
+        
+    - name: Generate TypeScript types
+      working-directory: ./siem_ui
+      run: npm run generate-api
+      
+    - name: Check for TypeScript compilation errors
+      working-directory: ./siem_ui
+      run: |
+        npx tsc --noEmit --project tsconfig.json
+        
+    - name: Verify generated types are up-to-date
+      run: |
+        if [ -n "$(git diff --name-only)" ]; then
+          echo "Generated API types are out of date. Please run 'npm run generate-api' and commit the changes."
+          git diff
+          exit 1
+        fi
+        
+  validate-api-client:
+    name: Validate API Client Integration
+    runs-on: ubuntu-latest
+    needs: validate-openapi-schema
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: siem_ui/package-lock.json
+        
+    - name: Install dependencies
+      working-directory: ./siem_ui
+      run: npm ci
+      
+    - name: Generate API types
+      working-directory: ./siem_ui
+      run: npm run generate-api
+      
+    - name: Run TypeScript type checking
+      working-directory: ./siem_ui
+      run: npx tsc --noEmit
+      
+    - name: Run ESLint on typed API files
+      working-directory: ./siem_ui
+      run: |
+        npx eslint src/services/typedApi.ts
+        npx eslint src/hooks/api/useTypedLogSources.ts
+        npx eslint src/generated/api-types.ts --max-warnings 0
+        
+    - name: Run unit tests for API client
+      working-directory: ./siem_ui
+      run: |
+        npm test -- --testPathPattern="(typedApi|useTypedLogSources)" --passWithNoTests
+        
+  validate-contract-compatibility:
+    name: Validate API Contract Compatibility
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    
+    steps:
+    - name: Checkout PR branch
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ github.head_ref }}
+        
+    - name: Checkout base branch
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ github.base_ref }}
+        path: base
+        
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        
+    - name: Install OpenAPI diff tool
+      run: npm install -g @apidevtools/swagger-diff
+      
+    - name: Check for breaking changes
+      run: |
+        if [ -f "base/openapi.json" ]; then
+          echo "Checking for breaking changes in OpenAPI schema..."
+          swagger-diff base/openapi.json openapi.json --fail-on-incompatible
+        else
+          echo "Base OpenAPI schema not found, skipping compatibility check"
+        fi
+        
+  security-scan:
+    name: Security Scan for API Endpoints
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        
+    - name: Install security scanning tools
+      run: |
+        npm install -g @42crunch/api-security-audit
+        
+    - name: Run API security audit
+      run: |
+        api-security-audit audit openapi.json --output-format json --output-file security-report.json
+        
+    - name: Upload security report
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: api-security-report
+        path: security-report.json
+        retention-days: 30

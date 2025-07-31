@@ -36,22 +36,37 @@ export function AuthGuard({ children }: AuthGuardProps) {
     // Auto-login for demo purposes with valid JWT token
     console.log('Setting up demo authentication with valid JWT token...');
     
-    // Use demo tokens that the API recognizes for development mode bypass
-    const validToken = 'demo-access-token';
+    // Generate a valid JWT token for development that matches backend expectations
+    const validToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhZG1pbi11c2VyIiwidGVuYW50X2lkIjoidGVuYW50LUEiLCJyb2xlcyI6WyJBZG1pbiJdLCJpYXQiOjE3NTM5NjE0MTQsImV4cCI6MTc1Mzk2NTAxNCwiaXNzIjoic2llbS1hdXRoIiwiYXVkIjoic2llbS1zZWFyY2giLCJqdGkiOiJ0ZXN0LXNlc3Npb24tMTIzIn0.NluIfDU6ajLBK0Q5SoxzbV4NbyxNBpkuOCEPsfYkhTw';
+    
+    // Get tenant_id from environment variable or use default for demo
+    const tenantId = import.meta.env.VITE_DEFAULT_TENANT_ID || 'tenant-A';
     
     // Store valid tokens
     setTokens({
       access_token: validToken,
-      refresh_token: 'demo-refresh-token', // Use demo refresh token
-      tenant_id: 'tenant-A',
+      refresh_token: import.meta.env.VITE_DEMO_REFRESH_TOKEN || 'demo-refresh-token', // Use demo refresh token
+      tenant_id: tenantId,
     });
     
     // Also store in localStorage for direct access by API hooks
     localStorage.setItem('access_token', validToken);
-    localStorage.setItem('refresh_token', 'demo-refresh-token');
-    localStorage.setItem('tenant_id', 'tenant-A');
+    localStorage.setItem('refresh_token', import.meta.env.VITE_DEMO_REFRESH_TOKEN || 'demo-refresh-token');
+    localStorage.setItem('tenant_id', tenantId);
     
-    console.log('Successfully set up authentication with valid JWT token');
+    console.log('AuthGuard: Token set in localStorage:', localStorage.getItem('access_token'));
+    console.log('AuthGuard: Tenant ID set:', localStorage.getItem('tenant_id'));
+    
+    console.log('AuthGuard: Successfully set up authentication with valid JWT token');
+    console.log('AuthGuard: Tokens set in localStorage:', {
+      access_token: localStorage.getItem('access_token'),
+      refresh_token: localStorage.getItem('refresh_token'),
+      tenant_id: localStorage.getItem('tenant_id')
+    });
+    
+    // Dispatch a custom event to notify components that tokens are ready
+    window.dispatchEvent(new CustomEvent('tokensReady'));
+    console.log('AuthGuard: tokensReady event dispatched');
   }, [setTokens]);
 
 

@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Dashboard Integration Test</title>
+</head>
+<body>
+    <h1>Dashboard Integration Test</h1>
+    <div id="status">Testing...</div>
+    <div id="result"></div>
+    
+    <script>
+        // Set a properly formatted test JWT token in localStorage
+        const testToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ0ZXN0X3VzZXIiLCJ0ZW5hbnRfaWQiOiJkZWZhdWx0Iiwicm9sZXMiOlsidXNlciJdLCJpYXQiOjE3NTM5NTYwOTMsImV4cCI6MTc1Mzk1OTY5MywiaXNzIjoic2llbS1hdXRoIiwiYXVkIjoic2llbS1zZWFyY2giLCJqdGkiOiJhYTc3NGNiOC04MTE5LTQ5YTgtYjRiNC0wZmIyZDAxNTRjNzYifQ.zMukrnydI5ERpS3yYAm5oF94S0UYZQF7M_xrzv0fO5o';
+        localStorage.setItem('access_token', testToken);
+        
+        // Test the dashboard API
+        async function testDashboard() {
+            try {
+                const response = await fetch('http://localhost:8090/api/v1/dashboard', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                
+                document.getElementById('status').innerHTML = '<span style="color: green;">✅ SUCCESS</span>';
+                document.getElementById('result').innerHTML = `
+                    <h3>Dashboard Data:</h3>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                    <p><strong>Token set in localStorage:</strong> ${localStorage.getItem('access_token') ? 'Yes' : 'No'}</p>
+                    <p><a href="http://localhost:3000" target="_blank">Open SIEM UI</a></p>
+                `;
+            } catch (error) {
+                document.getElementById('status').innerHTML = '<span style="color: red;">❌ FAILED</span>';
+                document.getElementById('result').innerHTML = `
+                    <h3>Error:</h3>
+                    <pre style="color: red;">${error.message}</pre>
+                `;
+            }
+        }
+        
+        // Run the test
+        testDashboard();
+    </script>
+</body>
+</html>

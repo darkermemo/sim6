@@ -3,6 +3,17 @@
 # SIEM System Health Check Script
 # Checks all components and their connectivity
 
+# Load environment variables
+if [ -f ".env" ]; then
+    export $(grep -v '^#' .env | xargs)
+fi
+
+# Set defaults if not provided
+PROJECT_ROOT=${PROJECT_ROOT:-$(pwd)}
+API_URL=${API_URL:-"http://localhost:8080"}
+CLICKHOUSE_URL=${CLICKHOUSE_URL:-"http://localhost:8123"}
+UI_PORT=${UI_PORT:-3004}
+
 echo "=== SIEM System Health Check ==="
 echo "Timestamp: $(date)"
 echo
@@ -22,7 +33,7 @@ echo "2. Service Connectivity:"
 
 # ClickHouse
 echo -n "   ClickHouse (8123): "
-if curl -s 'http://localhost:8123/' --data 'SELECT 1' > /dev/null 2>&1; then
+if curl -s '${CLICKHOUSE_URL}/' --data 'SELECT 1' > /dev/null 2>&1; then
     echo "✅ OK"
 else
     echo "❌ FAILED"
@@ -38,15 +49,15 @@ fi
 
 # SIEM API
 echo -n "   SIEM API (8080): "
-if curl -s 'http://localhost:8080/api/v1/health' > /dev/null 2>&1; then
+if curl -s '${API_URL}/api/v1/health' > /dev/null 2>&1; then
     echo "✅ OK"
 else
     echo "❌ FAILED"
 fi
 
 # SIEM UI
-echo -n "   SIEM UI (3004): "
-if curl -s 'http://localhost:3004/' > /dev/null 2>&1; then
+echo -n "   SIEM UI (${UI_PORT}): "
+if curl -s 'http://localhost:${UI_PORT}/' > /dev/null 2>&1; then
     echo "✅ OK"
 else
     echo "❌ FAILED"
@@ -56,10 +67,10 @@ echo
 
 # Check JWT token validity
 echo "3. Authentication Status:"
-if [ -f "/Users/yasseralmohammed/sim6/admin_token.txt" ]; then
-    TOKEN=$(cat /Users/yasseralmohammed/sim6/admin_token.txt)
+if [ -f "${PROJECT_ROOT}/admin_token.txt" ]; then
+    TOKEN=$(cat "${PROJECT_ROOT}/admin_token.txt")
     echo -n "   JWT Token: "
-    if curl -s -H "Authorization: Bearer $TOKEN" 'http://localhost:8080/api/v1/health' > /dev/null 2>&1; then
+    if curl -s -H "Authorization: Bearer $TOKEN" '${API_URL}/api/v1/health' > /dev/null 2>&1; then
         echo "✅ VALID"
     else
         echo "❌ EXPIRED/INVALID"
@@ -74,7 +85,7 @@ echo
 # Check data flow
 echo "4. Data Flow Status:"
 echo -n "   Recent Events in DB: "
-RECENT_COUNT=$(curl -s 'http://localhost:8123/' --data "SELECT COUNT(*) FROM dev.events WHERE event_timestamp > $(date -d '1 hour ago' +%s) FORMAT TSV" 2>/dev/null || echo "0")
+RECENT_COUNT=$(curl -s '${CLICKHOUSE_URL}/' --data "SELECT COUNT(*) FROM dev.events WHERE event_timestamp > $(date -d '1 hour ago' +%s) FORMAT TSV" 2>/dev/null || echo "0")
 echo "$RECENT_COUNT events in last hour"
 
 echo -n "   Kafka Topic Messages: "

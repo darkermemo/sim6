@@ -1,0 +1,805 @@
+{
+  "timestamp": "2025-07-30T13:56:55.647607",
+  "base_url": "http://localhost:8080",
+  "summary": {
+    "total_tests": 57,
+    "passed_tests": 21,
+    "failed_tests": 36,
+    "critical_tests": 41,
+    "critical_passed": 17,
+    "critical_failed": 24
+  },
+  "results": [
+    {
+      "endpoint": "GET /health",
+      "status_code": 200,
+      "success": true,
+      "response_time_ms": 8.47,
+      "critical": true,
+      "description": "Basic health check",
+      "response_data": {
+        "status": "OK",
+        "components": {
+          "database": {
+            "status": "OK",
+            "message": "Database connection successful",
+            "response_time_ms": 2
+          },
+          "kafka": {
+            "status": "OK",
+            "message": "Kafka check skipped",
+            "response_time_ms": 0
+          }
+        },
+        "timestamp": 1753862197
+      },
+      "timestamp": "2025-07-30T10:56:37.602224"
+    },
+    {
+      "endpoint": "GET /health/detailed",
+      "status_code": 404,
+      "success": false,
+      "response_time_ms": 0.76,
+      "critical": true,
+      "description": "Detailed health check",
+      "response_data": "No response body",
+      "timestamp": "2025-07-30T10:56:37.603034",
+      "error": "HTTP 404: Not Found"
+    },
+    {
+      "endpoint": "GET /api/v1/health",
+      "status_code": 200,
+      "success": true,
+      "response_time_ms": 1.79,
+      "critical": true,
+      "description": "API v1 health check",
+      "response_data": {
+        "status": "OK",
+        "components": {
+          "database": {
+            "status": "OK",
+            "message": "Database connection successful",
+            "response_time_ms": 1
+          },
+          "kafka": {
+            "status": "OK",
+            "message": "Kafka check skipped",
+            "response_time_ms": 0
+          }
+        },
+        "timestamp": 1753862197
+      },
+      "timestamp": "2025-07-30T10:56:37.604848"
+    },
+    {
+      "endpoint": "GET /api/v1/health/detailed",
+      "status_code": 200,
+      "success": true,
+      "response_time_ms": 4.55,
+      "critical": true,
+      "description": "API v1 detailed health",
+      "response_data": {
+        "status": "OK",
+        "components": {
+          "database": {
+            "status": "OK",
+            "message": "Database connection successful",
+            "response_time_ms": 3,
+            "details": {
+              "connection": "OK",
+              "database_stats": []
+            }
+          },
+          "kafka": {
+            "status": "OK",
+            "message": "Kafka check skipped",
+            "response_time_ms": 0,
+            "details": {
+              "status": "skipped"
+            }
+          }
+        },
+        "system_info": {
+          "version": "0.1.0",
+          "uptime_seconds": 0,
+          "memory_usage_mb": null
+        },
+        "timestamp": 1753862197
+      },
+      "timestamp": "2025-07-30T10:56:37.609425"
+    },
+    {
+      "endpoint": "GET /api/v1/status",
+      "status_code": 200,
+      "success": true,
+      "response_time_ms": 0.7,
+      "critical": true,
+      "description": "System status",
+      "response_data": {
+        "services": {
+          "api": "healthy",
+          "database": "healthy",
+          "kafka": "healthy"
+        },
+        "status": "operational",
+        "timestamp": 1753862197,
+        "version": "1.0.0"
+      },
+      "timestamp": "2025-07-30T10:56:37.610153"
+    },
+    {
+      "endpoint": "GET /api/v1/version",
+      "status_code": 200,
+      "success": true,
+      "response_time_ms": 0.53,
+      "critical": true,
+      "description": "Version information",
+      "response_data": {
+        "build_timestamp": "unknown",
+        "description": "",
+        "git_hash": "unknown",
+        "name": "siem_api",
+        "rust_version": "unknown",
+        "version": "0.1.0"
+      },
+      "timestamp": "2025-07-30T10:56:37.610702"
+    },
+    {
+      "endpoint": "GET /metrics",
+      "status_code": 200,
+      "success": true,
+      "response_time_ms": 2.46,
+      "critical": true,
+      "description": "Basic metrics",
+      "response_data": {
+        "status": "OK",
+        "components": {
+          "database": {
+            "status": "OK",
+            "message": "Database connection successful",
+            "response_time_ms": 1
+          },
+          "kafka": {
+            "status": "OK",
+            "message": "Kafka check skipped",
+            "response_time_ms": 0
+          }
+        },
+        "timestamp": 1753862197
+      },
+      "timestamp": "2025-07-30T10:56:37.613184"
+    },
+    {
+      "endpoint": "GET /api/v1/metrics",
+      "status_code": 200,
+      "success": true,
+      "response_time_ms": 0.53,
+      "critical": true,
+      "description": "API v1 metrics",
+      "response_data": {
+        "event_categories": {},
+        "events_per_hour": 0,
+        "top_sources": [],
+        "total_events": 0
+      },
+      "timestamp": "2025-07-30T10:56:37.613734"
+    },
+    {
+      "endpoint": "GET /api/v1/metrics/prometheus",
+      "status_code": 200,
+      "success": true,
+      "response_time_ms": 0.61,
+      "critical": false,
+      "description": "Prometheus metrics",
+      "response_data": "# HELP siem_events_total Total number of events processed\n# TYPE siem_events_total counter\nsiem_events_total 0\n\n# HELP siem_api_requests_total Total number of API requests\n# TYPE siem_api_requests_tot",
+      "timestamp": "2025-07-30T10:56:37.614457"
+    },
+    {
+      "endpoint": "GET /api/v1/metrics/components",
+      "status_code": 200,
+      "success": true,
+      "response_time_ms": 0.81,
+      "critical": true,
+      "description": "Component metrics",
+      "response_data": {
+        "components": {
+          "api_server": {
+            "memory_usage_mb": 128,
+            "response_time_ms": 50,
+            "status": "healthy"
+          },
+          "database": {
+            "connection_pool": 10,
+            "query_time_ms": 25,
+            "status": "healthy"
+          },
+          "kafka": {
+            "consumer_lag": 0,
+            "producer_lag": 0,
+            "status": "healthy"
+          }
+        },
+        "timestamp": 1753862197
+      },
+      "timestamp": "2025-07-30T10:56:37.615308"
+    },
+    {
+      "endpoint": "GET /api/v1/metrics/performance",
+      "status_code": 200,
+      "success": true,
+      "response_time_ms": 0.65,
+      "critical": true,
+      "description": "Performance metrics",
+      "response_data": {
+        "performance": {
+          "avg_response_time_ms": 50,
+          "cpu_usage_percent": 25.5,
+          "disk_usage_percent": 60.1,
+          "events_per_second": 0,
+          "memory_usage_percent": 45.2
+        },
+        "timestamp": 1753862197
+      },
+      "timestamp": "2025-07-30T10:56:37.616007"
+    },
+    {
+      "endpoint": "GET /api/v1/metrics/historical",
+      "status_code": 200,
+      "success": true,
+      "response_time_ms": 0.57,
+      "critical": false,
+      "description": "Historical metrics",
+      "response_data": {
+        "historical": {
+          "last_24h": {
+            "avg_response_time_ms": 55,
+            "error_rate_percent": 0.1,
+            "events_processed": 0
+          },
+          "last_30d": {
+            "avg_response_time_ms": 58,
+            "error_rate_percent": 0.3,
+            "events_processed": 0
+          },
+          "last_7d": {
+            "avg_response_time_ms": 52,
+            "error_rate_percent": 0.2,
+            "events_processed": 0
+          }
+        },
+        "timestamp": 1753862197
+      },
+      "timestamp": "2025-07-30T10:56:37.616597"
+    },
+    {
+      "endpoint": "GET /api/v1/events/search",
+      "status_code": 405,
+      "success": false,
+      "response_time_ms": 0.49,
+      "critical": true,
+      "description": "Event search",
+      "response_data": "No response body",
+      "timestamp": "2025-07-30T10:56:37.617127",
+      "error": "HTTP 405: Method Not Allowed"
+    },
+    {
+      "endpoint": "POST /api/v1/events/search",
+      "status_code": 400,
+      "success": false,
+      "response_time_ms": 0.54,
+      "critical": true,
+      "description": "Event search POST",
+      "response_data": "Json deserialize error: EOF while parsing a value at line 1 column 0",
+      "timestamp": "2025-07-30T10:56:37.617699",
+      "error": "HTTP 400: Bad Request"
+    },
+    {
+      "endpoint": "POST /api/v1/events/ingest",
+      "status_code": 400,
+      "success": false,
+      "response_time_ms": 0.51,
+      "critical": true,
+      "description": "Single event ingestion",
+      "response_data": "Json deserialize error: missing field `events` at line 1 column 110",
+      "timestamp": "2025-07-30T10:56:37.618232",
+      "error": "HTTP 400: Bad Request"
+    },
+    {
+      "endpoint": "POST /api/v1/events/batch",
+      "status_code": 400,
+      "success": false,
+      "response_time_ms": 0.48,
+      "critical": true,
+      "description": "Batch event ingestion",
+      "response_data": "Json deserialize error: missing field `source_ip` at line 1 column 122",
+      "timestamp": "2025-07-30T10:56:37.618730",
+      "error": "HTTP 400: Bad Request"
+    },
+    {
+      "endpoint": "GET /api/v1/events/stream",
+      "status_code": 0,
+      "success": false,
+      "response_time_ms": 10817899.80506897,
+      "critical": false,
+      "description": "Event stream",
+      "error": "Response ended prematurely",
+      "timestamp": "2025-07-30T13:56:55.518599"
+    },
+    {
+      "endpoint": "GET /api/v1/events/test-id",
+      "status_code": 404,
+      "success": false,
+      "response_time_ms": 6.43,
+      "critical": false,
+      "description": "Get event by ID",
+      "response_data": "No response body",
+      "timestamp": "2025-07-30T13:56:55.525572",
+      "error": "HTTP 404: Not Found"
+    },
+    {
+      "endpoint": "POST /api/v1/auth/login",
+      "status_code": 401,
+      "success": false,
+      "response_time_ms": 1.53,
+      "critical": true,
+      "description": "User authentication",
+      "response_data": {
+        "error": "Invalid credentials"
+      },
+      "timestamp": "2025-07-30T13:56:55.527181",
+      "error": "HTTP 401: Unauthorized"
+    },
+    {
+      "endpoint": "POST /api/v1/auth/logout",
+      "status_code": 200,
+      "success": true,
+      "response_time_ms": 1.08,
+      "critical": false,
+      "description": "User logout",
+      "response_data": {
+        "message": "Logout successful",
+        "status": "success"
+      },
+      "timestamp": "2025-07-30T13:56:55.528302"
+    },
+    {
+      "endpoint": "POST /api/v1/auth/refresh",
+      "status_code": 400,
+      "success": false,
+      "response_time_ms": 1.09,
+      "critical": false,
+      "description": "Token refresh",
+      "response_data": "Json deserialize error: missing field `refresh_token` at line 1 column 2",
+      "timestamp": "2025-07-30T13:56:55.529444",
+      "error": "HTTP 400: Bad Request"
+    },
+    {
+      "endpoint": "GET /api/v1/config",
+      "status_code": 404,
+      "success": false,
+      "response_time_ms": 1.31,
+      "critical": true,
+      "description": "Get configuration",
+      "response_data": "No response body",
+      "timestamp": "2025-07-30T13:56:55.530882",
+      "error": "HTTP 404: Not Found"
+    },
+    {
+      "endpoint": "POST /api/v1/config/validate",
+      "status_code": 404,
+      "success": false,
+      "response_time_ms": 1.02,
+      "critical": true,
+      "description": "Validate configuration",
+      "response_data": "No response body",
+      "timestamp": "2025-07-30T13:56:55.531978",
+      "error": "HTTP 404: Not Found"
+    },
+    {
+      "endpoint": "POST /api/v1/config/reload",
+      "status_code": 404,
+      "success": false,
+      "response_time_ms": 0.77,
+      "critical": true,
+      "description": "Reload configuration",
+      "response_data": "No response body",
+      "timestamp": "2025-07-30T13:56:55.532800",
+      "error": "HTTP 404: Not Found"
+    },
+    {
+      "endpoint": "GET /api/v1/routing/rules",
+      "status_code": 404,
+      "success": false,
+      "response_time_ms": 0.77,
+      "critical": true,
+      "description": "Get routing rules",
+      "response_data": "No response body",
+      "timestamp": "2025-07-30T13:56:55.533651",
+      "error": "HTTP 404: Not Found"
+    },
+    {
+      "endpoint": "GET /api/v1/pipeline/stats",
+      "status_code": 404,
+      "success": false,
+      "response_time_ms": 1.16,
+      "critical": true,
+      "description": "Pipeline statistics",
+      "response_data": "No response body",
+      "timestamp": "2025-07-30T13:56:55.534876",
+      "error": "HTTP 404: Not Found"
+    },
+    {
+      "endpoint": "POST /api/v1/pipeline/start",
+      "status_code": 404,
+      "success": false,
+      "response_time_ms": 1.11,
+      "critical": false,
+      "description": "Start pipeline",
+      "response_data": "No response body",
+      "timestamp": "2025-07-30T13:56:55.536065",
+      "error": "HTTP 404: Not Found"
+    },
+    {
+      "endpoint": "POST /api/v1/pipeline/stop",
+      "status_code": 404,
+      "success": false,
+      "response_time_ms": 0.69,
+      "critical": false,
+      "description": "Stop pipeline",
+      "response_data": "No response body",
+      "timestamp": "2025-07-30T13:56:55.536803",
+      "error": "HTTP 404: Not Found"
+    },
+    {
+      "endpoint": "POST /api/v1/pipeline/restart",
+      "status_code": 404,
+      "success": false,
+      "response_time_ms": 0.61,
+      "critical": false,
+      "description": "Restart pipeline",
+      "response_data": "No response body",
+      "timestamp": "2025-07-30T13:56:55.537456",
+      "error": "HTTP 404: Not Found"
+    },
+    {
+      "endpoint": "GET /api/v1/agents",
+      "status_code": 404,
+      "success": false,
+      "response_time_ms": 0.68,
+      "critical": true,
+      "description": "Get agents",
+      "response_data": "No response body",
+      "timestamp": "2025-07-30T13:56:55.538206",
+      "error": "HTTP 404: Not Found"
+    },
+    {
+      "endpoint": "GET /api/v1/agents/fleet",
+      "status_code": 200,
+      "success": true,
+      "response_time_ms": 39.91,
+      "critical": true,
+      "description": "Agent fleet",
+      "response_data": {
+        "agents": [],
+        "total": 0
+      },
+      "timestamp": "2025-07-30T13:56:55.578140"
+    },
+    {
+      "endpoint": "GET /api/v1/agents/policies",
+      "status_code": 200,
+      "success": true,
+      "response_time_ms": 3.1,
+      "critical": true,
+      "description": "Agent policies",
+      "response_data": {
+        "policies": [],
+        "total": 0
+      },
+      "timestamp": "2025-07-30T13:56:55.581273"
+    },
+    {
+      "endpoint": "GET /api/v1/agents/download",
+      "status_code": 400,
+      "success": false,
+      "response_time_ms": 0.79,
+      "critical": false,
+      "description": "Download agent",
+      "response_data": "Query deserialize error: missing field `os`",
+      "timestamp": "2025-07-30T13:56:55.582117",
+      "error": "HTTP 400: Bad Request"
+    },
+    {
+      "endpoint": "GET /api/v1/parsers",
+      "status_code": 500,
+      "success": false,
+      "response_time_ms": 2.19,
+      "critical": true,
+      "description": "Get parsers",
+      "response_data": {
+        "error": "Database error"
+      },
+      "timestamp": "2025-07-30T13:56:55.584342",
+      "error": "HTTP 500: Internal Server Error"
+    },
+    {
+      "endpoint": "GET /api/v1/parsers/all",
+      "status_code": 405,
+      "success": false,
+      "response_time_ms": 0.8,
+      "critical": true,
+      "description": "Get all parsers",
+      "response_data": "No response body",
+      "timestamp": "2025-07-30T13:56:55.585175",
+      "error": "HTTP 405: Method Not Allowed"
+    },
+    {
+      "endpoint": "GET /api/v1/users",
+      "status_code": 200,
+      "success": true,
+      "response_time_ms": 0.62,
+      "critical": true,
+      "description": "Get users",
+      "response_data": [],
+      "timestamp": "2025-07-30T13:56:55.585829"
+    },
+    {
+      "endpoint": "GET /api/v1/admin/users",
+      "status_code": 404,
+      "success": false,
+      "response_time_ms": 0.46,
+      "critical": true,
+      "description": "Get admin users",
+      "response_data": "No response body",
+      "timestamp": "2025-07-30T13:56:55.586311",
+      "error": "HTTP 404: Not Found"
+    },
+    {
+      "endpoint": "GET /api/v1/tenants",
+      "status_code": 403,
+      "success": false,
+      "response_time_ms": 0.55,
+      "critical": true,
+      "description": "Get tenants",
+      "response_data": {
+        "error": "Insufficient permissions. SuperAdmin role required."
+      },
+      "timestamp": "2025-07-30T13:56:55.586879",
+      "error": "HTTP 403: Forbidden"
+    },
+    {
+      "endpoint": "GET /api/v1/tenants/metrics",
+      "status_code": 403,
+      "success": false,
+      "response_time_ms": 0.56,
+      "critical": true,
+      "description": "Tenant metrics",
+      "response_data": {
+        "error": "Insufficient permissions. SuperAdmin role required."
+      },
+      "timestamp": "2025-07-30T13:56:55.587454",
+      "error": "HTTP 403: Forbidden"
+    },
+    {
+      "endpoint": "GET /api/v1/alerts",
+      "status_code": 500,
+      "success": false,
+      "response_time_ms": 4.03,
+      "critical": true,
+      "description": "Get alerts",
+      "response_data": "Failed to fetch alerts",
+      "timestamp": "2025-07-30T13:56:55.596472",
+      "error": "HTTP 500: Internal Server Error"
+    },
+    {
+      "endpoint": "GET /api/v1/cases",
+      "status_code": 200,
+      "success": true,
+      "response_time_ms": 1.98,
+      "critical": true,
+      "description": "Get cases",
+      "response_data": {
+        "cases": [],
+        "total": 0
+      },
+      "timestamp": "2025-07-30T13:56:55.598491"
+    },
+    {
+      "endpoint": "GET /api/v1/rules",
+      "status_code": 200,
+      "success": true,
+      "response_time_ms": 21.88,
+      "critical": true,
+      "description": "Get rules",
+      "response_data": {
+        "data": [],
+        "message": "Query executed successfully. Use type-safe methods for data retrieval."
+      },
+      "timestamp": "2025-07-30T13:56:55.620405"
+    },
+    {
+      "endpoint": "GET /api/v1/dashboard",
+      "status_code": 200,
+      "success": true,
+      "response_time_ms": 14.82,
+      "critical": true,
+      "description": "Get dashboard",
+      "response_data": {
+        "total_events": 0,
+        "total_alerts": 0,
+        "alerts_over_time": [],
+        "top_log_sources": [],
+        "recent_alerts": []
+      },
+      "timestamp": "2025-07-30T13:56:55.635279"
+    },
+    {
+      "endpoint": "GET /api/v1/dashboard/kpis",
+      "status_code": 404,
+      "success": false,
+      "response_time_ms": 0.68,
+      "critical": true,
+      "description": "Dashboard KPIs",
+      "response_data": "No response body",
+      "timestamp": "2025-07-30T13:56:55.635993",
+      "error": "HTTP 404: Not Found"
+    },
+    {
+      "endpoint": "GET /api/v1/log-sources",
+      "status_code": 200,
+      "success": true,
+      "response_time_ms": 1.71,
+      "critical": true,
+      "description": "Get log sources",
+      "response_data": [],
+      "timestamp": "2025-07-30T13:56:55.637725"
+    },
+    {
+      "endpoint": "GET /api/v1/log_sources",
+      "status_code": 200,
+      "success": true,
+      "response_time_ms": 1.35,
+      "critical": true,
+      "description": "Get log sources (underscore)",
+      "response_data": [],
+      "timestamp": "2025-07-30T13:56:55.639108"
+    },
+    {
+      "endpoint": "GET /api/v1/log_sources/groups",
+      "status_code": 404,
+      "success": false,
+      "response_time_ms": 0.61,
+      "critical": true,
+      "description": "Log source groups",
+      "response_data": "No response body",
+      "timestamp": "2025-07-30T13:56:55.639744",
+      "error": "HTTP 404: Not Found"
+    },
+    {
+      "endpoint": "GET /api/v1/log_sources/stats",
+      "status_code": 404,
+      "success": false,
+      "response_time_ms": 0.47,
+      "critical": true,
+      "description": "Log source stats",
+      "response_data": "No response body",
+      "timestamp": "2025-07-30T13:56:55.640242",
+      "error": "HTTP 404: Not Found"
+    },
+    {
+      "endpoint": "GET /api/v1/log_sources/enhanced",
+      "status_code": 404,
+      "success": false,
+      "response_time_ms": 0.55,
+      "critical": true,
+      "description": "Enhanced log sources",
+      "response_data": "No response body",
+      "timestamp": "2025-07-30T13:56:55.640821",
+      "error": "HTTP 404: Not Found"
+    },
+    {
+      "endpoint": "GET /api/v1/fields/values",
+      "status_code": 400,
+      "success": false,
+      "response_time_ms": 0.54,
+      "critical": true,
+      "description": "Field values",
+      "response_data": "Query deserialize error: missing field `field`",
+      "timestamp": "2025-07-30T13:56:55.641397",
+      "error": "HTTP 400: Bad Request"
+    },
+    {
+      "endpoint": "GET /api/v1/fields/multiple-values",
+      "status_code": 404,
+      "success": false,
+      "response_time_ms": 0.44,
+      "critical": false,
+      "description": "Multiple field values",
+      "response_data": "No response body",
+      "timestamp": "2025-07-30T13:56:55.641858",
+      "error": "HTTP 404: Not Found"
+    },
+    {
+      "endpoint": "GET /api/v1/eps/stats",
+      "status_code": 404,
+      "success": false,
+      "response_time_ms": 0.37,
+      "critical": true,
+      "description": "EPS statistics",
+      "response_data": "No response body",
+      "timestamp": "2025-07-30T13:56:55.642252",
+      "error": "HTTP 404: Not Found"
+    },
+    {
+      "endpoint": "GET /api/v1/taxonomy/mappings",
+      "status_code": 500,
+      "success": false,
+      "response_time_ms": 1.88,
+      "critical": false,
+      "description": "Taxonomy mappings",
+      "response_data": {
+        "error": "Failed to retrieve taxonomy mappings"
+      },
+      "timestamp": "2025-07-30T13:56:55.644159",
+      "error": "HTTP 500: Internal Server Error"
+    },
+    {
+      "endpoint": "GET /api/v1/admin/logs",
+      "status_code": 404,
+      "success": false,
+      "response_time_ms": 0.56,
+      "critical": false,
+      "description": "System logs",
+      "response_data": "No response body",
+      "timestamp": "2025-07-30T13:56:55.644780",
+      "error": "HTTP 404: Not Found"
+    },
+    {
+      "endpoint": "GET /api/v1/admin/debug",
+      "status_code": 404,
+      "success": false,
+      "response_time_ms": 0.47,
+      "critical": false,
+      "description": "Debug information",
+      "response_data": "No response body",
+      "timestamp": "2025-07-30T13:56:55.645276",
+      "error": "HTTP 404: Not Found"
+    },
+    {
+      "endpoint": "GET /api/v1/roles",
+      "status_code": 200,
+      "success": true,
+      "response_time_ms": 0.54,
+      "critical": false,
+      "description": "Get roles",
+      "response_data": [
+        {
+          "description": "Full system access",
+          "role_name": "Admin"
+        },
+        {
+          "description": "Read and analyze events",
+          "role_name": "Analyst"
+        },
+        {
+          "description": "Read-only access",
+          "role_name": "Viewer"
+        }
+      ],
+      "timestamp": "2025-07-30T13:56:55.645843"
+    },
+    {
+      "endpoint": "GET /api/v1/assets/192.168.1.1",
+      "status_code": 404,
+      "success": false,
+      "response_time_ms": 1.53,
+      "critical": false,
+      "description": "Get asset by IP",
+      "response_data": {
+        "error": "Asset not found or access denied"
+      },
+      "timestamp": "2025-07-30T13:56:55.647395",
+      "error": "HTTP 404: Not Found"
+    }
+  ]
+}

@@ -28,7 +28,7 @@ import {
 
 // Create axios instance with base configuration
 const apiClient = axios.create({
-  baseURL: '/api/v1',
+  baseURL: `${import.meta.env.VITE_API_BASE}/api/v1`,
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json'
@@ -195,9 +195,9 @@ export const validatedApiService = {
   // Dashboard KPIs
   async getDashboardKPIs(): Promise<DashboardKPIsResponse> {
     return makeValidatedApiCall(
-      () => apiClient.get('/dashboard/kpis'),
+      () => apiClient.get('/dashboard'),
       DashboardKPIsResponseSchema,
-      'GET /dashboard/kpis'
+      'GET /dashboard'
     );
   },
 

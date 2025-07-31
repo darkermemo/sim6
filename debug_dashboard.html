@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug Dashboard API</title>
+</head>
+<body>
+    <h1>Dashboard API Debug</h1>
+    <div id="output"></div>
+    <button onclick="testAPI()">Test API Call</button>
+    <button onclick="checkLocalStorage()">Check localStorage</button>
+    <button onclick="testDirectProxy()">Test Direct Proxy</button>
+    
+    <script>
+        // Set the JWT token in localStorage
+        const token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ0ZXN0X3VzZXIiLCJ0ZW5hbnRfaWQiOiJkZWZhdWx0Iiwicm9sZXMiOlsidXNlciJdLCJpYXQiOjE3NTM5NTYzMDUsImV4cCI6MTc1Mzk1OTkwNSwiaXNzIjoic2llbS1hdXRoIiwiYXVkIjoic2llbS1zZWFyY2giLCJqdGkiOiJ0ZXN0LXRva2VuLWlkIn0.JVJTZqVMefZTFP3LBNEaWRsC3Fz90gxaC3_Qr50wTTU';
+        localStorage.setItem('access_token', token);
+        localStorage.setItem('tenant_id', 'default');
+        
+        console.log('=== INITIAL SETUP ===');
+        console.log('Token set in localStorage:', localStorage.getItem('access_token'));
+        console.log('Current URL:', window.location.href);
+        console.log('Current origin:', window.location.origin);
+        
+        function checkLocalStorage() {
+            const output = document.getElementById('output');
+            const token = localStorage.getItem('access_token');
+            const tenantId = localStorage.getItem('tenant_id');
+            
+            console.log('=== LOCALSTORAGE CHECK ===');
+            console.log('access_token:', token);
+            console.log('tenant_id:', tenantId);
+            
+            output.innerHTML = `
+                <h3>localStorage Contents:</h3>
+                <p><strong>access_token:</strong> ${token ? 'Present (' + token.substring(0, 50) + '...)' : 'Missing'}</p>
+                <p><strong>tenant_id:</strong> ${tenantId || 'Missing'}</p>
+            `;
+        }
+        
+        // Test the API call through the proxy
+        async function testAPI() {
+            const output = document.getElementById('output');
+            output.innerHTML = '<p>Testing API call through proxy...</p>';
+            
+            try {
+                console.log('=== API TEST THROUGH PROXY ===');
+                console.log('Making fetch request to /api/v1/dashboard');
+                
+                // Get fresh token from localStorage
+                const currentToken = localStorage.getItem('access_token');
+                console.log('Current token from localStorage:', currentToken);
+                
+                const headers = {
+                    'Authorization': `Bearer ${currentToken}`,
+                    'Content-Type': 'application/json'
+                };
+                
+                console.log('Request headers:', headers);
+                console.log('Request URL:', '/api/v1/dashboard');
+                console.log('Request method:', 'GET');
+                
+                // Create a detailed request log
+                const requestDetails = {
+                    url: '/api/v1/dashboard',
+                    method: 'GET',
+                    headers: headers,
+                    credentials: 'same-origin',
+                    timestamp: new Date().toISOString()
+                };
+                console.log('Full request details:', requestDetails);
+                
+                const response = await fetch('/api/v1/dashboard', {
+                    method: 'GET',
+                    headers: headers,
+                    credentials: 'same-origin'
+                });
+                
+                console.log('=== RESPONSE RECEIVED ===');
+                console.log('Response status:', response.status);
+                console.log('Response statusText:', response.statusText);
+                console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+                console.log('Response URL:', response.url);
+                console.log('Response type:', response.type);
+                console.log('Response redirected:', response.redirected);
+                console.log('Response ok:', response.ok);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log('Success data:', data);
+                    output.innerHTML = '<p style="color: green;">API call successful!</p><pre>' + JSON.stringify(data, null, 2) + '</pre>';
+                } else {
+                    const errorText = await response.text();
+                    console.error('Error response body:', errorText);
+                    console.error('Error response length:', errorText.length);
+                    output.innerHTML = `<p style="color: red;">API call failed: ${response.status} ${response.statusText}</p><pre>${errorText}</pre>`;
+                }
+            } catch (error) {
+                console.error('Fetch error:', error);
+                console.error('Error name:', error.name);
+                console.error('Error message:', error.message);
+                console.error('Error stack:', error.stack);
+                output.innerHTML = `<p style="color: red;">Fetch error: ${error.message}</p>`;
+            }
+        }
+        
+        // Test direct call to proxy server
+        async function testDirectProxy() {
+            const output = document.getElementById('output');
+            output.innerHTML = '<p>Testing direct proxy call...</p>';
+            
+            try {
+                console.log('=== DIRECT PROXY TEST ===');
+                console.log('Making fetch request to http://localhost:8090/api/v1/dashboard');
+                
+                const response = await fetch('http://localhost:8090/api/v1/dashboard', {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    mode: 'cors'
+                });
+                
+                console.log('=== DIRECT PROXY RESPONSE ===');
+                console.log('Response status:', response.status);
+                console.log('Response statusText:', response.statusText);
+                console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log('Direct proxy success:', data);
+                    output.innerHTML = '<p style="color: green;">Direct proxy call successful!</p><pre>' + JSON.stringify(data, null, 2) + '</pre>';
+                } else {
+                    const errorText = await response.text();
+                    console.error('Direct proxy error:', errorText);
+                    output.innerHTML = `<p style="color: red;">Direct proxy failed: ${response.status} ${response.statusText}</p><pre>${errorText}</pre>`;
+                }
+            } catch (error) {
+                console.error('Direct proxy fetch error:', error);
+                output.innerHTML = `<p style="color: red;">Direct proxy fetch error: ${error.message}</p>`;
+            }
+        }
+        
+        // Run initial check when page loads
+        window.onload = () => {
+            console.log('=== PAGE LOADED ===');
+            checkLocalStorage();
+        };
+    </script>
+</body>
+</html>

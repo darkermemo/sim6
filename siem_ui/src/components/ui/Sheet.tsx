@@ -1,5 +1,6 @@
 import React from 'react';
 import { clsx } from 'clsx';
+import { X } from 'lucide-react';
 
 interface SheetProps {
   open: boolean;
@@ -16,6 +17,8 @@ interface SheetContentProps {
 interface SheetHeaderProps {
   className?: string;
   children: React.ReactNode;
+  onClose?: () => void;
+  showCloseButton?: boolean;
 }
 
 interface SheetTitleProps {
@@ -71,6 +74,15 @@ export function Sheet({ open, onOpenChange, children }: SheetProps) {
       <div 
         className="fixed inset-0 bg-black/50 backdrop-blur-sm"
         onClick={() => onOpenChange(false)}
+        onKeyDown={(e) => {
+          if (e.key === 'Escape' || e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            onOpenChange(false);
+          }
+        }}
+        role="button"
+        tabIndex={0}
+        aria-label="Close sheet"
       />
       
       {/* Sheet container */}
@@ -81,27 +93,43 @@ export function Sheet({ open, onOpenChange, children }: SheetProps) {
   );
 }
 
-export function SheetContent({ className, children }: SheetContentProps) {
+export function SheetContent({ className, children, side = 'right' }: SheetContentProps) {
+  const sideClasses = {
+    right: 'slide-in-from-right border-l',
+    left: 'slide-in-from-left border-r',
+    top: 'slide-in-from-top border-b',
+    bottom: 'slide-in-from-bottom border-t'
+  };
+
   return (
     <div 
       role="dialog" 
       aria-modal="true"
       className={clsx(
-        'relative bg-white dark:bg-gray-900 shadow-xl h-full animate-in slide-in-from-right duration-300',
-        'overflow-hidden border-l border-gray-200 dark:border-gray-700',
+        'relative bg-white dark:bg-gray-900 shadow-xl h-full animate-in duration-300',
+        'overflow-hidden border-gray-200 dark:border-gray-700',
+        sideClasses[side],
         className
       )}
-      onClick={(e) => e.stopPropagation()}
     >
       {children}
     </div>
   );
 }
 
-export function SheetHeader({ className, children }: SheetHeaderProps) {
+export function SheetHeader({ className, children, onClose, showCloseButton = true }: SheetHeaderProps) {
   return (
-    <div className={clsx('flex-shrink-0', className)}>
+    <div className={clsx('flex-shrink-0 relative', className)}>
       {children}
+      {showCloseButton && onClose && (
+        <button
+          onClick={onClose}
+          className="absolute top-0 right-0 p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+          aria-label="Close"
+        >
+          <X className="h-5 w-5" />
+        </button>
+      )}
     </div>
   );
 }
@@ -120,4 +148,4 @@ export function SheetDescription({ className, children }: SheetDescriptionProps)
       {children}
     </p>
   );
-} 
+}

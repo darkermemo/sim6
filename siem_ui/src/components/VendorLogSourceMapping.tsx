@@ -536,8 +536,8 @@ ${selectedVendor.keyFields.map(field => `  - {name: ${field}, grok: "${field}=%{
                 </div>
                 <div className="bg-muted p-3 rounded font-mono text-sm">
                   curl -X POST http://localhost:8080/v1/logs/search \<br />
-                  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;-H "Content-Type: application/json" \<br />
-                  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;-d '{`{"source_type":"${selectedVendor.vendor.toLowerCase().replace(' ', '_')}","severity":"Critical"}`}'
+                  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;-H &quot;Content-Type: application/json&quot; \<br />
+                  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;-d &apos;{`{"source_type":"${selectedVendor.vendor.toLowerCase().replace(" ", "_")}","severity":"Critical"}`}&apos;
                 </div>
               </div>
             </div>

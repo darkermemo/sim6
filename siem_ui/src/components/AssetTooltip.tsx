@@ -15,9 +15,8 @@ interface AssetTooltipProps {
  */
 export function AssetTooltip({ ip, children, className }: AssetTooltipProps) {
   const [isHovered, setIsHovered] = useState(false);
-  const { data: assetInfo, isLoading, hasAsset } = useAssetApi(
-    isHovered ? ip : null,
-    isHovered
+  const { data: assetInfo, isLoading } = useAssetApi(
+    isHovered ? ip : null
   );
 
   const TooltipContent = () => {
@@ -30,7 +29,7 @@ export function AssetTooltip({ ip, children, className }: AssetTooltipProps) {
       );
     }
 
-    if (!hasAsset || !assetInfo) {
+    if (!assetInfo) {
       return (
         <div className="space-y-1">
           <div><span className="font-medium">IP:</span> {ip}</div>
@@ -42,14 +41,14 @@ export function AssetTooltip({ ip, children, className }: AssetTooltipProps) {
     return (
       <div className="space-y-1">
         <div><span className="font-medium">Asset:</span> {assetInfo.name}</div>
-        <div><span className="font-medium">Criticality:</span> 
-          <span className={`ml-1 ${
-            assetInfo.criticality === 'High' ? 'text-severity-critical' :
-            assetInfo.criticality === 'Medium' ? 'text-severity-medium' :
-            'text-severity-low'
-          }`}>
-            {assetInfo.criticality}
-          </span>
+        <div><span className="font-medium">Status:</span> 
+          <span className={`ml-1 ${ 
+            assetInfo.status === 'active' ? 'text-green-600' : 
+            assetInfo.status === 'inactive' ? 'text-red-600' : 
+            'text-yellow-600' 
+          }`}> 
+            {assetInfo.status} 
+          </span> 
         </div>
         <div><span className="font-medium">Type:</span> {assetInfo.type}</div>
         <div className="text-secondary-text text-xs">IP: {ip}</div>
@@ -69,4 +68,4 @@ export function AssetTooltip({ ip, children, className }: AssetTooltipProps) {
       </Tooltip>
     </div>
   );
-} 
+}

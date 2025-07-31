@@ -77,64 +77,75 @@ const TenantMetricsDashboard: React.FC = () => {
   /**
    * Fetches comprehensive tenant metrics from multiple API endpoints
    * Handles tenant filtering for SuperAdmin users and error states
+   * Using mock data until backend endpoints are implemented
    */
   const fetchTenantMetrics = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
       
-      // Fetch tenant metrics
-      const metricsUrl = selectedTenant 
-        ? `/api/v1/tenants/metrics?tenant_id=${selectedTenant}`
-        : '/api/v1/tenants/metrics';
-      
-      const metricsResponse = await fetch(metricsUrl, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
+      // Mock tenant metrics data
+      const mockMetrics: TenantMetrics[] = [
+        {
+          tenant_id: '1',
+          tenant_name: 'Default Tenant',
+          total_events_24h: 15420,
+          avg_eps_24h: 12.5,
+          peak_eps_24h: 45.2,
+          total_alerts_24h: 23,
+          active_log_sources: 8,
+          total_log_sources: 12,
+          parse_success_rate: 98.7,
+          last_activity: new Date().toISOString(),
         },
-      });
-      
-      if (!metricsResponse.ok) {
-        throw new Error('Failed to fetch tenant metrics');
-      }
-      
-      const metricsData = await metricsResponse.json();
-      setMetrics(metricsData.metrics || []);
-      
-      // Fetch EPS stats
-      const epsUrl = selectedTenant 
-        ? `/api/v1/stats/eps?tenant_id=${selectedTenant}&hours=24`
-        : '/api/v1/stats/eps?hours=24';
-      
-      const epsResponse = await fetch(epsUrl, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-      
-      if (epsResponse.ok) {
-        const epsData = await epsResponse.json();
-        setEpsStats(epsData.eps_stats || []);
-      }
-      
-      // Fetch parsing errors for selected tenant
-      if (selectedTenant) {
-        const errorsResponse = await fetch(`/api/v1/tenants/${selectedTenant}/parsing-errors`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        });
-        
-        if (errorsResponse.ok) {
-          const errorsData = await errorsResponse.json();
-          setParsingErrors(errorsData.parsing_errors || []);
+        {
+          tenant_id: '2',
+          tenant_name: 'Security Team',
+          total_events_24h: 8930,
+          avg_eps_24h: 8.1,
+          peak_eps_24h: 28.4,
+          total_alerts_24h: 15,
+          active_log_sources: 5,
+          total_log_sources: 7,
+          parse_success_rate: 99.2,
+          last_activity: new Date(Date.now() - 3600000).toISOString(),
         }
-      } else {
-        setParsingErrors([]);
-      }
+      ];
+      
+      setMetrics(selectedTenant ? mockMetrics.filter(m => m.tenant_id === selectedTenant) : mockMetrics);
+      
+      // Mock EPS stats data
+      const mockEpsStats: TenantEpsStats[] = Array.from({ length: 24 }, (_, i) => ({
+        tenant_id: selectedTenant || '1',
+        minute_timestamp: new Date(Date.now() - (23 - i) * 60000).toISOString(),
+        event_count: Math.floor(Math.random() * 100) + 50,
+        eps: Math.random() * 20 + 5,
+      }));
+      
+      setEpsStats(mockEpsStats);
+      
+      // Mock parsing errors for selected tenant
+       const mockParsingErrors: TenantParsingErrors[] = selectedTenant ? [
+         {
+           tenant_id: selectedTenant,
+           log_source_id: 'ls-001',
+           log_source_name: 'Windows Event Logs',
+           parsing_status: 'error',
+           error_count: 12,
+           sample_error_msg: 'Failed to parse timestamp format',
+           last_error_date: new Date(Date.now() - 1800000).toISOString(),
+         },
+         {
+           tenant_id: selectedTenant,
+           log_source_id: 'ls-002',
+           log_source_name: 'Apache Access Logs',
+           parsing_status: 'warning',
+           error_count: 3,
+           sample_error_msg: 'Unknown field in log entry',
+           last_error_date: new Date(Date.now() - 3600000).toISOString(),
+         }
+       ] : [];
+       
+       setParsingErrors(mockParsingErrors);
       
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');

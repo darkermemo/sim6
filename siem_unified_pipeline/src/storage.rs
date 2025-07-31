@@ -11,6 +11,7 @@ use redis::{Client as RedisClient, Commands};
 use tokio::fs::OpenOptions;
 use tokio::io::AsyncWriteExt;
 use reqwest::Client as HttpClient;
+use regex::Regex;
 
 #[cfg(feature = "aws")]
 use aws_sdk_s3::Client as S3Client;
@@ -211,6 +212,10 @@ impl StorageManager {
     }
     
     async fn create_clickhouse_table(&self, client: &ClickHouseClient, table_name: &str) -> Result<()> {
+        // Validate table name to prevent SQL injection
+        let validated_table_name = Self::validate_table_name(table_name)
+            .map_err(|e| PipelineError::validation(format!("Invalid table name '{}': {}", table_name, e)))?;
+        
         let create_table_sql = format!(
             r#"
             CREATE TABLE IF NOT EXISTS {} (
@@ -236,14 +241,44 @@ impl StorageManager {
             ORDER BY (timestamp, source, severity)
             SETTINGS index_granularity = 8192
             "#,
-            table_name
+            validated_table_name
         );
         
         client.query(&create_table_sql).execute().await
             .map_err(|e| PipelineError::database(format!("Failed to create ClickHouse table: {}", e)))?;
         
-        info!("ClickHouse table '{}' created/verified", table_name);
+        info!("ClickHouse table '{}' created/verified", validated_table_name);
         Ok(())
+    }
+    
+    /// Validate table name to prevent SQL injection
+    fn validate_table_name(table_name: &str) -> Result<String> {
+        // Only allow alphanumeric characters, underscores, and dots
+        let valid_pattern = Regex::new(r"^[a-zA-Z0-9_\.]+$").unwrap();
+        
+        if table_name.is_empty() {
+            return Err(PipelineError::validation("Table name cannot be empty".to_string()));
+        }
+        
+        if table_name.len() > 64 {
+            return Err(PipelineError::validation("Table name too long (max 64 characters)".to_string()));
+        }
+        
+        if !valid_pattern.is_match(table_name) {
+            return Err(PipelineError::validation("Table name contains invalid characters".to_string()));
+        }
+        
+        // Prevent SQL keywords and dangerous patterns
+        let dangerous_keywords = ["DROP", "DELETE", "INSERT", "UPDATE", "CREATE", "ALTER", "TRUNCATE"];
+        let upper_table = table_name.to_uppercase();
+        
+        for keyword in &dangerous_keywords {
+            if upper_table.contains(keyword) {
+                return Err(PipelineError::validation("Table name contains dangerous SQL keyword".to_string()));
+            }
+        }
+        
+        Ok(table_name.to_string())
     }
     
     async fn initialize_kafka(&self, dest_name: &str, dest_config: &DataDestination) -> Result<()> {
@@ -759,6 +794,114 @@ impl StorageManager {
             "total_destinations": total_destinations,
             "avg_storage_time_ms": avg_storage_time,
             "destinations": stats
+        })
+    }
+    
+    pub async fn search_events(
+        &self,
+        search_query: &crate::models::SearchQuery,
+    ) -> Result<crate::models::SearchResult<crate::models::Event>> {
+        let query_start = std::time::Instant::now();
+        info!("Searching events with ClickHouse query: {:?}", search_query);
+        // Get the first available ClickHouse client
+        let clients_guard = self.clickhouse_clients.read().await;
+        let client = clients_guard.values().next()
+            .ok_or_else(|| PipelineError::not_found("No ClickHouse client available".to_string()))?;
+        
+        // Build the ClickHouse query
+        let mut query = "SELECT * FROM events WHERE 1=1".to_string();
+        let mut count_query = "SELECT COUNT(*) FROM events WHERE 1=1".to_string();
+        
+        // Add time range filter
+        query.push_str(&format!(" AND timestamp >= '{}'", search_query.time_range.start.format("%Y-%m-%d %H:%M:%S")));
+        query.push_str(&format!(" AND timestamp <= '{}'", search_query.time_range.end.format("%Y-%m-%d %H:%M:%S")));
+        count_query.push_str(&format!(" AND timestamp >= '{}'", search_query.time_range.start.format("%Y-%m-%d %H:%M:%S")));
+        count_query.push_str(&format!(" AND timestamp <= '{}'", search_query.time_range.end.format("%Y-%m-%d %H:%M:%S")));
+        
+        // Add filters
+        for (field, value) in &search_query.filters {
+            if let Some(val) = value.as_str() {
+                match field.as_str() {
+                    "source" | "source_type" | "severity" | "hostname" => {
+                        query.push_str(&format!(" AND {} = '{}'", field, val));
+                        count_query.push_str(&format!(" AND {} = '{}'", field, val));
+                    }
+                    _ => {}
+                }
+            }
+        }
+        
+        // Add text search
+        if !search_query.query.is_empty() {
+            query.push_str(&format!(" AND (message LIKE '%{}%' OR raw_message LIKE '%{}%')", search_query.query, search_query.query));
+            count_query.push_str(&format!(" AND (message LIKE '%{}%' OR raw_message LIKE '%{}%')", search_query.query, search_query.query));
+        }
+        
+        // Add sorting
+        if let Some(sort_field) = &search_query.sort_by {
+            let order = match search_query.sort_order {
+                crate::models::SortOrder::Asc => "ASC",
+                crate::models::SortOrder::Desc => "DESC",
+            };
+            query.push_str(&format!(" ORDER BY {} {}", sort_field, order));
+        } else {
+            query.push_str(" ORDER BY timestamp DESC");
+        }
+        
+        // Add pagination
+        query.push_str(&format!(" LIMIT {} OFFSET {}", search_query.limit, search_query.offset));
+        
+        // Execute count query
+        let total_count: u64 = client.query(&count_query)
+            .fetch_one::<u64>()
+            .await
+            .map_err(|e| PipelineError::database(format!("Failed to execute count query: {}", e)))?;
+        
+        // Execute main query
+        let siem_events: Vec<SiemEvent> = client.query(&query)
+            .fetch_all::<SiemEvent>()
+            .await
+            .map_err(|e| PipelineError::database(format!("Failed to execute search query: {}", e)))?;
+        
+        // Convert SiemEvent to Event
+        let events: Vec<crate::models::Event> = siem_events.into_iter().map(|siem_event| {
+            crate::models::Event {
+                id: uuid::Uuid::parse_str(&siem_event.id).unwrap_or_else(|_| uuid::Uuid::new_v4()),
+                timestamp: siem_event.timestamp,
+                source: siem_event.source,
+                source_type: siem_event.source_type,
+                severity: siem_event.severity,
+                facility: siem_event.facility,
+                hostname: siem_event.hostname,
+                process: siem_event.process,
+                message: siem_event.message,
+                raw_message: siem_event.raw_message,
+                source_ip: siem_event.source_ip,
+                source_port: siem_event.source_port as i32, // Convert u16 to i32
+                protocol: siem_event.protocol,
+                tags: siem_event.tags,
+                fields: serde_json::from_str(&siem_event.fields).unwrap_or_default(),
+                processing_stage: siem_event.processing_stage,
+                created_at: siem_event.created_at,
+                updated_at: siem_event.created_at, // Use created_at as default for updated_at
+            }
+        }).collect();
+        
+        let current_page = (search_query.offset / search_query.limit) + 1;
+        let total_pages = (total_count as f64 / search_query.limit as f64).ceil() as u32;
+        
+        Ok(crate::models::SearchResult {
+            items: events,
+            total_count: total_count as i64,
+            page_info: crate::models::PageInfo {
+                current_page,
+                total_pages,
+                page_size: search_query.limit,
+                has_next: current_page < total_pages,
+                has_previous: search_query.offset > 0,
+            },
+            aggregations: None,
+            query_time_ms: query_start.elapsed().as_millis() as f64,
         })
     }
     

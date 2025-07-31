@@ -3,7 +3,22 @@
 # SIEM System Startup Script
 # Starts all SIEM components in the correct order with dependency checks
 
-LOG_FILE="/Users/yasseralmohammed/sim6/startup.log"
+set -e
+
+# Load environment variables
+if [ -f ".env" ]; then
+    export $(grep -v '^#' .env | xargs)
+fi
+
+# Configuration
+PROJECT_ROOT=${PROJECT_ROOT:-"/Users/yasseralmohammed/sim6"}
+LOGS_DIR=${LOGS_DIR:-"${PROJECT_ROOT}/logs"}
+LOG_FILE="${PROJECT_ROOT}/startup.log"
+MAX_WAIT_TIME=60
+SLEEP_INTERVAL=5
+API_URL=${API_URL:-"http://localhost:8080"}
+CLICKHOUSE_URL=${CLICKHOUSE_URL:-"http://localhost:8123"}
+UI_PORT=${VITE_PORT:-"3001"}
 
 # Function to log messages
 log_message() {
@@ -35,7 +50,7 @@ wait_for_service() {
 }
 
 # Create logs directory
-mkdir -p /Users/yasseralmohammed/sim6/logs
+mkdir -p "${LOGS_DIR}"
 
 log_message "Starting SIEM system..."
 
@@ -54,16 +69,16 @@ if ! pgrep -f "clickhouse server" > /dev/null; then
 fi
 
 # 3. Wait for ClickHouse to be ready
-wait_for_service "ClickHouse" "curl -s 'http://localhost:8123/' --data 'SELECT 1'"
+wait_for_service "ClickHouse" "curl -s '${CLICKHOUSE_URL}/' --data 'SELECT 1'"
 if [ $? -ne 0 ]; then
     exit 1
 fi
 
 # 4. Start SIEM Ingestor
 log_message "Starting SIEM Ingestor..."
-cd /Users/yasseralmohammed/sim6/siem_ingestor
+cd "${PROJECT_ROOT}/siem_ingestor"
 if ! pgrep -f "siem_ingestor" > /dev/null; then
-    nohup cargo run --release > /Users/yasseralmohammed/sim6/logs/siem_ingestor.log 2>&1 &
+    nohup cargo run --release > "${LOGS_DIR}/siem_ingestor.log" 2>&1 &
     sleep 5
 else
     log_message "SIEM Ingestor is already running"
@@ -71,9 +86,9 @@ fi
 
 # 5. Start SIEM Consumer
 log_message "Starting SIEM Consumer..."
-cd /Users/yasseralmohammed/sim6/siem_consumer
+cd "${PROJECT_ROOT}/siem_consumer"
 if ! pgrep -f "siem_consumer" > /dev/null; then
-    nohup cargo run --release > /Users/yasseralmohammed/sim6/logs/siem_consumer.log 2>&1 &
+    nohup cargo run --release > "${LOGS_DIR}/siem_consumer.log" 2>&1 &
     sleep 5
 else
     log_message "SIEM Consumer is already running"
@@ -81,45 +96,45 @@ fi
 
 # 6. Start SIEM API
 log_message "Starting SIEM API..."
-cd /Users/yasseralmohammed/sim6/siem_api
+cd "${PROJECT_ROOT}/siem_api"
 if ! pgrep -f "siem_api" > /dev/null; then
-    nohup cargo run --release > /Users/yasseralmohammed/sim6/logs/siem_api.log 2>&1 &
+    nohup cargo run --release > "${LOGS_DIR}/siem_api.log" 2>&1 &
     sleep 5
 else
     log_message "SIEM API is already running"
 fi
 
 # 7. Wait for SIEM API to be ready
-wait_for_service "SIEM API" "curl -s 'http://localhost:8080/api/v1/health'"
+wait_for_service "SIEM API" "curl -s '${API_URL}/api/v1/health'"
 if [ $? -ne 0 ]; then
     exit 1
 fi
 
 # 8. Generate fresh JWT token
 log_message "Generating fresh JWT token..."
-/Users/yasseralmohammed/sim6/generate_fresh_token.sh
+"${PROJECT_ROOT}/generate_fresh_token.sh"
 
 # 9. Start SIEM UI
 log_message "Starting SIEM UI..."
-cd /Users/yasseralmohammed/sim6/siem_ui
+cd "${PROJECT_ROOT}/siem_ui"
 if ! pgrep -f "npm.*dev" > /dev/null; then
-    nohup npm run dev > /Users/yasseralmohammed/sim6/logs/siem_ui.log 2>&1 &
+    nohup npm run dev > "${LOGS_DIR}/siem_ui.log" 2>&1 &
     sleep 10
 else
     log_message "SIEM UI is already running"
 fi
 
 # 10. Wait for SIEM UI to be ready
-wait_for_service "SIEM UI" "curl -s 'http://localhost:3004/'"
+wait_for_service "SIEM UI" "curl -s 'http://localhost:${UI_PORT}/'"
 if [ $? -ne 0 ]; then
     exit 1
 fi
 
 # 11. Run system health check
 log_message "Running system health check..."
-/Users/yasseralmohammed/sim6/system_health_check.sh
+"${PROJECT_ROOT}/system_health_check.sh"
 
 log_message "SIEM system startup complete!"
-log_message "Access the UI at: http://localhost:3004/"
-log_message "API available at: http://localhost:8080/"
+log_message "Access the UI at: http://localhost:${UI_PORT}/"
+log_message "API available at: ${API_URL}/"
 log_message "To monitor the system continuously, run: ./monitor_and_restart.sh &"

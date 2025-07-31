@@ -57,7 +57,6 @@ prefix = "siem-production"
 # Configuration files to backup
 config_paths = [
     "/etc/siem",
-    "./docker-compose.yml",
     "./haproxy.cfg",
     "./siem_api/src",
     "./siem_consumer/src",
@@ -80,4 +79,4 @@ compression_level = 6
 # Optional: Encryption configuration
 # [encryption]
 # key = "base64-encoded-encryption-key"
-# algorithm = "AES-256-GCM" 
+# algorithm = "AES-256-GCM"

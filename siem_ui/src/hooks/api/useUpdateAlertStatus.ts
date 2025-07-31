@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useSWRConfig } from 'swr';
 import { apiClient } from '@/services/api';
 import { useToast } from '@/hooks/useToast';
-import type { DashboardResponse } from '@/types/api';
+import type { DashboardResponse, RecentAlert } from '@/types/api';
 
 /**
  * Hook for updating alert status with optimistic updates
@@ -38,7 +38,7 @@ export function useUpdateAlertStatus() {
 
             return {
               ...data,
-              recentAlerts: data.recentAlerts.map(alert =>
+              recent_alerts: data.recent_alerts.map((alert: RecentAlert) =>
                 alert.id === alertId
                   ? { ...alert, status: newStatus as any }
                   : alert
@@ -49,8 +49,8 @@ export function useUpdateAlertStatus() {
         );
       }
 
-      // Make API call
-      const response = await apiClient.patch(`/api/v1/alerts/${alertId}/status`, {
+      // Make API call - using correct endpoint from backend
+      const response = await apiClient.patch(`/api/v1/alerts/${alertId}`, {
         status: newStatus
       });
 
@@ -190,4 +190,4 @@ export function useBatchUpdateAlertStatus() {
     /** Progress percentage (0-100) */
     progress,
   };
-} 
+}

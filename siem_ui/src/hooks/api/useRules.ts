@@ -1,11 +1,37 @@
 import useSWR from 'swr';
 import { useState, useMemo } from 'react';
 import { useAuthStore } from '@/stores/authStore';
-import { rulesApi } from '@/services/api';
-import type { Rule, RuleFilters, CreateRuleRequest, UpdateRuleRequest, CreateSigmaRuleResponse } from '@/types/api';
+import { validatedFetch } from '../useValidatedApi';
+import { RoutingRuleSchema, type RoutingRule } from '@/schemas/api-validation';
+import { z } from 'zod';
+import type { RuleFilters } from '@/types/api';
+
+// Additional Zod schemas for rule operations
+const CreateRuleRequestSchema = z.object({
+  name: z.string().min(1),
+  description: z.string().optional(),
+  condition: z.string().min(1),
+  severity: z.enum(['low', 'medium', 'high', 'critical']),
+  enabled: z.boolean().default(true),
+});
+
+const UpdateRuleRequestSchema = CreateRuleRequestSchema.partial();
+
+const CreateSigmaRuleResponseSchema = z.object({
+  id: z.string().uuid(),
+  message: z.string(),
+});
+
+type CreateRuleRequest = z.infer<typeof CreateRuleRequestSchema>;
+type UpdateRuleRequest = z.infer<typeof UpdateRuleRequestSchema>;
+type CreateSigmaRuleResponse = z.infer<typeof CreateSigmaRuleResponseSchema>;
+type Rule = RoutingRule; // Use RoutingRule as the base Rule type
+
+const RulesListSchema = z.array(RoutingRuleSchema);
 
 /**
  * Hook to fetch all rules with optional filtering
+ * Uses validatedFetch with Zod validation and corrected API base URL
  * 
  * Critical Quality Gate Rule 3: Infinite Loop Prevention
  * Critical Quality Gate Rule 4: Security-First Development
@@ -15,7 +41,7 @@ export function useRules(filters?: RuleFilters) {
 
   // Stabilize the SWR key to prevent infinite re-renders
   const key = useMemo(() => {
-    return filters ? [`/api/v1/rules`, JSON.stringify(filters)] : '/api/v1/rules';
+    return filters ? [`/routing-rules`, JSON.stringify(filters)] : '/routing-rules';
   }, [
     filters?.page,
     filters?.limit,
@@ -28,7 +54,7 @@ export function useRules(filters?: RuleFilters) {
 
   const { data, error, isLoading, mutate } = useSWR(
     shouldFetch ? key : null, // Conditional fetching prevents infinite loops
-    shouldFetch ? () => rulesApi.getRules(filters) : null,
+    shouldFetch ? () => fetchRulesWithValidation(filters, accessToken) : null,
     {
       refreshInterval: shouldFetch ? 30000 : 0, // Only refresh when authenticated
       revalidateOnFocus: shouldFetch ? true : false,
@@ -54,13 +80,37 @@ export function useRules(filters?: RuleFilters) {
   );
 
   return {
-    rules: shouldFetch ? (data?.data || []) : [],
-    total: shouldFetch ? (data?.total || 0) : 0,
+    rules: shouldFetch ? (data || []) : [],
+    total: shouldFetch ? (data?.length || 0) : 0,
     isLoading: shouldFetch ? isLoading : false,
     error: shouldFetch ? error : null,
     refresh: shouldFetch ? mutate : () => Promise.resolve(),
     isAuthenticated: shouldFetch,
   };
+}
+
+/**
+ * Fetch rules from API with Zod validation
+ * Uses the updated VITE_API_BASE environment variable
+ */
+async function fetchRulesWithValidation(filters?: RuleFilters, token?: string): Promise<RoutingRule[]> {
+  const params = new URLSearchParams();
+  if (filters?.page) params.append('page', filters.page.toString());
+  if (filters?.limit) params.append('limit', filters.limit.toString());
+  if (filters?.search) params.append('search', filters.search);
+  if (filters?.is_active !== undefined) params.append('is_active', filters.is_active.toString());
+  
+  const url = `/routing-rules${params.toString() ? `?${params.toString()}` : ''}`;
+  
+  return validatedFetch(
+    url,
+    RulesListSchema,
+    {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    }
+  );
 }
 
 /**
@@ -72,7 +122,7 @@ export function useRule(ruleId: string | null) {
 
   const { data, error, isLoading, mutate } = useSWR(
     shouldFetch ? ['rule', ruleId] : null,
-    shouldFetch ? () => rulesApi.getRule(ruleId!) : null,
+    shouldFetch ? () => fetchSingleRule(ruleId!, accessToken!) : null,
     {
       revalidateOnFocus: false,
       errorRetryCount: shouldFetch ? 2 : 0,
@@ -111,7 +161,7 @@ export function useCreateRule() {
     setError(null);
     
     try {
-      const result = await rulesApi.createRule(ruleData);
+      const result = await createRuleWithValidation(ruleData, accessToken);
       return result;
     } catch (err) {
       const error = err instanceof Error ? err : new Error('Failed to create rule');
@@ -142,7 +192,7 @@ export function useCreateSigmaRule() {
     setError(null);
     
     try {
-      const result = await rulesApi.createSigmaRule(sigmaYaml);
+      const result = await createSigmaRuleWithValidation(sigmaYaml, accessToken);
       return result;
     } catch (err) {
       const error = err instanceof Error ? err : new Error('Failed to create Sigma rule');
@@ -173,7 +223,7 @@ export function useUpdateRule() {
     setError(null);
     
     try {
-      const result = await rulesApi.updateRule(ruleId, updates);
+      const result = await updateRuleWithValidation(ruleId, updates, accessToken);
       return result;
     } catch (err) {
       const error = err instanceof Error ? err : new Error('Failed to update rule');
@@ -204,7 +254,7 @@ export function useToggleRule() {
     setError(null);
     
     try {
-      const result = await rulesApi.toggleRule(ruleId, enabled);
+      const result = await toggleRuleWithValidation(ruleId, enabled, accessToken);
       return result;
     } catch (err) {
       const error = err instanceof Error ? err : new Error('Failed to toggle rule');
@@ -235,7 +285,7 @@ export function useDeleteRule() {
     setError(null);
     
     try {
-      await rulesApi.deleteRule(ruleId);
+      await deleteRuleWithValidation(ruleId, accessToken);
     } catch (err) {
       const error = err instanceof Error ? err : new Error('Failed to delete rule');
       setError(error);
@@ -246,4 +296,91 @@ export function useDeleteRule() {
   };
 
   return { deleteRule, isLoading, error, isAuthenticated };
-} 
+}
+
+// Helper functions for API calls with validation
+
+async function fetchSingleRule(ruleId: string, token: string): Promise<RoutingRule> {
+  return validatedFetch(
+    `/routing-rules/${ruleId}`,
+    RoutingRuleSchema,
+    {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    }
+  );
+}
+
+async function createRuleWithValidation(ruleData: CreateRuleRequest, token: string): Promise<RoutingRule> {
+  return validatedFetch(
+    '/routing-rules',
+    RoutingRuleSchema,
+    {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(ruleData),
+    }
+  );
+}
+
+async function createSigmaRuleWithValidation(sigmaYaml: string, token: string): Promise<CreateSigmaRuleResponse> {
+  return validatedFetch(
+    '/routing-rules/sigma',
+    CreateSigmaRuleResponseSchema,
+    {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ sigma_yaml: sigmaYaml }),
+    }
+  );
+}
+
+async function updateRuleWithValidation(ruleId: string, updates: UpdateRuleRequest, token: string): Promise<RoutingRule> {
+  return validatedFetch(
+    `/routing-rules/${ruleId}`,
+    RoutingRuleSchema,
+    {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(updates),
+    }
+  );
+}
+
+async function toggleRuleWithValidation(ruleId: string, enabled: boolean, token: string): Promise<RoutingRule> {
+  return validatedFetch(
+    `/routing-rules/${ruleId}/toggle`,
+    RoutingRuleSchema,
+    {
+      method: 'PATCH',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ enabled }),
+    }
+  );
+}
+
+async function deleteRuleWithValidation(ruleId: string, token: string): Promise<void> {
+  await validatedFetch(
+    `/routing-rules/${ruleId}`,
+    z.object({}), // Empty response schema for delete
+    {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    }
+  );
+}

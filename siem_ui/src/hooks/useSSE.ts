@@ -104,17 +104,17 @@ function handleSSEMessage(data: SSEEvent, alertId: string) {
           (currentNotes: AlertNote[] = []) => {
             // Check if note already exists (avoid duplicates)
             const exists = currentNotes.some(
-              note => note.note_id === data.payload.id
+              note => note.note_id === data.payload!.note_id
             );
             
             if (!exists) {
               const newNote: AlertNote = {
-                note_id: data.payload.id,
+                note_id: data.payload!.note_id,
                 alert_id: alertId,
-                tenant_id: data.payload.tenant_id || '',
-                author: data.payload.author,
-                content: data.payload.content,
-                created_at: Math.floor(new Date(data.payload.created_at).getTime() / 1000),
+                tenant_id: data.payload!.tenant_id || '',
+                author: data.payload!.author,
+                content: data.payload!.content,
+                created_at: Math.floor(new Date(data.payload!.created_at).getTime() / 1000),
               };
               return [newNote, ...currentNotes];
             }
@@ -141,9 +141,9 @@ function handleSSEMessage(data: SSEEvent, alertId: string) {
 export function useAlertNotesSSE(alertId: string | null, enabled = true) {
   const sseUrl = useMemo(() => {
     return alertId && enabled 
-      ? `${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/v1/alerts/${alertId}/notes/stream`
+      ? `${import.meta.env.VITE_API_BASE || 'http://localhost:8090'}/api/v1/alerts/${alertId}/notes/stream`
       : null;
   }, [alertId, enabled]);
 
   return useSSE(sseUrl, alertId, { enabled });
-} 
+}

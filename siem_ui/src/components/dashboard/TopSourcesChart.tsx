@@ -17,12 +17,12 @@ interface TopSourcesChartProps {
 export function TopSourcesChart({ data = [] }: TopSourcesChartProps) {
   // Add colors and percentages for display
   const colors = ['#3b82f6', '#ef4444', '#f97316', '#eab308', '#22c55e', '#a855f7'];
-  const total = data.reduce((sum, item) => sum + item.value, 0);
+  const total = data.reduce((sum, item) => sum + item.count, 0);
   
   const chartData = data.map((item, index) => ({
     ...item,
     color: colors[index % colors.length],
-    percentage: total > 0 ? ((item.value / total) * 100).toFixed(1) : '0',
+    percentage: total > 0 ? ((item.count / total) * 100).toFixed(1) : '0',
   }));
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
@@ -105,4 +105,4 @@ export function TopSourcesChart({ data = [] }: TopSourcesChartProps) {
       </ResponsiveContainer>
     </Card>
   );
-} 
+}

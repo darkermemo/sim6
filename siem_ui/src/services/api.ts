@@ -13,7 +13,7 @@ import type {
  * Automatically adds Authorization header and handles token refresh
  */
 export const apiClient: AxiosInstance = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE || 'http://localhost:8080',
+  // Remove baseURL to use Vite proxy for API calls
   timeout: 30000,
   headers: {
     'Content-Type': 'application/json',

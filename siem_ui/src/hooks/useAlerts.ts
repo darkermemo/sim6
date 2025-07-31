@@ -50,30 +50,63 @@ export const useAlerts = (): UseAlertsResult => {
       setLoading(true);
       setError(null);
       
-      const response = await fetch('/api/v1/alerts', {
+      // Fetch events from the events endpoint instead of alerts
+      const response = await fetch('/api/v1/events', {
         headers: getAuthHeaders(),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to fetch alerts');
+        throw new Error('Failed to fetch events');
       }
 
       const data = await response.json();
-      // Handle both direct array response and wrapped response
-      const alertsArray = Array.isArray(data) ? data : (data.data || []);
       
-      // Validate and sanitize alert data
-      const validatedAlerts = alertsArray.filter((alert: any) => {
-        return alert && typeof alert === 'object' && alert.alert_id;
-      }).map((alert: any) => ({
-        ...alert,
-        alert_id: alert.alert_id || 'unknown',
-        rule_name: alert.rule_name || 'Unknown Rule',
-        severity: alert.severity || 'low',
-        status: alert.status || 'open'
-      }));
+      // Extract events from the search response structure
+      let eventsArray: any[] = [];
+      if (data.hits && Array.isArray(data.hits.hits)) {
+        // Standard search response format
+        eventsArray = data.hits.hits.map((hit: any) => hit.source || hit._source || hit);
+      } else if (Array.isArray(data)) {
+        // Direct array response
+        eventsArray = data;
+      } else if (data.events && Array.isArray(data.events)) {
+        // Events wrapped in events property
+        eventsArray = data.events;
+      }
       
-      setAlerts(validatedAlerts);
+      // Transform Event data to Alert format and filter for alert-worthy events
+      const transformedAlerts = eventsArray
+        .filter((event: any) => {
+          // Filter for events that represent alerts (have severity indicating alert level)
+          return event && 
+                 typeof event === 'object' && 
+                 event.event_id && 
+                 event.severity && 
+                 ['critical', 'high', 'medium'].includes(event.severity.toLowerCase());
+        })
+        .map((event: any) => {
+          // Transform Event to Alert interface
+          const alertTimestamp = event.event_timestamp 
+            ? (typeof event.event_timestamp === 'string' 
+                ? new Date(event.event_timestamp).getTime() 
+                : event.event_timestamp * 1000) // Convert Unix timestamp to milliseconds
+            : Date.now();
+            
+          return {
+            alert_id: event.event_id,
+            id: event.event_id,
+            tenant_id: event.tenant_id || '',
+            rule_id: event.rule_id || '',
+            rule_name: event.message || 'Unknown Alert', // Use message as rule name
+            event_id: event.event_id,
+            alert_timestamp: alertTimestamp,
+            severity: event.severity || 'low',
+            status: 'New', // Default status since Event doesn't have status
+            created_at: alertTimestamp
+          } as Alert;
+        });
+      
+      setAlerts(transformedAlerts);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch alerts');
     } finally {

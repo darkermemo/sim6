@@ -158,12 +158,13 @@ export function RecentAlertsList({
                  <td className="py-3 px-4">
                    <div className="flex items-center space-x-2">
                      <button
-                       onClick={stopPropagation(() => handlePivotClick('Source IP', alert.source_ip))}
+                       onClick={stopPropagation(() => handlePivotClick('Source IP', alert.source_ip || 'N/A'))}
                        className="text-accent hover:text-blue-400 hover:underline text-sm font-mono transition-colors"
+                       disabled={!alert.source_ip}
                      >
-                       {alert.source_ip}
+                       {alert.source_ip || 'N/A'}
                      </button>
-                     <AssetTooltip ip={alert.source_ip} />
+                     {alert.source_ip && <AssetTooltip ip={alert.source_ip} />}
                    </div>
                  </td>
 
@@ -171,12 +172,13 @@ export function RecentAlertsList({
                  <td className="py-3 px-4">
                    <div className="flex items-center space-x-2">
                      <button
-                       onClick={stopPropagation(() => handlePivotClick('Destination IP', alert.dest_ip))}
+                       onClick={stopPropagation(() => handlePivotClick('Destination IP', alert.dest_ip || 'N/A'))}
                        className="text-accent hover:text-blue-400 hover:underline text-sm font-mono transition-colors"
+                       disabled={!alert.dest_ip}
                      >
-                       {alert.dest_ip}
+                       {alert.dest_ip || 'N/A'}
                      </button>
-                     <AssetTooltip ip={alert.dest_ip} />
+                     {alert.dest_ip && <AssetTooltip ip={alert.dest_ip} />}
                    </div>
                  </td>
 

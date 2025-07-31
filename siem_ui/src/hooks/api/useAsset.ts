@@ -1,77 +1,125 @@
-import { useState, useEffect } from 'react';
 import useSWR from 'swr';
-import { assetsApi } from '@/services/api';
-import type { AssetInfo } from '@/types/api';
+import { validatedFetch } from '../useValidatedApi';
+import { z } from 'zod';
+
+// Zod schema for asset
+const AssetSchema = z.object({
+  id: z.string().uuid(),
+  name: z.string(),
+  type: z.string(),
+  ip_address: z.string().optional(),
+  hostname: z.string().optional(),
+  os: z.string().optional(),
+  status: z.enum(['active', 'inactive', 'unknown']),
+  last_seen: z.string().datetime().optional(),
+  created_at: z.string().datetime(),
+  updated_at: z.string().datetime().optional(),
+}).transform((data) => ({
+  id: data.id,
+  name: data.name,
+  type: data.type,
+  ipAddress: data.ip_address,
+  hostname: data.hostname,
+  os: data.os,
+  status: data.status,
+  lastSeen: data.last_seen,
+  createdAt: data.created_at,
+  updatedAt: data.updated_at,
+}));
+
+type Asset = z.infer<typeof AssetSchema>;
 
 /**
- * Hook to fetch asset information by IP with debouncing
- * Used for tooltip data on hover
+ * Hook to fetch asset information
+ * Uses SWR for caching and automatic revalidation with Zod validation
  */
-export function useAsset(ip: string | null, enabled: boolean = true) {
-  const [debouncedIp, setDebouncedIp] = useState<string | null>(null);
-
-  // Debounce IP changes to avoid excessive API calls
-  useEffect(() => {
-    if (!ip || !enabled) {
-      setDebouncedIp(null);
-      return;
-    }
-
-    const timer = setTimeout(() => {
-      setDebouncedIp(ip);
-    }, 300); // 300ms debounce
-
-    return () => clearTimeout(timer);
-  }, [ip, enabled]);
+export function useAsset(assetId: string | null) {
+  const key = assetId ? ['asset', assetId] : null;
 
   const {
     data,
     error,
     isLoading,
-    isValidating
-  } = useSWR<AssetInfo>(
-    debouncedIp ? ['asset', debouncedIp] : null,
-    () => assetsApi.getAssetByIp(debouncedIp!),
+    isValidating,
+    mutate
+  } = useSWR<Asset>(
+    assetId ? key : null,
+    () => fetchAsset(assetId!),
     {
       revalidateOnFocus: false,
-      revalidateOnReconnect: false,
-      dedupingInterval: 60000, // Cache for 1 minute
-      errorRetryCount: 1,
-      shouldRetryOnError: false, // Don't retry on 404 for non-existent assets
+      revalidateOnReconnect: true,
+      errorRetryCount: 3,
+      errorRetryInterval: 5000,
     }
   );
 
   return {
-    /** Asset information from API */
+    /** Asset data from API */
     data,
-    /** Loading state */
-    isLoading: isLoading || (!!debouncedIp && !data && !error),
+    /** Loading state - true during initial load */
+    isLoading,
+    /** Validating state - true during background refresh */
+    isValidating,
     /** Error object if request failed */
     error,
-    /** Whether asset data exists */
-    hasAsset: !!data,
-    /** Whether currently fetching */
-    isFetching: isValidating,
+    /** Whether data is empty/null */
+    isEmpty: !data,
+    /** Manual refresh function */
+    refresh: mutate,
+    /** Whether currently refreshing */
+    isRefreshing: isValidating && !!data,
   };
 }
 
 /**
- * Hook for batch asset fetching (for multiple IPs)
- * Useful when loading multiple tooltips at once
+ * Fetch asset from API with Zod validation
+ * Uses the updated VITE_API_BASE environment variable
  */
-export function useAssets(ips: string[], enabled: boolean = true) {
-  const results = ips.map(ip => useAsset(ip, enabled));
+async function fetchAsset(assetId: string): Promise<Asset> {
+  const token = localStorage.getItem('access_token');
+  return validatedFetch(
+    `/assets/${assetId}`,
+    AssetSchema,
+    {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    }
+  );
+}
+
+/**
+ * Hook for loading multiple assets by ID
+ * Useful when loading multiple assets at once
+ */
+export function useAssets(assetIds: string[]) {
+  const {
+    data,
+    error,
+    isLoading,
+  } = useSWR<Asset[]>(
+    assetIds.length > 0 ? ['assets', ...assetIds.sort()] : null,
+    () => Promise.all(assetIds.map(id => fetchAsset(id))),
+    {
+      revalidateOnFocus: false,
+      revalidateOnReconnect: false,
+      dedupingInterval: 60000,
+      errorRetryCount: 1,
+      shouldRetryOnError: false,
+    }
+  );
 
   return {
-    /** Map of IP to asset data */
-    assets: Object.fromEntries(
-      ips.map((ip, index) => [ip, results[index].data]).filter(([, data]) => data)
-    ),
-    /** Whether any requests are loading */
-    isLoading: results.some(result => result.isLoading),
-    /** Whether any requests have errors */
-    hasErrors: results.some(result => result.error),
-    /** Array of all errors */
-    errors: results.map(result => result.error).filter(Boolean),
+    /** Assets data indexed by ID */
+    data: data?.reduce((acc, asset, index) => {
+      if (asset) {
+        acc[assetIds[index]] = asset;
+      }
+      return acc;
+    }, {} as Record<string, Asset>) || {},
+    /** Loading state */
+    isLoading,
+    /** Error object if request failed */
+    error,
   };
-} 
+}

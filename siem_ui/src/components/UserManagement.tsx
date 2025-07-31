@@ -103,7 +103,7 @@ export function UserManagement() {
     if (!selectedUser || !selectedRole) return;
 
     try {
-      await assignRole({ role_name: selectedRole });
+      await assignRole(selectedUser.user_id, { role_name: selectedRole });
       await refetchUsers();
 
       toast({

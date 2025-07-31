@@ -1,8 +1,34 @@
 import { useState } from 'react';
 import useSWR, { mutate } from 'swr';
-import { apiClient } from '@/services/api';
+import { validatedFetch } from '../useValidatedApi';
 import { useToast } from '@/hooks/useToast';
-import type { AlertNote, CreateAlertNoteRequest } from '@/types/api';
+import { z } from 'zod';
+
+// Zod schemas for alert notes
+const AlertNoteSchema = z.object({
+  id: z.string().uuid(),
+  alertId: z.string().uuid(),
+  content: z.string(),
+  createdBy: z.string(),
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime().optional(),
+}).transform((data) => ({
+  id: data.id,
+  alertId: data.alertId,
+  content: data.content,
+  createdBy: data.createdBy,
+  createdAt: data.createdAt,
+  updatedAt: data.updatedAt,
+}));
+
+const AlertNotesListSchema = z.array(AlertNoteSchema);
+
+const CreateAlertNoteRequestSchema = z.object({
+  content: z.string().min(1),
+});
+
+type AlertNote = z.infer<typeof AlertNoteSchema>;
+type CreateAlertNoteRequest = z.infer<typeof CreateAlertNoteRequestSchema>;
 
 /**
  * Hook to fetch alert notes
@@ -66,12 +92,12 @@ export function useAddAlertNote() {
       // Optimistic update - add note to UI before API call
       if (optimistic) {
         const optimisticNote: AlertNote = {
-          note_id: `temp-${Date.now()}`,
-          alert_id: alertId,
-          tenant_id: '', // Will be filled by backend
-          author: 'You', // Temporary author
+          id: `temp-${Date.now()}`,
+          alertId: alertId,
           content,
-          created_at: Math.floor(Date.now() / 1000),
+          createdBy: 'You', // Temporary author
+          createdAt: new Date().toISOString(),
+          updatedAt: undefined,
         };
 
         await mutate(
@@ -82,27 +108,20 @@ export function useAddAlertNote() {
       }
 
       // Make API call
-      const response = await apiClient.post(
-        `/api/v1/alerts/${alertId}/notes`,
-        { content } as CreateAlertNoteRequest
-      );
+      const response = await addAlertNote(alertId, { content } as CreateAlertNoteRequest);
 
-      if (response.data) {
-        // Revalidate to ensure data consistency
-        await mutate(['alert-notes', alertId]);
+      // Revalidate to ensure data consistency
+      await mutate(['alert-notes', alertId]);
 
-        if (showToast) {
-          toast({
-            title: 'Note Added',
-            description: 'Your note has been added to the alert',
-            variant: 'success',
-          });
-        }
-
-        return response.data;
-      } else {
-        throw new Error('Failed to add note');
+      if (showToast) {
+        toast({
+          title: 'Note Added',
+          description: 'Your note has been added to the alert',
+          variant: 'success',
+        });
       }
+
+      return response;
     } catch (error) {
       // Revert optimistic update on error
       if (optimistic) {
@@ -135,19 +154,33 @@ export function useAddAlertNote() {
  * Fetch alert notes from API
  */
 async function fetchAlertNotes(alertId: string): Promise<AlertNote[]> {
-  const response = await apiClient.get(`/api/v1/alerts/${alertId}/notes`);
-  
-  // Handle ClickHouse JSON format
-  if (response.data?.data && Array.isArray(response.data.data)) {
-    return response.data.data.map((row: any[]) => ({
-      note_id: row[0],
-      alert_id: row[1],
-      tenant_id: row[2],
-      author: row[3],
-      content: row[4],
-      created_at: row[5],
-    }));
-  }
-  
-  return response.data || [];
-} 
+  const token = localStorage.getItem('access_token');
+  return validatedFetch(
+    `/alerts/${alertId}/notes`,
+    AlertNotesListSchema,
+    {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    }
+  );
+}
+
+async function addAlertNote(
+  alertId: string,
+  noteData: CreateAlertNoteRequest
+): Promise<AlertNote> {
+  const token = localStorage.getItem('access_token');
+  return validatedFetch(
+    `/alerts/${alertId}/notes`,
+    AlertNoteSchema,
+    {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(noteData),
+    }
+  );
+}

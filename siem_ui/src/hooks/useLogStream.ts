@@ -37,11 +37,10 @@ export const useLogStream = (options: UseLogStreamOptions = {}): UseLogStreamRes
   const { accessToken } = useAuthStore();
   
   // Watch for filter changes
-  const { filters, timeRange, freeText, sortConfig } = useEventFilters();
+  const { filters, timeRange, freeText } = useEventFilters();
   const filtersRef = useRef(filters);
   const timeRangeRef = useRef(timeRange);
   const freeTextRef = useRef(freeText);
-  const _sortConfigRef = useRef(sortConfig);
   const eventSourceRef = useRef<ExtendedEventSource | null>(null);
   const isStreamingRef = useRef(false);
   const isRefreshingRef = useRef(false);

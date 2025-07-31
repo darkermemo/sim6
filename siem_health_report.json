@@ -1,0 +1,380 @@
+{
+  "status": "UNHEALTHY",
+  "total_tests": 46,
+  "successful_tests": 16,
+  "failed_tests": 30,
+  "critical_failures": 29,
+  "success_rate": 34.78260869565217,
+  "critical_success_rate": 29.268292682926827,
+  "authenticated": false,
+  "results": [
+    {
+      "endpoint": "GET /health",
+      "success": true,
+      "status_code": 200,
+      "message": "OK",
+      "critical": true,
+      "description": "System health check"
+    },
+    {
+      "endpoint": "GET /metrics",
+      "success": true,
+      "status_code": 200,
+      "message": "OK",
+      "critical": true,
+      "description": "System metrics"
+    },
+    {
+      "endpoint": "GET /api/v1/version",
+      "success": true,
+      "status_code": 200,
+      "message": "OK",
+      "critical": true,
+      "description": "API version info"
+    },
+    {
+      "endpoint": "POST /api/v1/auth/login",
+      "success": false,
+      "status_code": 400,
+      "message": "Json deserialize error: missing field `email` at line 1 column 45",
+      "critical": true,
+      "description": "User authentication"
+    },
+    {
+      "endpoint": "GET /api/v1/log_sources/cache",
+      "success": true,
+      "status_code": 200,
+      "message": "OK",
+      "critical": true,
+      "description": "Log source cache"
+    },
+    {
+      "endpoint": "POST /api/v1/auth/refresh",
+      "success": false,
+      "status_code": 400,
+      "message": "Content type error",
+      "critical": true,
+      "description": "Token refresh"
+    },
+    {
+      "endpoint": "POST /api/v1/auth/logout",
+      "success": false,
+      "status_code": 404,
+      "message": "No response body",
+      "critical": true,
+      "description": "User logout"
+    },
+    {
+      "endpoint": "GET /api/v1/dashboard",
+      "success": true,
+      "status_code": 200,
+      "message": "OK",
+      "critical": true,
+      "description": "Main dashboard data"
+    },
+    {
+      "endpoint": "GET /api/v1/dashboard/kpis",
+      "success": false,
+      "status_code": 404,
+      "message": "No response body",
+      "critical": true,
+      "description": "Key performance indicators"
+    },
+    {
+      "endpoint": "GET /api/v1/tenants",
+      "success": false,
+      "status_code": 403,
+      "message": "{\"error\":\"Insufficient permissions. SuperAdmin role required.\"}",
+      "critical": true,
+      "description": "List all tenants"
+    },
+    {
+      "endpoint": "POST /api/v1/tenants",
+      "success": false,
+      "status_code": 400,
+      "message": "Json deserialize error: missing field `tenant_name` at line 1 column 53",
+      "critical": true,
+      "description": "Create tenant"
+    },
+    {
+      "endpoint": "GET /api/v1/tenants/metrics",
+      "success": false,
+      "status_code": 403,
+      "message": "{\"error\":\"Insufficient permissions. SuperAdmin role required.\"}",
+      "critical": true,
+      "description": "Tenant metrics"
+    },
+    {
+      "endpoint": "GET /api/v1/events/search",
+      "success": false,
+      "status_code": 405,
+      "message": "No response body",
+      "critical": true,
+      "description": "Event search - CRITICAL"
+    },
+    {
+      "endpoint": "POST /api/v1/events/search",
+      "success": true,
+      "status_code": 200,
+      "message": "OK",
+      "critical": true,
+      "description": "Advanced event search - CRITICAL"
+    },
+    {
+      "endpoint": "GET /api/v1/log-sources",
+      "success": true,
+      "status_code": 200,
+      "message": "OK",
+      "critical": true,
+      "description": "List log sources - CRITICAL"
+    },
+    {
+      "endpoint": "GET /api/v1/log_sources",
+      "success": true,
+      "status_code": 200,
+      "message": "OK",
+      "critical": true,
+      "description": "Enhanced log sources - CRITICAL"
+    },
+    {
+      "endpoint": "GET /api/v1/log_sources/enhanced",
+      "success": false,
+      "status_code": 404,
+      "message": "No response body",
+      "critical": true,
+      "description": "Enhanced log source details"
+    },
+    {
+      "endpoint": "GET /api/v1/log_sources/stats",
+      "success": false,
+      "status_code": 404,
+      "message": "No response body",
+      "critical": true,
+      "description": "Log source statistics - CRITICAL"
+    },
+    {
+      "endpoint": "GET /api/v1/log_sources/groups",
+      "success": false,
+      "status_code": 404,
+      "message": "No response body",
+      "critical": true,
+      "description": "Log source groups"
+    },
+    {
+      "endpoint": "GET /api/v1/alerts",
+      "success": false,
+      "status_code": 500,
+      "message": "Failed to fetch alerts",
+      "critical": true,
+      "description": "List alerts - CRITICAL"
+    },
+    {
+      "endpoint": "POST /api/v1/alerts",
+      "success": false,
+      "status_code": 400,
+      "message": "Json deserialize error: missing field `alerts` at line 1 column 45",
+      "critical": true,
+      "description": "Create alert - CRITICAL"
+    },
+    {
+      "endpoint": "GET /api/v1/rules",
+      "success": true,
+      "status_code": 200,
+      "message": "OK",
+      "critical": true,
+      "description": "List detection rules - CRITICAL"
+    },
+    {
+      "endpoint": "POST /api/v1/rules",
+      "success": false,
+      "status_code": 400,
+      "message": "Json deserialize error: missing field `rule_name` at line 1 column 52",
+      "critical": true,
+      "description": "Create rule - CRITICAL"
+    },
+    {
+      "endpoint": "POST /api/v1/rules/test",
+      "success": false,
+      "status_code": 400,
+      "message": "{\"error\":\"Query must be a SELECT statement\"}",
+      "critical": true,
+      "description": "Test rule query - CRITICAL"
+    },
+    {
+      "endpoint": "POST /api/v1/rules/sigma",
+      "success": true,
+      "status_code": 201,
+      "message": "OK",
+      "critical": true,
+      "description": "Sigma rule creation - CRITICAL"
+    },
+    {
+      "endpoint": "GET /api/v1/cases",
+      "success": true,
+      "status_code": 200,
+      "message": "OK",
+      "critical": true,
+      "description": "List investigation cases"
+    },
+    {
+      "endpoint": "POST /api/v1/cases",
+      "success": false,
+      "status_code": 400,
+      "message": "Json deserialize error: missing field `priority` at line 1 column 50",
+      "critical": true,
+      "description": "Create case"
+    },
+    {
+      "endpoint": "GET /api/v1/agents",
+      "success": false,
+      "status_code": 404,
+      "message": "No response body",
+      "critical": true,
+      "description": "List agents - CRITICAL"
+    },
+    {
+      "endpoint": "GET /api/v1/agents/fleet",
+      "success": true,
+      "status_code": 200,
+      "message": "OK",
+      "critical": true,
+      "description": "Agent fleet status - CRITICAL"
+    },
+    {
+      "endpoint": "GET /api/v1/agents/policies",
+      "success": true,
+      "status_code": 200,
+      "message": "OK",
+      "critical": true,
+      "description": "Agent policies - CRITICAL"
+    },
+    {
+      "endpoint": "POST /api/v1/agents/policies",
+      "success": false,
+      "status_code": 400,
+      "message": "Json deserialize error: missing field `policy_name` at line 1 column 37",
+      "critical": true,
+      "description": "Create agent policy"
+    },
+    {
+      "endpoint": "POST /api/v1/agents/assignments",
+      "success": false,
+      "status_code": 400,
+      "message": "Json deserialize error: missing field `asset_id` at line 1 column 41",
+      "critical": true,
+      "description": "Assign agent policy"
+    },
+    {
+      "endpoint": "GET /api/v1/admin/users",
+      "success": false,
+      "status_code": 404,
+      "message": "No response body",
+      "critical": true,
+      "description": "List users (admin)"
+    },
+    {
+      "endpoint": "GET /api/v1/users",
+      "success": true,
+      "status_code": 200,
+      "message": "OK",
+      "critical": true,
+      "description": "List users"
+    },
+    {
+      "endpoint": "POST /api/v1/users",
+      "success": false,
+      "status_code": 400,
+      "message": "Json deserialize error: missing field `user_id` at line 1 column 53",
+      "critical": true,
+      "description": "Create user"
+    },
+    {
+      "endpoint": "GET /api/v1/roles",
+      "success": true,
+      "status_code": 200,
+      "message": "OK",
+      "critical": true,
+      "description": "List roles"
+    },
+    {
+      "endpoint": "GET /api/v1/fields/values",
+      "success": false,
+      "status_code": 400,
+      "message": "Query deserialize error: missing field `field`",
+      "critical": true,
+      "description": "Field values - CRITICAL"
+    },
+    {
+      "endpoint": "GET /api/v1/fields/values/multiple",
+      "success": false,
+      "status_code": 400,
+      "message": "Query deserialize error: missing field `fields`",
+      "critical": true,
+      "description": "Multiple field values"
+    },
+    {
+      "endpoint": "GET /api/v1/stats/eps",
+      "success": false,
+      "status_code": 404,
+      "message": "No response body",
+      "critical": true,
+      "description": "Events per second stats - CRITICAL"
+    },
+    {
+      "endpoint": "GET /api/v1/assets",
+      "success": true,
+      "status_code": 200,
+      "message": "OK",
+      "critical": true,
+      "description": "List assets"
+    },
+    {
+      "endpoint": "GET /api/v1/parsers",
+      "success": false,
+      "status_code": 500,
+      "message": "{\"error\":\"Database error\"}",
+      "critical": true,
+      "description": "List parsers - CRITICAL"
+    },
+    {
+      "endpoint": "POST /api/v1/parsers",
+      "success": false,
+      "status_code": 400,
+      "message": "Json deserialize error: missing field `parser_name` at line 1 column 40",
+      "critical": true,
+      "description": "Create parser - CRITICAL"
+    },
+    {
+      "endpoint": "GET /api/v1/taxonomy/mappings",
+      "success": false,
+      "status_code": 500,
+      "message": "{\"error\":\"Failed to retrieve taxonomy mappings\"}",
+      "critical": true,
+      "description": "Taxonomy mappings"
+    },
+    {
+      "endpoint": "POST /api/v1/taxonomy/mappings",
+      "success": false,
+      "status_code": 400,
+      "message": "Json deserialize error: missing field `source_type` at line 1 column 48",
+      "critical": true,
+      "description": "Create taxonomy mapping"
+    },
+    {
+      "endpoint": "GET /api/v1/ueba/baselines",
+      "success": false,
+      "status_code": 500,
+      "message": "bad response: {\n\t\"meta\":\n\t[\n\n\t],\n\n\t\"data\":\n\t[\n\n\t],\n\n\t\"rows\": 0,\n\n\t\"exception\": \"Code: 60. DB::Except",
+      "critical": true,
+      "description": "UEBA baselines"
+    },
+    {
+      "endpoint": "POST /api/v1/ueba/baselines",
+      "success": false,
+      "status_code": 403,
+      "message": "Service access required",
+      "critical": true,
+      "description": "Create UEBA baselines"
+    }
+  ]
+}

@@ -53,12 +53,11 @@ export function RuleDetailDrawer({
   // Form state
   const [ruleType, setRuleType] = useState<RuleType>('regular');
   const [formData, setFormData] = useState<CreateRuleRequest>({
-    rule_name: '',
+    name: '',
     description: '',
-    query: '',
-    engine_type: 'scheduled',
-    is_stateful: 0,
-    stateful_config: '',
+    condition: '',
+    severity: 'medium',
+    enabled: true,
   });
   const [sigmaYaml, setSigmaYaml] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -68,12 +67,11 @@ export function RuleDetailDrawer({
   useEffect(() => {
     if (isOpen && mode === 'create') {
       setFormData({
-        rule_name: '',
+        name: '',
         description: '',
-        query: '',
-        engine_type: 'scheduled',
-        is_stateful: 0,
-        stateful_config: '',
+        condition: '',
+        severity: 'medium',
+        enabled: true,
       });
       setSigmaYaml('');
       setErrors({});
@@ -85,13 +83,12 @@ export function RuleDetailDrawer({
   useEffect(() => {
     if (rule && (mode === 'view' || mode === 'edit')) {
       setFormData({
-        rule_name: rule.rule_name,
-        description: rule.rule_description,
-        query: rule.rule_query,
-        engine_type: 'scheduled', // Default since we removed from backend
-        is_stateful: rule.is_stateful,
-        stateful_config: rule.stateful_config || '',
-      });
+          name: rule.name,
+          description: rule.description || '',
+          condition: JSON.stringify(rule.conditions, null, 2),
+          severity: 'medium', // Default severity
+          enabled: rule.enabled,
+        });
     }
   }, [rule, mode]);
 
@@ -100,28 +97,19 @@ export function RuleDetailDrawer({
     const newErrors: Record<string, string> = {};
 
     if (ruleType === 'regular') {
-      if (!formData.rule_name.trim()) {
-        newErrors.rule_name = 'Rule name is required';
+      if (!formData.name.trim()) {
+        newErrors.name = 'Rule name is required';
       }
-      if (!formData.description.trim()) {
-        newErrors.description = 'Description is required';
+      if (formData.description && !formData.description.trim()) {
+        newErrors.description = 'Description cannot be empty if provided';
       }
-      if (!formData.query.trim()) {
-        newErrors.query = 'Query is required';
-      }
-
-      // Validate SQL query format (basic check)
-      if (formData.query.trim() && !formData.query.toLowerCase().includes('select')) {
-        newErrors.query = 'Query should be a valid SQL SELECT statement';
+      if (!formData.condition.trim()) {
+        newErrors.condition = 'Condition is required';
       }
 
-      // Validate stateful config if stateful is enabled
-      if (formData.is_stateful && formData.stateful_config && formData.stateful_config.trim()) {
-        try {
-          JSON.parse(formData.stateful_config);
-        } catch {
-          newErrors.stateful_config = 'Stateful config must be valid JSON';
-        }
+      // Validate condition format (basic check)
+      if (formData.condition.trim() && !formData.condition.toLowerCase().includes('select')) {
+        newErrors.condition = 'Condition should be a valid SQL SELECT statement';
       }
     } else {
       if (!sigmaYaml.trim()) {
@@ -165,25 +153,23 @@ export function RuleDetailDrawer({
         const result = await createRule(formData);
         toast({
           title: 'Rule Created',
-          description: `Rule "${result.rule_name}" created successfully`,
+          description: `Rule "${result.name}" created successfully`,
           variant: 'success',
         });
       } else {
         const result = await createSigmaRule(sigmaYaml);
         toast({
           title: 'Sigma Rule Created',
-          description: `Sigma rule "${result.rule.rule_name}" created successfully`,
+          description: `Sigma rule created successfully`,
           variant: 'success',
         });
 
-        // Show complexity analysis
-        if (result.complexity_analysis.is_complex) {
-          toast({
-            title: 'Complex Rule Detected',
-            description: `Rule routed to ${result.complexity_analysis.engine_type} engine. Reasons: ${result.complexity_analysis.complexity_reasons.join(', ')}`,
-            variant: 'default',
-          });
-        }
+        // Show validation result
+        toast({
+          title: 'Rule Validation Complete',
+          description: result.message || 'Sigma rule processed successfully',
+          variant: 'default',
+        });
       }
 
       onSuccess?.();
@@ -203,7 +189,7 @@ export function RuleDetailDrawer({
   const isViewMode = mode === 'view';
   const isCreating = isCreatingRule || isCreatingSigma;
   const isFormValid = ruleType === 'regular' 
-    ? Object.keys(errors).length === 0 && formData.rule_name.trim() && formData.description.trim() && formData.query.trim()
+    ? Object.keys(errors).length === 0 && formData.name.trim() && formData.condition.trim()
     : Object.keys(errors).length === 0 && sigmaYaml.trim();
 
   return (
@@ -273,24 +259,24 @@ export function RuleDetailDrawer({
               <>
                 {/* Rule Name */}
                 <div className="space-y-2">
-                  <label htmlFor="rule_name" className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                  <label htmlFor="name" className="text-sm font-medium text-gray-900 dark:text-gray-100">
                     Rule Name *
                   </label>
                   <input
                     type="text"
-                    id="rule_name"
+                    id="name"
                     placeholder="e.g., Suspicious Login Activity"
-                    value={formData.rule_name}
-                    onChange={(e) => handleInputChange('rule_name', e.target.value)}
+                    value={formData.name}
+                    onChange={(e) => handleInputChange('name', e.target.value)}
                     disabled={isViewMode}
                     className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                      errors.rule_name ? 'border-red-500' : 'border-gray-300'
+                      errors.name ? 'border-red-500' : 'border-gray-300'
                     }`}
                   />
-                  {errors.rule_name && (
+                  {errors.name && (
                     <div className="flex items-center gap-1 text-sm text-red-600">
                       <AlertCircle className="h-4 w-4" />
-                      {errors.rule_name}
+                      {errors.name}
                     </div>
                   )}
                 </div>
@@ -298,12 +284,12 @@ export function RuleDetailDrawer({
                 {/* Description */}
                 <div className="space-y-2">
                   <label htmlFor="description" className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                    Description *
+                    Description
                   </label>
                   <textarea
                     id="description"
                     placeholder="Describe what this rule detects..."
-                    value={formData.description}
+                    value={formData.description || ''}
                     onChange={(e) => handleInputChange('description', e.target.value)}
                     disabled={isViewMode}
                     rows={3}
@@ -319,93 +305,70 @@ export function RuleDetailDrawer({
                   )}
                 </div>
 
-                {/* Engine Type */}
+                {/* Severity */}
                 <div className="space-y-2">
-                  <label htmlFor="engine_type" className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                    Engine Type *
+                  <label htmlFor="severity" className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                    Severity *
                   </label>
                   <select
-                    id="engine_type"
-                    value={formData.engine_type}
-                    onChange={(e) => handleInputChange('engine_type', e.target.value as 'scheduled' | 'real-time')}
+                    id="severity"
+                    value={formData.severity}
+                    onChange={(e) => handleInputChange('severity', e.target.value as 'critical' | 'high' | 'medium' | 'low')}
                     disabled={isViewMode}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
-                    <option value="scheduled">Scheduled - Historical analysis</option>
-                    <option value="real-time">Real-time - Stream processing</option>
+                    <option value="low">Low</option>
+                    <option value="medium">Medium</option>
+                    <option value="high">High</option>
+                    <option value="critical">Critical</option>
                   </select>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
-                    Scheduled rules run on historical data, real-time rules process live streams
+                    Set the severity level for alerts generated by this rule
                   </p>
                 </div>
 
-                {/* SQL Query */}
+                {/* Condition */}
                 <div className="space-y-2">
-                  <label htmlFor="query" className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                    SQL Query *
+                  <label htmlFor="condition" className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                    Condition *
                   </label>
                   <textarea
-                    id="query"
+                    id="condition"
                     placeholder="SELECT * FROM events WHERE..."
-                    value={formData.query}
-                    onChange={(e) => handleInputChange('query', e.target.value)}
+                    value={formData.condition}
+                    onChange={(e) => handleInputChange('condition', e.target.value)}
                     disabled={isViewMode}
                     rows={6}
                     className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm ${
-                      errors.query ? 'border-red-500' : 'border-gray-300'
+                      errors.condition ? 'border-red-500' : 'border-gray-300'
                     }`}
                   />
-                  {errors.query && (
+                  {errors.condition && (
                     <div className="flex items-center gap-1 text-sm text-red-600">
                       <AlertCircle className="h-4 w-4" />
-                      {errors.query}
+                      {errors.condition}
                     </div>
                   )}
                 </div>
 
-                {/* Stateful Configuration */}
+                {/* Enabled Status */}
                 <div className="space-y-2">
                   <div className="flex items-center gap-3">
                     <input
                       type="checkbox"
-                      id="is_stateful"
-                      checked={formData.is_stateful === 1}
-                      onChange={(e) => handleInputChange('is_stateful', e.target.checked ? 1 : 0)}
+                      id="enabled"
+                      checked={formData.enabled}
+                      onChange={(e) => handleInputChange('enabled', e.target.checked)}
                       disabled={isViewMode}
                       className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                     />
-                    <label htmlFor="is_stateful" className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                      Stateful Rule (Track events over time)
+                    <label htmlFor="enabled" className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                      Enable Rule
                     </label>
                   </div>
-
-                  {formData.is_stateful === 1 && (
-                    <div className="space-y-2">
-                      <label htmlFor="stateful_config" className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                        Stateful Configuration (JSON)
-                      </label>
-                      <textarea
-                        id="stateful_config"
-                        placeholder='{"key_prefix":"login_attempts","aggregate_on":["source_ip"],"threshold":5,"window_seconds":3600}'
-                        value={formData.stateful_config}
-                        onChange={(e) => handleInputChange('stateful_config', e.target.value)}
-                        disabled={isViewMode}
-                        rows={3}
-                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm ${
-                          errors.stateful_config ? 'border-red-500' : 'border-gray-300'
-                        }`}
-                      />
-                      {errors.stateful_config && (
-                        <div className="flex items-center gap-1 text-sm text-red-600">
-                          <AlertCircle className="h-4 w-4" />
-                          {errors.stateful_config}
-                        </div>
-                      )}
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
-                        JSON configuration for Redis-based state tracking
-                      </p>
-                    </div>
-                  )}
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    When enabled, this rule will actively monitor for threats
+                  </p>
                 </div>
               </>
             )}
@@ -461,15 +424,15 @@ level: medium`}
                   <div className="flex items-center gap-2">
                     <CheckCircle2 className="h-4 w-4 text-green-600" />
                     <span className="text-sm font-medium text-gray-900 dark:text-gray-100">Rule Active</span>
-                    <Badge variant={rule.is_active ? 'success' : 'warning'}>
-                      {rule.is_active ? 'Enabled' : 'Disabled'}
+                    <Badge variant={rule.enabled ? 'success' : 'warning'}>
+                      {rule.enabled ? 'Enabled' : 'Disabled'}
                     </Badge>
                   </div>
                   <div className="text-sm text-gray-700 dark:text-gray-300 space-y-1">
-                    <div>Rule ID: <span className="font-mono text-gray-900 dark:text-gray-100">{rule.rule_id}</span></div>
-                    <div>Created: <span className="text-gray-900 dark:text-gray-100">{new Date(rule.created_at * 1000).toLocaleString()}</span></div>
-                    <div>Tenant: <span className="font-mono text-gray-900 dark:text-gray-100">{rule.tenant_id}</span></div>
-                    <div>Stateful: <Badge variant={rule.is_stateful ? 'warning' : 'default'}>{rule.is_stateful ? 'Yes' : 'No'}</Badge></div>
+                    <div>Rule ID: <span className="font-mono text-gray-900 dark:text-gray-100">{rule.id}</span></div>
+                    <div>Created: <span className="text-gray-900 dark:text-gray-100">{new Date(rule.createdAt).toLocaleString()}</span></div>
+                    <div>Tenant: <span className="font-mono text-gray-900 dark:text-gray-100">{rule.tenantId}</span></div>
+                    <div>Priority: <Badge variant={rule.priority > 5 ? 'warning' : 'default'}>{rule.priority}</Badge></div>
                   </div>
                 </div>
               </Card>

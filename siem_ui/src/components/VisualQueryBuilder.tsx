@@ -322,10 +322,10 @@ export function VisualQueryBuilder({
               <div className="text-sm text-blue-800">
                 <p className="font-medium mb-1">SPL-style Query Examples:</p>
                 <ul className="space-y-1 text-xs">
-                  <li>• <code>event_category = "Network"</code> - Filter events</li>
-                  <li>• <code>source_ip = "192.168.1.1" | stats count by dest_ip</code> - Group and count</li>
-                  <li>• <code>user = "admin" | sort -timestamp | limit 10</code> - Sort and limit</li>
-                  <li>• <code>severity = "Critical" | top 5 dest_ip</code> - Top values</li>
+                  <li>• <code>event_category = &quot;Network&quot;</code> - Filter events</li>
+                  <li>• <code>source_ip = &quot;192.168.1.1&quot; | stats count by dest_ip</code> - Group and count</li>
+                  <li>• <code>user = &quot;admin&quot; | sort -timestamp | limit 10</code> - Sort and limit</li>
+                  <li>• <code>severity = &quot;Critical&quot; | top 5 dest_ip</code> - Top values</li>
                 </ul>
               </div>
             </div>

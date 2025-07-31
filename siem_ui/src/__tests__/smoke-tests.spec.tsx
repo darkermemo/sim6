@@ -220,15 +220,16 @@ describe('Smoke Tests - Component Rendering', () => {
 describe('Smoke Tests - Error Boundaries', () => {
   it('handles missing props gracefully', () => {
     // Test component with undefined/null props
-    const mockAlert = {
-      alert_id: undefined,
-      name: null,
-      severity: 'high',
-      source_ip: '192.168.1.1',
-      dest_ip: '10.0.0.1',
-      timestamp: '2024-01-15T10:30:00Z',
-      status: 'open',
-    };
+    // Mock alert data for potential future use
+    // const _mockAlert = {
+    //   alert_id: undefined,
+    //   name: null,
+    //   severity: 'high',
+    //   source_ip: '192.168.1.1',
+    //   dest_ip: '10.0.0.1',
+    //   timestamp: '2024-01-15T10:30:00Z',
+    //   status: 'open',
+    // };
 
     // This should not crash the component
     expect(() => {

@@ -6,9 +6,9 @@ import { Select } from '@/components/ui/Select';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/Sheet';
-import { useCreateLogSource, getLogSourceTypeBadgeVariant, getValidLogSourceTypes } from '@/hooks/api/useLogSources';
+import { useCreateLogSource, getLogSourceTypeBadgeVariant, getValidLogSourceTypes, type LogSource, type CreateLogSourceRequest } from '@/hooks/api/useTypedLogSources';
 import { useToast } from '@/hooks/useToast';
-import type { LogSource, CreateLogSourceRequest, LogSourceType } from '@/types/api';
+import type { LogSourceType } from '@/types/api';
 
 interface LogSourceDetailDrawerProps {
   isOpen: boolean;
@@ -43,7 +43,7 @@ export function LogSourceDetailDrawer({
   mode = 'create'
 }: LogSourceDetailDrawerProps) {
   const { toast } = useToast();
-  const { createLogSource, isCreating } = useCreateLogSource();
+  const createLogSourceMutation = useCreateLogSource();
 
   // Form state
   const [formData, setFormData] = useState<CreateLogSourceRequest>({
@@ -53,7 +53,7 @@ export function LogSourceDetailDrawer({
   });
 
   // Validation state
-  const [errors, setErrors] = useState<Partial<CreateLogSourceRequest>>({});
+  const [errors, setErrors] = useState<Partial<Record<keyof CreateLogSourceRequest, string>>>({});
   const [isValidating, setIsValidating] = useState(false);
 
   // Initialize form data when viewing existing log source
@@ -62,7 +62,7 @@ export function LogSourceDetailDrawer({
       setFormData({
         source_name: logSource.source_name,
         source_type: logSource.source_type,
-        source_ip: logSource.source_ip,
+        source_ip: logSource.source_ip || '',
       });
     } else if (mode === 'create') {
       // Reset form for create mode
@@ -75,15 +75,11 @@ export function LogSourceDetailDrawer({
     setErrors({});
   }, [logSource, mode, isOpen]);
 
-  // Validate IP address format
-  const validateIpAddress = (ip: string): boolean => {
-    const ipRegex = /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
-    return ipRegex.test(ip);
-  };
+
 
   // Validate form fields
   const validateForm = (): boolean => {
-    const newErrors: Partial<CreateLogSourceRequest> = {};
+    const newErrors: Partial<Record<keyof CreateLogSourceRequest, string>> = {};
 
     // Source name validation
     if (!formData.source_name.trim()) {
@@ -94,17 +90,9 @@ export function LogSourceDetailDrawer({
       newErrors.source_name = 'Source name must be less than 50 characters';
     }
 
-    // Source IP validation
-    if (!formData.source_ip.trim()) {
-      newErrors.source_ip = 'IP address is required';
-    } else if (!validateIpAddress(formData.source_ip)) {
-      newErrors.source_ip = 'Please enter a valid IP address (e.g., 192.168.1.100)';
-    }
-
     // Source type validation  
-    if (!getValidLogSourceTypes().includes(formData.source_type)) {
-      // Type error fix: use any for the error object since it's a string message
-      (newErrors as any).source_type = 'Please select a valid source type';
+    if (!getValidLogSourceTypes().includes(formData.source_type as LogSourceType)) {
+      newErrors.source_type = 'Please select a valid source type';
     }
 
     setErrors(newErrors);
@@ -117,7 +105,7 @@ export function LogSourceDetailDrawer({
     
     // Clear error for this field when user starts typing
     if (errors[field]) {
-      setErrors((prev: Partial<CreateLogSourceRequest>) => ({ ...prev, [field]: undefined }));
+      setErrors((prev: Partial<Record<keyof CreateLogSourceRequest, string>>) => ({ ...prev, [field]: undefined }));
     }
   };
 
@@ -143,7 +131,7 @@ export function LogSourceDetailDrawer({
     }
 
     try {
-      await createLogSource(formData);
+      await createLogSourceMutation.mutateAsync(formData);
       onSuccess?.();
       onClose();
       
@@ -160,21 +148,11 @@ export function LogSourceDetailDrawer({
     }
   };
 
-  // Handle IP address paste and auto-format
-  const handleIpPaste = (event: React.ClipboardEvent<HTMLInputElement>) => {
-    const paste = event.clipboardData.getData('text');
-    const cleaned = paste.replace(/[^0-9.]/g, ''); // Remove non-numeric and non-dot characters
-    
-    if (cleaned !== paste) {
-      event.preventDefault();
-      handleInputChange('source_ip', cleaned);
-    }
-  };
+
 
   const isViewMode = mode === 'view';
   const isFormValid = Object.keys(errors).length === 0 && 
-                     formData.source_name.trim() && 
-                     formData.source_ip.trim();
+                     formData.source_name.trim();
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
@@ -195,21 +173,21 @@ export function LogSourceDetailDrawer({
         <form onSubmit={handleSubmit} className="space-y-6 mt-6">
           {/* Source Name */}
                      <div className="space-y-2">
-             <label htmlFor="source_name" className="text-sm font-medium text-gray-900 dark:text-gray-100">
+             <label htmlFor="name" className="text-sm font-medium text-gray-900 dark:text-gray-100">
                Source Name *
              </label>
              <input
                type="text"
-               id="source_name"
+               id="name"
                placeholder="e.g., Production Web Server, Main Firewall"
                value={formData.source_name}
                                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange('source_name', e.target.value)}
                disabled={isViewMode}
                className={`px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.source_name ? 'border-destructive' : 'border-border'}`}
-               aria-describedby={errors.source_name ? 'source_name-error' : undefined}
+               aria-describedby={errors.source_name ? 'name-error' : undefined}
              />
             {errors.source_name && (
-              <div id="source_name-error" className="flex items-center gap-1 text-sm text-destructive">
+              <div id="name-error" className="flex items-center gap-1 text-sm text-destructive">
                 <AlertCircle className="h-4 w-4" />
                 {errors.source_name}
               </div>
@@ -218,7 +196,7 @@ export function LogSourceDetailDrawer({
 
           {/* Source Type */}
                      <div className="space-y-2">
-             <label htmlFor="source_type" className="text-sm font-medium text-gray-900 dark:text-gray-100">
+             <label htmlFor="type" className="text-sm font-medium text-gray-900 dark:text-gray-100">
                Source Type *
              </label>
             <Select
@@ -226,14 +204,14 @@ export function LogSourceDetailDrawer({
               onValueChange={(value) => handleInputChange('source_type', value as LogSourceType)}
               disabled={isViewMode}
             >
-                             {getValidLogSourceTypes().map((type: LogSourceType) => (
+                             {getValidLogSourceTypes().map((type: string) => (
                  <option key={type} value={type}>
                    {type}
                  </option>
                ))}
             </Select>
             <div className="flex items-center gap-2 mt-2">
-              <Badge variant={getLogSourceTypeBadgeVariant(formData.source_type)}>
+              <Badge variant={getLogSourceTypeBadgeVariant(formData.source_type as LogSourceType) as 'default' | 'secondary' | 'outline' | 'success'}>
                 {formData.source_type}
               </Badge>
               <span className="text-sm text-gray-600 dark:text-gray-400">
@@ -242,32 +220,26 @@ export function LogSourceDetailDrawer({
             </div>
           </div>
 
-          {/* Source IP Address */}
-                     <div className="space-y-2">
-             <label htmlFor="source_ip" className="text-sm font-medium text-gray-900 dark:text-gray-100">
-               IP Address *
+          {/* Host */}
+          <div className="space-y-2">
+             <label htmlFor="host" className="text-sm font-medium text-gray-900 dark:text-gray-100">
+               Host
              </label>
              <input
-               id="source_ip"
+               id="host"
                type="text"
-               placeholder="192.168.1.100"
-               value={formData.source_ip}
-                                onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange('source_ip', e.target.value)}
-               onPaste={handleIpPaste}
+               placeholder="Optional host address"
+               value={formData.source_ip || ''}
+               onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange('source_ip', e.target.value)}
                disabled={isViewMode}
-               className={`font-mono px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.source_ip ? 'border-destructive' : 'border-border'}`}
-               aria-describedby={errors.source_ip ? 'source_ip-error' : undefined}
+               className={`px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 border-border`}
              />
-            {errors.source_ip && (
-              <div id="source_ip-error" className="flex items-center gap-1 text-sm text-destructive">
-                <AlertCircle className="h-4 w-4" />
-                {errors.source_ip}
-              </div>
-            )}
             <p className="text-sm text-gray-600 dark:text-gray-400">
-              The IP address where logs originate from
+              Optional host address for the log source
             </p>
           </div>
+
+
 
           {/* View Mode Additional Info */}
           {isViewMode && logSource && (
@@ -279,8 +251,8 @@ export function LogSourceDetailDrawer({
                 </div>
                 <div className="text-sm text-gray-700 dark:text-gray-300 space-y-1">
                   <div>Source ID: <span className="font-mono text-gray-900 dark:text-gray-100">{logSource.source_id}</span></div>
-                  <div>Created: <span className="text-gray-900 dark:text-gray-100">{new Date(logSource.created_at * 1000).toLocaleString()}</span></div>
-                  <div>Tenant: <span className="font-mono text-gray-900 dark:text-gray-100">{logSource.tenant_id}</span></div>
+                  <div>Created: <span className="text-gray-900 dark:text-gray-100">{new Date(typeof logSource.created_at === 'number' ? logSource.created_at * 1000 : new Date(logSource.created_at).getTime()).toLocaleString()}</span></div>
+                  <div>Tenant: <span className="font-mono text-gray-900 dark:text-gray-100">{logSource.tenant_id || 'N/A'}</span></div>
                 </div>
               </div>
             </Card>
@@ -318,10 +290,10 @@ export function LogSourceDetailDrawer({
             {!isViewMode && (
               <Button
                 type="submit"
-                disabled={!isFormValid || isCreating || isValidating}
+                disabled={!isFormValid || createLogSourceMutation.isPending || isValidating}
                 className="flex-1"
               >
-                {isCreating || isValidating ? (
+                {createLogSourceMutation.isPending || isValidating ? (
                   <>
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
                     Creating...
@@ -345,13 +317,13 @@ export function LogSourceDetailDrawer({
             </h4>
             <ul className="text-sm text-blue-800 dark:text-blue-200 space-y-1">
               <li>• Choose the appropriate source type for proper log parsing</li>
-              <li>• Ensure the IP address is reachable from your SIEM infrastructure</li>
               <li>• Use descriptive names for easy identification in dashboards</li>
-              <li>• Each IP address can only be configured once per tenant</li>
+              <li>• Subtype and parser ID are optional for additional customization</li>
+              <li>• Each source name should be unique within your tenant</li>
             </ul>
           </div>
         )}
       </SheetContent>
     </Sheet>
   );
-} 
+}

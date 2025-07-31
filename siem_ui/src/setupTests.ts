@@ -44,7 +44,7 @@ Object.defineProperty(window, 'matchMedia', {
 const originalError = console.error;
 const originalWarn = console.warn;
 
-console.error = (...args: any[]) => {
+console.error = (...args: unknown[]) => {
   // Only fail on actual runtime errors, not React warnings
   const message = args.join(' ');
   if (message.includes('TypeError:') || 
@@ -58,7 +58,7 @@ console.error = (...args: any[]) => {
   originalError(...args);
 };
 
-console.warn = (...args: any[]) => {
+console.warn = (...args: unknown[]) => {
   // Don't fail on warnings during tests
   originalWarn(...args);
 };
