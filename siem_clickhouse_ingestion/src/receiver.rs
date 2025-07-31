@@ -33,6 +33,7 @@ use crate::{
     metrics::MetricsCollector,
     router::LogRouter,
     schema::LogEvent,
+    pool::ChPool,
 };
 use std::time::{SystemTime, UNIX_EPOCH};
 use chrono::{DateTime, Utc};
@@ -101,6 +102,7 @@ pub struct AppState {
     pub tenant_registry: Arc<RwLock<TenantRegistry>>,
     pub log_router: Arc<LogRouter>,
     pub metrics: Arc<MetricsCollector>,
+    pub ch_pool: Arc<ChPool>,
 }
 
 /// Request payload for log ingestion
@@ -146,6 +148,14 @@ pub struct RateLimitInfo {
     pub burst_capacity: u32,
 }
 
+/// Response for database pool health endpoint
+#[derive(Debug, Serialize)]
+pub struct PoolHealthResponse {
+    pub active: usize,
+    pub idle: usize,
+    pub max: usize,
+}
+
 /// Rate limiting state
 #[derive(Debug, Clone)]
 pub struct RateLimitState {
@@ -180,12 +190,14 @@ impl LogReceiver {
         tenant_registry: Arc<RwLock<TenantRegistry>>,
         log_router: Arc<LogRouter>,
         metrics: Arc<MetricsCollector>,
+        ch_pool: Arc<ChPool>,
     ) -> Self {
         let state = AppState {
             config,
             tenant_registry,
             log_router,
             metrics,
+            ch_pool,
         };
 
         Self {
@@ -213,6 +225,7 @@ impl LogReceiver {
 
         Router::new()
             .route("/health", get(health_check))
+            .route("/api/v1/db/pool", get(db_pool_health))
             .route("/metrics", get(metrics_handler))
             .route("/tenants/:tenant_id", get(tenant_info))
             .route("/ingest/:tenant_id", post(ingest_logs))
@@ -281,6 +294,19 @@ async fn metrics_handler(State(state): State<AppState>) -> Result<String, Status
     let snapshot = state.metrics.get_snapshot().await;
     let prometheus_metrics = crate::metrics::export_prometheus_metrics(&snapshot);
     Ok(prometheus_metrics)
+}
+
+/// Database pool health handler
+async fn db_pool_health(State(state): State<AppState>) -> Result<Json<PoolHealthResponse>, StatusCode> {
+    let pool_stats = state.ch_pool.get_stats().await;
+    
+    let response = PoolHealthResponse {
+        active: pool_stats.active as usize,
+        idle: pool_stats.idle as usize,
+        max: pool_stats.max as usize,
+    };
+    
+    Ok(Json(response))
 }
 
 /// Tenant information handler

@@ -11,6 +11,7 @@ use syn::{visit::Visit, LitStr, Macro, spanned::Spanned};
 use walkdir::WalkDir;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct ColumnDefinition {
     pub name: String,
     pub data_type: String,
@@ -19,6 +20,7 @@ pub struct ColumnDefinition {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct TableSchema {
     pub name: String,
     pub database: Option<String>,
@@ -28,12 +30,14 @@ pub struct TableSchema {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct DatabaseSchema {
     pub tables: HashMap<String, TableSchema>,
     pub databases: HashSet<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct SqlReference {
     pub file_path: String,
     pub line_number: usize,
@@ -46,6 +50,7 @@ pub struct SqlReference {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct ValidationError {
     pub severity: String,
     pub error_type: String,
@@ -58,6 +63,7 @@ pub struct ValidationError {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct ValidationReport {
     pub timestamp: DateTime<Utc>,
     pub total_files_scanned: usize,
@@ -69,6 +75,7 @@ pub struct ValidationReport {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct ValidationSummary {
     pub critical_issues: usize,
     pub warnings: usize,

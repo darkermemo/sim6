@@ -11,7 +11,7 @@ use uuid::Uuid;
 
 /// Compression algorithm enumeration matching ClickHouse Enum8
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-#[serde(rename_all = "lowercase")]
+#[serde(rename_all = "snake_case")]
 pub enum CompressionAlgorithm {
     None = 0,
     Gzip = 1,
@@ -54,6 +54,7 @@ impl From<CompressionAlgorithm> for u8 {
 /// - Compression tracking
 /// - Pipeline observability
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "snake_case")]
 pub struct EventV2 {
     /// Tenant identifier (UUID)
     pub tenant_id: Uuid,

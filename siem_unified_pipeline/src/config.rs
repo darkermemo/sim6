@@ -4,6 +4,7 @@ use std::path::Path;
 use crate::error::{Result, PipelineError};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct PipelineConfig {
     pub server: ServerConfig,
     pub database: DatabaseConfig,
@@ -19,6 +20,7 @@ pub struct PipelineConfig {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct ServerConfig {
     pub host: String,
     pub port: u16,
@@ -29,6 +31,7 @@ pub struct ServerConfig {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct DataSource {
     pub source_type: SourceType,
     pub config: SourceConfig,
@@ -41,6 +44,7 @@ pub struct DataSource {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type")]
+#[serde(rename_all = "snake_case")]
 pub enum SourceType {
     Syslog { port: u16, protocol: String },
     Http { endpoint: String, method: String },
@@ -54,6 +58,7 @@ pub enum SourceType {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct SourceConfig {
     pub format: DataFormat,
     pub compression: Option<CompressionType>,
@@ -64,6 +69,7 @@ pub struct SourceConfig {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum DataFormat {
     Json,
     Csv,
@@ -77,6 +83,7 @@ pub enum DataFormat {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum CompressionType {
     Gzip,
     Zstd,
@@ -85,6 +92,7 @@ pub enum CompressionType {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct FieldConfig {
     pub field_type: FieldType,
     pub required: bool,
@@ -93,6 +101,7 @@ pub struct FieldConfig {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum FieldType {
     String,
     Integer,
@@ -106,6 +115,7 @@ pub enum FieldType {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum ValidationRule {
     Regex(String),
     Range { min: f64, max: f64 },
@@ -114,6 +124,7 @@ pub enum ValidationRule {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct TransformationPipeline {
     pub steps: Vec<TransformationStep>,
     pub parallel: bool,
@@ -122,6 +133,7 @@ pub struct TransformationPipeline {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type")]
+#[serde(rename_all = "snake_case")]
 pub enum TransformationStep {
     Parse {
         parser: String,
@@ -153,6 +165,7 @@ pub enum TransformationStep {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum FilterAction {
     Drop,
     Route(String),
@@ -160,6 +173,7 @@ pub enum FilterAction {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct AggregateFunction {
     pub function: String,
     pub field: String,
@@ -167,6 +181,7 @@ pub struct AggregateFunction {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum ErrorHandling {
     Drop,
     DeadLetter,
@@ -175,6 +190,7 @@ pub enum ErrorHandling {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct DataDestination {
     pub destination_type: DestinationType,
     pub config: DestinationConfig,
@@ -186,6 +202,7 @@ pub struct DataDestination {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type")]
+#[serde(rename_all = "snake_case")]
 pub enum DestinationType {
     ClickHouse {
         connection_string: String,
@@ -223,6 +240,7 @@ pub enum DestinationType {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct DestinationConfig {
     pub format: DataFormat,
     pub compression: Option<CompressionType>,
@@ -230,6 +248,7 @@ pub struct DestinationConfig {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct FileRotation {
     pub size_mb: u64,
     pub time_hours: u64,
@@ -237,12 +256,14 @@ pub struct FileRotation {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct PartitioningConfig {
     pub strategy: PartitioningStrategy,
     pub fields: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum PartitioningStrategy {
     Time { format: String },
     Hash { buckets: u32 },
@@ -250,6 +271,7 @@ pub enum PartitioningStrategy {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct RoutingConfig {
     pub rules: Vec<RoutingRule>,
     pub default_destination: String,
@@ -257,6 +279,7 @@ pub struct RoutingConfig {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct RoutingRule {
     pub name: String,
     pub condition: String,
@@ -266,6 +289,7 @@ pub struct RoutingRule {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum LoadBalancingStrategy {
     RoundRobin,
     Random,
@@ -274,6 +298,7 @@ pub enum LoadBalancingStrategy {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct StorageConfig {
     pub data_lake: DataLakeConfig,
     pub hot_storage: HotStorageConfig,
@@ -282,6 +307,7 @@ pub struct StorageConfig {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct DataLakeConfig {
     pub provider: String,
     pub bucket: String,
@@ -292,6 +318,7 @@ pub struct DataLakeConfig {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct DatabaseConfig {
     pub host: String,
     pub port: u16,
@@ -306,6 +333,7 @@ pub struct DatabaseConfig {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct HotStorageConfig {
     pub clickhouse_url: String,
     pub database: String,
@@ -313,6 +341,7 @@ pub struct HotStorageConfig {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct ColdStorageConfig {
     pub s3_bucket: String,
     pub compression: CompressionType,
@@ -320,6 +349,7 @@ pub struct ColdStorageConfig {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct RetentionConfig {
     pub hot_days: u32,
     pub warm_days: u32,
@@ -328,6 +358,7 @@ pub struct RetentionConfig {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct MetricsConfig {
     pub enabled: bool,
     pub port: u16,
@@ -336,6 +367,7 @@ pub struct MetricsConfig {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct SecurityConfig {
     pub tls: Option<TlsConfig>,
     pub authentication: Option<AuthConfig>,
@@ -343,6 +375,7 @@ pub struct SecurityConfig {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct TlsConfig {
     pub cert_file: String,
     pub key_file: String,
@@ -350,12 +383,14 @@ pub struct TlsConfig {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct AuthConfig {
     pub method: AuthMethod,
     pub config: HashMap<String, String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum AuthMethod {
     ApiKey,
     JWT,
@@ -365,6 +400,7 @@ pub enum AuthMethod {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct RateLimitConfig {
     pub requests_per_second: u32,
     pub burst_size: u32,
@@ -372,6 +408,7 @@ pub struct RateLimitConfig {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct PerformanceConfig {
     pub workers: WorkersConfig,
     pub buffers: BuffersConfig,
@@ -380,6 +417,7 @@ pub struct PerformanceConfig {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct WorkersConfig {
     pub ingestion_workers: usize,
     pub transformation_workers: usize,
@@ -388,6 +426,7 @@ pub struct WorkersConfig {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct BuffersConfig {
     pub event_buffer_size: usize,
     pub batch_buffer_size: usize,
@@ -395,12 +434,14 @@ pub struct BuffersConfig {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct MemoryConfig {
     pub max_memory_usage: String,
     pub gc_threshold: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct ParallelProcessingConfig {
     pub enabled: bool,
     pub worker_count: Option<usize>,
@@ -409,6 +450,7 @@ pub struct ParallelProcessingConfig {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct RateLimitingConfig {
     pub enabled: bool,
     pub requests_per_second: u32,

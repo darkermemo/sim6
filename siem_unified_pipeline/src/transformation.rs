@@ -11,6 +11,7 @@ use crate::error::{Result, PipelineError};
 use crate::pipeline::{PipelineEvent, ProcessingStage};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct TransformationStats {
     pub pipeline_name: String,
     pub events_processed: u64,
@@ -40,6 +41,7 @@ pub struct EnrichmentData {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct GeoLocation {
     pub country: String,
     pub city: String,
@@ -50,6 +52,7 @@ pub struct GeoLocation {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct ThreatIntel {
     pub is_malicious: bool,
     pub threat_type: Option<String>,
@@ -59,6 +62,7 @@ pub struct ThreatIntel {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct AssetInfo {
     pub asset_id: String,
     pub asset_type: String,
@@ -68,6 +72,7 @@ pub struct AssetInfo {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct UserInfo {
     pub user_id: String,
     pub username: String,

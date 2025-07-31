@@ -11,6 +11,7 @@ import ParserManagement from './components/ParserManagement';
 import TenantMetricsDashboard from './components/TenantMetricsDashboard';
 import { InteractiveParserBuilder } from './components/InteractiveParserBuilder';
 import { EventInvestigation } from './components/EventInvestigation';
+import { LogActivities } from './components/LogActivities';
 
 import DevEventsTable from './components/DevEventsTable';
 import { AlertDetailDrawer } from './components/AlertDetailDrawer';
@@ -90,7 +91,7 @@ function App() {
       case 'events':
         return <EventInvestigation />;
       case 'log-activity':
-        return <EventInvestigation />;
+        return <LogActivities />;
       case 'vendor-mapping':
         return <VendorMappingPage />;
       case 'agent-fleet':

@@ -9,6 +9,7 @@ use clickhouse::Row;
 
 /// Event detail response structure for frontend compatibility
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct EventDetailResponse {
     pub id: String,
     pub timestamp: String,
@@ -32,6 +33,7 @@ pub struct EventDetailResponse {
 
 /// Search events response structure
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct SearchEventsResponse {
     pub events: Vec<EventDetailResponse>,
     pub total: usize,
@@ -40,6 +42,7 @@ pub struct SearchEventsResponse {
 
 /// Search request structure with comprehensive filtering options
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct SearchRequest {
     /// Search query string (supports full-text and regex)
     pub query: Option<String>,
@@ -71,6 +74,7 @@ pub struct SearchRequest {
 
 /// Time range filter for log events
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct TimeRange {
     /// Start time (inclusive)
     pub start: DateTime<Utc>,
@@ -137,6 +141,7 @@ pub enum FilterValue {
 
 /// Pagination configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct Pagination {
     /// Page number (0-based)
     pub page: u32,
@@ -153,6 +158,7 @@ pub struct Pagination {
 
 /// Sort field configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct SortField {
     /// Field name to sort by
     pub field: String,
@@ -166,15 +172,15 @@ pub struct SortField {
 
 /// Sort direction enumeration
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum SortDirection {
-    #[serde(rename = "asc")]
     Ascending,
-    #[serde(rename = "desc")]
     Descending,
 }
 
 /// Search behavior options
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct SearchOptions {
     /// Enable full-text search
     pub enable_fulltext: Option<bool>,
@@ -206,6 +212,7 @@ pub struct SearchOptions {
 
 /// Aggregation request structure
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct AggregationRequest {
     /// Aggregation type
     pub agg_type: AggregationType,
@@ -222,6 +229,7 @@ pub struct AggregationRequest {
 
 /// Dashboard V2 response structure
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct DashboardV2Response {
     /// Total number of events
     pub total_events: i64,
@@ -237,6 +245,7 @@ pub struct DashboardV2Response {
 
 /// Alerts over time data structure
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct AlertsOverTimeData {
     /// Unix timestamp
     pub ts: i64,
@@ -252,6 +261,7 @@ pub struct AlertsOverTimeData {
 
 /// Top log source data structure
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct TopLogSourceData {
     /// Source type name
     pub source_type: String,
@@ -261,6 +271,7 @@ pub struct TopLogSourceData {
 
 /// Recent alert V2 structure
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct RecentAlertV2 {
     /// Alert ID
     pub alert_id: String,
@@ -291,6 +302,7 @@ pub struct Event {
 
 /// Event filters for querying
 #[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct EventFilters {
     pub page: Option<u32>,
     pub limit: Option<u32>,
@@ -304,6 +316,7 @@ pub struct EventFilters {
 
 /// Types of aggregations supported
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum AggregationType {
     /// Count of documents
     Count,
@@ -369,6 +382,7 @@ pub struct SearchHits {
 
 /// Total hits information
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct TotalHits {
     /// Total count
     pub value: u64,
@@ -379,15 +393,15 @@ pub struct TotalHits {
 
 /// Relation of total count to actual total
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum TotalRelation {
-    #[serde(rename = "eq")]
     Equal,
-    #[serde(rename = "gte")]
     GreaterThanOrEqual,
 }
 
 /// Individual search hit
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct SearchHit {
     /// Document ID
     pub id: String,
@@ -407,6 +421,7 @@ pub struct SearchHit {
 
 /// Log event structure matching dev.events table schema
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct LogEvent {
     /// Event ID
     pub event_id: String,
@@ -678,6 +693,7 @@ mod timestamp_serde {
 
 /// Detection rule match information
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct DetectionMatch {
     /// Rule ID
     pub rule_id: String,
@@ -700,6 +716,7 @@ pub struct DetectionMatch {
 
 /// Pagination information in response
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct PaginationInfo {
     /// Current page number
     pub current_page: u32,
@@ -725,7 +742,7 @@ pub struct PaginationInfo {
 
 /// Aggregation result
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(tag = "type")]
+#[serde(tag = "type", rename_all = "snake_case")]
 pub enum AggregationResult {
     /// Count result
     Count {
@@ -770,6 +787,7 @@ pub enum AggregationResult {
 
 /// Terms aggregation bucket
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct TermsBucket {
     /// Term value
     pub key: String,
@@ -783,6 +801,7 @@ pub struct TermsBucket {
 
 /// Date histogram bucket
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct DateHistogramBucket {
     /// Bucket timestamp
     pub key: DateTime<Utc>,
@@ -799,6 +818,7 @@ pub struct DateHistogramBucket {
 
 /// Numeric histogram bucket
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct HistogramBucket {
     /// Bucket value
     pub key: f64,
@@ -812,6 +832,7 @@ pub struct HistogramBucket {
 
 /// Search execution metadata
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct SearchMetadata {
     /// Query execution time in milliseconds
     pub took: u64,
@@ -837,6 +858,7 @@ pub struct SearchMetadata {
 
 /// Shard information
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct ShardInfo {
     /// Total shards
     pub total: u32,
@@ -853,6 +875,7 @@ pub struct ShardInfo {
 
 /// Query execution explanation
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct QueryExplanation {
     /// SQL query executed
     pub sql: String,
@@ -866,6 +889,7 @@ pub struct QueryExplanation {
 
 /// Query execution statistics
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct QueryStatistics {
     /// Rows read
     pub rows_read: u64,
@@ -882,6 +906,7 @@ pub struct QueryStatistics {
 
 /// Search suggestion
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct SearchSuggestion {
     /// Suggestion type
     pub suggestion_type: SuggestionType,
@@ -898,6 +923,7 @@ pub struct SearchSuggestion {
 
 /// Types of search suggestions
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum SuggestionType {
     /// Query completion
     Completion,
@@ -914,6 +940,7 @@ pub enum SuggestionType {
 
 /// Error response structure
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct ErrorResponse {
     /// Error code
     pub code: String,
@@ -933,6 +960,7 @@ pub struct ErrorResponse {
 
 /// Health check response
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct HealthResponse {
     /// Service status
     pub status: HealthStatus,
@@ -952,17 +980,16 @@ pub struct HealthResponse {
 
 /// Health status enumeration
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum HealthStatus {
-    #[serde(rename = "healthy")]
     Healthy,
-    #[serde(rename = "degraded")]
     Degraded,
-    #[serde(rename = "unhealthy")]
     Unhealthy,
 }
 
 /// Component health information
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct ComponentHealth {
     /// Component status
     pub status: HealthStatus,

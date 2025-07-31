@@ -17,6 +17,7 @@ use crate::{
     config::Config,
     metrics::MetricsCollector,
     schema::LogEvent,
+    pool::ChPool,
 };
 
 /// ClickHouse row representation for log events
@@ -71,7 +72,7 @@ pub struct ConnectionStats {
 
 /// ClickHouse writer for batch log ingestion
 pub struct ClickHouseWriter {
-    client: Client,
+    pool: Arc<ChPool>,
     config: Arc<Config>,
     metrics: Arc<MetricsCollector>,
     connection_stats: Arc<RwLock<ConnectionStats>>,
@@ -79,43 +80,54 @@ pub struct ClickHouseWriter {
 }
 
 impl ClickHouseWriter {
-    /// Create a new ClickHouse writer
-    pub async fn new(
+    /// Create a new ClickHouse writer with connection pool
+    pub async fn new_with_pool(
         config: Arc<Config>,
         metrics: Arc<MetricsCollector>,
+        pool: Arc<ChPool>,
     ) -> Result<Self> {
-        info!("Initializing ClickHouse writer with URL: {}", config.clickhouse.url);
-        
-        let client = Client::default()
-            .with_url(&config.clickhouse.url.to_string())
-            .with_user(&config.clickhouse.username)
-            .with_password(&config.clickhouse.password)
-            .with_database(&config.clickhouse.database)
-            .with_compression(clickhouse::Compression::Lz4);
+        info!("Initializing ClickHouse writer with connection pool");
         
         let writer = Self {
-            client,
+            pool,
             config,
             metrics,
             connection_stats: Arc::new(RwLock::new(ConnectionStats::default())),
             table_schemas: Arc::new(RwLock::new(HashMap::new())),
         };
         
-        // Test connection
+        // Test connection using pool
         writer.test_connection().await
-            .context("Failed to establish ClickHouse connection")?;
+            .context("Failed to establish ClickHouse connection via pool")?;
         
-        info!("ClickHouse writer initialized successfully");
+        info!("ClickHouse writer initialized successfully with connection pool");
         Ok(writer)
+    }
+    
+    /// Create a new ClickHouse writer (legacy method - creates own pool)
+    pub async fn new(
+        config: Arc<Config>,
+        metrics: Arc<MetricsCollector>,
+    ) -> Result<Self> {
+        info!("Initializing ClickHouse writer with URL: {}", config.clickhouse.url);
+        
+        // Create a connection pool internally
+        let pool = Arc::new(ChPool::new(config.clickhouse.clone()).await?);
+        
+        Self::new_with_pool(config, metrics, pool).await
     }
     
     /// Test ClickHouse connection
     pub async fn test_connection(&self) -> Result<()> {
         let start_time = Instant::now();
         
-        debug!("Testing ClickHouse connection");
+        debug!("Testing ClickHouse connection via pool");
         
-        let result = self.client
+        // Get a connection handle from the pool
+        let client = self.pool.get_handle().await
+            .context("Failed to get connection handle from pool")?;
+        
+        let result = client
             .query("SELECT 1 as test")
             .fetch_one::<u8>()
             .await;
@@ -131,7 +143,8 @@ impl ClickHouseWriter {
                 stats.total_connections += 1;
                 stats.active_connections += 1;
                 
-                // Connection test successful - no specific metrics needed
+                // Return connection to pool
+                self.pool.return_connection(client).await;
                 
                 Ok(())
             }
@@ -144,6 +157,9 @@ impl ClickHouseWriter {
                 
                 // Record connection failure
                 self.metrics.record_error("clickhouse_connection_failure", None);
+                
+                // Return connection to pool even on error
+                self.pool.return_connection(client).await;
                 
                 Err(anyhow::anyhow!("ClickHouse connection failed: {}", e))
             }
@@ -186,7 +202,11 @@ impl ClickHouseWriter {
         
         let start_time = Instant::now();
         
-        match self.client.query(&create_table_sql).execute().await {
+        // Get connection handle from pool
+        let client = self.pool.get_handle().await
+            .context("Failed to get connection from pool for table creation")?;
+        
+        match client.query(&create_table_sql).execute().await {
             Ok(_) => {
                 let duration = start_time.elapsed();
                 info!("Table '{}' ensured in {:?}", validated_table_name, duration);
@@ -235,9 +255,24 @@ impl ClickHouseWriter {
         let mut last_error = None;
         
         while retry_count <= max_retries {
+            // Get connection handle from pool
+            let client = match self.pool.get_handle().await {
+                Ok(handle) => handle,
+                Err(e) => {
+                    last_error = Some(anyhow::anyhow!("Failed to get connection from pool: {}", e));
+                    retry_count += 1;
+                    if retry_count <= max_retries {
+                        let backoff_ms = 100 * (2_u64.pow(retry_count as u32 - 1));
+                        warn!("Retrying to get connection from pool (attempt {}/{}) after {}ms backoff", retry_count, max_retries, backoff_ms);
+                        tokio::time::sleep(Duration::from_millis(backoff_ms)).await;
+                    }
+                    continue;
+                }
+            };
+            
             // Prepare insert query
             let insert_result = async {
-                let mut insert = self.client.insert(table_name)?;
+                let mut insert = client.insert(table_name)?;
                 
                 // Add rows to insert
                 for row in &rows {
@@ -334,7 +369,11 @@ impl ClickHouseWriter {
         
         let start_time = Instant::now();
         
-        match self.client.query(&query).fetch_one::<(u64, u64, u64, u64)>().await {
+        // Get connection handle from pool
+        let client = self.pool.get_handle().await
+            .context("Failed to get connection from pool for table info query")?;
+        
+        match client.query(&query).fetch_one::<(u64, u64, u64, u64)>().await {
             Ok((row_count, min_ts, max_ts, unique_tenants)) => {
                 let duration = start_time.elapsed();
                 
@@ -409,7 +448,11 @@ impl ClickHouseWriter {
     pub async fn list_tables(&self) -> Result<Vec<String>> {
         let query = "SHOW TABLES";
         
-        match self.client.query(query).fetch_all::<String>().await {
+        // Get connection handle from pool
+        let client = self.pool.get_handle().await
+            .context("Failed to get connection from pool for list tables query")?;
+        
+        match client.query(query).fetch_all::<String>().await {
             Ok(tables) => {
                 debug!("Found {} tables in ClickHouse", tables.len());
                 Ok(tables)
@@ -431,7 +474,11 @@ impl ClickHouseWriter {
         
         let query = format!("DROP TABLE IF EXISTS {}", validated_table_name);
         
-        match self.client.query(&query).execute().await {
+        // Get connection handle from pool
+        let client = self.pool.get_handle().await
+            .context("Failed to get connection from pool for drop table query")?;
+        
+        match client.query(&query).execute().await {
             Ok(_) => {
                 info!("Successfully dropped table: {}", validated_table_name);
                 

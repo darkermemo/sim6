@@ -72,6 +72,7 @@ impl std::fmt::Debug for AuthManager {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct LoginRequest {
     pub username: String,
     pub password: String,
@@ -79,6 +80,7 @@ pub struct LoginRequest {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct LoginResponse {
     pub access_token: String,
     pub refresh_token: String,
@@ -87,6 +89,7 @@ pub struct LoginResponse {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct UserInfo {
     pub id: Uuid,
     pub username: String,
@@ -98,17 +101,20 @@ pub struct UserInfo {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct RefreshTokenRequest {
     pub refresh_token: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct ChangePasswordRequest {
     pub current_password: String,
     pub new_password: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct SetupMfaResponse {
     pub secret: String,
     pub qr_code_url: String,
@@ -116,6 +122,7 @@ pub struct SetupMfaResponse {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct VerifyMfaRequest {
     pub code: String,
 }
@@ -429,13 +436,13 @@ impl AuthManager {
     fn generate_refresh_token(&self) -> String {
         let mut rng = rand::thread_rng();
         let token: [u8; 32] = rng.gen();
-        base64::encode(token)
+        token.iter().map(|b| format!("{:02x}", b)).collect::<String>()
     }
 
     fn generate_mfa_secret(&self) -> String {
         let mut rng = rand::thread_rng();
         let secret: [u8; 20] = rng.gen();
-        base64::encode(secret)
+        secret.iter().map(|b| format!("{:02x}", b)).collect::<String>()
     }
 
     fn generate_backup_codes(&self) -> Vec<String> {

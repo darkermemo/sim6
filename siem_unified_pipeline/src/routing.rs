@@ -24,6 +24,7 @@ pub struct RoutingRule {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct RoutingCondition {
     pub field: String,
     pub operator: ConditionOperator,
@@ -32,6 +33,7 @@ pub struct RoutingCondition {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum ConditionOperator {
     Equals,
     NotEquals,

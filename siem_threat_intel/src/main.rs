@@ -7,6 +7,7 @@ use uuid::Uuid;
 use log::{info, error, warn};
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 struct ThreatIntelRecord {
     ioc_id: String,
     ioc_type: String,
@@ -166,4 +167,4 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         // Sleep for 1 hour before next update
         time::sleep(Duration::from_secs(3600)).await;
     }
-} 
+}

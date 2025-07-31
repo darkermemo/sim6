@@ -89,7 +89,7 @@ test.describe('Runtime Error Detection', () => {
       const errorCollector = new ErrorCollector(page);
       
       try {
-        await page.goto(`http://localhost:3000${route.path}`, {
+        await page.goto(`${route.path}`, {
           waitUntil: 'networkidle',
           timeout: 10000
         });
@@ -123,7 +123,7 @@ test.describe('Runtime Error Detection', () => {
   test('Dashboard components render with mock data', async ({ page }) => {
     const errorCollector = new ErrorCollector(page);
     
-    await page.goto('http://localhost:3000/', { waitUntil: 'networkidle' });
+    await page.goto('/', { waitUntil: 'networkidle' });
     
     // Check for key dashboard elements
     await expect(page.locator('[data-testid="dashboard-stats"], .grid')).toBeVisible();
@@ -177,7 +177,7 @@ test.describe('Runtime Error Detection', () => {
       });
     });
     
-    await page.goto('http://localhost:3000/alerts', { waitUntil: 'networkidle' });
+    await page.goto('/alerts', { waitUntil: 'networkidle' });
     await page.waitForTimeout(2000);
     
     // Verify page still renders despite malformed data
@@ -190,7 +190,7 @@ test.describe('Runtime Error Detection', () => {
   test('Interactive elements work without errors', async ({ page }) => {
     const errorCollector = new ErrorCollector(page);
     
-    await page.goto('http://localhost:3000/rules', { waitUntil: 'networkidle' });
+    await page.goto('/rules', { waitUntil: 'networkidle' });
     
     // Test button clicks
     const editButtons = page.locator('button:has-text("Edit")');
@@ -222,7 +222,7 @@ test.describe('Runtime Error Detection', () => {
       });
     });
     
-    await page.goto('http://localhost:3000/alerts', { waitUntil: 'networkidle' });
+    await page.goto('/alerts', { waitUntil: 'networkidle' });
     await page.waitForTimeout(3000);
     
     // Should show error state, not crash
@@ -238,7 +238,7 @@ test.describe('Runtime Error Detection', () => {
   test('Navigation between pages works without errors', async ({ page }) => {
     const errorCollector = new ErrorCollector(page);
     
-    await page.goto('http://localhost:3000/', { waitUntil: 'networkidle' });
+    await page.goto('/', { waitUntil: 'networkidle' });
     
     // Navigate through main routes
     for (const route of ROUTES_TO_TEST.slice(1, 4)) { // Test first few routes

@@ -54,6 +54,7 @@ pub struct AuthConfig {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct Claims {
     pub sub: String,
     pub exp: usize,

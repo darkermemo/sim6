@@ -24,6 +24,7 @@ use crate::pipeline::PipelineEvent;
 use crate::routing::DestinationHealth;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct StorageStats {
     pub destination_name: String,
     pub events_stored: u64,
@@ -36,6 +37,7 @@ pub struct StorageStats {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum ConnectionStatus {
     Connected,
     Disconnected,
@@ -44,6 +46,7 @@ pub enum ConnectionStatus {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Row)]
+#[serde(rename_all = "snake_case")]
 pub struct SiemEvent {
     pub id: String,
     pub timestamp: DateTime<Utc>,

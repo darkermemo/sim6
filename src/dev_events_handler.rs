@@ -137,6 +137,7 @@ pub struct DevEvent {
 
 /// Query parameters for filtering events
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct EventQueryParams {
     /// Limit number of results (default: 100, max: 1000)
     pub limit: Option<u32>,
@@ -158,6 +159,7 @@ pub struct EventQueryParams {
 
 /// Response structure for dev events API using the core event structure
 #[derive(Debug, Serialize)]
+#[serde(rename_all = "snake_case")]
 pub struct DevEventsResponse {
     pub events: Vec<DevEventCore>,
     pub total_count: usize,
@@ -168,6 +170,7 @@ pub struct DevEventsResponse {
 /// Legacy response structure for backward compatibility
 /// TODO: Remove this once frontend is updated to use DevEventsResponse
 #[derive(Debug, Serialize)]
+#[serde(rename_all = "snake_case")]
 pub struct DevEventsResponseLegacy {
     pub events: Vec<DevEvent>,
     pub total_count: usize,
@@ -177,6 +180,7 @@ pub struct DevEventsResponseLegacy {
 
 /// Error response structure
 #[derive(Debug, Serialize)]
+#[serde(rename_all = "snake_case")]
 pub struct ErrorResponse {
     pub error: String,
     pub message: String,

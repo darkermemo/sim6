@@ -1,0 +1,51 @@
+{
+  "route_details": [
+    {
+      "path": "/api/v1/alerts",
+      "method": "GET",
+      "handler": "get_alerts",
+      "is_used_in_frontend": true,
+      "frontend_usage": [
+        {
+          "file": "siem_ui/src/components/AlertsPage.tsx",
+          "sample_payload": null
+        }
+      ],
+      "backend_file": "src/handlers/alerts.rs"
+    },
+    {
+      "path": "/api/v1/alerts",
+      "method": "POST",
+      "handler": "create_alert",
+      "is_used_in_frontend": true,
+      "frontend_usage": [
+        {
+          "file": "siem_ui/src/components/AlertsPage.tsx",
+          "sample_payload": {
+            "title": "Test Alert",
+            "severity": "high",
+            "description": "Test alert description"
+          }
+        }
+      ],
+      "backend_file": "src/handlers/alerts.rs",
+      "expected_status": 201
+    },
+    {
+      "path": "/api/v1/users",
+      "method": "GET",
+      "handler": "get_users",
+      "is_used_in_frontend": true,
+      "frontend_usage": [],
+      "backend_file": "src/handlers/users.rs"
+    },
+    {
+      "path": "/api/v1/internal/metrics",
+      "method": "GET",
+      "handler": "get_metrics",
+      "is_used_in_frontend": false,
+      "backend_only": true,
+      "backend_file": "src/handlers/metrics.rs"
+    }
+  ]
+}

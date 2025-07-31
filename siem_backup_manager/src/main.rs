@@ -39,6 +39,7 @@ struct Args {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct BackupMetadata {
     pub backup_id: String,
     pub timestamp: DateTime<Utc>,
@@ -50,6 +51,7 @@ pub struct BackupMetadata {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum BackupType {
     Full,
     Incremental,
@@ -57,6 +59,7 @@ pub enum BackupType {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct BackupComponent {
     pub name: String,
     pub path: String,
@@ -410,4 +413,4 @@ async fn cleanup_old_backups(
     }
     
     Ok(())
-} 
+}

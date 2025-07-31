@@ -460,14 +460,28 @@ impl Config {
         Duration::from_secs(self.server.request_timeout_secs)
     }
     
-    /// Get table name for a specific tenant
+    /// Get table name for a specific tenant with safe validation
     pub fn get_table_name(&self, tenant_id: Option<&str>) -> String {
         match tenant_id {
             Some(id) if self.security.enable_tenant_isolation => {
-                self.clickhouse.tables.tenant_table_pattern
-                    .replace("{tenant_id}", id)
+                // Validate tenant_id to prevent injection
+                if Self::is_valid_tenant_id(id) {
+                    self.clickhouse.tables.tenant_table_pattern
+                        .replace("{tenant_id}", id)
+                } else {
+                    // Fall back to default table for invalid tenant IDs
+                    self.clickhouse.tables.default_table.clone()
+                }
             }
             _ => self.clickhouse.tables.default_table.clone(),
         }
+    }
+    
+    /// Validate tenant ID to ensure it only contains safe characters
+    fn is_valid_tenant_id(tenant_id: &str) -> bool {
+        // Only allow alphanumeric characters, underscores, and hyphens
+        tenant_id.chars().all(|c| c.is_alphanumeric() || c == '_' || c == '-')
+            && !tenant_id.is_empty()
+            && tenant_id.len() <= 64 // Reasonable length limit
     }
 }

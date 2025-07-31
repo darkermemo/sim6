@@ -904,15 +904,17 @@ impl<'a> QueryBuilder<'a> {
             params.insert("end_time".to_string(), time_range.end.timestamp().to_string());
         }
         
-        // Text search
+        // Text search with proper encoding
         if let Some(query) = &self.request.query {
             if !query.is_empty() {
+                // URL encode the search query to prevent injection
+                let encoded_query = urlencoding::encode(query);
                 if self.config.search.enable_fulltext {
                     where_clauses.push("hasToken(message, ?)".to_string());
                 } else {
                     where_clauses.push("message ILIKE ?".to_string());
                 }
-                params.insert("search_query".to_string(), query.clone());
+                params.insert("search_query".to_string(), encoded_query.to_string());
             }
         }
         

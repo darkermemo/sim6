@@ -68,6 +68,7 @@ TableRow.displayName = 'TableRow';
 const TableHead = forwardRef<
   HTMLTableCellElement,
   React.ThHTMLAttributes<HTMLTableCellElement>
+  // eslint-disable-next-line react/prop-types
 >(({ className, ...props }, ref) => (
   <th
     ref={ref}
@@ -83,6 +84,7 @@ TableHead.displayName = 'TableHead';
 const TableCell = forwardRef<
   HTMLTableCellElement,
   React.TdHTMLAttributes<HTMLTableCellElement>
+  // eslint-disable-next-line react/prop-types
 >(({ className, ...props }, ref) => (
   <td
     ref={ref}

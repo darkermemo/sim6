@@ -8,6 +8,7 @@ mod router;
 mod clickhouse;
 mod metrics;
 mod schema;
+mod pool;
 
 use anyhow::Result;
 use std::sync::Arc;
@@ -22,6 +23,7 @@ use crate::{
     router::LogRouter,
     clickhouse::ClickHouseWriter,
     metrics::MetricsCollector,
+    pool::ChPool,
 };
 
 #[tokio::main]
@@ -51,8 +53,12 @@ async fn main() -> Result<()> {
     // Initialize metrics collector
     let metrics = Arc::new(MetricsCollector::new(std::time::Duration::from_secs(10)));
     
-    // Initialize ClickHouse writer
-    let clickhouse_writer: Arc<ClickHouseWriter> = Arc::new(ClickHouseWriter::new(Arc::new(config.clone()), metrics.clone()).await?);
+    // Initialize ClickHouse connection pool
+    let ch_pool = Arc::new(ChPool::new(config.clickhouse.clone()).await?);
+    info!("ClickHouse connection pool initialized");
+    
+    // Initialize ClickHouse writer with pool
+    let clickhouse_writer: Arc<ClickHouseWriter> = Arc::new(ClickHouseWriter::new_with_pool(Arc::new(config.clone()), metrics.clone(), ch_pool.clone()).await?);
     info!("ClickHouse writer initialized");
     metrics.start_collection().await?;
     info!("Metrics collector initialized");
@@ -72,6 +78,7 @@ async fn main() -> Result<()> {
         tenant_registry.clone(),
         router.clone(),
         metrics.clone(),
+        ch_pool.clone(),
     );
     let app = log_receiver.create_router();
     let listener = tokio::net::TcpListener::bind(&config.server.bind_address).await?;

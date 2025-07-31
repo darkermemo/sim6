@@ -3,6 +3,7 @@ use std::path::Path;
 use crate::error::{Result, ClickVisualError};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct Config {
     pub server: ServerConfig,
     pub database: DatabaseConfig,
@@ -12,6 +13,7 @@ pub struct Config {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct ServerConfig {
     pub host: String,
     pub port: u16,
@@ -22,6 +24,7 @@ pub struct ServerConfig {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct DatabaseConfig {
     pub url: String,
     pub max_connections: u32,
@@ -30,6 +33,7 @@ pub struct DatabaseConfig {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct ClickHouseConfig {
     pub url: String,
     pub username: String,
@@ -41,6 +45,7 @@ pub struct ClickHouseConfig {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct AuthConfig {
     pub jwt_secret: String,
     pub jwt_expiration: u64,
@@ -49,6 +54,7 @@ pub struct AuthConfig {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct OAuthProvider {
     pub name: String,
     pub client_id: String,
@@ -59,6 +65,7 @@ pub struct OAuthProvider {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct LoggingConfig {
     pub level: String,
     pub format: String,

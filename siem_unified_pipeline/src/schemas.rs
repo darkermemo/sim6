@@ -87,6 +87,7 @@ pub struct CreateRoutingRuleRequest {
 }
 
 #[derive(Debug, Serialize, Deserialize, Validate)]
+#[serde(rename_all = "snake_case")]
 pub struct UpdateRoutingRuleRequest {
     #[validate(length(min = 1, max = 1000))]
     pub description: Option<String>,
@@ -103,6 +104,7 @@ pub struct UpdateRoutingRuleRequest {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "snake_case")]
 pub struct RoutingRuleResponse {
     pub id: String,
     pub name: String,
@@ -118,6 +120,7 @@ pub struct RoutingRuleResponse {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct RoutingRulesListResponse {
     pub rules: Vec<RoutingRuleResponse>,
     pub total: u64,
@@ -125,6 +128,7 @@ pub struct RoutingRulesListResponse {
 
 // System Logs Schemas
 #[derive(Debug, Serialize, Deserialize, Validate)]
+#[serde(rename_all = "snake_case")]
 pub struct SystemLogsRequest {
     #[validate(length(min = 1, max = 50))]
     pub level: Option<String>,
@@ -152,6 +156,7 @@ pub struct SystemLogEntry {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct SystemLogsResponse {
     pub logs: Vec<SystemLogEntry>,
     pub total: u64,
@@ -159,6 +164,7 @@ pub struct SystemLogsResponse {
 
 // Common Error Response Schema
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct ErrorResponse {
     pub error: String,
     pub message: String,

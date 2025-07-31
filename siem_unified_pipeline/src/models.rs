@@ -7,6 +7,7 @@ use validator::{Validate, ValidationError};
 
 // Core event models
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow, Validate)]
+#[serde(rename_all = "snake_case")]
 pub struct Event {
     pub id: Uuid,
     pub timestamp: DateTime<Utc>,
@@ -38,6 +39,7 @@ pub struct Event {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct EventMetadata {
     pub event_id: Uuid,
     pub enrichment_data: HashMap<String, serde_json::Value>,
@@ -53,6 +55,7 @@ pub struct EventMetadata {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+#[serde(rename_all = "snake_case")]
 pub struct GeoLocation {
     pub country: Option<String>,
     pub country_code: Option<String>,
@@ -66,6 +69,7 @@ pub struct GeoLocation {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+#[serde(rename_all = "snake_case")]
 pub struct ThreatIntelligence {
     pub is_malicious: bool,
     pub threat_type: Option<String>,
@@ -79,6 +83,7 @@ pub struct ThreatIntelligence {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+#[serde(rename_all = "snake_case")]
 pub struct AssetInfo {
     pub asset_id: String,
     pub asset_name: String,
@@ -93,6 +98,7 @@ pub struct AssetInfo {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+#[serde(rename_all = "snake_case")]
 pub struct UserInfo {
     pub user_id: String,
     pub username: String,
@@ -108,6 +114,7 @@ pub struct UserInfo {
 
 // Alert models
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow, Validate)]
+#[serde(rename_all = "snake_case")]
 pub struct Alert {
     pub id: Uuid,
     #[validate(length(min = 1, max = 255))]
@@ -140,6 +147,7 @@ pub struct Alert {
 
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::Type)]
 #[sqlx(type_name = "alert_severity", rename_all = "lowercase")]
+#[serde(rename_all = "snake_case")]
 #[derive(Default)]
 pub enum AlertSeverity {
     Critical,
@@ -152,6 +160,7 @@ pub enum AlertSeverity {
 
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::Type)]
 #[sqlx(type_name = "alert_status", rename_all = "lowercase")]
+#[serde(rename_all = "snake_case")]
 #[derive(Default)]
 pub enum AlertStatus {
     #[default]
@@ -164,6 +173,7 @@ pub enum AlertStatus {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+#[serde(rename_all = "snake_case")]
 pub struct AlertComment {
     pub id: Uuid,
     pub alert_id: Uuid,
@@ -175,6 +185,7 @@ pub struct AlertComment {
 
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::Type)]
 #[sqlx(type_name = "comment_type", rename_all = "lowercase")]
+#[serde(rename_all = "snake_case")]
 pub enum CommentType {
     Note,
     Investigation,
@@ -185,6 +196,7 @@ pub enum CommentType {
 
 // Detection rule models
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow, Validate)]
+#[serde(rename_all = "snake_case")]
 pub struct DetectionRule {
     pub id: Uuid,
     #[validate(length(min = 1, max = 255))]
@@ -212,6 +224,7 @@ pub struct DetectionRule {
 
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::Type)]
 #[sqlx(type_name = "rule_type", rename_all = "lowercase")]
+#[serde(rename_all = "snake_case")]
 pub enum RuleType {
     Sigma,
     Yara,
@@ -223,6 +236,7 @@ pub enum RuleType {
 
 // User and authentication models
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow, Validate)]
+#[serde(rename_all = "snake_case")]
 pub struct User {
     pub id: Uuid,
     #[validate(length(min = 3, max = 50))]
@@ -248,6 +262,7 @@ pub struct User {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, sqlx::Type)]
 #[sqlx(type_name = "user_role", rename_all = "lowercase")]
+#[serde(rename_all = "snake_case")]
 #[derive(Default)]
 pub enum UserRole {
     Admin,
@@ -258,7 +273,8 @@ pub enum UserRole {
     ApiUser,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]  
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+#[serde(rename_all = "snake_case")]
 pub struct UserSession {
     pub id: Uuid,
     pub user_id: Uuid,
@@ -272,6 +288,7 @@ pub struct UserSession {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+#[serde(rename_all = "snake_case")]
 pub struct PendingMfaSetup {
     pub user_id: Uuid,
     pub secret: String,
@@ -281,6 +298,7 @@ pub struct PendingMfaSetup {
 
 // Configuration models
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow, Validate)]
+#[serde(rename_all = "snake_case")]
 pub struct DataSource {
     pub id: Uuid,
     #[validate(length(min = 1, max = 255))]
@@ -301,6 +319,7 @@ pub struct DataSource {
 
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::Type)]
 #[sqlx(type_name = "data_source_type", rename_all = "lowercase")]
+#[serde(rename_all = "snake_case")]
 pub enum DataSourceType {
     Syslog,
     File,
@@ -315,6 +334,7 @@ pub enum DataSourceType {
 
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::Type)]
 #[sqlx(type_name = "health_status", rename_all = "lowercase")]
+#[serde(rename_all = "snake_case")]
 #[derive(Default)]
 pub enum HealthStatus {
     Healthy,
@@ -325,6 +345,7 @@ pub enum HealthStatus {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+#[serde(rename_all = "snake_case")]
 pub struct Destination {
     pub id: Uuid,
     pub name: String,
@@ -342,6 +363,7 @@ pub struct Destination {
 
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::Type)]
 #[sqlx(type_name = "destination_type", rename_all = "lowercase")]
+#[serde(rename_all = "snake_case")]
 pub enum DestinationType {
     ClickHouse,
     Kafka,
@@ -352,6 +374,7 @@ pub enum DestinationType {
 
 // Audit and compliance models
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+#[serde(rename_all = "snake_case")]
 pub struct AuditLog {
     pub id: Uuid,
     pub user_id: Option<Uuid>,
@@ -367,6 +390,7 @@ pub struct AuditLog {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+#[serde(rename_all = "snake_case")]
 pub struct ComplianceReport {
     pub id: Uuid,
     pub report_type: String,
@@ -382,6 +406,7 @@ pub struct ComplianceReport {
 
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::Type)]
 #[sqlx(type_name = "report_status", rename_all = "lowercase")]
+#[serde(rename_all = "snake_case")]
 pub enum ReportStatus {
     Draft,
     InReview,
@@ -391,6 +416,7 @@ pub enum ReportStatus {
 
 // Statistics and metrics models
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct EventStatistics {
     pub total_events: i64,
     pub events_by_severity: HashMap<String, i64>,
@@ -404,6 +430,7 @@ pub struct EventStatistics {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct AlertStatistics {
     pub total_alerts: i64,
     pub open_alerts: i64,
@@ -418,6 +445,7 @@ pub struct AlertStatistics {
 
 // Search and query models
 #[derive(Debug, Clone, Serialize, Deserialize, Validate)]
+#[serde(rename_all = "snake_case")]
 pub struct SearchQuery {
     #[validate(length(min = 1))]
     pub query: String,
@@ -433,12 +461,14 @@ pub struct SearchQuery {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct TimeRange {
     pub start: DateTime<Utc>,
     pub end: DateTime<Utc>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 #[derive(Default)]
 pub enum SortOrder {
     Asc,
@@ -447,6 +477,7 @@ pub enum SortOrder {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct SearchResult<T> {
     pub items: Vec<T>,
     pub total_count: i64,
@@ -456,6 +487,7 @@ pub struct SearchResult<T> {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct PageInfo {
     pub current_page: u32,
     pub total_pages: u32,
