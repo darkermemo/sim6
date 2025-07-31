@@ -285,7 +285,7 @@ impl DatabaseManager {
         let mut connections = self.connections.write().await;
         
         // Find an idle healthy connection
-        for (_index, conn) in connections.iter_mut().enumerate() {
+        for conn in connections.iter_mut() {
             if conn.is_healthy {
                 conn.mark_used();
                 
@@ -326,6 +326,7 @@ impl DatabaseManager {
     }
     
     /// Return a connection to the pool
+    #[allow(dead_code)]
     async fn return_connection(&self, connection_id: Uuid) {
         let mut connections = self.connections.write().await;
         

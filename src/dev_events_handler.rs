@@ -188,6 +188,7 @@ pub struct ErrorResponse {
 }
 
 /// Retry logic for database operations
+#[allow(dead_code)]
 async fn execute_with_retry<F, Fut, T>(
     operation: F,
     max_retries: usize,

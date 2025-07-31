@@ -5,14 +5,13 @@
 
 use anyhow::{Context, Result};
 use clickhouse::Client;
-use glob::glob;
 use quote::quote;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::env;
 use std::fs;
-use std::path::Path;
-use syn::{Attribute, Data, DeriveInput, Fields, Lit, Meta, MetaList, MetaNameValue};
+
+use syn::{Attribute, Fields, Meta};
 use thiserror::Error;
 use walkdir::WalkDir;
 
@@ -154,7 +153,7 @@ fn parse_rust_structs() -> Result<HashMap<String, HashMap<String, RustField>>, S
     for entry in WalkDir::new("src/models")
         .into_iter()
         .filter_map(|e| e.ok())
-        .filter(|e| e.path().extension().map_or(false, |ext| ext == "rs"))
+        .filter(|e| e.path().extension().is_some_and(|ext| ext == "rs"))
     {
         let content = fs::read_to_string(entry.path())
             .map_err(|e| SchemaAuditError::RustParsingFailed(format!("Failed to read {}: {}", entry.path().display(), e)))?;
@@ -447,7 +446,7 @@ fn write_schema_report(diffs: &[SchemaDiff]) -> Result<(), SchemaAuditError> {
     for diff in diffs {
         for field in &diff.missing_in_db {
             let db_field_name = field.serde_name.as_ref().unwrap_or(&field.name);
-            let ch_type = convert_rust_to_clickhouse(&field.rust_type);
+            let _ch_type = convert_rust_to_clickhouse(&field.rust_type);
             report.push_str(&format!(
                 "| {} | {} | {} | - | ADD COLUMN |\n",
                 diff.table, db_field_name, field.rust_type
