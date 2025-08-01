@@ -112,7 +112,8 @@ fn main() -> Result<()> {
     let format = matches.get_one::<String>("format").unwrap();
     let verbose = matches.get_flag("verbose");
     let fail_on_critical = matches.get_flag("fail_on_critical");
-    let coverage_threshold: f64 = matches.get_one::<String>("coverage_threshold")
+    let coverage_threshold: f64 = matches
+        .get_one::<String>("coverage_threshold")
         .unwrap()
         .parse()
         .unwrap_or(80.0);
@@ -169,7 +170,7 @@ fn main() -> Result<()> {
         println!("🗄️  Loading database schema...");
     }
     validator.load_database_schema(Path::new(database_schema_path))?;
-    
+
     if verbose {
         let schema = validator.get_current_database_schema();
         if let Some(db_schema) = schema {
@@ -182,7 +183,7 @@ fn main() -> Result<()> {
         println!("🔍 Scanning Rust source code...");
     }
     validator.scan_source_code(Path::new(source_code_path))?;
-    
+
     if verbose {
         let sql_refs = validator.get_sql_references();
         println!("   ✅ Found {} SQL references", sql_refs.len());
@@ -194,7 +195,7 @@ fn main() -> Result<()> {
             println!("📘 Scanning TypeScript interfaces...");
         }
         validator.scan_typescript_interfaces(Path::new(ts_path))?;
-        
+
         if verbose {
             let interfaces = validator.get_current_typescript_interfaces();
             if let Some(ts_interfaces) = interfaces {
@@ -209,7 +210,7 @@ fn main() -> Result<()> {
             println!("🔗 Loading GraphQL schema...");
         }
         validator.load_graphql_schema(Path::new(gql_path))?;
-        
+
         if verbose {
             let schema = validator.get_current_graphql_schema();
             if let Some(gql_schema) = schema {
@@ -224,13 +225,12 @@ fn main() -> Result<()> {
             println!("📋 Loading OpenAPI specification...");
         }
         validator.load_openapi_spec(Path::new(api_path))?;
-        
+
         if verbose {
             let spec = validator.get_current_openapi_spec();
             if let Some(api_spec) = spec {
-                let total_operations: usize = api_spec.paths.values()
-                    .map(|path| path.methods.len())
-                    .sum();
+                let total_operations: usize =
+                    api_spec.paths.values().map(|path| path.methods.len()).sum();
                 println!("   ✅ Loaded {} OpenAPI operations", total_operations);
             }
         }
@@ -244,7 +244,7 @@ fn main() -> Result<()> {
 
     // Generate and export reports
     let output_path = Path::new(output_dir);
-    
+
     match format.as_str() {
         "json" => {
             let json_path = output_path.join("schema_validation_report.json");
@@ -262,7 +262,9 @@ fn main() -> Result<()> {
             }
             #[cfg(not(feature = "html-reporting"))]
             {
-                eprintln!("❌ HTML reporting feature not enabled. Rebuild with --features html-reporting");
+                eprintln!(
+                    "❌ HTML reporting feature not enabled. Rebuild with --features html-reporting"
+                );
                 std::process::exit(1);
             }
         }
@@ -282,18 +284,18 @@ fn main() -> Result<()> {
             // Export JSON
             let json_path = output_path.join("schema_validation_report.json");
             validator.export_json_report(&json_path)?;
-            
+
             // Export Markdown
             let md_path = output_path.join("schema_validation_report.md");
             validator.export_markdown_report(&md_path)?;
-            
+
             // Export HTML if feature is enabled
             #[cfg(feature = "html-reporting")]
             {
                 let html_path = output_path.join("schema_validation_report.html");
                 validator.export_html_report(&html_path)?;
             }
-            
+
             // Export Prometheus metrics if feature is enabled
             #[cfg(feature = "prometheus-metrics")]
             {
@@ -302,27 +304,39 @@ fn main() -> Result<()> {
             }
         }
         _ => {
-            eprintln!("❌ Invalid format: {}. Use json, markdown, html, prometheus, or all", format);
+            eprintln!(
+                "❌ Invalid format: {}. Use json, markdown, html, prometheus, or all",
+                format
+            );
             std::process::exit(1);
         }
     }
 
     // Generate final report and check results
     let report = validator.generate_report();
-    
+
     if verbose {
         println!();
         println!("📊 Validation Summary:");
         println!("   🗄️  Tables Loaded: {}", report.total_tables_loaded);
         println!("   🔍 SQL References: {}", report.total_sql_references);
-        println!("   📘 TypeScript Interfaces: {}", report.total_typescript_interfaces);
+        println!(
+            "   📘 TypeScript Interfaces: {}",
+            report.total_typescript_interfaces
+        );
         println!("   🔗 GraphQL Types: {}", report.total_graphql_types);
-        println!("   📋 OpenAPI Operations: {}", report.total_openapi_operations);
+        println!(
+            "   📋 OpenAPI Operations: {}",
+            report.total_openapi_operations
+        );
         println!("   ❌ Critical Issues: {}", report.summary.critical_issues);
         println!("   ⚠️  Warnings: {}", report.summary.warnings);
-        println!("   🔗 Cross-Layer Mismatches: {}", report.summary.cross_layer_mismatches);
+        println!(
+            "   🔗 Cross-Layer Mismatches: {}",
+            report.summary.cross_layer_mismatches
+        );
         println!();
-        
+
         println!("📈 Layer Coverage:");
         for (layer, coverage) in &report.summary.layer_coverage {
             let status = if *coverage >= coverage_threshold {
@@ -332,25 +346,37 @@ fn main() -> Result<()> {
             };
             println!("   {} {:?}: {:.1}%", status, layer, coverage);
         }
-        
-        let overall_coverage = report.summary.layer_coverage.values().sum::<f64>() / report.summary.layer_coverage.len() as f64;
+
+        let overall_coverage = report.summary.layer_coverage.values().sum::<f64>()
+            / report.summary.layer_coverage.len() as f64;
         println!();
-        println!("🎯 Overall Coverage: {:.1}% (Threshold: {:.1}%)", overall_coverage, coverage_threshold);
+        println!(
+            "🎯 Overall Coverage: {:.1}% (Threshold: {:.1}%)",
+            overall_coverage, coverage_threshold
+        );
     }
 
     // Check if validation passed
-    let overall_coverage = report.summary.layer_coverage.values().sum::<f64>() / report.summary.layer_coverage.len() as f64;
-    let validation_passed = report.summary.critical_issues == 0 && overall_coverage >= coverage_threshold;
-    
+    let overall_coverage = report.summary.layer_coverage.values().sum::<f64>()
+        / report.summary.layer_coverage.len() as f64;
+    let validation_passed =
+        report.summary.critical_issues == 0 && overall_coverage >= coverage_threshold;
+
     if validation_passed {
         println!("✅ Schema validation PASSED");
     } else {
         println!("❌ Schema validation FAILED");
         if report.summary.critical_issues > 0 {
-            println!("   💥 {} critical issues found", report.summary.critical_issues);
+            println!(
+                "   💥 {} critical issues found",
+                report.summary.critical_issues
+            );
         }
         if overall_coverage < coverage_threshold {
-            println!("   📉 Coverage {:.1}% below threshold {:.1}%", overall_coverage, coverage_threshold);
+            println!(
+                "   📉 Coverage {:.1}% below threshold {:.1}%",
+                overall_coverage, coverage_threshold
+            );
         }
     }
 

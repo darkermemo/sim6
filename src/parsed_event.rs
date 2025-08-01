@@ -15,8 +15,8 @@
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use serde_json::Value;
+use std::collections::HashMap;
 
 /// Canonical ParsedEvent struct representing a normalized security event
 ///
@@ -337,7 +337,10 @@ mod tests {
         assert_eq!(event.destination_ip, Some("10.0.0.1".to_string()));
         assert_eq!(event.user_name, Some("alice".to_string()));
         assert_eq!(event.event_action, Some("login".to_string()));
-        assert_eq!(event.get_field("custom_field"), Some(&json!("custom_value")));
+        assert_eq!(
+            event.get_field("custom_field"),
+            Some(&json!("custom_value"))
+        );
     }
 
     #[test]
@@ -382,7 +385,10 @@ mod tests {
         assert_eq!(original.user_name, deserialized.user_name);
         assert_eq!(original.source_port, deserialized.source_port);
         assert_eq!(original.destination_port, deserialized.destination_port);
-        assert_eq!(original.http_response_status_code, deserialized.http_response_status_code);
+        assert_eq!(
+            original.http_response_status_code,
+            deserialized.http_response_status_code
+        );
         assert_eq!(original.additional_fields, deserialized.additional_fields);
     }
 }

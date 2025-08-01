@@ -1,14 +1,13 @@
 use anyhow::{Context, Result};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use sqlparser::ast::{Statement, TableFactor, Expr, SelectItem, SetExpr, Query};
+use sqlparser::ast::{Expr, Query, SelectItem, SetExpr, Statement, TableFactor};
 use sqlparser::dialect::ClickHouseDialect;
 use sqlparser::parser::Parser;
 use std::collections::{HashMap, HashSet};
-use std::env;
 use std::fs;
 use std::path::Path;
-use syn::{visit::Visit, LitStr, Macro, spanned::Spanned};
+use syn::{spanned::Spanned, visit::Visit, LitStr, Macro};
 use walkdir::WalkDir;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -110,18 +109,22 @@ impl SchemaValidator {
             .with_context(|| format!("Failed to read schema file: {:?}", schema_file))?;
 
         self.parse_clickhouse_schema(&content)?;
-        println!("Loaded {} tables from schema", self.database_schema.tables.len());
+        println!(
+            "Loaded {} tables from schema",
+            self.database_schema.tables.len()
+        );
         Ok(())
     }
 
     /// Parse ClickHouse schema using regex patterns
     fn parse_clickhouse_schema(&mut self, content: &str) -> Result<()> {
         use regex::Regex;
-        
+
         // Regex to match CREATE TABLE statements
-        let table_regex = Regex::new(r"(?s)CREATE TABLE IF NOT EXISTS\s+(\w+)\.(\w+)\s*\((.+?)\)\s*ENGINE")
-            .with_context(|| "Failed to compile table regex")?;
-        
+        let table_regex =
+            Regex::new(r"(?s)CREATE TABLE IF NOT EXISTS\s+(\w+)\.(\w+)\s*\((.+?)\)\s*ENGINE")
+                .with_context(|| "Failed to compile table regex")?;
+
         // Regex to match column definitions
         let column_regex = Regex::new(r"(\w+)\s+([^,\n]+?)(?:DEFAULT\s+([^,\n]+?))?(?:,|\n|$)")
             .with_context(|| "Failed to compile column regex")?;
@@ -134,27 +137,27 @@ impl SchemaValidator {
             self.database_schema.databases.insert(database_name.clone());
 
             let mut table_columns = HashMap::new();
-            
+
             // Parse columns from the table definition
             for line in columns_text.lines() {
                 let line = line.trim();
                 if line.is_empty() || line.starts_with("--") {
                     continue;
                 }
-                
+
                 // Simple column parsing
                 if let Some(column_match) = column_regex.captures(line) {
                     let col_name = column_match.get(1).unwrap().as_str().to_string();
                     let col_type = column_match.get(2).unwrap().as_str().trim().to_string();
                     let default_value = column_match.get(3).map(|m| m.as_str().trim().to_string());
-                    
+
                     let column_def = ColumnDefinition {
                         name: col_name.clone(),
                         data_type: col_type.clone(),
                         nullable: col_type.contains("Nullable"),
                         default_value,
                     };
-                    
+
                     table_columns.insert(col_name, column_def);
                 }
             }
@@ -164,17 +167,17 @@ impl SchemaValidator {
                 database: Some(database_name.clone()),
                 columns: table_columns,
                 engine: Some("MergeTree".to_string()), // Default for ClickHouse
-                order_by: Vec::new(), // Simplified for now
+                order_by: Vec::new(),                  // Simplified for now
             };
 
             let full_table_name = format!("{}.{}", database_name, table_name);
-            self.database_schema.tables.insert(full_table_name, table_schema);
+            self.database_schema
+                .tables
+                .insert(full_table_name, table_schema);
         }
 
         Ok(())
     }
-
-
 
     /// Scan Rust codebase for SQL references using AST parsing
     pub fn scan_rust_codebase(&mut self, source_dir: &Path) -> Result<()> {
@@ -193,8 +196,11 @@ impl SchemaValidator {
             }
         }
 
-        println!("Scanned {} Rust files, found {} SQL references", 
-                files_scanned, self.sql_references.len());
+        println!(
+            "Scanned {} Rust files, found {} SQL references",
+            files_scanned,
+            self.sql_references.len()
+        );
         Ok(())
     }
 
@@ -235,9 +241,10 @@ impl SchemaValidator {
                     if !self.database_schema.tables.contains_key(table) {
                         // Try without database prefix
                         let table_without_db = table.split('.').last().unwrap_or(table);
-                        let table_exists = self.database_schema.tables.keys()
-                            .any(|t| t.ends_with(&format!(".{}", table_without_db)) || t == table_without_db);
-                        
+                        let table_exists = self.database_schema.tables.keys().any(|t| {
+                            t.ends_with(&format!(".{}", table_without_db)) || t == table_without_db
+                        });
+
                         if !table_exists {
                             self.validation_errors.push(ValidationError {
                                 severity: "Critical".to_string(),
@@ -246,7 +253,9 @@ impl SchemaValidator {
                                 file_path: sql_ref.file_path.clone(),
                                 line_number: sql_ref.line_number,
                                 column_number: sql_ref.column_number,
-                                suggestion: Some("Add table to database_setup.sql or fix table name".to_string()),
+                                suggestion: Some(
+                                    "Add table to database_setup.sql or fix table name".to_string(),
+                                ),
                                 context: sql_ref.context.clone(),
                             });
                         }
@@ -273,7 +282,9 @@ impl SchemaValidator {
                             file_path: sql_ref.file_path.clone(),
                             line_number: sql_ref.line_number,
                             column_number: sql_ref.column_number,
-                            suggestion: Some("Add column to table schema or fix column name".to_string()),
+                            suggestion: Some(
+                                "Add column to table schema or fix column name".to_string(),
+                            ),
                             context: sql_ref.context.clone(),
                         });
                     }
@@ -299,7 +310,10 @@ impl SchemaValidator {
                                 file_path: sql_ref.file_path.clone(),
                                 line_number: sql_ref.line_number,
                                 column_number: sql_ref.column_number,
-                                suggestion: Some("Use environment variables or configuration for database names".to_string()),
+                                suggestion: Some(
+                                    "Use environment variables or configuration for database names"
+                                        .to_string(),
+                                ),
                                 context: sql_ref.context.clone(),
                             });
                         }
@@ -312,8 +326,8 @@ impl SchemaValidator {
     /// Parse SQL query using sqlparser-rs
     fn parse_sql_query(&self, query: &str) -> Result<SqlReference> {
         let dialect = ClickHouseDialect {};
-        let statements = Parser::parse_sql(&dialect, query)
-            .with_context(|| "Failed to parse SQL query")?;
+        let statements =
+            Parser::parse_sql(&dialect, query).with_context(|| "Failed to parse SQL query")?;
 
         let mut tables_referenced = Vec::new();
         let mut columns_referenced = Vec::new();
@@ -323,14 +337,24 @@ impl SchemaValidator {
             match statement {
                 Statement::Query(query) => {
                     query_type = "SELECT".to_string();
-                    self.extract_from_query(&query, &mut tables_referenced, &mut columns_referenced);
+                    self.extract_from_query(
+                        &query,
+                        &mut tables_referenced,
+                        &mut columns_referenced,
+                    );
                 }
-                Statement::Insert { table_name, columns, .. } => {
+                Statement::Insert {
+                    table_name,
+                    columns,
+                    ..
+                } => {
                     query_type = "INSERT".to_string();
                     tables_referenced.push(table_name.to_string());
                     columns_referenced.extend(columns.iter().map(|c| c.value.clone()));
                 }
-                Statement::Update { table, assignments, .. } => {
+                Statement::Update {
+                    table, assignments, ..
+                } => {
                     query_type = "UPDATE".to_string();
                     if let TableFactor::Table { name, .. } = &table.relation {
                         tables_referenced.push(name.to_string());
@@ -366,7 +390,12 @@ impl SchemaValidator {
     }
 
     /// Extract table and column references from a query
-    fn extract_from_query(&self, query: &Query, tables: &mut Vec<String>, columns: &mut Vec<String>) {
+    fn extract_from_query(
+        &self,
+        query: &Query,
+        tables: &mut Vec<String>,
+        columns: &mut Vec<String>,
+    ) {
         if let SetExpr::Select(select) = &*query.body {
             // Extract table references from FROM clause
             for table_with_joins in &select.from {
@@ -420,7 +449,10 @@ impl SchemaValidator {
             }
             Expr::Function(func) => {
                 for arg in &func.args {
-                    if let sqlparser::ast::FunctionArg::Unnamed(sqlparser::ast::FunctionArgExpr::Expr(e)) = arg {
+                    if let sqlparser::ast::FunctionArg::Unnamed(
+                        sqlparser::ast::FunctionArgExpr::Expr(e),
+                    ) = arg
+                    {
                         self.extract_column_names(e, columns);
                     }
                 }
@@ -431,12 +463,16 @@ impl SchemaValidator {
 
     /// Generate validation report
     pub fn generate_report(&self) -> ValidationReport {
-        let critical_errors: Vec<_> = self.validation_errors.iter()
+        let critical_errors: Vec<_> = self
+            .validation_errors
+            .iter()
             .filter(|e| e.severity == "Critical")
             .cloned()
             .collect();
-        
-        let warnings: Vec<_> = self.validation_errors.iter()
+
+        let warnings: Vec<_> = self
+            .validation_errors
+            .iter()
             .filter(|e| e.severity == "Warning")
             .cloned()
             .collect();
@@ -444,13 +480,19 @@ impl SchemaValidator {
         let summary = ValidationSummary {
             critical_issues: critical_errors.len(),
             warnings: warnings.len(),
-            missing_tables: self.validation_errors.iter()
+            missing_tables: self
+                .validation_errors
+                .iter()
                 .filter(|e| e.error_type == "MissingTable")
                 .count(),
-            missing_columns: self.validation_errors.iter()
+            missing_columns: self
+                .validation_errors
+                .iter()
                 .filter(|e| e.error_type == "MissingColumn")
                 .count(),
-            hardcoded_database_names: self.validation_errors.iter()
+            hardcoded_database_names: self
+                .validation_errors
+                .iter()
                 .filter(|e| e.error_type == "HardcodedDatabaseName")
                 .count(),
             unknown_references: 0,
@@ -472,10 +514,10 @@ impl SchemaValidator {
         let report = self.generate_report();
         let json = serde_json::to_string_pretty(&report)
             .with_context(|| "Failed to serialize report to JSON")?;
-        
+
         fs::write(output_path, json)
             .with_context(|| format!("Failed to write JSON report to {:?}", output_path))?;
-        
+
         Ok(())
     }
 
@@ -485,21 +527,33 @@ impl SchemaValidator {
         let mut markdown = String::new();
 
         markdown.push_str(&format!("# Schema Validation Report\n\n"));
-        markdown.push_str(&format!("**Generated:** {}\n\n", report.timestamp.format("%Y-%m-%d %H:%M:%S UTC")));
-        
+        markdown.push_str(&format!(
+            "**Generated:** {}\n\n",
+            report.timestamp.format("%Y-%m-%d %H:%M:%S UTC")
+        ));
+
         markdown.push_str(&format!("## Summary\n\n"));
-        markdown.push_str(&format!("- **Total Tables Loaded:** {}\n", report.total_tables_loaded));
-        markdown.push_str(&format!("- **Total SQL References:** {}\n", report.total_sql_references));
-        markdown.push_str(&format!("- **Critical Issues:** {}\n", report.summary.critical_issues));
+        markdown.push_str(&format!(
+            "- **Total Tables Loaded:** {}\n",
+            report.total_tables_loaded
+        ));
+        markdown.push_str(&format!(
+            "- **Total SQL References:** {}\n",
+            report.total_sql_references
+        ));
+        markdown.push_str(&format!(
+            "- **Critical Issues:** {}\n",
+            report.summary.critical_issues
+        ));
         markdown.push_str(&format!("- **Warnings:** {}\n\n", report.summary.warnings));
 
         if !report.errors.is_empty() {
-            markdown.push_str(&format!("## 🚨 Critical Issues ({})\n\n", report.errors.len()));
+            markdown.push_str(&format!(
+                "## 🚨 Critical Issues ({})\n\n",
+                report.errors.len()
+            ));
             for error in &report.errors {
-                markdown.push_str(&format!(
-                    "### {} - {}\n\n",
-                    error.error_type, error.message
-                ));
+                markdown.push_str(&format!("### {} - {}\n\n", error.error_type, error.message));
                 markdown.push_str(&format!("**File:** `{}`\n", error.file_path));
                 markdown.push_str(&format!("**Line:** {}\n", error.line_number));
                 if let Some(suggestion) = &error.suggestion {
@@ -527,7 +581,7 @@ impl SchemaValidator {
 
         fs::write(output_path, markdown)
             .with_context(|| format!("Failed to write Markdown report to {:?}", output_path))?;
-        
+
         Ok(())
     }
 }
@@ -541,8 +595,13 @@ struct SqlVisitor<'a> {
 
 impl<'a> Visit<'a> for SqlVisitor<'a> {
     fn visit_macro(&mut self, mac: &'a Macro) {
-        let macro_name = mac.path.segments.last().map(|s| s.ident.to_string()).unwrap_or_default();
-        
+        let macro_name = mac
+            .path
+            .segments
+            .last()
+            .map(|s| s.ident.to_string())
+            .unwrap_or_default();
+
         // Handle sqlx::query! and similar macros
         if macro_name.contains("query") {
             let tokens = mac.tokens.to_string();
@@ -551,7 +610,7 @@ impl<'a> Visit<'a> for SqlVisitor<'a> {
                 self.add_sql_reference(sql_query, line_number, "sqlx macro".to_string());
             }
         }
-        
+
         // Handle format! macros that might contain SQL
         if macro_name == "format" {
             let tokens = mac.tokens.to_string();
@@ -560,7 +619,7 @@ impl<'a> Visit<'a> for SqlVisitor<'a> {
                 self.add_sql_reference(sql_query, line_number, "format! macro".to_string());
             }
         }
-        
+
         syn::visit::visit_macro(self, mac);
     }
 
@@ -570,7 +629,7 @@ impl<'a> Visit<'a> for SqlVisitor<'a> {
             let line_number = self.get_line_number_from_span(lit_str.span());
             self.add_sql_reference(value, line_number, "string literal".to_string());
         }
-        
+
         syn::visit::visit_lit_str(self, lit_str);
     }
 }
@@ -610,13 +669,13 @@ impl<'a> SqlVisitor<'a> {
 
     fn is_sql_query(&self, text: &str) -> bool {
         let text_upper = text.to_uppercase();
-        text_upper.contains("SELECT") ||
-        text_upper.contains("INSERT") ||
-        text_upper.contains("UPDATE") ||
-        text_upper.contains("DELETE") ||
-        text_upper.contains("ALTER") ||
-        text_upper.contains("CREATE") ||
-        text_upper.contains("DROP")
+        text_upper.contains("SELECT")
+            || text_upper.contains("INSERT")
+            || text_upper.contains("UPDATE")
+            || text_upper.contains("DELETE")
+            || text_upper.contains("ALTER")
+            || text_upper.contains("CREATE")
+            || text_upper.contains("DROP")
     }
 
     fn get_line_number_from_span(&self, _span: proc_macro2::Span) -> usize {
@@ -668,11 +727,14 @@ mod tests {
     #[test]
     fn test_sql_parsing() {
         let validator = SchemaValidator::new();
-        let database_name = env::var("CLICKHOUSE_DB").unwrap_or_else(|_| "dev".to_string());
-        let query = format!("SELECT id, name FROM {}.users WHERE active = 1", database_name);
+        let database_name = std::env::var("CLICKHOUSE_DB").unwrap_or_else(|_| "dev".to_string());
+        let query = format!(
+            "SELECT id, name FROM {}.users WHERE active = 1",
+            database_name
+        );
         let result = validator.parse_sql_query(&query);
         assert!(result.is_ok());
-        
+
         let sql_ref = result.unwrap();
         assert_eq!(sql_ref.query_type, "SELECT");
         let expected_table = format!("{}.users", database_name);

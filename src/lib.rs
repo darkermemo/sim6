@@ -10,16 +10,18 @@
 //! - `database_manager`: Unified database connection management
 //! - `dev_events_handler`: Development events API handler
 
-pub mod parsed_event;
-pub mod error_handling;
 pub mod database_manager;
 pub mod dev_events_handler;
+pub mod error_handling;
+pub mod parsed_event;
 
 // Re-export the main types for convenience
+pub use database_manager::{DatabaseConfig, DatabaseManager};
+pub use dev_events_handler::{
+    create_dev_events_router, get_dev_events, AppState, DevEventCore, DevEventsResponse,
+};
+pub use error_handling::{ErrorResponse, SiemError, SiemResult};
 pub use parsed_event::ParsedEvent;
-pub use error_handling::{SiemError, SiemResult, ErrorResponse};
-pub use database_manager::{DatabaseManager, DatabaseConfig};
-pub use dev_events_handler::{get_dev_events, create_dev_events_router, AppState, DevEventsResponse, DevEventCore};
 
 #[cfg(test)]
 mod tests {

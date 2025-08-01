@@ -7,11 +7,11 @@ use sqlparser::parser::Parser;
 use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::path::{Path, PathBuf};
-use syn::{visit::Visit, LitStr, Macro, spanned::Spanned};
-use walkdir::WalkDir;
 use swc_common::SourceMap;
 use swc_ecma_ast::Module;
 use swc_ecma_parser::{lexer::Lexer, Parser as SwcParser, StringInput, Syntax, TsConfig};
+use syn::{spanned::Spanned, visit::Visit, LitStr, Macro};
+use walkdir::WalkDir;
 
 /// Configuration for different environments/schemas
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -223,14 +223,14 @@ impl SchemaValidator {
     pub fn load_environment_config(&mut self, config_file: &Path) -> Result<()> {
         let content = fs::read_to_string(config_file)
             .with_context(|| format!("Failed to read config file: {:?}", config_file))?;
-        
+
         let configs: Vec<EnvironmentConfig> = serde_json::from_str(&content)
             .with_context(|| "Failed to parse environment configuration")?;
-        
+
         for config in configs {
             self.environments.insert(config.name.clone(), config);
         }
-        
+
         Ok(())
     }
 
@@ -245,9 +245,11 @@ impl SchemaValidator {
 
     /// Load database schema for current environment
     pub fn load_database_schema(&mut self) -> Result<()> {
-        let env_config = self.environments.get(&self.current_environment)
+        let env_config = self
+            .environments
+            .get(&self.current_environment)
             .ok_or_else(|| anyhow::anyhow!("Current environment not configured"))?;
-        
+
         let content = fs::read_to_string(&env_config.schema_file)
             .with_context(|| format!("Failed to read schema file: {:?}", env_config.schema_file))?;
 
@@ -261,45 +263,61 @@ impl SchemaValidator {
         };
 
         self.parse_clickhouse_schema(&content, &mut database_schema)?;
-        
-        println!("Loaded {} tables from schema for environment '{}'", 
-                database_schema.tables.len(), self.current_environment);
-        
-        self.database_schemas.insert(self.current_environment.clone(), database_schema);
+
+        println!(
+            "Loaded {} tables from schema for environment '{}'",
+            database_schema.tables.len(),
+            self.current_environment
+        );
+
+        self.database_schemas
+            .insert(self.current_environment.clone(), database_schema);
         Ok(())
     }
 
     /// Parse ClickHouse schema with enhanced metadata extraction
     fn parse_clickhouse_schema(&self, content: &str, schema: &mut DatabaseSchema) -> Result<()> {
         use regex::Regex;
-        
+
         // Enhanced regex patterns for ClickHouse
         let table_regex = Regex::new(r"(?s)CREATE TABLE IF NOT EXISTS\s+(\w+)\.(\w+)\s*\((.+?)\)\s*ENGINE\s*=\s*(\w+)(?:\(([^)]+)\))?(?:\s*ORDER BY\s*\(([^)]+)\))?(?:\s*PARTITION BY\s*\(([^)]+)\))?")
             .map_err(|e| anyhow::anyhow!("Failed to compile table regex: {}", e))?;
-        
+
         let view_regex = Regex::new(r"(?s)CREATE VIEW\s+(\w+)\.(\w+)\s+AS\s+(.+?)(?:;|$)")
             .map_err(|e| anyhow::anyhow!("Failed to compile view regex: {}", e))?;
-        
+
         let mv_regex = Regex::new(r"(?s)CREATE MATERIALIZED VIEW\s+(\w+)\.(\w+)\s+(.+?)(?:;|$)")
             .map_err(|e| anyhow::anyhow!("Failed to compile materialized view regex: {}", e))?;
-        
+
         // Parse tables
         for table_match in table_regex.captures_iter(content) {
             let database_name = table_match.get(1).unwrap().as_str().to_string();
             let table_name = table_match.get(2).unwrap().as_str().to_string();
             let columns_text = table_match.get(3).unwrap().as_str();
             let engine = table_match.get(4).map(|m| m.as_str().to_string());
-            let order_by = table_match.get(6).map(|m| {
-                m.as_str().split(',').map(|s| s.trim().to_string()).collect()
-            }).unwrap_or_default();
-            let partition_by = table_match.get(7).map(|m| {
-                m.as_str().split(',').map(|s| s.trim().to_string()).collect()
-            }).unwrap_or_default();
+            let order_by = table_match
+                .get(6)
+                .map(|m| {
+                    m.as_str()
+                        .split(',')
+                        .map(|s| s.trim().to_string())
+                        .collect()
+                })
+                .unwrap_or_default();
+            let partition_by = table_match
+                .get(7)
+                .map(|m| {
+                    m.as_str()
+                        .split(',')
+                        .map(|s| s.trim().to_string())
+                        .collect()
+                })
+                .unwrap_or_default();
 
             schema.databases.insert(database_name.clone());
-            
+
             let table_columns = self.parse_table_columns(columns_text)?;
-            
+
             let table_schema = TableSchema {
                 name: table_name.clone(),
                 database: Some(database_name.clone()),
@@ -308,7 +326,7 @@ impl SchemaValidator {
                 order_by,
                 partition_by,
                 indexes: Vec::new(), // TODO: Parse indexes
-                comment: None, // TODO: Parse comments
+                comment: None,       // TODO: Parse comments
             };
 
             let full_table_name = format!("{}.{}", database_name, table_name);
@@ -320,7 +338,7 @@ impl SchemaValidator {
             let database_name = view_match.get(1).unwrap().as_str();
             let view_name = view_match.get(2).unwrap().as_str();
             let definition = view_match.get(3).unwrap().as_str();
-            
+
             let full_view_name = format!("{}.{}", database_name, view_name);
             schema.views.insert(full_view_name, definition.to_string());
         }
@@ -330,9 +348,11 @@ impl SchemaValidator {
             let database_name = mv_match.get(1).unwrap().as_str();
             let mv_name = mv_match.get(2).unwrap().as_str();
             let definition = mv_match.get(3).unwrap().as_str();
-            
+
             let full_mv_name = format!("{}.{}", database_name, mv_name);
-            schema.materialized_views.insert(full_mv_name, definition.to_string());
+            schema
+                .materialized_views
+                .insert(full_mv_name, definition.to_string());
         }
 
         Ok(())
@@ -341,25 +361,25 @@ impl SchemaValidator {
     /// Parse table columns with enhanced metadata
     fn parse_table_columns(&self, columns_text: &str) -> Result<HashMap<String, ColumnDefinition>> {
         use regex::Regex;
-        
+
         let mut columns = HashMap::new();
-        
+
         // Enhanced column regex with constraints and comments
         let column_regex = Regex::new(r"(?m)^\s*(\w+)\s+([^,\n]+?)(?:\s+DEFAULT\s+([^,\n]+?))?(?:\s+COMMENT\s+'([^']+)')?(?:\s*,)?\s*$")
             .map_err(|e| anyhow::anyhow!("Failed to compile column regex: {}", e))?;
-        
+
         for line in columns_text.lines() {
             let line = line.trim();
             if line.is_empty() || line.starts_with("--") {
                 continue;
             }
-            
+
             if let Some(column_match) = column_regex.captures(line) {
                 let col_name = column_match.get(1).unwrap().as_str().to_string();
                 let col_type = column_match.get(2).unwrap().as_str().trim().to_string();
                 let default_value = column_match.get(3).map(|m| m.as_str().trim().to_string());
                 let comment = column_match.get(4).map(|m| m.as_str().to_string());
-                
+
                 let column_def = ColumnDefinition {
                     name: col_name.clone(),
                     data_type: col_type.clone(),
@@ -371,40 +391,42 @@ impl SchemaValidator {
                     constraints: Vec::new(), // TODO: Parse constraints
                     comment,
                 };
-                
+
                 columns.insert(col_name, column_def);
             }
         }
-        
+
         Ok(columns)
     }
 
     /// Scan all configured source directories for current environment
     pub fn scan_all_sources(&mut self) -> Result<()> {
-        let env_config = self.environments.get(&self.current_environment)
+        let env_config = self
+            .environments
+            .get(&self.current_environment)
             .ok_or_else(|| anyhow::anyhow!("Current environment not configured"))?
             .clone();
-        
+
         // Scan Rust sources
         for rust_dir in &env_config.rust_source_dirs {
             self.scan_rust_codebase(rust_dir)?;
         }
-        
+
         // Scan TypeScript sources
         for ts_dir in &env_config.typescript_source_dirs {
             self.scan_typescript_codebase(ts_dir)?;
         }
-        
+
         // Scan GraphQL schemas
         for graphql_file in &env_config.graphql_schema_files {
             self.scan_graphql_schema(graphql_file)?;
         }
-        
+
         // Scan OpenAPI specs
         for openapi_file in &env_config.openapi_spec_files {
             self.scan_openapi_spec(openapi_file)?;
         }
-        
+
         Ok(())
     }
 
@@ -425,8 +447,11 @@ impl SchemaValidator {
             }
         }
 
-        println!("Scanned {} Rust files, found {} SQL references", 
-                files_scanned, self.sql_references.len());
+        println!(
+            "Scanned {} Rust files, found {} SQL references",
+            files_scanned,
+            self.sql_references.len()
+        );
         Ok(())
     }
 
@@ -439,9 +464,9 @@ impl SchemaValidator {
             .into_iter()
             .filter_map(|e| e.ok())
             .filter(|e| {
-                e.path().extension().map_or(false, |ext| {
-                    ext == "ts" || ext == "tsx"
-                })
+                e.path()
+                    .extension()
+                    .map_or(false, |ext| ext == "ts" || ext == "tsx")
             })
         {
             let file_path = entry.path();
@@ -451,13 +476,19 @@ impl SchemaValidator {
                     interfaces_found += count;
                 }
                 Err(e) => {
-                    eprintln!("Warning: Failed to scan TypeScript file {}: {}", file_path.display(), e);
+                    eprintln!(
+                        "Warning: Failed to scan TypeScript file {}: {}",
+                        file_path.display(),
+                        e
+                    );
                 }
             }
         }
 
-        println!("Scanned {} TypeScript files, found {} interfaces", 
-                files_scanned, interfaces_found);
+        println!(
+            "Scanned {} TypeScript files, found {} interfaces",
+            files_scanned, interfaces_found
+        );
         Ok(())
     }
 
@@ -467,10 +498,8 @@ impl SchemaValidator {
             .with_context(|| format!("Failed to read TypeScript file: {:?}", file_path))?;
 
         let source_map = SourceMap::default();
-        let source_file = source_map.new_source_file(
-            swc_common::FileName::Real(file_path.to_path_buf()),
-            content,
-        );
+        let source_file = source_map
+            .new_source_file(swc_common::FileName::Real(file_path.to_path_buf()), content);
 
         let lexer = Lexer::new(
             Syntax::Typescript(TsConfig {
@@ -486,12 +515,13 @@ impl SchemaValidator {
         );
 
         let mut parser = SwcParser::new_from(lexer);
-        let module = parser.parse_module()
+        let module = parser
+            .parse_module()
             .map_err(|e| anyhow::anyhow!("Failed to parse TypeScript: {:?}", e))?;
 
         let interfaces = self.extract_typescript_interfaces(&module, file_path)?;
         let interface_count = interfaces.len();
-        
+
         self.typescript_interfaces
             .entry(self.current_environment.clone())
             .or_insert_with(Vec::new)
@@ -501,26 +531,36 @@ impl SchemaValidator {
     }
 
     /// Extract TypeScript interfaces from AST
-    fn extract_typescript_interfaces(&self, _module: &Module, _file_path: &Path) -> Result<Vec<TypeScriptInterface>> {
+    fn extract_typescript_interfaces(
+        &self,
+        _module: &Module,
+        _file_path: &Path,
+    ) -> Result<Vec<TypeScriptInterface>> {
         let interfaces = Vec::new();
-        
+
         // TODO: Implement TypeScript AST traversal to extract interfaces
         // This is a placeholder implementation
-        
+
         Ok(interfaces)
     }
 
     /// Scan GraphQL schema file
     fn scan_graphql_schema(&mut self, schema_file: &Path) -> Result<()> {
         // TODO: Implement GraphQL schema parsing
-        println!("GraphQL schema scanning not yet implemented for: {:?}", schema_file);
+        println!(
+            "GraphQL schema scanning not yet implemented for: {:?}",
+            schema_file
+        );
         Ok(())
     }
 
     /// Scan OpenAPI specification file
     fn scan_openapi_spec(&mut self, spec_file: &Path) -> Result<()> {
         // TODO: Implement OpenAPI spec parsing
-        println!("OpenAPI spec scanning not yet implemented for: {:?}", spec_file);
+        println!(
+            "OpenAPI spec scanning not yet implemented for: {:?}",
+            spec_file
+        );
         Ok(())
     }
 
@@ -556,7 +596,9 @@ impl SchemaValidator {
 
     /// Validate consistency between database schema and backend SQL usage
     fn validate_database_backend_consistency(&mut self) -> Result<()> {
-        let database_schema = self.database_schemas.get(&self.current_environment)
+        let database_schema = self
+            .database_schemas
+            .get(&self.current_environment)
             .ok_or_else(|| anyhow::anyhow!("Database schema not loaded for current environment"))?;
 
         for sql_ref in &self.sql_references {
@@ -574,15 +616,19 @@ impl SchemaValidator {
                         file_path: sql_ref.file_path.clone(),
                         line_number: sql_ref.line_number,
                         column_number: sql_ref.column_number,
-                        suggestion: Some("Add table to database schema or fix table name".to_string()),
+                        suggestion: Some(
+                            "Add table to database schema or fix table name".to_string(),
+                        ),
                         context: sql_ref.context.clone(),
                         layer: ValidationLayer::Backend,
                         environment: self.current_environment.clone(),
                         affected_layers: vec![ValidationLayer::Database, ValidationLayer::Backend],
                     };
-                    
+
                     self.validation_errors.push(error.clone());
-                    self.cross_layer_validation.database_backend_mismatches.push(error);
+                    self.cross_layer_validation
+                        .database_backend_mismatches
+                        .push(error);
                 }
             }
 
@@ -606,15 +652,19 @@ impl SchemaValidator {
                         file_path: sql_ref.file_path.clone(),
                         line_number: sql_ref.line_number,
                         column_number: sql_ref.column_number,
-                        suggestion: Some("Add column to table schema or fix column name".to_string()),
+                        suggestion: Some(
+                            "Add column to table schema or fix column name".to_string(),
+                        ),
                         context: sql_ref.context.clone(),
                         layer: ValidationLayer::Backend,
                         environment: self.current_environment.clone(),
                         affected_layers: vec![ValidationLayer::Database, ValidationLayer::Backend],
                     };
-                    
+
                     self.validation_errors.push(error.clone());
-                    self.cross_layer_validation.database_backend_mismatches.push(error);
+                    self.cross_layer_validation
+                        .database_backend_mismatches
+                        .push(error);
                 }
             }
         }
@@ -650,12 +700,16 @@ impl SchemaValidator {
 
     /// Generate comprehensive validation report
     pub fn generate_enhanced_report(&self) -> ValidationReport {
-        let critical_errors: Vec<_> = self.validation_errors.iter()
+        let critical_errors: Vec<_> = self
+            .validation_errors
+            .iter()
             .filter(|e| e.severity == "Critical")
             .cloned()
             .collect();
-        
-        let warnings: Vec<_> = self.validation_errors.iter()
+
+        let warnings: Vec<_> = self
+            .validation_errors
+            .iter()
             .filter(|e| e.severity == "Warning")
             .cloned()
             .collect();
@@ -673,19 +727,34 @@ impl SchemaValidator {
         let summary = ValidationSummary {
             critical_issues: critical_errors.len(),
             warnings: warnings.len(),
-            missing_tables: self.validation_errors.iter()
+            missing_tables: self
+                .validation_errors
+                .iter()
                 .filter(|e| e.error_type == "MissingTable")
                 .count(),
-            missing_columns: self.validation_errors.iter()
+            missing_columns: self
+                .validation_errors
+                .iter()
                 .filter(|e| e.error_type == "MissingColumn")
                 .count(),
-            hardcoded_database_names: self.validation_errors.iter()
+            hardcoded_database_names: self
+                .validation_errors
+                .iter()
                 .filter(|e| e.error_type == "HardcodedDatabaseName")
                 .count(),
             unknown_references: 0,
-            cross_layer_mismatches: self.cross_layer_validation.database_backend_mismatches.len() +
-                                  self.cross_layer_validation.backend_frontend_mismatches.len() +
-                                  self.cross_layer_validation.database_frontend_mismatches.len(),
+            cross_layer_mismatches: self
+                .cross_layer_validation
+                .database_backend_mismatches
+                .len()
+                + self
+                    .cross_layer_validation
+                    .backend_frontend_mismatches
+                    .len()
+                + self
+                    .cross_layer_validation
+                    .database_frontend_mismatches
+                    .len(),
             layer_coverage,
         };
 
@@ -694,10 +763,16 @@ impl SchemaValidator {
             environment: self.current_environment.clone(),
             total_files_scanned: files_scanned,
             total_sql_references: self.sql_references.len(),
-            total_tables_loaded: self.database_schemas.get(&self.current_environment)
-                .map(|s| s.tables.len()).unwrap_or(0),
-            total_typescript_interfaces: self.typescript_interfaces.get(&self.current_environment)
-                .map(|i| i.len()).unwrap_or(0),
+            total_tables_loaded: self
+                .database_schemas
+                .get(&self.current_environment)
+                .map(|s| s.tables.len())
+                .unwrap_or(0),
+            total_typescript_interfaces: self
+                .typescript_interfaces
+                .get(&self.current_environment)
+                .map(|i| i.len())
+                .unwrap_or(0),
             total_graphql_types: 0, // TODO: Implement
             errors: critical_errors,
             warnings,
@@ -711,10 +786,10 @@ impl SchemaValidator {
         let report = self.generate_enhanced_report();
         let json = serde_json::to_string_pretty(&report)
             .with_context(|| "Failed to serialize report to JSON")?;
-        
+
         fs::write(output_path, json)
             .with_context(|| format!("Failed to write JSON report to {:?}", output_path))?;
-        
+
         Ok(())
     }
 
@@ -726,16 +801,34 @@ impl SchemaValidator {
         // Header
         markdown.push_str(&format!("# Multi-Layer Schema Validation Report\n\n"));
         markdown.push_str(&format!("**Environment:** {}\n", report.environment));
-        markdown.push_str(&format!("**Generated:** {}\n\n", report.timestamp.format("%Y-%m-%d %H:%M:%S UTC")));
-        
+        markdown.push_str(&format!(
+            "**Generated:** {}\n\n",
+            report.timestamp.format("%Y-%m-%d %H:%M:%S UTC")
+        ));
+
         // Executive Summary
         markdown.push_str(&format!("## 📊 Executive Summary\n\n"));
-        markdown.push_str(&format!("- **Total Tables Loaded:** {}\n", report.total_tables_loaded));
-        markdown.push_str(&format!("- **Total SQL References:** {}\n", report.total_sql_references));
-        markdown.push_str(&format!("- **TypeScript Interfaces:** {}\n", report.total_typescript_interfaces));
-        markdown.push_str(&format!("- **Critical Issues:** {}\n", report.summary.critical_issues));
+        markdown.push_str(&format!(
+            "- **Total Tables Loaded:** {}\n",
+            report.total_tables_loaded
+        ));
+        markdown.push_str(&format!(
+            "- **Total SQL References:** {}\n",
+            report.total_sql_references
+        ));
+        markdown.push_str(&format!(
+            "- **TypeScript Interfaces:** {}\n",
+            report.total_typescript_interfaces
+        ));
+        markdown.push_str(&format!(
+            "- **Critical Issues:** {}\n",
+            report.summary.critical_issues
+        ));
         markdown.push_str(&format!("- **Warnings:** {}\n", report.summary.warnings));
-        markdown.push_str(&format!("- **Cross-Layer Mismatches:** {}\n\n", report.summary.cross_layer_mismatches));
+        markdown.push_str(&format!(
+            "- **Cross-Layer Mismatches:** {}\n\n",
+            report.summary.cross_layer_mismatches
+        ));
 
         // Layer Coverage
         markdown.push_str(&format!("## 🎯 Layer Coverage\n\n"));
@@ -746,25 +839,36 @@ impl SchemaValidator {
 
         // Cross-Layer Analysis
         markdown.push_str(&format!("## 🔗 Cross-Layer Analysis\n\n"));
-        
-        if !report.cross_layer_validation.database_backend_mismatches.is_empty() {
-            markdown.push_str(&format!("### Database ↔ Backend Mismatches ({})\n\n", 
-                report.cross_layer_validation.database_backend_mismatches.len()));
+
+        if !report
+            .cross_layer_validation
+            .database_backend_mismatches
+            .is_empty()
+        {
+            markdown.push_str(&format!(
+                "### Database ↔ Backend Mismatches ({})\n\n",
+                report
+                    .cross_layer_validation
+                    .database_backend_mismatches
+                    .len()
+            ));
             for error in &report.cross_layer_validation.database_backend_mismatches {
-                markdown.push_str(&format!("- **{}:** {} ({}:{})\n", 
-                    error.error_type, error.message, error.file_path, error.line_number));
+                markdown.push_str(&format!(
+                    "- **{}:** {} ({}:{})\n",
+                    error.error_type, error.message, error.file_path, error.line_number
+                ));
             }
             markdown.push_str("\n");
         }
 
         // Critical Issues
         if !report.errors.is_empty() {
-            markdown.push_str(&format!("## 🚨 Critical Issues ({})\n\n", report.errors.len()));
+            markdown.push_str(&format!(
+                "## 🚨 Critical Issues ({})\n\n",
+                report.errors.len()
+            ));
             for error in &report.errors {
-                markdown.push_str(&format!(
-                    "### {} - {}\n\n",
-                    error.error_type, error.message
-                ));
+                markdown.push_str(&format!("### {} - {}\n\n", error.error_type, error.message));
                 markdown.push_str(&format!("**File:** `{}`\n", error.file_path));
                 markdown.push_str(&format!("**Line:** {}\n", error.line_number));
                 markdown.push_str(&format!("**Layer:** {:?}\n", error.layer));
@@ -772,7 +876,10 @@ impl SchemaValidator {
                 if let Some(suggestion) = &error.suggestion {
                     markdown.push_str(&format!("**Suggestion:** {}\n", suggestion));
                 }
-                markdown.push_str(&format!("**Affected Layers:** {:?}\n", error.affected_layers));
+                markdown.push_str(&format!(
+                    "**Affected Layers:** {:?}\n",
+                    error.affected_layers
+                ));
                 markdown.push_str(&format!("**Context:** {}\n\n", error.context));
             }
         }
@@ -797,7 +904,7 @@ impl SchemaValidator {
 
         fs::write(output_path, markdown)
             .with_context(|| format!("Failed to write Markdown report to {:?}", output_path))?;
-        
+
         Ok(())
     }
 }
@@ -811,8 +918,13 @@ struct EnhancedSqlVisitor {
 
 impl Visit<'_> for EnhancedSqlVisitor {
     fn visit_macro(&mut self, mac: &Macro) {
-        let macro_name = mac.path.segments.last().map(|s| s.ident.to_string()).unwrap_or_default();
-        
+        let macro_name = mac
+            .path
+            .segments
+            .last()
+            .map(|s| s.ident.to_string())
+            .unwrap_or_default();
+
         // Handle sqlx::query! and similar macros
         if macro_name.contains("query") {
             let tokens = mac.tokens.to_string();
@@ -821,7 +933,7 @@ impl Visit<'_> for EnhancedSqlVisitor {
                 self.add_sql_reference(sql_query, line_number, "sqlx macro".to_string());
             }
         }
-        
+
         // Handle format! macros that might contain SQL
         if macro_name == "format" {
             let tokens = mac.tokens.to_string();
@@ -830,7 +942,7 @@ impl Visit<'_> for EnhancedSqlVisitor {
                 self.add_sql_reference(sql_query, line_number, "format! macro".to_string());
             }
         }
-        
+
         syn::visit::visit_macro(self, mac);
     }
 
@@ -840,7 +952,7 @@ impl Visit<'_> for EnhancedSqlVisitor {
             let line_number = self.get_line_number_from_span(lit_str.span());
             self.add_sql_reference(value, line_number, "string literal".to_string());
         }
-        
+
         syn::visit::visit_lit_str(self, lit_str);
     }
 }
@@ -880,13 +992,13 @@ impl EnhancedSqlVisitor {
 
     fn is_sql_query(&self, text: &str) -> bool {
         let text_upper = text.to_uppercase();
-        text_upper.contains("SELECT") ||
-        text_upper.contains("INSERT") ||
-        text_upper.contains("UPDATE") ||
-        text_upper.contains("DELETE") ||
-        text_upper.contains("ALTER") ||
-        text_upper.contains("CREATE") ||
-        text_upper.contains("DROP")
+        text_upper.contains("SELECT")
+            || text_upper.contains("INSERT")
+            || text_upper.contains("UPDATE")
+            || text_upper.contains("DELETE")
+            || text_upper.contains("ALTER")
+            || text_upper.contains("CREATE")
+            || text_upper.contains("DROP")
     }
 
     fn get_line_number_from_span(&self, _span: proc_macro2::Span) -> usize {
@@ -931,7 +1043,7 @@ impl EnhancedSqlVisitor {
     }
 }
 
-#[cfg(test)]  
+#[cfg(test)]
 mod tests {
     use super::*;
     use std::path::PathBuf;
@@ -939,7 +1051,7 @@ mod tests {
     #[test]
     fn test_environment_config() {
         let mut validator = SchemaValidator::new();
-        
+
         let config = EnvironmentConfig {
             name: "test".to_string(),
             schema_file: PathBuf::from("test.sql"),
@@ -949,7 +1061,7 @@ mod tests {
             graphql_schema_files: vec![],
             openapi_spec_files: vec![],
         };
-        
+
         validator.environments.insert("test".to_string(), config);
         assert!(validator.set_environment("test").is_ok());
         assert_eq!(validator.current_environment, "test");
@@ -970,7 +1082,7 @@ mod tests {
             environment: "test".to_string(),
             affected_layers: vec![ValidationLayer::Database, ValidationLayer::Backend],
         };
-        
+
         assert_eq!(error.layer, ValidationLayer::Backend);
         assert_eq!(error.affected_layers.len(), 2);
     }

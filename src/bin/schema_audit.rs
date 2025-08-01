@@ -1,5 +1,5 @@
 //! ClickHouse ⇄ Rust Struct Alignment & Auto-Migration Tool
-//! 
+//!
 //! This tool automatically detects schema mismatches between ClickHouse database
 //! and Rust structs, then generates safe DDL migrations to align them.
 
@@ -97,7 +97,7 @@ impl Config {
     fn create_client(&self) -> Result<Client, SchemaAuditError> {
         let protocol = if self.secure { "https" } else { "http" };
         let url = format!("{}://{}:{}", protocol, self.host, self.port);
-        
+
         let mut client = Client::default()
             .with_url(url)
             .with_user(&self.user)
@@ -115,7 +115,10 @@ impl Config {
 }
 
 /// Discover database schema from ClickHouse system tables
-async fn discover_db_schema(client: &Client, database: &str) -> Result<Vec<ColumnMeta>, SchemaAuditError> {
+async fn discover_db_schema(
+    client: &Client,
+    database: &str,
+) -> Result<Vec<ColumnMeta>, SchemaAuditError> {
     let query = format!(
         "SELECT table, name, type, default_kind, '' as codec 
          FROM system.columns 
@@ -148,19 +151,29 @@ async fn discover_db_schema(client: &Client, database: &str) -> Result<Vec<Colum
 /// Parse Rust structs from source files
 fn parse_rust_structs() -> Result<HashMap<String, HashMap<String, RustField>>, SchemaAuditError> {
     let mut structs = HashMap::new();
-    
+
     // Scan src/models/**/*.rs files
     for entry in WalkDir::new("src/models")
         .into_iter()
         .filter_map(|e| e.ok())
         .filter(|e| e.path().extension().is_some_and(|ext| ext == "rs"))
     {
-        let content = fs::read_to_string(entry.path())
-            .map_err(|e| SchemaAuditError::RustParsingFailed(format!("Failed to read {}: {}", entry.path().display(), e)))?;
-        
-        let syntax_tree = syn::parse_file(&content)
-            .map_err(|e| SchemaAuditError::RustParsingFailed(format!("Failed to parse {}: {}", entry.path().display(), e)))?;
-        
+        let content = fs::read_to_string(entry.path()).map_err(|e| {
+            SchemaAuditError::RustParsingFailed(format!(
+                "Failed to read {}: {}",
+                entry.path().display(),
+                e
+            ))
+        })?;
+
+        let syntax_tree = syn::parse_file(&content).map_err(|e| {
+            SchemaAuditError::RustParsingFailed(format!(
+                "Failed to parse {}: {}",
+                entry.path().display(),
+                e
+            ))
+        })?;
+
         for item in syntax_tree.items {
             if let syn::Item::Struct(item_struct) = item {
                 if has_serde_derive(&item_struct.attrs) {
@@ -171,7 +184,7 @@ fn parse_rust_structs() -> Result<HashMap<String, HashMap<String, RustField>>, S
             }
         }
     }
-    
+
     Ok(structs)
 }
 
@@ -180,8 +193,8 @@ fn has_serde_derive(attrs: &[Attribute]) -> bool {
     attrs.iter().any(|attr| {
         if attr.path().is_ident("derive") {
             if let Meta::List(meta_list) = &attr.meta {
-                return meta_list.tokens.to_string().contains("Serialize") || 
-                       meta_list.tokens.to_string().contains("Deserialize");
+                return meta_list.tokens.to_string().contains("Serialize")
+                    || meta_list.tokens.to_string().contains("Deserialize");
             }
         }
         false
@@ -191,30 +204,30 @@ fn has_serde_derive(attrs: &[Attribute]) -> bool {
 /// Parse fields from a struct
 fn parse_struct_fields(fields: &Fields) -> Result<HashMap<String, RustField>, SchemaAuditError> {
     let mut field_map = HashMap::new();
-    
+
     match fields {
         Fields::Named(fields_named) => {
             for field in &fields_named.named {
                 if let Some(ident) = &field.ident {
                     let field_name = ident.to_string();
                     let rust_type = quote!(#field.ty).to_string();
-                    
+
                     let (serde_name, skip) = parse_serde_attrs(&field.attrs);
-                    
+
                     let rust_field = RustField {
                         name: field_name.clone(),
                         rust_type,
                         serde_name,
                         skip,
                     };
-                    
+
                     field_map.insert(field_name, rust_field);
                 }
             }
         }
         _ => {} // Skip tuple structs and unit structs
     }
-    
+
     Ok(field_map)
 }
 
@@ -222,20 +235,21 @@ fn parse_struct_fields(fields: &Fields) -> Result<HashMap<String, RustField>, Sc
 fn parse_serde_attrs(attrs: &[Attribute]) -> (Option<String>, bool) {
     let mut serde_name = None;
     let mut skip = false;
-    
+
     for attr in attrs {
         if attr.path().is_ident("serde") {
             if let Meta::List(meta_list) = &attr.meta {
                 let tokens_str = meta_list.tokens.to_string();
-                
+
                 // Parse rename attribute
                 if let Some(start) = tokens_str.find("rename = \"") {
                     let start_quote = start + 10; // Length of "rename = \""
                     if let Some(end_quote) = tokens_str[start_quote..].find('\"') {
-                        serde_name = Some(tokens_str[start_quote..start_quote + end_quote].to_string());
+                        serde_name =
+                            Some(tokens_str[start_quote..start_quote + end_quote].to_string());
                     }
                 }
-                
+
                 // Check for skip attribute
                 if tokens_str.contains("skip") {
                     skip = true;
@@ -243,7 +257,7 @@ fn parse_serde_attrs(attrs: &[Attribute]) -> (Option<String>, bool) {
             }
         }
     }
-    
+
     (serde_name, skip)
 }
 
@@ -261,11 +275,11 @@ fn convert_clickhouse_to_rust(ch_type: &str) -> String {
         "DateTime" => "DateTime<Utc>".to_string(),
         "Date" => "NaiveDate".to_string(),
         t if t.starts_with("Nullable(") => {
-            let inner = &t[9..t.len()-1];
+            let inner = &t[9..t.len() - 1];
             format!("Option<{}>", convert_clickhouse_to_rust(inner))
         }
         t if t.starts_with("Array(") => {
-            let inner = &t[6..t.len()-1];
+            let inner = &t[6..t.len() - 1];
             format!("Vec<{}>", convert_clickhouse_to_rust(inner))
         }
         _ => ch_type.to_string(), // Fallback to original type
@@ -286,11 +300,11 @@ fn convert_rust_to_clickhouse(rust_type: &str) -> String {
         "DateTime<Utc>" => "DateTime".to_string(),
         "NaiveDate" => "Date".to_string(),
         t if t.starts_with("Option<") => {
-            let inner = &t[7..t.len()-1];
+            let inner = &t[7..t.len() - 1];
             format!("Nullable({})", convert_rust_to_clickhouse(inner))
         }
         t if t.starts_with("Vec<") => {
-            let inner = &t[4..t.len()-1];
+            let inner = &t[4..t.len() - 1];
             format!("Array({})", convert_rust_to_clickhouse(inner))
         }
         _ => "String".to_string(), // Default fallback
@@ -303,13 +317,13 @@ fn compute_schema_diff(
     rust_structs: &HashMap<String, HashMap<String, RustField>>,
 ) -> Result<Vec<SchemaDiff>, SchemaAuditError> {
     let mut diffs = Vec::new();
-    
+
     // Group database columns by table
     let mut db_by_table: HashMap<String, Vec<&ColumnMeta>> = HashMap::new();
     for col in db_columns {
         db_by_table.entry(col.table.clone()).or_default().push(col);
     }
-    
+
     // Map table names to struct names
     let table_to_struct = |table: &str| -> Option<&str> {
         if table.starts_with("events_") {
@@ -320,7 +334,7 @@ fn compute_schema_diff(
             None
         }
     };
-    
+
     // Process each table
     for (table, db_cols) in &db_by_table {
         if let Some(struct_name) = table_to_struct(table) {
@@ -328,21 +342,19 @@ fn compute_schema_diff(
                 let mut missing_in_db = Vec::new();
                 let mut extra_in_db = Vec::new();
                 let mut type_mismatches = Vec::new();
-                
+
                 // Create maps for easier lookup
-                let db_col_map: HashMap<String, &ColumnMeta> = db_cols
-                    .iter()
-                    .map(|col| (col.name.clone(), *col))
-                    .collect();
-                
+                let db_col_map: HashMap<String, &ColumnMeta> =
+                    db_cols.iter().map(|col| (col.name.clone(), *col)).collect();
+
                 // Check for missing fields in DB
                 for (field_name, rust_field) in rust_fields {
                     if rust_field.skip {
                         continue;
                     }
-                    
+
                     let db_field_name = rust_field.serde_name.as_ref().unwrap_or(field_name);
-                    
+
                     if let Some(db_col) = db_col_map.get(db_field_name) {
                         // Check for type mismatches
                         let expected_rust_type = convert_clickhouse_to_rust(&db_col.r#type);
@@ -353,20 +365,23 @@ fn compute_schema_diff(
                         missing_in_db.push(rust_field.clone());
                     }
                 }
-                
+
                 // Check for extra fields in DB
                 for db_col in db_cols {
                     let found_in_rust = rust_fields.values().any(|rf| {
                         let db_field_name = rf.serde_name.as_ref().unwrap_or(&rf.name);
                         db_field_name == &db_col.name
                     });
-                    
+
                     if !found_in_rust {
                         extra_in_db.push((*db_col).clone());
                     }
                 }
-                
-                if !missing_in_db.is_empty() || !extra_in_db.is_empty() || !type_mismatches.is_empty() {
+
+                if !missing_in_db.is_empty()
+                    || !extra_in_db.is_empty()
+                    || !type_mismatches.is_empty()
+                {
                     diffs.push(SchemaDiff {
                         table: table.clone(),
                         missing_in_db,
@@ -375,20 +390,21 @@ fn compute_schema_diff(
                     });
                 }
             } else {
-                return Err(SchemaAuditError::RustParsingFailed(
-                    format!("Missing struct mapping for table: {}", table)
-                ));
+                return Err(SchemaAuditError::RustParsingFailed(format!(
+                    "Missing struct mapping for table: {}",
+                    table
+                )));
             }
         }
     }
-    
+
     Ok(diffs)
 }
 
 /// Generate DDL statements for schema differences
 fn generate_ddl(diffs: &[SchemaDiff]) -> Vec<String> {
     let mut ddl_statements = Vec::new();
-    
+
     for diff in diffs {
         // Add missing columns
         for field in &diff.missing_in_db {
@@ -400,7 +416,7 @@ fn generate_ddl(diffs: &[SchemaDiff]) -> Vec<String> {
             );
             ddl_statements.push(statement);
         }
-        
+
         // Modify mismatched columns
         for (rust_field, _db_col) in &diff.type_mismatches {
             let db_field_name = rust_field.serde_name.as_ref().unwrap_or(&rust_field.name);
@@ -412,7 +428,7 @@ fn generate_ddl(diffs: &[SchemaDiff]) -> Vec<String> {
             ddl_statements.push(statement);
         }
     }
-    
+
     ddl_statements
 }
 
@@ -421,18 +437,20 @@ fn write_migration_file(ddl_statements: &[String]) -> Result<String, SchemaAudit
     if ddl_statements.is_empty() {
         return Ok(String::new());
     }
-    
+
     let timestamp = chrono::Utc::now().format("%Y%m%d_%H%M%S");
     let filename = format!("migrations/auto_{}.sql", timestamp);
-    
+
     // Ensure migrations directory exists
-    fs::create_dir_all("migrations")
-        .map_err(|e| SchemaAuditError::MigrationFailed(format!("Failed to create migrations directory: {}", e)))?;
-    
+    fs::create_dir_all("migrations").map_err(|e| {
+        SchemaAuditError::MigrationFailed(format!("Failed to create migrations directory: {}", e))
+    })?;
+
     let content = ddl_statements.join("\n");
-    fs::write(&filename, content)
-        .map_err(|e| SchemaAuditError::MigrationFailed(format!("Failed to write migration file: {}", e)))?;
-    
+    fs::write(&filename, content).map_err(|e| {
+        SchemaAuditError::MigrationFailed(format!("Failed to write migration file: {}", e))
+    })?;
+
     Ok(filename)
 }
 
@@ -442,7 +460,7 @@ fn write_schema_report(diffs: &[SchemaDiff]) -> Result<(), SchemaAuditError> {
     report.push_str("# Schema Mismatch Report\n\n");
     report.push_str("| Table | Column | Rust Type | DB Type | Action |\n");
     report.push_str("|-------|--------|-----------|---------|--------|\n");
-    
+
     for diff in diffs {
         for field in &diff.missing_in_db {
             let db_field_name = field.serde_name.as_ref().unwrap_or(&field.name);
@@ -452,14 +470,14 @@ fn write_schema_report(diffs: &[SchemaDiff]) -> Result<(), SchemaAuditError> {
                 diff.table, db_field_name, field.rust_type
             ));
         }
-        
+
         for col in &diff.extra_in_db {
             report.push_str(&format!(
                 "| {} | {} | - | {} | EXTRA (no action) |\n",
                 diff.table, col.name, col.r#type
             ));
         }
-        
+
         for (rust_field, db_col) in &diff.type_mismatches {
             let db_field_name = rust_field.serde_name.as_ref().unwrap_or(&rust_field.name);
             report.push_str(&format!(
@@ -468,55 +486,57 @@ fn write_schema_report(diffs: &[SchemaDiff]) -> Result<(), SchemaAuditError> {
             ));
         }
     }
-    
+
     fs::write("schema_mismatch_report.md", report)
         .map_err(|e| SchemaAuditError::MigrationFailed(format!("Failed to write report: {}", e)))?;
-    
+
     Ok(())
 }
 
 #[tokio::main]
 async fn main() -> Result<()> {
     // Load configuration
-    let config = Config::from_env()
-        .context("Failed to load configuration from environment")?;
-    
+    let config = Config::from_env().context("Failed to load configuration from environment")?;
+
     // Create ClickHouse client
-    let client = config.create_client()
+    let client = config
+        .create_client()
         .context("Failed to create ClickHouse client")?;
-    
+
     // Discover database schema
-    let db_columns = discover_db_schema(&client, &config.database).await
+    let db_columns = discover_db_schema(&client, &config.database)
+        .await
         .context("Failed to discover database schema")?;
-    
+
     // Parse Rust structs
-    let rust_structs = parse_rust_structs()
-        .context("Failed to parse Rust structs")?;
-    
+    let rust_structs = parse_rust_structs().context("Failed to parse Rust structs")?;
+
     // Compute schema differences
     let diffs = compute_schema_diff(&db_columns, &rust_structs)
         .context("Failed to compute schema differences")?;
-    
+
     // Generate DDL and reports
     let ddl_statements = generate_ddl(&diffs);
-    let migration_file = write_migration_file(&ddl_statements)
-        .context("Failed to write migration file")?;
-    
-    write_schema_report(&diffs)
-        .context("Failed to write schema report")?;
-    
+    let migration_file =
+        write_migration_file(&ddl_statements).context("Failed to write migration file")?;
+
+    write_schema_report(&diffs).context("Failed to write schema report")?;
+
     // CI guard: fail if mismatches exist but no migration was created
     if !diffs.is_empty() && migration_file.is_empty() {
         anyhow::bail!("Schema mismatches detected but no migration file was created");
     }
-    
+
     if !diffs.is_empty() {
-        println!("Schema mismatches detected. Migration file: {}", migration_file);
+        println!(
+            "Schema mismatches detected. Migration file: {}",
+            migration_file
+        );
         println!("Report written to: schema_mismatch_report.md");
     } else {
         println!("No schema mismatches detected.");
     }
-    
+
     println!("SCHEMA_AUDIT_COMPLETE");
     Ok(())
 }
@@ -524,20 +544,26 @@ async fn main() -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_clickhouse_to_rust_conversion() {
         assert_eq!(convert_clickhouse_to_rust("String"), "String");
         assert_eq!(convert_clickhouse_to_rust("UInt32"), "u32");
-        assert_eq!(convert_clickhouse_to_rust("Nullable(String)"), "Option<String>");
+        assert_eq!(
+            convert_clickhouse_to_rust("Nullable(String)"),
+            "Option<String>"
+        );
         assert_eq!(convert_clickhouse_to_rust("Array(UInt32)"), "Vec<u32>");
     }
-    
+
     #[test]
     fn test_rust_to_clickhouse_conversion() {
         assert_eq!(convert_rust_to_clickhouse("String"), "String");
         assert_eq!(convert_rust_to_clickhouse("u32"), "UInt32");
-        assert_eq!(convert_rust_to_clickhouse("Option<String>"), "Nullable(String)");
+        assert_eq!(
+            convert_rust_to_clickhouse("Option<String>"),
+            "Nullable(String)"
+        );
         assert_eq!(convert_rust_to_clickhouse("Vec<u32>"), "Array(UInt32)");
     }
 }

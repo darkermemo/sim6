@@ -1,10 +1,9 @@
 //! Schema validation tool for SIEM system
 //! Ensures Rust structs match ClickHouse table schemas
 
-use serde_json::{Value, Map};
+use serde_json::Value;
 use std::collections::HashMap;
 use std::env;
-use reqwest;
 
 /// Schema validation errors
 #[derive(Debug)]
@@ -21,7 +20,11 @@ impl std::fmt::Display for SchemaError {
         match self {
             SchemaError::MissingColumn(col) => write!(f, "Missing required column: {}", col),
             SchemaError::TypeMismatch(col, expected, actual) => {
-                write!(f, "Type mismatch for column '{}': expected {}, got {}", col, expected, actual)
+                write!(
+                    f,
+                    "Type mismatch for column '{}': expected {}, got {}",
+                    col, expected, actual
+                )
             }
             SchemaError::ExtraColumn(col) => write!(f, "Unexpected column in database: {}", col),
             SchemaError::ConnectionError(msg) => write!(f, "Connection error: {}", msg),
@@ -56,9 +59,9 @@ impl SchemaValidator {
             database_name,
         }
     }
-    
+
     fn new_with_db(clickhouse_url: String, database_name: String) -> Self {
-        Self { 
+        Self {
             clickhouse_url,
             database_name,
         }
@@ -188,7 +191,8 @@ impl SchemaValidator {
         ];
 
         let table_name = format!("{}.alerts", &self.database_name);
-        self.validate_table_schema(&table_name, expected_columns).await
+        self.validate_table_schema(&table_name, expected_columns)
+            .await
     }
 
     /// Validate alert_notes table schema
@@ -239,7 +243,8 @@ impl SchemaValidator {
         ];
 
         let table_name = format!("{}.alert_notes", &self.database_name);
-        self.validate_table_schema(&table_name, expected_columns).await
+        self.validate_table_schema(&table_name, expected_columns)
+            .await
     }
 
     /// Validate events table schema (if it exists)
@@ -284,7 +289,8 @@ impl SchemaValidator {
         ];
 
         let table_name = format!("{}.events", &self.database_name);
-        self.validate_table_schema(&table_name, expected_columns).await
+        self.validate_table_schema(&table_name, expected_columns)
+            .await
     }
 
     /// Generic table schema validation
@@ -307,11 +313,9 @@ impl SchemaValidator {
 
         // Check for missing required columns
         for expected in &expected_columns {
-            if expected.required {
-                if !actual_columns.contains_key(&expected.name) {
-                    errors.push(SchemaError::MissingColumn(expected.name.clone()));
-                    continue;
-                }
+            if expected.required && !actual_columns.contains_key(&expected.name) {
+                errors.push(SchemaError::MissingColumn(expected.name.clone()));
+                continue;
             }
 
             // Check type compatibility if column exists
@@ -337,7 +341,10 @@ impl SchemaValidator {
         for actual_name in actual_columns.keys() {
             if !expected_names.contains(actual_name) {
                 // This is just a warning, not an error
-                println!("⚠️  Unexpected column '{}' in table {}", actual_name, table_name);
+                println!(
+                    "⚠️  Unexpected column '{}' in table {}",
+                    actual_name, table_name
+                );
             }
         }
 
@@ -403,7 +410,11 @@ impl SchemaValidator {
         let data = schema_response
             .get("data")
             .and_then(|d| d.as_array())
-            .ok_or_else(|| vec![SchemaError::ParseError("Invalid schema response format".to_string())])?;
+            .ok_or_else(|| {
+                vec![SchemaError::ParseError(
+                    "Invalid schema response format".to_string(),
+                )]
+            })?;
 
         Ok(data.clone())
     }
@@ -417,7 +428,9 @@ impl SchemaValidator {
 
         // Handle nullable types
         if expected.starts_with("Nullable(") && actual.starts_with("Nullable(") {
-            let expected_inner = expected.trim_start_matches("Nullable(").trim_end_matches(")");
+            let expected_inner = expected
+                .trim_start_matches("Nullable(")
+                .trim_end_matches(")");
             let actual_inner = actual.trim_start_matches("Nullable(").trim_end_matches(")");
             return self.types_compatible(expected_inner, actual_inner);
         }
@@ -458,10 +471,7 @@ impl SchemaMigrator {
                 }
                 SchemaError::TypeMismatch(col, expected, _actual) => {
                     // Generate MODIFY COLUMN statement
-                    let sql = format!(
-                        "ALTER TABLE dev.alerts MODIFY COLUMN {} {}",
-                        col, expected
-                    );
+                    let sql = format!("ALTER TABLE dev.alerts MODIFY COLUMN {} {}", col, expected);
                     migrations.push(sql);
                 }
                 _ => {} // Skip other error types
@@ -496,8 +506,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("🔍 SIEM Schema Validation Tool");
     println!("==============================");
 
-    let clickhouse_url = std::env::var("CLICKHOUSE_URL")
-        .unwrap_or_else(|_| "http://localhost:8123".to_string());
+    let clickhouse_url =
+        std::env::var("CLICKHOUSE_URL").unwrap_or_else(|_| "http://localhost:8123".to_string());
 
     let validator = SchemaValidator::new(clickhouse_url.clone());
     let migrator = SchemaMigrator::new(clickhouse_url);
@@ -511,14 +521,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
         Err(errors) => {
             println!("❌ Schema validation failed with {} errors:", errors.len());
-            
+
             for (i, error) in errors.iter().enumerate() {
                 println!("  {}. {}", i + 1, error);
             }
 
             println!("\n🔧 Generating migration SQL...");
             let migrations = migrator.generate_migration_sql(&errors).await;
-            
+
             if !migrations.is_empty() {
                 println!("\n📝 Suggested migration SQL:");
                 println!("=============================");
@@ -526,7 +536,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     println!("-- Migration {}", i + 1);
                     println!("{};\n", sql);
                 }
-                
+
                 println!("💡 Run these SQL statements against your ClickHouse instance to fix schema issues.");
             } else {
                 println!("⚠️  No automatic migrations available for these errors.");
@@ -546,7 +556,7 @@ mod tests {
     #[test]
     fn test_type_compatibility() {
         let validator = SchemaValidator::new("http://localhost:8123".to_string());
-        
+
         assert!(validator.types_compatible("String", "String"));
         assert!(validator.types_compatible("UInt32", "UInt32"));
         assert!(validator.types_compatible("Nullable(String)", "Nullable(String)"));
@@ -557,11 +567,11 @@ mod tests {
     #[test]
     fn test_migration_sql_generation() {
         let migrator = SchemaMigrator::new("http://localhost:8123".to_string());
-        
+
         let sql = migrator.generate_add_column_sql("event_id");
         assert!(sql.is_some());
         assert!(sql.unwrap().contains("Nullable(String)"));
-        
+
         let sql = migrator.generate_add_column_sql("unknown_column");
         assert!(sql.is_none());
     }

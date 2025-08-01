@@ -17,7 +17,7 @@ fn main() -> Result<()> {
                 .long("schema")
                 .value_name("FILE")
                 .help("Path to database schema SQL file")
-                .default_value("database_setup.sql")
+                .default_value("database_setup.sql"),
         )
         .arg(
             Arg::new("source-dir")
@@ -25,7 +25,7 @@ fn main() -> Result<()> {
                 .long("source-dir")
                 .value_name("DIR")
                 .help("Path to source code directory")
-                .default_value("siem_api/src")
+                .default_value("siem_api/src"),
         )
         .arg(
             Arg::new("output-dir")
@@ -33,34 +33,36 @@ fn main() -> Result<()> {
                 .long("output-dir")
                 .value_name("DIR")
                 .help("Output directory for reports")
-                .default_value(".")
+                .default_value("."),
         )
         .arg(
             Arg::new("typescript-dir")
                 .short('t')
                 .long("typescript-dir")
                 .value_name("DIR")
-                .help("Path to TypeScript source directory (optional)")
+                .help("Path to TypeScript source directory (optional)"),
         )
         .arg(
             Arg::new("fail-on-critical")
                 .long("fail-on-critical")
                 .help("Exit with error code if critical issues are found")
-                .action(clap::ArgAction::SetTrue)
+                .action(clap::ArgAction::SetTrue),
         )
         .arg(
             Arg::new("verbose")
                 .short('v')
                 .long("verbose")
                 .help("Enable verbose output")
-                .action(clap::ArgAction::SetTrue)
+                .action(clap::ArgAction::SetTrue),
         )
         .get_matches();
 
     let schema_file = PathBuf::from(matches.get_one::<String>("schema").unwrap());
     let source_dir = PathBuf::from(matches.get_one::<String>("source-dir").unwrap());
     let output_dir = PathBuf::from(matches.get_one::<String>("output-dir").unwrap());
-    let typescript_dir = matches.get_one::<String>("typescript-dir").map(PathBuf::from);
+    let typescript_dir = matches
+        .get_one::<String>("typescript-dir")
+        .map(PathBuf::from);
     let fail_on_critical = matches.get_flag("fail-on-critical");
     let verbose = matches.get_flag("verbose");
 
@@ -81,14 +83,16 @@ fn main() -> Result<()> {
     if verbose {
         println!("\n🗄️  Loading database schema...");
     }
-    validator.load_database_schema(&schema_file)
+    validator
+        .load_database_schema(&schema_file)
         .with_context(|| "Failed to load database schema")?;
 
     // Step 2: Scan Rust codebase
     if verbose {
         println!("\n🦀 Scanning Rust codebase...");
     }
-    validator.scan_rust_codebase(&source_dir)
+    validator
+        .scan_rust_codebase(&source_dir)
         .with_context(|| "Failed to scan Rust codebase")?;
 
     // Step 3: Scan TypeScript codebase (if provided)
@@ -104,26 +108,29 @@ fn main() -> Result<()> {
     if verbose {
         println!("\n✅ Validating schemas...");
     }
-    validator.validate_schemas()
+    validator
+        .validate_schemas()
         .with_context(|| "Failed to validate schemas")?;
 
     // Step 5: Generate reports
     if verbose {
         println!("\n📊 Generating reports...");
     }
-    
+
     let json_report_path = output_dir.join("schema_validation_report.json");
     let markdown_report_path = output_dir.join("schema_validation_report.md");
 
-    validator.generate_json_report(&json_report_path)
+    validator
+        .generate_json_report(&json_report_path)
         .with_context(|| "Failed to generate JSON report")?;
-    
-    validator.generate_markdown_report(&markdown_report_path)
+
+    validator
+        .generate_markdown_report(&markdown_report_path)
         .with_context(|| "Failed to generate Markdown report")?;
 
     // Step 6: Print summary
     let report = validator.generate_report();
-    
+
     println!("\n📋 Validation Summary:");
     println!("   Tables loaded: {}", report.total_tables_loaded);
     println!("   SQL references found: {}", report.total_sql_references);
@@ -131,15 +138,21 @@ fn main() -> Result<()> {
     println!("   Warnings: {}", report.summary.warnings);
     println!("   Missing tables: {}", report.summary.missing_tables);
     println!("   Missing columns: {}", report.summary.missing_columns);
-    println!("   Hardcoded database names: {}", report.summary.hardcoded_database_names);
-    
+    println!(
+        "   Hardcoded database names: {}",
+        report.summary.hardcoded_database_names
+    );
+
     println!("\n📄 Reports generated:");
     println!("   JSON: {:?}", json_report_path);
     println!("   Markdown: {:?}", markdown_report_path);
 
     // Step 7: Exit with appropriate code
     if fail_on_critical && report.summary.critical_issues > 0 {
-        println!("\n❌ Validation failed with {} critical issues", report.summary.critical_issues);
+        println!(
+            "\n❌ Validation failed with {} critical issues",
+            report.summary.critical_issues
+        );
         process::exit(1);
     } else if report.summary.critical_issues > 0 {
         println!("\n⚠️  Validation completed with {} critical issues (not failing due to --fail-on-critical not set)", report.summary.critical_issues);

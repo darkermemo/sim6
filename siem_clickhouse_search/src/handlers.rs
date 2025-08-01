@@ -1,13 +1,16 @@
 //! HTTP handlers for ClickHouse search service
 //! Provides REST API endpoints for log search, aggregation, and monitoring
 
+use crate::auth::Auth;
 use crate::config::Config;
 use crate::database::ClickHouseService;
 use crate::dto::*;
 use crate::security::{SecurityService, Claims};
+use crate::validation::ValidationService;
 use axum::{
-    extract::{Query, State},
+    extract::{Query, State, Request, FromRequestParts},
     http::{HeaderMap, StatusCode},
+    middleware::Next,
     response::{IntoResponse, Response, Sse},
     routing::{get, post},
     Json, Router,
@@ -15,12 +18,13 @@ use axum::{
 use axum::response::sse::{Event as SseEvent, KeepAlive};
 use futures::stream::{self, Stream};
 use tokio_stream::StreamExt as _;
-use chrono::{DateTime, Utc, TimeZone};
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Instant;
 use tracing::{debug, error, info, warn};
+use crate::error::ApiError;
 use uuid::Uuid;
 
 /// Application state shared across handlers
@@ -29,6 +33,7 @@ pub struct AppState {
     pub config: Arc<Config>,
     pub db_service: Arc<ClickHouseService>,
     pub security_service: Arc<SecurityService>,
+    pub validation_service: Arc<ValidationService>,
     pub start_time: Instant,
 }
 
@@ -61,69 +66,85 @@ pub async fn stream_events(
     Sse::new(stream).keep_alive(KeepAlive::default())
 }
 
-/// Search events with POST request (API v1)
+/// Search events with POST request (API v1) - SECURE VERSION
 pub async fn search_events_v1(
     State(state): State<AppState>,
+    headers: HeaderMap,
     Json(request): Json<SearchRequest>,
-) -> impl IntoResponse {
+) -> Result<Json<SearchEventsResponse>, ApiError> {
+    // Validate JWT token and extract claims
+    let claims = state.security_service.validate_request(&headers).await
+        .map_err(|e| {
+            warn!("Authentication failed: {}", e);
+            ApiError::Unauthorized("Invalid or missing authentication token".to_string())
+        })?;
+    
+    // Validate and sanitize the search request
+    let validated_request = state.validation_service.validate_search_request(
+        request,
+        &claims,
+        state.config.security.enable_tenant_isolation,
+    ).map_err(|e| {
+        warn!("Request validation failed: {}", e);
+        ApiError::BadRequest(format!("Invalid request: {}", e))
+    })?;
+    
+    // Convert to EventFilters with validated data
     let filters = EventFilters {
         page: None,
-        limit: request.pagination.as_ref().and_then(|p| Some(p.size)),
-        search: request.query,
+        limit: validated_request.pagination.as_ref().map(|p| p.size),
+        search: validated_request.query,
         severity: None,
         source_type: None,
-        start_time: request.time_range.as_ref().map(|tr| tr.start.timestamp() as u32),
-        end_time: request.time_range.as_ref().map(|tr| tr.end.timestamp() as u32),
-        tenant_id: request.tenant_id,
+        start_time: validated_request.time_range.as_ref().map(|tr| tr.start.timestamp() as u32),
+        end_time: validated_request.time_range.as_ref().map(|tr| tr.end.timestamp() as u32),
+        tenant_id: validated_request.tenant_id, // This is now guaranteed to be from JWT claims
     };
 
-    match state.db_service.get_events(filters).await {
-        Ok(events) => {
-            // Convert Event objects to EventDetailResponse objects
-            let event_details: Vec<EventDetailResponse> = events.into_iter().map(|event| {
-                let timestamp = chrono::Utc.timestamp_opt(event.event_timestamp as i64, 0)
-                    .single()
-                    .unwrap_or_default()
-                    .to_rfc3339();
-                
-                EventDetailResponse {
-                    id: event.event_id.clone(),
-                    timestamp: timestamp.clone(),
-                    source: event.source_ip.clone(),
-                    source_type: event.source_type.clone(),
-                    severity: event.severity.clone().unwrap_or_else(|| "info".to_string()),
-                    facility: "local0".to_string(), // Default facility
-                    hostname: "unknown".to_string(), // Default hostname
-                    process: "siem".to_string(), // Default process
-                    message: event.message.clone().unwrap_or_else(|| "No message".to_string()),
-                    raw_message: event.message.clone().unwrap_or_else(|| "No message".to_string()),
-                    source_ip: event.source_ip.clone(),
-                    source_port: 0, // Default port
-                    protocol: "tcp".to_string(), // Default protocol
-                    tags: vec![], // Empty tags array
-                    fields: std::collections::HashMap::new(), // Empty fields map
-                    processing_stage: "processed".to_string(), // Default stage
-                    created_at: timestamp.clone(),
-                    updated_at: timestamp,
-                }
-            }).collect();
-
-            let response = SearchEventsResponse {
-                events: event_details.clone(),
-                total: event_details.len(),
-                status: "success".to_string(),
-            };
-
-            Json(response).into_response()
-        },
-        Err(e) => {
-            error!("Failed to search events: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({
-                "error": "Failed to search events",
-                "details": e.to_string()
-            }))).into_response()
+    // Execute the search
+    let events = state.db_service.get_events(filters).await
+        .map_err(|e| {
+            error!("Database query failed: {}", e);
+            ApiError::InternalServerError("Failed to search events".to_string())
+        })?;
+    
+    // Convert Event objects to EventDetailResponse objects
+    let event_details: Vec<EventDetailResponse> = events.into_iter().map(|event| {
+        let timestamp = DateTime::from_timestamp(event.event_timestamp as i64, 0)
+            .unwrap_or_default()
+            .to_rfc3339();
+        
+        EventDetailResponse {
+            id: event.event_id.clone(),
+            timestamp: timestamp.clone(),
+            source: event.source_ip.clone(),
+            source_type: event.source_type.clone(),
+            severity: event.severity.clone().unwrap_or_else(|| "info".to_string()),
+            facility: "local0".to_string(),
+            hostname: "unknown".to_string(),
+            process: "siem".to_string(),
+            message: event.message.clone().unwrap_or_else(|| "No message".to_string()),
+            raw_message: event.message.clone().unwrap_or_else(|| "No message".to_string()),
+            source_ip: event.source_ip.clone(),
+            source_port: 0,
+            protocol: "tcp".to_string(),
+            tags: vec![],
+            fields: std::collections::HashMap::new(),
+            processing_stage: "processed".to_string(),
+            created_at: timestamp.clone(),
+            updated_at: timestamp,
         }
-    }
+    }).collect();
+
+    let response = SearchEventsResponse {
+        events: event_details.clone(),
+        total: event_details.len(),
+        status: "success".to_string(),
+    };
+
+    debug!("Search completed for tenant: {}, returned {} events", claims.tenant_id, event_details.len());
+    
+    Ok(Json(response))
 }
 
 /// Get events size/count
@@ -193,23 +214,32 @@ pub async fn ingest_batch_events(
 
 /// Create the main application router
 pub fn create_router(state: AppState) -> Router {
-    Router::new()
-        .route("/search", post(search_logs))
-        .route("/search", get(search_logs_get))
-        .route("/dashboard", get(get_dashboard))
-        .route("/events", get(get_events))
+    // Public routes (no authentication required)
+    let public_routes = Router::new()
         .route("/health", get(health_check))
         .route("/metrics", get(metrics))
-        .route("/status", get(status))
-        .route("/schema", get(get_schema))
-        .route("/suggest", post(suggest_query))
+        .route("/status", get(status));
+    
+    // Protected routes (authentication required)
+    let protected_routes = Router::new()
+        .route("/search", post(search_logs_protected))
+        .route("/search", get(search_logs_get_protected))
+        .route("/dashboard", get(get_dashboard_protected))
+        .route("/events", get(get_events_protected))
+        .route("/schema", get(get_schema_protected))
+        .route("/suggest", post(suggest_query_protected))
         // New API v1 endpoints for SIEM ingestion pipeline
-        .route("/api/v1/dashboard", get(get_dashboard))
-        .route("/api/v1/events/stream", get(stream_events))
-        .route("/api/v1/events/search", post(search_events_v1))
-        .route("/api/v1/events/size", get(get_events_size))
-        .route("/api/v1/events/ingest", post(ingest_single_event))
-        .route("/api/v1/events/batch", post(ingest_batch_events))
+        .route("/api/v1/dashboard", get(get_dashboard_protected))
+        .route("/api/v1/events/stream", get(stream_events_protected))
+        .route("/api/v1/events/search", post(search_events_v1_protected))
+        .route("/api/v1/events/size", get(get_events_size_protected))
+        .route("/api/v1/events/ingest", post(ingest_single_event_protected))
+        .route("/api/v1/events/batch", post(ingest_batch_events_protected))
+        .layer(axum::middleware::from_fn_with_state(state.clone(), auth_middleware));
+    
+    Router::new()
+        .merge(public_routes)
+        .merge(protected_routes)
         .with_state(state)
 }
 
@@ -518,10 +548,12 @@ fn map_clickhouse_type(clickhouse_type: &str) -> (String, bool, bool) {
        let db_service = Arc::new(ClickHouseService::new(config.clone()).await.unwrap());
        let security_service = Arc::new(SecurityService::new(config.clone()).unwrap());
        
+       let validation_service = Arc::new(ValidationService::new().unwrap());
        let state = AppState {
           config: config.clone(),
           db_service: db_service.clone(),
           security_service,
+          validation_service,
           start_time: std::time::Instant::now(),
       };
         
@@ -830,38 +862,123 @@ struct SuggestionResponse {
     took: u64,
 }
 
-/// API error types
-#[derive(Debug)]
-enum ApiError {
-    BadRequest(String),
-    Unauthorized(String),
-    Forbidden(String),
-    NotFound(String),
-    InternalServerError(String),
-    ServiceUnavailable(String),
-}
+use std::time::Duration;
 
-impl IntoResponse for ApiError {
-    fn into_response(self) -> Response {
-        let (status, message) = match self {
-            ApiError::BadRequest(msg) => (StatusCode::BAD_REQUEST, msg),
-            ApiError::Unauthorized(msg) => (StatusCode::UNAUTHORIZED, msg),
-            ApiError::Forbidden(msg) => (StatusCode::FORBIDDEN, msg),
-            ApiError::NotFound(msg) => (StatusCode::NOT_FOUND, msg),
-            ApiError::InternalServerError(msg) => (StatusCode::INTERNAL_SERVER_ERROR, msg),
-            ApiError::ServiceUnavailable(msg) => (StatusCode::SERVICE_UNAVAILABLE, msg),
-        };
-        
-        let error_response = ErrorResponse {
-            code: status.as_u16().to_string(),
-            message,
-            details: None,
-            request_id: Uuid::new_v4().to_string(),
-            timestamp: Utc::now(),
-        };
-        
-        (status, Json(error_response)).into_response()
+/// Authentication middleware that validates the dev admin token
+async fn auth_middleware(
+    State(_state): State<AppState>,
+    mut request: Request,
+    next: Next,
+) -> Result<Response, StatusCode> {
+    // Extract auth from request parts
+    let (mut parts, body) = request.into_parts();
+    
+    // Validate authentication
+    match Auth::from_request_parts(&mut parts, &()).await {
+        Ok(_auth) => {
+            // Authentication successful, proceed with request
+            request = Request::from_parts(parts, body);
+            Ok(next.run(request).await)
+        }
+        Err(status) => {
+            // Authentication failed
+            Err(status)
+        }
     }
 }
 
-use std::time::Duration;
+// Protected handler wrappers that include authentication
+
+async fn search_logs_protected(
+    _auth: Auth,
+    state: State<AppState>,
+    headers: HeaderMap,
+    request: Json<SearchRequest>,
+) -> Result<Json<SearchResponse>, ApiError> {
+    search_logs(state, headers, request).await
+}
+
+async fn search_logs_get_protected(
+    _auth: Auth,
+    state: State<AppState>,
+    headers: HeaderMap,
+    params: Query<SearchQueryParams>,
+) -> Result<Json<SearchResponse>, ApiError> {
+    search_logs_get(state, headers, params).await
+}
+
+async fn get_dashboard_protected(
+    _auth: Auth,
+    state: State<AppState>,
+    headers: HeaderMap,
+) -> Result<Json<DashboardV2Response>, ApiError> {
+    get_dashboard(state, headers).await
+}
+
+async fn get_events_protected(
+    _auth: Auth,
+    state: State<AppState>,
+    filters: Query<EventFilters>,
+) -> Result<Json<Vec<Event>>, ApiError> {
+    get_events(state, filters).await
+}
+
+async fn get_schema_protected(
+    _auth: Auth,
+    state: State<AppState>,
+    headers: HeaderMap,
+) -> Result<Json<SchemaResponse>, ApiError> {
+    get_schema(state, headers).await
+}
+
+async fn suggest_query_protected(
+    _auth: Auth,
+    state: State<AppState>,
+    headers: HeaderMap,
+    request: Json<SuggestionRequest>,
+) -> Result<Json<SuggestionResponse>, ApiError> {
+    suggest_query(state, headers, request).await
+}
+
+async fn stream_events_protected(
+    _auth: Auth,
+    filters: Query<EventFilters>,
+    state: State<AppState>,
+) -> impl IntoResponse {
+    stream_events(filters, state).await
+}
+
+async fn search_events_v1_protected(
+    _auth: Auth,
+    state: State<AppState>,
+    headers: HeaderMap,
+    request: Json<SearchRequest>,
+) -> Result<Json<SearchEventsResponse>, ApiError> {
+    search_events_v1(state, headers, request).await
+}
+
+async fn get_events_size_protected(
+    _auth: Auth,
+    filters: Query<EventFilters>,
+    state: State<AppState>,
+) -> impl IntoResponse {
+    get_events_size(filters, state).await
+}
+
+async fn ingest_single_event_protected(
+    _auth: Auth,
+    state: State<AppState>,
+    headers: HeaderMap,
+    body: String,
+) -> impl IntoResponse {
+    ingest_single_event(state, headers, body).await
+}
+
+async fn ingest_batch_events_protected(
+    _auth: Auth,
+    state: State<AppState>,
+    headers: HeaderMap,
+    events: Json<serde_json::Value>,
+) -> impl IntoResponse {
+    ingest_batch_events(state, headers, events).await
+}

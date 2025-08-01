@@ -89,6 +89,7 @@ tokio-test = "0.4"
 [features]
 default = ["metrics"]
 metrics = ["prometheus", "axum-prometheus"]
+dev-auth = []
 full = ["metrics"]
 
 [profile.release]

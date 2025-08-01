@@ -1,16 +1,20 @@
 //! SIEM ClickHouse Search Service
 //! High-performance log search service with multi-tenant support
 
+mod auth;
 mod config;
 mod database;
 mod dto;
+mod error;
 mod handlers;
 mod security;
+mod validation;
 
 use crate::config::Config;
 use crate::database::ClickHouseService;
 use crate::handlers::{create_router, AppState};
 use crate::security::{AuditLogger, SecurityService};
+use crate::validation::ValidationService;
 use anyhow::{Context, Result};
 // use axum::Server; // Not needed in newer axum versions
 use clap::{Arg, Command};
@@ -116,6 +120,10 @@ async fn main() -> Result<()> {
     let security_service = SecurityService::new(config.clone())
         .context("Failed to initialize security service")?;
     
+    // Initialize validation service
+    let validation_service = ValidationService::new()
+        .context("Failed to initialize validation service")?;
+    
     // Initialize audit logger
     let audit_logger = AuditLogger::new(config.clone());
     
@@ -124,6 +132,7 @@ async fn main() -> Result<()> {
         config: config.clone(),
         db_service: Arc::new(clickhouse_service),
         security_service: Arc::new(security_service),
+        validation_service: Arc::new(validation_service),
         start_time: std::time::Instant::now(),
     };
     

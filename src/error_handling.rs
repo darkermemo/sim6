@@ -1,7 +1,6 @@
 //! Standardized error handling module for the SIEM system
 //! Provides consistent error types, logging, and recovery patterns
 
-
 use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},
@@ -9,7 +8,7 @@ use axum::{
 };
 use serde::{Deserialize, Serialize};
 
-use tracing::{error, warn, info};
+use tracing::{error, info, warn};
 
 /// Standard error response structure for API endpoints
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -32,60 +31,51 @@ pub enum SiemError {
         #[source]
         source: Option<anyhow::Error>,
     },
-    
+
     #[error("Configuration error: {message}")]
     Configuration {
         message: String,
         #[source]
         source: Option<anyhow::Error>,
     },
-    
+
     #[error("Validation error: {message}")]
     Validation {
         message: String,
         field: Option<String>,
     },
-    
+
     #[error("Authentication error: {message}")]
-    Authentication {
-        message: String,
-    },
-    
+    Authentication { message: String },
+
     #[error("Authorization error: {message}")]
-    Authorization {
-        message: String,
-    },
-    
+    Authorization { message: String },
+
     #[error("Network error: {message}")]
     Network {
         message: String,
         #[source]
         source: Option<anyhow::Error>,
     },
-    
+
     #[error("Internal server error: {message}")]
     Internal {
         message: String,
         #[source]
         source: Option<anyhow::Error>,
     },
-    
+
     #[error("Resource not found: {resource}")]
-    NotFound {
-        resource: String,
-    },
-    
+    NotFound { resource: String },
+
     #[error("Rate limit exceeded: {message}")]
     RateLimit {
         message: String,
         retry_after: Option<u64>,
     },
-    
+
     #[error("Timeout error: {message}")]
-    Timeout {
-        message: String,
-        timeout_ms: u64,
-    },
+    Timeout { message: String, timeout_ms: u64 },
 }
 
 impl SiemError {
@@ -96,7 +86,7 @@ impl SiemError {
             source: None,
         }
     }
-    
+
     /// Create a database error with source
     pub fn database_with_source<S: Into<String>>(message: S, source: anyhow::Error) -> Self {
         Self::Database {
@@ -104,7 +94,7 @@ impl SiemError {
             source: Some(source),
         }
     }
-    
+
     /// Create a configuration error
     pub fn configuration<S: Into<String>>(message: S) -> Self {
         Self::Configuration {
@@ -112,7 +102,7 @@ impl SiemError {
             source: None,
         }
     }
-    
+
     /// Create a validation error
     pub fn validation<S: Into<String>>(message: S) -> Self {
         Self::Validation {
@@ -120,7 +110,7 @@ impl SiemError {
             field: None,
         }
     }
-    
+
     /// Create a validation error with field
     pub fn validation_field<S: Into<String>, F: Into<String>>(message: S, field: F) -> Self {
         Self::Validation {
@@ -128,7 +118,7 @@ impl SiemError {
             field: Some(field.into()),
         }
     }
-    
+
     /// Create an internal error
     pub fn internal<S: Into<String>>(message: S) -> Self {
         Self::Internal {
@@ -136,7 +126,7 @@ impl SiemError {
             source: None,
         }
     }
-    
+
     /// Create an internal error with source
     pub fn internal_with_source<S: Into<String>>(message: S, source: anyhow::Error) -> Self {
         Self::Internal {
@@ -144,14 +134,14 @@ impl SiemError {
             source: Some(source),
         }
     }
-    
+
     /// Create a not found error
     pub fn not_found<S: Into<String>>(resource: S) -> Self {
         Self::NotFound {
             resource: resource.into(),
         }
     }
-    
+
     /// Create a timeout error
     pub fn timeout<S: Into<String>>(message: S, timeout_ms: u64) -> Self {
         Self::Timeout {
@@ -159,7 +149,7 @@ impl SiemError {
             timeout_ms,
         }
     }
-    
+
     /// Get the error code for API responses
     pub fn error_code(&self) -> &'static str {
         match self {
@@ -175,7 +165,7 @@ impl SiemError {
             Self::Timeout { .. } => "TIMEOUT_ERROR",
         }
     }
-    
+
     /// Get the HTTP status code for this error
     pub fn status_code(&self) -> StatusCode {
         match self {
@@ -191,7 +181,7 @@ impl SiemError {
             Self::Timeout { .. } => StatusCode::REQUEST_TIMEOUT,
         }
     }
-    
+
     /// Convert to ErrorResponse for API responses
     pub fn to_error_response(&self) -> ErrorResponse {
         ErrorResponse {
@@ -202,19 +192,20 @@ impl SiemError {
             request_id: None, // Can be set by middleware
         }
     }
-    
+
     /// Get additional error details
     fn get_details(&self) -> Option<serde_json::Value> {
         match self {
-            Self::Validation { field: Some(field), .. } => {
-                Some(serde_json::json!({ "field": field }))
-            },
-            Self::RateLimit { retry_after: Some(retry), .. } => {
-                Some(serde_json::json!({ "retry_after_seconds": retry }))
-            },
+            Self::Validation {
+                field: Some(field), ..
+            } => Some(serde_json::json!({ "field": field })),
+            Self::RateLimit {
+                retry_after: Some(retry),
+                ..
+            } => Some(serde_json::json!({ "retry_after_seconds": retry })),
             Self::Timeout { timeout_ms, .. } => {
                 Some(serde_json::json!({ "timeout_ms": timeout_ms }))
-            },
+            }
             _ => None,
         }
     }
@@ -225,23 +216,23 @@ impl IntoResponse for SiemError {
     fn into_response(self) -> Response {
         let status = self.status_code();
         let error_response = self.to_error_response();
-        
+
         // Log the error with appropriate level
         match &self {
             SiemError::Internal { .. } | SiemError::Database { .. } => {
                 error!("Internal error: {}", self);
-            },
+            }
             SiemError::Configuration { .. } => {
                 error!("Configuration error: {}", self);
-            },
+            }
             SiemError::Network { .. } | SiemError::Timeout { .. } => {
                 warn!("Network/timeout error: {}", self);
-            },
+            }
             _ => {
                 info!("Client error: {}", self);
             }
         }
-        
+
         (status, Json(error_response)).into_response()
     }
 }
@@ -254,11 +245,11 @@ pub trait ErrorContext<T> {
     fn with_context<F>(self, f: F) -> SiemResult<T>
     where
         F: FnOnce() -> String;
-    
+
     fn with_database_context<F>(self, f: F) -> SiemResult<T>
     where
         F: FnOnce() -> String;
-    
+
     fn with_validation_context<F>(self, f: F) -> SiemResult<T>
     where
         F: FnOnce() -> String;
@@ -274,14 +265,14 @@ where
     {
         self.map_err(|e| SiemError::internal_with_source(f(), e.into()))
     }
-    
+
     fn with_database_context<F>(self, f: F) -> SiemResult<T>
     where
         F: FnOnce() -> String,
     {
         self.map_err(|e| SiemError::database_with_source(f(), e.into()))
     }
-    
+
     fn with_validation_context<F>(self, f: F) -> SiemResult<T>
     where
         F: FnOnce() -> String,
@@ -331,22 +322,19 @@ impl DatabaseHealthChecker {
             .fetch_one::<u8>()
             .await
             .with_database_context(|| "Failed to ping ClickHouse database".to_string())?;
-        
+
         info!("ClickHouse health check passed");
         Ok(())
     }
-    
+
     /// Check database with timeout
-    pub async fn check_with_timeout<F, Fut>(
-        check_fn: F,
-        timeout_ms: u64,
-    ) -> SiemResult<()>
+    pub async fn check_with_timeout<F, Fut>(check_fn: F, timeout_ms: u64) -> SiemResult<()>
     where
         F: FnOnce() -> Fut,
         Fut: std::future::Future<Output = SiemResult<()>>,
     {
         let timeout = std::time::Duration::from_millis(timeout_ms);
-        
+
         match tokio::time::timeout(timeout, check_fn()).await {
             Ok(result) => result,
             Err(_) => Err(SiemError::timeout(
@@ -384,13 +372,13 @@ impl RetryPolicy {
         Fut: std::future::Future<Output = SiemResult<T>>,
     {
         let mut last_error = None;
-        
+
         for attempt in 1..=self.max_attempts {
             match operation().await {
                 Ok(result) => return Ok(result),
                 Err(error) => {
                     last_error = Some(error);
-                    
+
                     if attempt < self.max_attempts {
                         let delay = self.calculate_delay(attempt);
                         warn!(
@@ -402,14 +390,14 @@ impl RetryPolicy {
                 }
             }
         }
-        
-        Err(last_error.unwrap_or_else(|| {
-            SiemError::internal("Retry operation failed with no error details")
-        }))
+
+        Err(last_error
+            .unwrap_or_else(|| SiemError::internal("Retry operation failed with no error details")))
     }
-    
+
     fn calculate_delay(&self, attempt: u32) -> u64 {
-        let delay = (self.base_delay_ms as f64 * self.backoff_multiplier.powi(attempt as i32 - 1)) as u64;
+        let delay =
+            (self.base_delay_ms as f64 * self.backoff_multiplier.powi(attempt as i32 - 1)) as u64;
         delay.min(self.max_delay_ms)
     }
 }
@@ -417,32 +405,32 @@ impl RetryPolicy {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_siem_error_creation() {
         let db_error = SiemError::database("Connection failed");
         assert_eq!(db_error.error_code(), "DATABASE_ERROR");
         assert_eq!(db_error.status_code(), StatusCode::INTERNAL_SERVER_ERROR);
-        
+
         let validation_error = SiemError::validation_field("Invalid email", "email");
         assert_eq!(validation_error.error_code(), "VALIDATION_ERROR");
         assert_eq!(validation_error.status_code(), StatusCode::BAD_REQUEST);
     }
-    
+
     #[test]
     fn test_error_response_serialization() {
         let error = SiemError::validation_field("Invalid input", "username");
         let response = error.to_error_response();
-        
+
         assert_eq!(response.error, "VALIDATION_ERROR");
         assert_eq!(response.code, "VALIDATION_ERROR");
         assert!(response.details.is_some());
     }
-    
+
     #[test]
     fn test_retry_policy_delay_calculation() {
         let policy = RetryPolicy::default();
-        
+
         assert_eq!(policy.calculate_delay(1), 100);
         assert_eq!(policy.calculate_delay(2), 200);
         assert_eq!(policy.calculate_delay(3), 400);

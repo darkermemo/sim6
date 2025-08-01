@@ -165,7 +165,8 @@ fn main() -> Result<()> {
     let environment = matches.get_one::<String>("environment").unwrap();
     let output_dir = Path::new(matches.get_one::<String>("output").unwrap());
     let report_format = matches.get_one::<String>("report-format").unwrap();
-    let coverage_threshold: f64 = matches.get_one::<String>("coverage-threshold")
+    let coverage_threshold: f64 = matches
+        .get_one::<String>("coverage-threshold")
         .unwrap()
         .parse()
         .context("Invalid coverage threshold")?;
@@ -185,23 +186,28 @@ fn main() -> Result<()> {
         if verbose {
             println!("📖 Loading configuration from: {}", config_file);
         }
-        validator.load_environment_config(Path::new(config_file))
+        validator
+            .load_environment_config(Path::new(config_file))
             .context("Failed to load environment configuration")?;
     } else {
         // Create environment config from CLI arguments
         let env_config = create_environment_config_from_cli(&matches, environment)?;
-        validator.environments.insert(environment.to_string(), env_config);
+        validator
+            .environments
+            .insert(environment.to_string(), env_config);
     }
 
     // Set current environment
-    validator.set_environment(environment)
+    validator
+        .set_environment(environment)
         .context("Failed to set environment")?;
 
     // Load database schema
     if verbose {
         println!("🗄️  Loading database schema...");
     }
-    validator.load_database_schema()
+    validator
+        .load_database_schema()
         .context("Failed to load database schema")?;
 
     // Parse enabled layers
@@ -214,7 +220,8 @@ fn main() -> Result<()> {
     if verbose {
         println!("🔎 Scanning source files...");
     }
-    validator.scan_all_sources()
+    validator
+        .scan_all_sources()
         .context("Failed to scan source files")?;
 
     // Perform validation
@@ -228,22 +235,26 @@ fn main() -> Result<()> {
     if verbose {
         println!("🔗 Performing cross-layer validation...");
     }
-    validator.validate_all_layers()
+    validator
+        .validate_all_layers()
         .context("Failed to perform cross-layer validation")?;
 
     // Generate reports
     if verbose {
         println!("📊 Generating validation reports...");
     }
-    
+
     let report = validator.generate_enhanced_report();
-    
+
     // Check coverage threshold
-    let avg_coverage = report.summary.layer_coverage.values().sum::<f64>() / 
-                      report.summary.layer_coverage.len() as f64;
-    
+    let avg_coverage = report.summary.layer_coverage.values().sum::<f64>()
+        / report.summary.layer_coverage.len() as f64;
+
     if avg_coverage < coverage_threshold {
-        eprintln!("❌ Coverage threshold not met: {:.1}% < {:.1}%", avg_coverage, coverage_threshold);
+        eprintln!(
+            "❌ Coverage threshold not met: {:.1}% < {:.1}%",
+            avg_coverage, coverage_threshold
+        );
         if fail_on_critical {
             process::exit(1);
         }
@@ -253,25 +264,29 @@ fn main() -> Result<()> {
     match report_format.as_str() {
         "json" => {
             let json_path = output_dir.join("schema_validation_report.json");
-            validator.generate_enhanced_json_report(&json_path)
+            validator
+                .generate_enhanced_json_report(&json_path)
                 .context("Failed to generate JSON report")?;
             println!("📄 JSON report generated: {:?}", json_path);
         }
         "markdown" => {
             let md_path = output_dir.join("schema_validation_report.md");
-            validator.generate_enhanced_markdown_report(&md_path)
+            validator
+                .generate_enhanced_markdown_report(&md_path)
                 .context("Failed to generate Markdown report")?;
             println!("📄 Markdown report generated: {:?}", md_path);
         }
         "both" | _ => {
             let json_path = output_dir.join("schema_validation_report.json");
             let md_path = output_dir.join("schema_validation_report.md");
-            
-            validator.generate_enhanced_json_report(&json_path)
+
+            validator
+                .generate_enhanced_json_report(&json_path)
                 .context("Failed to generate JSON report")?;
-            validator.generate_enhanced_markdown_report(&md_path)
+            validator
+                .generate_enhanced_markdown_report(&md_path)
                 .context("Failed to generate Markdown report")?;
-            
+
             println!("📄 Reports generated:");
             println!("   JSON: {:?}", json_path);
             println!("   Markdown: {:?}", md_path);
@@ -290,7 +305,10 @@ fn main() -> Result<()> {
 
     // Exit with appropriate code
     if fail_on_critical && report.summary.critical_issues > 0 {
-        eprintln!("❌ Validation failed with {} critical issues", report.summary.critical_issues);
+        eprintln!(
+            "❌ Validation failed with {} critical issues",
+            report.summary.critical_issues
+        );
         process::exit(1);
     }
 
@@ -306,26 +324,32 @@ fn create_environment_config_from_cli(
     matches: &clap::ArgMatches,
     environment: &str,
 ) -> Result<EnvironmentConfig> {
-    let schema_file = matches.get_one::<String>("schema")
+    let schema_file = matches
+        .get_one::<String>("schema")
         .ok_or_else(|| anyhow::anyhow!("Schema file is required when not using config file"))?;
-    
-    let rust_source_dirs: Vec<PathBuf> = matches.get_many::<String>("rust-source")
+
+    let rust_source_dirs: Vec<PathBuf> = matches
+        .get_many::<String>("rust-source")
         .map(|values| values.map(PathBuf::from).collect())
         .unwrap_or_else(|| vec![PathBuf::from("src")]);
-    
-    let typescript_source_dirs: Vec<PathBuf> = matches.get_many::<String>("typescript-source")
+
+    let typescript_source_dirs: Vec<PathBuf> = matches
+        .get_many::<String>("typescript-source")
         .map(|values| values.map(PathBuf::from).collect())
         .unwrap_or_default();
-    
-    let graphql_schema_files: Vec<PathBuf> = matches.get_many::<String>("graphql-schema")
+
+    let graphql_schema_files: Vec<PathBuf> = matches
+        .get_many::<String>("graphql-schema")
         .map(|values| values.map(PathBuf::from).collect())
         .unwrap_or_default();
-    
-    let openapi_spec_files: Vec<PathBuf> = matches.get_many::<String>("openapi-spec")
+
+    let openapi_spec_files: Vec<PathBuf> = matches
+        .get_many::<String>("openapi-spec")
         .map(|values| values.map(PathBuf::from).collect())
         .unwrap_or_default();
-    
-    let database_name = matches.get_one::<String>("database-name")
+
+    let database_name = matches
+        .get_one::<String>("database-name")
         .unwrap()
         .to_string();
 
@@ -343,7 +367,7 @@ fn create_environment_config_from_cli(
 /// Parse enabled layers from comma-separated string
 fn parse_enabled_layers(layers_str: &str) -> Result<Vec<ValidationLayer>> {
     let mut layers = Vec::new();
-    
+
     for layer in layers_str.split(',') {
         match layer.trim().to_lowercase().as_str() {
             "database" => layers.push(ValidationLayer::Database),
@@ -354,7 +378,7 @@ fn parse_enabled_layers(layers_str: &str) -> Result<Vec<ValidationLayer>> {
             _ => return Err(anyhow::anyhow!("Unknown layer: {}", layer)),
         }
     }
-    
+
     Ok(layers)
 }
 
@@ -363,9 +387,12 @@ fn print_validation_summary(report: &ValidationReport, verbose: bool) {
     println!("\n📊 Validation Summary");
     println!("═══════════════════════");
     println!("🌍 Environment: {}", report.environment);
-    println!("📅 Timestamp: {}", report.timestamp.format("%Y-%m-%d %H:%M:%S UTC"));
+    println!(
+        "📅 Timestamp: {}",
+        report.timestamp.format("%Y-%m-%d %H:%M:%S UTC")
+    );
     println!();
-    
+
     // Layer Statistics
     println!("📈 Layer Statistics:");
     for (layer, count) in &report.total_files_scanned {
@@ -373,72 +400,129 @@ fn print_validation_summary(report: &ValidationReport, verbose: bool) {
     }
     println!("   SQL References: {}", report.total_sql_references);
     println!("   Database Tables: {}", report.total_tables_loaded);
-    println!("   TypeScript Interfaces: {}", report.total_typescript_interfaces);
+    println!(
+        "   TypeScript Interfaces: {}",
+        report.total_typescript_interfaces
+    );
     println!("   GraphQL Types: {}", report.total_graphql_types);
     println!();
-    
+
     // Coverage Information
     println!("🎯 Layer Coverage:");
     for (layer, coverage) in &report.summary.layer_coverage {
-        let emoji = if *coverage >= 90.0 { "🟢" } else if *coverage >= 70.0 { "🟡" } else { "🔴" };
+        let emoji = if *coverage >= 90.0 {
+            "🟢"
+        } else if *coverage >= 70.0 {
+            "🟡"
+        } else {
+            "🔴"
+        };
         println!("   {} {:?}: {:.1}%", emoji, layer, coverage);
     }
     println!();
-    
+
     // Issue Summary
     println!("🚨 Issue Summary:");
     println!("   Critical Issues: {}", report.summary.critical_issues);
     println!("   Warnings: {}", report.summary.warnings);
     println!("   Missing Tables: {}", report.summary.missing_tables);
     println!("   Missing Columns: {}", report.summary.missing_columns);
-    println!("   Cross-Layer Mismatches: {}", report.summary.cross_layer_mismatches);
+    println!(
+        "   Cross-Layer Mismatches: {}",
+        report.summary.cross_layer_mismatches
+    );
     println!();
-    
+
     // Cross-Layer Analysis
     if report.summary.cross_layer_mismatches > 0 {
         println!("🔗 Cross-Layer Mismatches:");
-        println!("   Database ↔ Backend: {}", report.cross_layer_validation.database_backend_mismatches.len());
-        println!("   Backend ↔ Frontend: {}", report.cross_layer_validation.backend_frontend_mismatches.len());
-        println!("   Database ↔ Frontend: {}", report.cross_layer_validation.database_frontend_mismatches.len());
-        println!("   GraphQL Mismatches: {}", report.cross_layer_validation.graphql_mismatches.len());
-        println!("   OpenAPI Mismatches: {}", report.cross_layer_validation.openapi_mismatches.len());
+        println!(
+            "   Database ↔ Backend: {}",
+            report
+                .cross_layer_validation
+                .database_backend_mismatches
+                .len()
+        );
+        println!(
+            "   Backend ↔ Frontend: {}",
+            report
+                .cross_layer_validation
+                .backend_frontend_mismatches
+                .len()
+        );
+        println!(
+            "   Database ↔ Frontend: {}",
+            report
+                .cross_layer_validation
+                .database_frontend_mismatches
+                .len()
+        );
+        println!(
+            "   GraphQL Mismatches: {}",
+            report.cross_layer_validation.graphql_mismatches.len()
+        );
+        println!(
+            "   OpenAPI Mismatches: {}",
+            report.cross_layer_validation.openapi_mismatches.len()
+        );
         println!();
     }
-    
+
     // Detailed Issues (if verbose)
     if verbose {
         if !report.errors.is_empty() {
             println!("🚨 Critical Issues Details:");
             for (i, error) in report.errors.iter().enumerate().take(5) {
-                println!("   {}. {} - {} ({}:{})", 
-                    i + 1, error.error_type, error.message, error.file_path, error.line_number);
+                println!(
+                    "   {}. {} - {} ({}:{})",
+                    i + 1,
+                    error.error_type,
+                    error.message,
+                    error.file_path,
+                    error.line_number
+                );
             }
             if report.errors.len() > 5 {
-                println!("   ... and {} more (see full report)", report.errors.len() - 5);
+                println!(
+                    "   ... and {} more (see full report)",
+                    report.errors.len() - 5
+                );
             }
             println!();
         }
-        
+
         if !report.warnings.is_empty() {
             println!("⚠️  Warning Details:");
             for (i, warning) in report.warnings.iter().enumerate().take(5) {
-                println!("   {}. {} - {} ({}:{})", 
-                    i + 1, warning.error_type, warning.message, warning.file_path, warning.line_number);
+                println!(
+                    "   {}. {} - {} ({}:{})",
+                    i + 1,
+                    warning.error_type,
+                    warning.message,
+                    warning.file_path,
+                    warning.line_number
+                );
             }
             if report.warnings.len() > 5 {
-                println!("   ... and {} more (see full report)", report.warnings.len() - 5);
+                println!(
+                    "   ... and {} more (see full report)",
+                    report.warnings.len() - 5
+                );
             }
             println!();
         }
     }
-    
+
     // Status
     if report.summary.critical_issues == 0 {
         println!("✅ Validation Status: PASSED");
     } else {
-        println!("❌ Validation Status: FAILED ({} critical issues)", report.summary.critical_issues);
+        println!(
+            "❌ Validation Status: FAILED ({} critical issues)",
+            report.summary.critical_issues
+        );
     }
-    
+
     // Recommendations
     if report.summary.critical_issues > 0 || report.summary.warnings > 10 {
         println!();

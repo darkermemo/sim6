@@ -1,12 +1,11 @@
 //! ClickHouse database client with connection pooling and query optimization
 //! Handles tenant isolation, query building, and performance monitoring
 
-use crate::config::{Config, ClickHouseConfig};
+use crate::config::Config;
 use crate::dto::*;
 use anyhow::{Context, Result};
 use chrono::{DateTime, Utc};
 use clickhouse::{Client, Row};
-// use deadpool::managed::{Manager, Pool, PoolError};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -718,29 +717,84 @@ impl ClickHouseService {
         }
     }
 
-    /// Get events from events table
+    /// Get events from events table - SECURE VERSION with parameterized queries
     pub async fn get_events(&self, filters: EventFilters) -> Result<Vec<Event>, Box<dyn std::error::Error + Send + Sync>> {
         let client = &self.client;
         
-        let table_name = format!("{}.events", &self.config.clickhouse.database);
+        // Validate table name to prevent injection
+        let database_name = &self.config.clickhouse.database;
+        if !database_name.chars().all(|c| c.is_alphanumeric() || c == '_') {
+            return Err("Invalid database name".into());
+        }
+        
+        let table_name = format!("{}.events", database_name);
         let mut query = format!("SELECT event_id, tenant_id, event_timestamp, source_ip, source_type, message, severity FROM {}", table_name);
         let mut conditions = Vec::new();
+        let mut bind_values = Vec::new();
         
-        // Add filters
+        // Add filters with parameterized queries
         if let Some(severity) = &filters.severity {
-            conditions.push(format!("severity = '{}'", severity));
+            // Validate severity value
+            if severity.len() > 50 || !severity.chars().all(|c| c.is_alphanumeric() || c == '_' || c == '-') {
+                return Err("Invalid severity value".into());
+            }
+            conditions.push("severity = ?".to_string());
+            bind_values.push(severity.clone());
         }
         
         if let Some(source_type) = &filters.source_type {
-            conditions.push(format!("source_type = '{}'", source_type));
+            // Validate source_type value
+            if source_type.len() > 100 || !source_type.chars().all(|c| c.is_alphanumeric() || c == '_' || c == '-' || c == '.') {
+                return Err("Invalid source_type value".into());
+            }
+            conditions.push("source_type = ?".to_string());
+            bind_values.push(source_type.clone());
         }
         
         if let Some(tenant_id) = &filters.tenant_id {
-            conditions.push(format!("tenant_id = '{}'", tenant_id));
+            // Validate tenant_id (should be UUID format)
+            if tenant_id.len() > 36 || !tenant_id.chars().all(|c| c.is_alphanumeric() || c == '-') {
+                return Err("Invalid tenant_id value".into());
+            }
+            conditions.push("tenant_id = ?".to_string());
+            bind_values.push(tenant_id.clone());
         }
         
         if let Some(search) = &filters.search {
-            conditions.push(format!("(message ILIKE '%{}%' OR source_ip ILIKE '%{}%')", search, search));
+            // Validate and sanitize search term
+            if search.len() > 256 {
+                return Err("Search term too long".into());
+            }
+            
+            // Check for SQL injection patterns
+            let dangerous_patterns = [
+                "'", "\"", ";", "--", "/*", "*/", "xp_", "sp_", 
+                "union", "select", "insert", "update", "delete", "drop", "create", "alter"
+            ];
+            
+            let search_lower = search.to_lowercase();
+            for pattern in &dangerous_patterns {
+                if search_lower.contains(pattern) {
+                    return Err("Invalid characters in search term".into());
+                }
+            }
+            
+            // Use parameterized LIKE query
+            conditions.push("(message ILIKE ? OR source_ip ILIKE ?)".to_string());
+            let search_pattern = format!("%{}%", search);
+            bind_values.push(search_pattern.clone());
+            bind_values.push(search_pattern);
+        }
+        
+        // Add time range filters if present
+        if let Some(start_time) = filters.start_time {
+            conditions.push("event_timestamp >= ?".to_string());
+            bind_values.push(start_time.to_string());
+        }
+        
+        if let Some(end_time) = filters.end_time {
+            conditions.push("event_timestamp <= ?".to_string());
+            bind_values.push(end_time.to_string());
         }
         
         if !conditions.is_empty() {
@@ -750,15 +804,29 @@ impl ClickHouseService {
         
         query.push_str(" ORDER BY event_timestamp DESC");
         
-        let limit = filters.limit.unwrap_or(100).min(1000);
+        // Validate and add limit
+        let limit = filters.limit.unwrap_or(100).min(1000).max(1);
         query.push_str(&format!(" LIMIT {}", limit));
         
-        let events: Vec<Event> = client
-            .query(&query)
+        debug!("Executing parameterized query: {} with {} parameters", query, bind_values.len());
+        
+        // Execute parameterized query
+        let mut query_builder = client.query(&query);
+        
+        // Bind all parameters
+        for value in bind_values {
+            query_builder = query_builder.bind(value);
+        }
+        
+        let events: Vec<Event> = query_builder
             .fetch_all()
             .await
-            .unwrap_or_default();
+            .map_err(|e| {
+                error!("Database query failed: {}", e);
+                Box::new(e) as Box<dyn std::error::Error + Send + Sync>
+            })?;
         
+        debug!("Query returned {} events", events.len());
         Ok(events)
     }
 }

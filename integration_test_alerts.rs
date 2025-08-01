@@ -1,8 +1,7 @@
 //! Integration tests for SIEM Alert System
 //! Tests full alert creation → retrieval flow, schema validation, and frontend integration
 
-use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+// Removed unused imports: Deserialize, Serialize, HashMap
 
 /// Test data structures matching the API contracts
 #[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
@@ -121,7 +120,10 @@ async fn test_alert_creation_and_retrieval_flow() -> Result<(), Box<dyn std::err
     // Test alert retrieval
     let alerts = get_alerts(base_url, &token, tenant_id).await?;
 
-    println!("  ✓ Alert retrieval successful (found {} alerts)", alerts.len());
+    println!(
+        "  ✓ Alert retrieval successful (found {} alerts)",
+        alerts.len()
+    );
 
     Ok(())
 }
