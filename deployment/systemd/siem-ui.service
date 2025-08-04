@@ -1,0 +1,54 @@
+[Unit]
+Description=SIEM UI Service
+Documentation=https://github.com/company/siem
+After=network.target siem-api.service
+Wants=siem-api.service
+Requires=network.target
+
+[Service]
+# Service configuration
+Type=simple
+User=siem
+Group=siem
+WorkingDirectory=/opt/siem/ui
+ExecStartPre=/bin/bash -c 'cd /opt/siem/ui && npm ci --only=production'
+ExecStart=/usr/bin/npm start
+ExecReload=/bin/kill -HUP $MAINPID
+KillMode=mixed
+KillSignal=SIGTERM
+TimeoutStopSec=30
+TimeoutStartSec=300
+
+# Restart configuration
+Restart=always
+RestartSec=10
+StartLimitInterval=60
+StartLimitBurst=3
+
+# Environment
+EnvironmentFile=/etc/siem/siem.env
+Environment=NODE_ENV=production
+Environment=NPM_CONFIG_CACHE=/var/lib/siem/npm-cache
+
+# Security settings
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/log/siem /var/lib/siem /opt/siem/ui/node_modules /tmp
+CapabilityBoundingSet=CAP_NET_BIND_SERVICE
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+
+# Resource limits
+LimitNOFILE=65536
+LimitNPROC=4096
+MemoryMax=2G
+CPUQuota=200%
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=siem-ui
+
+[Install]
+WantedBy=multi-user.target

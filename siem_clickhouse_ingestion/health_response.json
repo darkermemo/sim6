@@ -1,0 +1,1 @@
+{"status":"OK","components":{"database":{"status":"OK","message":"Database connection successful","response_time_ms":5},"kafka":{"status":"OK","message":"Kafka check skipped","response_time_ms":0}},"timestamp":1754016302}

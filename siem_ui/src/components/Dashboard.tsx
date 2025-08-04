@@ -1,15 +1,23 @@
-import React, { useMemo, useCallback } from 'react';
+import React, { useMemo, useCallback, useState } from 'react';
 import { KpiCard } from './dashboard/KpiCard';
 import { AlertsOverTimeChart } from './dashboard/AlertsOverTimeChart';
 import { TopSourcesChart } from './dashboard/TopSourcesChart';
 import { RecentAlertsList } from './dashboard/RecentAlertsList';
+import { DashboardFilters } from './dashboard/DashboardFilters';
 import { KpiCardSkeleton, ChartSkeleton } from '@/components/ui/Skeleton';
 import { useDashboardV2 } from '@/hooks/api/useDashboardV2';
 import { Button } from '@/components/ui/Button';
 import { RefreshCw } from 'lucide-react';
+import type { TimeRange } from './dashboard/TimeRangePicker';
+import type { SeverityLevel } from './dashboard/SeverityFilter';
 
 export function Dashboard() {
   console.log('Dashboard component mounted');
+  
+  // State for dashboard filters
+  const [timeRange, setTimeRange] = useState<TimeRange>('last-24h');
+  const [customTimeRange, setCustomTimeRange] = useState<{ start: Date; end: Date } | null>(null);
+  const [selectedSeverities, setSelectedSeverities] = useState<SeverityLevel[]>(['Critical', 'High', 'Medium', 'Low']);
   
   // Debug authentication state
   React.useEffect(() => {
@@ -22,13 +30,45 @@ export function Dashboard() {
     });
   }, []);
 
+  // Convert time range to API format
+  const getTimeRangeForAPI = useCallback(() => {
+    const now = new Date();
+    let from: Date, to: Date;
+    
+    if (timeRange === 'custom' && customTimeRange) {
+      from = customTimeRange.start;
+      to = customTimeRange.end;
+    } else {
+      to = now;
+      switch (timeRange) {
+        case 'last-7d':
+          from = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+          break;
+        case 'last-30d':
+          from = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+          break;
+        case 'last-24h':
+        default:
+          from = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+          break;
+      }
+    }
+    
+    return {
+       from: from.toISOString(),
+       to: to.toISOString(),
+       severity: selectedSeverities.map(s => s.toLowerCase()).join(','),
+       tenant_id: localStorage.getItem('tenant_id') || 'tenant-A'
+     };
+  }, [timeRange, customTimeRange, selectedSeverities]);
+
   // Fetch dashboard data using the new V2 endpoint
   const {
     data: dashboardData,
     isLoading: isDashboardLoading,
     error: dashboardError,
     mutate: mutateDashboard
-  } = useDashboardV2();
+  } = useDashboardV2(getTimeRangeForAPI());
   
   console.log('Dashboard component - hook result:', { 
     data: !!dashboardData, 
@@ -40,6 +80,21 @@ export function Dashboard() {
   const handleRefresh = useCallback(() => {
     mutateDashboard();
   }, [mutateDashboard]);
+
+  // Handle time range change
+  const handleTimeRangeChange = useCallback((range: TimeRange, customStart?: Date, customEnd?: Date) => {
+    setTimeRange(range);
+    if (range === 'custom' && customStart && customEnd) {
+      setCustomTimeRange({ start: customStart, end: customEnd });
+    } else {
+      setCustomTimeRange(null);
+    }
+  }, []);
+
+  // Handle severity filter change
+  const handleSeveritiesChange = useCallback((severities: SeverityLevel[]) => {
+    setSelectedSeverities(severities);
+  }, []);
 
   // Transform snake_case data for existing components
   const transformedData = useMemo(() => {
@@ -135,15 +190,17 @@ export function Dashboard() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-        <Button
-          onClick={handleRefresh}
-          variant="outline"
-          size="sm"
-        >
-          <RefreshCw className="mr-2 h-4 w-4" />
-          Refresh
-        </Button>
       </div>
+
+      {/* Dashboard Filters */}
+      <DashboardFilters
+        timeRange={timeRange}
+        onTimeRangeChange={handleTimeRangeChange}
+        selectedSeverities={selectedSeverities}
+        onSeveritiesChange={handleSeveritiesChange}
+        onRefresh={handleRefresh}
+        isRefreshing={isDashboardLoading}
+      />
 
       {/* KPI Cards */}
       <div className="grid gap-4 md:grid-cols-2">

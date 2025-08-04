@@ -8,6 +8,7 @@ use url::Url;
 
 /// Main configuration structure for the search service
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Config {
     /// Server configuration
     pub server: ServerConfig,
@@ -25,6 +26,7 @@ pub struct Config {
 
 /// HTTP server configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct ServerConfig {
     /// Server bind address
     pub host: String,
@@ -42,6 +44,7 @@ pub struct ServerConfig {
 
 /// ClickHouse database configuration with connection pooling
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct ClickHouseConfig {
     /// ClickHouse server URL
     pub url: Url,
@@ -61,6 +64,7 @@ pub struct ClickHouseConfig {
 
 /// Connection pool configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct PoolConfig {
     /// Maximum number of connections in the pool
     pub max_size: u32,
@@ -78,6 +82,7 @@ pub struct PoolConfig {
 
 /// Query performance configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct QueryConfig {
     /// Default query timeout in seconds
     pub default_timeout_secs: u64,
@@ -101,6 +106,7 @@ pub struct QueryConfig {
 
 /// Table configuration for ClickHouse
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct TableConfig {
     /// Default table name for logs
     pub default_table: String,
@@ -114,6 +120,7 @@ pub struct TableConfig {
 
 /// Partition configuration for ClickHouse tables
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct PartitionConfig {
     /// Partition by time interval (daily, monthly)
     pub time_interval: String,
@@ -125,6 +132,7 @@ pub struct PartitionConfig {
 
 /// Redis cache configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct RedisConfig {
     /// Redis server URL
     pub url: String,
@@ -142,6 +150,7 @@ pub struct RedisConfig {
 
 /// Search performance and behavior configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct SearchConfig {
     /// Enable full-text search
     pub enable_fulltext: bool,
@@ -163,6 +172,7 @@ pub struct SearchConfig {
 
 /// Security and tenant isolation configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct SecurityConfig {
     /// Enable tenant isolation
     pub enable_tenant_isolation: bool,
@@ -182,6 +192,7 @@ pub struct SecurityConfig {
 
 /// Monitoring and metrics configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct MonitoringConfig {
     /// Enable Prometheus metrics
     pub enable_metrics: bool,

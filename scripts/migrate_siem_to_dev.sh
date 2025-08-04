@@ -42,11 +42,11 @@ CLICKHOUSE_USER=${CLICKHOUSE_USER:-"default"}
 CLICKHOUSE_PASSWORD=${CLICKHOUSE_PASSWORD:-""}
 CLICKHOUSE_URL=${CLICKHOUSE_URL:-"http://${CLICKHOUSE_HOST}:${CLICKHOUSE_PORT}"}
 
-# Construct clickhouse-client command
+# Construct clickhouse client command
 if [ -n "$CLICKHOUSE_PASSWORD" ]; then
-    CH_CLIENT="clickhouse-client --host=$CLICKHOUSE_HOST --port=$CLICKHOUSE_PORT --user=$CLICKHOUSE_USER --password=$CLICKHOUSE_PASSWORD"
+    CH_CLIENT="clickhouse client --host=$CLICKHOUSE_HOST --port=$CLICKHOUSE_PORT --user=$CLICKHOUSE_USER --password=$CLICKHOUSE_PASSWORD"
 else
-    CH_CLIENT="clickhouse-client --host=$CLICKHOUSE_HOST --port=$CLICKHOUSE_PORT --user=$CLICKHOUSE_USER"
+    CH_CLIENT="clickhouse client --host=$CLICKHOUSE_HOST --port=$CLICKHOUSE_PORT --user=$CLICKHOUSE_USER"
 fi
 
 print_info "Starting ClickHouse database migration from 'siem' to 'dev'"
@@ -168,4 +168,4 @@ print_warning "Remember to backup the 'siem' database before dropping it"
 
 echo
 print_info "To drop the old 'siem' database after verification, run:"
-print_info "  clickhouse-client --query='DROP DATABASE siem'"
+print_info "  clickhouse client --query='DROP DATABASE siem'"

@@ -275,14 +275,36 @@ class FrontendAPIScanner {
 
 // Main execution
 function main() {
-  console.log('🔍 Scanning frontend code for /api/v1/* usage...\n');
+  // Parse command line arguments
+  const args = process.argv.slice(2);
+  let outputFile = 'frontend_api_usage.json';
+  let quiet = false;
+  
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === '--out' && i + 1 < args.length) {
+      outputFile = args[i + 1];
+      i++; // Skip next argument as it's the value
+    } else if (args[i] === '--quiet') {
+      quiet = true;
+    }
+  }
+  
+  if (!quiet) {
+    console.log('🔍 Scanning frontend code for /api/v1/* usage...\n');
+  }
   
   const scanner = new FrontendAPIScanner();
   scanner.scanDirectory();
-  scanner.printResults();
-  scanner.saveResults();
   
-  console.log('\n💡 Next step: Run the route mapper to combine backend and frontend analysis.');
+  if (!quiet) {
+    scanner.printResults();
+  }
+  
+  scanner.saveResults(outputFile);
+  
+  if (!quiet) {
+    console.log('\n💡 Next step: Run the route mapper to combine backend and frontend analysis.');
+  }
 }
 
 if (require.main === module) {

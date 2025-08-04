@@ -1,0 +1,14 @@
+[package]
+name = "smoke"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow      = "1"
+tokio       = { version = "1", features = ["rt-multi-thread", "macros", "time", "process"] }
+serde_json  = "1"
+rdkafka     = { version = "0.36", features = ["tokio", "cmake-build"] }
+clickhouse  = { version = "0.12", default-features = false, features = ["lz4"] }
+reqwest     = { version = "0.11", features = ["json", "blocking"] }
+uuid        = { version = "1", features = ["v4"] }
+chrono      = { version = "0.4", features = ["serde"] }

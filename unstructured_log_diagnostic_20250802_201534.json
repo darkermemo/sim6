@@ -1,0 +1,242 @@
+[
+  {
+    "test_case": "malformed_json",
+    "description": "Malformed JSON with syntax errors",
+    "data_size": 42,
+    "siem_ingestor": {
+      "success": true,
+      "status_code": 200,
+      "response": "{\"accepted\":1,\"rejected\":0,\"parsing_status\":{\"raw\":1},\"infrastructure_errors\":0,\"errors\":[],\"request_id\":\"5d8b668e-00f5-4971-a4da-1bbf558aecac\"}",
+      "error": null
+    },
+    "clickhouse_ingestion": {
+      "success": false,
+      "status_code": 404,
+      "response": "",
+      "error": null
+    },
+    "clickhouse_verification": {
+      "found": false,
+      "count": 0,
+      "rows": [],
+      "error": null
+    },
+    "timestamp": "2025-08-02T20:14:49.424194"
+  },
+  {
+    "test_case": "plain_text",
+    "description": "Plain text log message",
+    "data_size": 50,
+    "siem_ingestor": {
+      "success": true,
+      "status_code": 200,
+      "response": "{\"accepted\":1,\"rejected\":0,\"parsing_status\":{\"raw\":1},\"infrastructure_errors\":0,\"errors\":[],\"request_id\":\"fae0e7e2-ee89-4af3-a82d-49b8aa18fe3b\"}",
+      "error": null
+    },
+    "clickhouse_ingestion": {
+      "success": false,
+      "status_code": 404,
+      "response": "",
+      "error": null
+    },
+    "clickhouse_verification": {
+      "found": false,
+      "count": 0,
+      "rows": [],
+      "error": null
+    },
+    "timestamp": "2025-08-02T20:14:54.488286"
+  },
+  {
+    "test_case": "mixed_format",
+    "description": "Mixed format with timestamp, level, and JSON",
+    "data_size": 91,
+    "siem_ingestor": {
+      "success": true,
+      "status_code": 200,
+      "response": "{\"accepted\":1,\"rejected\":0,\"parsing_status\":{\"parsed\":1},\"infrastructure_errors\":0,\"errors\":[],\"request_id\":\"f853ba48-9c3b-4204-a784-3f7c9d761cfe\"}",
+      "error": null
+    },
+    "clickhouse_ingestion": {
+      "success": false,
+      "status_code": 404,
+      "response": "",
+      "error": null
+    },
+    "clickhouse_verification": {
+      "found": false,
+      "count": 0,
+      "rows": [],
+      "error": null
+    },
+    "timestamp": "2025-08-02T20:14:59.539730"
+  },
+  {
+    "test_case": "syslog_format",
+    "description": "Standard syslog format",
+    "data_size": 111,
+    "siem_ingestor": {
+      "success": true,
+      "status_code": 200,
+      "response": "{\"accepted\":1,\"rejected\":0,\"parsing_status\":{\"parsed\":1},\"infrastructure_errors\":0,\"errors\":[],\"request_id\":\"dfe5411e-3d41-4e4d-add7-75eb9b2aa74a\"}",
+      "error": null
+    },
+    "clickhouse_ingestion": {
+      "success": false,
+      "status_code": 404,
+      "response": "",
+      "error": null
+    },
+    "clickhouse_verification": {
+      "found": false,
+      "count": 0,
+      "rows": [],
+      "error": null
+    },
+    "timestamp": "2025-08-02T20:15:04.564871"
+  },
+  {
+    "test_case": "binary_encoded",
+    "description": "Base64 encoded binary data",
+    "data_size": 32,
+    "siem_ingestor": {
+      "success": true,
+      "status_code": 200,
+      "response": "{\"accepted\":1,\"rejected\":0,\"parsing_status\":{\"raw\":1},\"infrastructure_errors\":0,\"errors\":[],\"request_id\":\"2b74e52d-be56-48c8-bd98-b88dbba1be55\"}",
+      "error": null
+    },
+    "clickhouse_ingestion": {
+      "success": false,
+      "status_code": 404,
+      "response": "",
+      "error": null
+    },
+    "clickhouse_verification": {
+      "found": false,
+      "count": 0,
+      "rows": [],
+      "error": null
+    },
+    "timestamp": "2025-08-02T20:15:09.605352"
+  },
+  {
+    "test_case": "large_payload",
+    "description": "Large payload (10KB+)",
+    "data_size": 10017,
+    "siem_ingestor": {
+      "success": true,
+      "status_code": 200,
+      "response": "{\"accepted\":1,\"rejected\":0,\"parsing_status\":{\"raw\":1},\"infrastructure_errors\":0,\"errors\":[],\"request_id\":\"0c9ed3fb-9c91-4ddb-bff3-8ef8b9f6961a\"}",
+      "error": null
+    },
+    "clickhouse_ingestion": {
+      "success": false,
+      "status_code": 404,
+      "response": "",
+      "error": null
+    },
+    "clickhouse_verification": {
+      "found": false,
+      "count": 0,
+      "rows": [],
+      "error": null
+    },
+    "timestamp": "2025-08-02T20:15:14.647547"
+  },
+  {
+    "test_case": "empty_log",
+    "description": "Empty log message",
+    "data_size": 0,
+    "siem_ingestor": {
+      "success": true,
+      "status_code": 200,
+      "response": "{\"accepted\":1,\"rejected\":0,\"parsing_status\":{\"raw\":1},\"infrastructure_errors\":0,\"errors\":[],\"request_id\":\"fb295354-cdc7-4954-a526-8955b5bed386\"}",
+      "error": null
+    },
+    "clickhouse_ingestion": {
+      "success": false,
+      "status_code": 404,
+      "response": "",
+      "error": null
+    },
+    "clickhouse_verification": {
+      "found": false,
+      "count": 0,
+      "rows": [],
+      "error": null
+    },
+    "timestamp": "2025-08-02T20:15:19.693258"
+  },
+  {
+    "test_case": "special_characters",
+    "description": "Log with special characters and escape sequences",
+    "data_size": 31,
+    "siem_ingestor": {
+      "success": true,
+      "status_code": 200,
+      "response": "{\"accepted\":1,\"rejected\":0,\"parsing_status\":{\"raw\":1},\"infrastructure_errors\":0,\"errors\":[],\"request_id\":\"e307af5d-481b-4e55-8e7a-361ce99d3001\"}",
+      "error": null
+    },
+    "clickhouse_ingestion": {
+      "success": false,
+      "status_code": 404,
+      "response": "",
+      "error": null
+    },
+    "clickhouse_verification": {
+      "found": false,
+      "count": 0,
+      "rows": [],
+      "error": null
+    },
+    "timestamp": "2025-08-02T20:15:24.745241"
+  },
+  {
+    "test_case": "nested_json",
+    "description": "Valid nested JSON structure",
+    "data_size": 181,
+    "siem_ingestor": {
+      "success": true,
+      "status_code": 200,
+      "response": "{\"accepted\":1,\"rejected\":0,\"parsing_status\":{\"parsed\":1},\"infrastructure_errors\":0,\"errors\":[],\"request_id\":\"7ca834ef-1707-409d-a119-d77f933448ea\"}",
+      "error": null
+    },
+    "clickhouse_ingestion": {
+      "success": false,
+      "status_code": 404,
+      "response": "",
+      "error": null
+    },
+    "clickhouse_verification": {
+      "found": false,
+      "count": 0,
+      "rows": [],
+      "error": null
+    },
+    "timestamp": "2025-08-02T20:15:29.780530"
+  },
+  {
+    "test_case": "xml_format",
+    "description": "XML formatted log",
+    "data_size": 128,
+    "siem_ingestor": {
+      "success": true,
+      "status_code": 200,
+      "response": "{\"accepted\":1,\"rejected\":0,\"parsing_status\":{\"parsed\":1},\"infrastructure_errors\":0,\"errors\":[],\"request_id\":\"0e5e6172-f842-4b72-ba8d-a078ed3c77e5\"}",
+      "error": null
+    },
+    "clickhouse_ingestion": {
+      "success": false,
+      "status_code": 404,
+      "response": "",
+      "error": null
+    },
+    "clickhouse_verification": {
+      "found": false,
+      "count": 0,
+      "rows": [],
+      "error": null
+    },
+    "timestamp": "2025-08-02T20:15:34.822230"
+  }
+]

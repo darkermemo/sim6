@@ -66,6 +66,59 @@ pub async fn stream_events(
     Sse::new(stream).keep_alive(KeepAlive::default())
 }
 
+/// Search events with proper pagination and filtering for Log Activities page
+pub async fn search_events(
+    Query(query): Query<SearchQuery>,
+    State(state): State<AppState>,
+) -> Result<Json<PagedEvents>, ApiError> {
+    // Set defaults
+    let page = query.page.unwrap_or(1);
+    let limit = query.limit.unwrap_or(50).min(1000); // Cap at 1000
+    let offset = (page.saturating_sub(1)) * limit;
+    
+    // Convert SearchQuery to EventFilters for compatibility with existing get_events method
+    let filters = EventFilters {
+        page: Some(page),
+        limit: Some(limit),
+        search: query.search.clone(),
+        severity: query.filters.as_ref().and_then(|f| f.get("severity").cloned()),
+        source_type: query.filters.as_ref().and_then(|f| f.get("source_type").cloned()),
+        start_time: query.start_time,
+        end_time: query.end_time,
+        tenant_id: Some(query.tenant_id.clone()),
+    };
+    
+    // Use existing get_events method
+    let events = state.db_service.get_events(filters).await
+        .map_err(|e| ApiError::InternalServerError(e.to_string()))?;
+    
+    // For total count, we need to make a separate query without pagination
+    let count_filters = EventFilters {
+        page: None,
+        limit: None,
+        search: query.search.clone(),
+        severity: query.filters.as_ref().and_then(|f| f.get("severity").cloned()),
+        source_type: query.filters.as_ref().and_then(|f| f.get("source_type").cloned()),
+        start_time: query.start_time,
+        end_time: query.end_time,
+        tenant_id: Some(query.tenant_id.clone()),
+    };
+    
+    let all_events = state.db_service.get_events(count_filters).await
+        .map_err(|e| ApiError::InternalServerError(e.to_string()))?;
+    
+    let total = all_events.len() as u64;
+    let has_next = (offset + limit as u32) < total as u32;
+    
+    Ok(Json(PagedEvents {
+        events,
+        total,
+        page,
+        limit,
+        has_next,
+    }))
+}
+
 /// Search events with POST request (API v1) - SECURE VERSION
 pub async fn search_events_v1(
     State(state): State<AppState>,
@@ -89,30 +142,17 @@ pub async fn search_events_v1(
         ApiError::BadRequest(format!("Invalid request: {}", e))
     })?;
     
-    // Convert to EventFilters with validated data
-    let filters = EventFilters {
-        page: None,
-        limit: validated_request.pagination.as_ref().map(|p| p.size),
-        search: validated_request.query,
-        severity: None,
-        source_type: None,
-        start_time: validated_request.time_range.as_ref().map(|tr| tr.start.timestamp() as u32),
-        end_time: validated_request.time_range.as_ref().map(|tr| tr.end.timestamp() as u32),
-        tenant_id: validated_request.tenant_id, // This is now guaranteed to be from JWT claims
-    };
-
-    // Execute the search
-    let events = state.db_service.get_events(filters).await
+    // Execute the search using the proper search method
+    let search_response = state.db_service.search(validated_request).await
         .map_err(|e| {
-            error!("Database query failed: {}", e);
+            error!("Database search failed: {}", e);
             ApiError::InternalServerError("Failed to search events".to_string())
         })?;
     
-    // Convert Event objects to EventDetailResponse objects
-    let event_details: Vec<EventDetailResponse> = events.into_iter().map(|event| {
-        let timestamp = DateTime::from_timestamp(event.event_timestamp as i64, 0)
-            .unwrap_or_default()
-            .to_rfc3339();
+    // Convert SearchHits to EventDetailResponse objects
+    let event_details: Vec<EventDetailResponse> = search_response.hits.hits.into_iter().map(|hit| {
+        let event = hit.source;
+        let timestamp = event.event_timestamp.to_rfc3339();
         
         EventDetailResponse {
             id: event.event_id.clone(),
@@ -124,12 +164,12 @@ pub async fn search_events_v1(
             hostname: "unknown".to_string(),
             process: "siem".to_string(),
             message: event.message.clone().unwrap_or_else(|| "No message".to_string()),
-            raw_message: event.message.clone().unwrap_or_else(|| "No message".to_string()),
+            raw_message: event.raw_event.clone(),
             source_ip: event.source_ip.clone(),
-            source_port: 0,
-            protocol: "tcp".to_string(),
-            tags: vec![],
-            fields: std::collections::HashMap::new(),
+            source_port: event.src_port.unwrap_or(0) as i32,
+            protocol: event.protocol.clone().unwrap_or_else(|| "tcp".to_string()),
+            tags: event.tags.clone().map(|t| vec![t]).unwrap_or_else(|| vec![]),
+            fields: event.custom_fields.clone().unwrap_or_else(|| std::collections::HashMap::new()).into_iter().map(|(k, v)| (k, serde_json::Value::String(v))).collect(),
             processing_stage: "processed".to_string(),
             created_at: timestamp.clone(),
             updated_at: timestamp,
@@ -138,7 +178,7 @@ pub async fn search_events_v1(
 
     let response = SearchEventsResponse {
         events: event_details.clone(),
-        total: event_details.len(),
+        total: search_response.hits.total.map(|t| t.value as usize).unwrap_or(event_details.len()),
         status: "success".to_string(),
     };
 
@@ -215,13 +255,20 @@ pub async fn ingest_batch_events(
 /// Create the main application router
 pub fn create_router(state: AppState) -> Router {
     // Public routes (no authentication required)
-    let public_routes = Router::new()
+    let mut public_routes = Router::new()
         .route("/health", get(health_check))
         .route("/metrics", get(metrics))
-        .route("/status", get(status));
+        .route("/status", get(status))
+        .route("/api/v1/events/search", get(search_events));
+    
+    // Add dev-auth dashboard route if feature is enabled
+    #[cfg(feature = "dev-auth")]
+    {
+        public_routes = public_routes.route("/api/v1/dashboard", get(get_dashboard_dev));
+    }
     
     // Protected routes (authentication required)
-    let protected_routes = Router::new()
+    let mut protected_routes = Router::new()
         .route("/search", post(search_logs_protected))
         .route("/search", get(search_logs_get_protected))
         .route("/dashboard", get(get_dashboard_protected))
@@ -229,13 +276,18 @@ pub fn create_router(state: AppState) -> Router {
         .route("/schema", get(get_schema_protected))
         .route("/suggest", post(suggest_query_protected))
         // New API v1 endpoints for SIEM ingestion pipeline
-        .route("/api/v1/dashboard", get(get_dashboard_protected))
         .route("/api/v1/events/stream", get(stream_events_protected))
         .route("/api/v1/events/search", post(search_events_v1_protected))
         .route("/api/v1/events/size", get(get_events_size_protected))
         .route("/api/v1/events/ingest", post(ingest_single_event_protected))
         .route("/api/v1/events/batch", post(ingest_batch_events_protected))
         .layer(axum::middleware::from_fn_with_state(state.clone(), auth_middleware));
+    
+    // Only add protected dashboard route if dev-auth is not enabled
+    #[cfg(not(feature = "dev-auth"))]
+    {
+        protected_routes = protected_routes.route("/api/v1/dashboard", get(get_dashboard_protected));
+    }
     
     Router::new()
         .merge(public_routes)
@@ -533,14 +585,51 @@ fn map_clickhouse_type(clickhouse_type: &str) -> (String, bool, bool) {
  }
  
  #[cfg(test)]
- mod tests {
-     use super::*;
-     use crate::config::Config;
-     use crate::database::ClickHouseService;
-     use crate::security::SecurityService;
-     use std::sync::Arc;
- 
-     #[tokio::test]
+mod tests {
+    use super::*;
+    use crate::config::Config;
+    use crate::database::ClickHouseService;
+    use crate::security::SecurityService;
+    use std::sync::Arc;
+
+    #[test]
+    fn test_search_query_serialization() {
+        let query = SearchQuery {
+            tenant_id: "test_tenant".to_string(),
+            page: Some(1),
+            limit: Some(50),
+            start_time: None,
+            end_time: None,
+            search: Some("test search".to_string()),
+            filters: None,
+        };
+        
+        // Test that the query can be serialized/deserialized
+        let json = serde_json::to_string(&query).unwrap();
+        let deserialized: SearchQuery = serde_json::from_str(&json).unwrap();
+        assert_eq!(query.tenant_id, deserialized.tenant_id);
+        assert_eq!(query.page, deserialized.page);
+        assert_eq!(query.limit, deserialized.limit);
+    }
+
+    #[test]
+    fn test_paged_events_serialization() {
+        let events = vec![];
+        let paged = PagedEvents {
+            events,
+            total: 100,
+            page: 1,
+            limit: 50,
+            has_next: true,
+        };
+        
+        // Test camelCase serialization
+        let json = serde_json::to_string(&paged).unwrap();
+        assert!(json.contains("hasNext"));
+        assert!(!json.contains("has_next"));
+    }
+
+    #[tokio::test]
     #[ignore] // Skip this test as it requires a live ClickHouse connection
     async fn test_schema_consistency() {
         // This test verifies that schema response fields match ClickHouse columns
@@ -633,7 +722,7 @@ async fn get_dashboard(
     State(state): State<AppState>,
     headers: HeaderMap,
 ) -> Result<Json<DashboardV2Response>, ApiError> {
-    let start_time = Instant::now();
+    let request_start_time = Instant::now();
     
     // Extract and validate tenant from JWT token
     let claims = state.security_service.validate_request(&headers).await
@@ -641,14 +730,53 @@ async fn get_dashboard(
     
     debug!("Processing dashboard request for tenant: {}", claims.tenant_id);
     
-    // Execute dashboard queries
-    let response = state.db_service.get_dashboard_data(None).await
+    // Execute dashboard queries with tenant filtering
+    // For now, we'll create a time range for the last 24 hours
+    let end_time = chrono::Utc::now();
+    let start_time = end_time - chrono::Duration::hours(24);
+    let time_range = Some(TimeRange {
+        start: start_time,
+        end: end_time,
+        timezone: None,
+    });
+    
+    let response = state.db_service.get_dashboard_data(time_range, Some(claims.tenant_id.clone())).await
         .map_err(|e| {
             error!("Dashboard query failed: {}", e);
             ApiError::InternalServerError("Dashboard query failed".to_string())
         })?;
     
-    let query_time = start_time.elapsed();
+    let query_time = request_start_time.elapsed();
+    info!("Dashboard data retrieved in {}ms", query_time.as_millis());
+    
+    Ok(Json(response))
+}
+
+#[cfg(feature = "dev-auth")]
+async fn get_dashboard_dev(
+    State(state): State<AppState>,
+) -> Result<Json<DashboardV2Response>, ApiError> {
+    let request_start_time = Instant::now();
+    
+    debug!("Processing dashboard request for dev environment");
+    
+    // Execute dashboard queries without tenant filtering for dev
+    // For now, we'll create a time range for the last 24 hours
+    let end_time = chrono::Utc::now();
+    let start_time = end_time - chrono::Duration::hours(24);
+    let time_range = Some(TimeRange {
+        start: start_time,
+        end: end_time,
+        timezone: None,
+    });
+    
+    let response = state.db_service.get_dashboard_data(time_range, None).await
+        .map_err(|e| {
+            error!("Dashboard query failed: {}", e);
+            ApiError::InternalServerError("Dashboard query failed".to_string())
+        })?;
+    
+    let query_time = request_start_time.elapsed();
     info!("Dashboard data retrieved in {}ms", query_time.as_millis());
     
     Ok(Json(response))
@@ -873,15 +1001,24 @@ async fn auth_middleware(
     // Extract auth from request parts
     let (mut parts, body) = request.into_parts();
     
+    // Debug: Log the authorization header
+    if let Some(auth_header) = parts.headers.get("authorization") {
+        tracing::debug!("Authorization header present: {:?}", auth_header.to_str().unwrap_or("<invalid>"));
+    } else {
+        tracing::debug!("No authorization header found");
+    }
+    
     // Validate authentication
     match Auth::from_request_parts(&mut parts, &()).await {
         Ok(_auth) => {
             // Authentication successful, proceed with request
+            tracing::debug!("Authentication successful in middleware");
             request = Request::from_parts(parts, body);
             Ok(next.run(request).await)
         }
         Err(status) => {
             // Authentication failed
+            tracing::debug!("Authentication failed in middleware with status: {:?}", status);
             Err(status)
         }
     }
@@ -890,7 +1027,6 @@ async fn auth_middleware(
 // Protected handler wrappers that include authentication
 
 async fn search_logs_protected(
-    _auth: Auth,
     state: State<AppState>,
     headers: HeaderMap,
     request: Json<SearchRequest>,
@@ -899,7 +1035,6 @@ async fn search_logs_protected(
 }
 
 async fn search_logs_get_protected(
-    _auth: Auth,
     state: State<AppState>,
     headers: HeaderMap,
     params: Query<SearchQueryParams>,
@@ -908,15 +1043,20 @@ async fn search_logs_get_protected(
 }
 
 async fn get_dashboard_protected(
-    _auth: Auth,
     state: State<AppState>,
     headers: HeaderMap,
 ) -> Result<Json<DashboardV2Response>, ApiError> {
-    get_dashboard(state, headers).await
+    #[cfg(feature = "dev-auth")]
+    {
+        get_dashboard_dev(state).await
+    }
+    #[cfg(not(feature = "dev-auth"))]
+    {
+        get_dashboard(state, headers).await
+    }
 }
 
 async fn get_events_protected(
-    _auth: Auth,
     state: State<AppState>,
     filters: Query<EventFilters>,
 ) -> Result<Json<Vec<Event>>, ApiError> {
@@ -924,7 +1064,6 @@ async fn get_events_protected(
 }
 
 async fn get_schema_protected(
-    _auth: Auth,
     state: State<AppState>,
     headers: HeaderMap,
 ) -> Result<Json<SchemaResponse>, ApiError> {
@@ -932,7 +1071,6 @@ async fn get_schema_protected(
 }
 
 async fn suggest_query_protected(
-    _auth: Auth,
     state: State<AppState>,
     headers: HeaderMap,
     request: Json<SuggestionRequest>,
@@ -941,7 +1079,6 @@ async fn suggest_query_protected(
 }
 
 async fn stream_events_protected(
-    _auth: Auth,
     filters: Query<EventFilters>,
     state: State<AppState>,
 ) -> impl IntoResponse {
@@ -949,7 +1086,6 @@ async fn stream_events_protected(
 }
 
 async fn search_events_v1_protected(
-    _auth: Auth,
     state: State<AppState>,
     headers: HeaderMap,
     request: Json<SearchRequest>,
@@ -958,7 +1094,6 @@ async fn search_events_v1_protected(
 }
 
 async fn get_events_size_protected(
-    _auth: Auth,
     filters: Query<EventFilters>,
     state: State<AppState>,
 ) -> impl IntoResponse {
@@ -966,7 +1101,6 @@ async fn get_events_size_protected(
 }
 
 async fn ingest_single_event_protected(
-    _auth: Auth,
     state: State<AppState>,
     headers: HeaderMap,
     body: String,
@@ -975,7 +1109,6 @@ async fn ingest_single_event_protected(
 }
 
 async fn ingest_batch_events_protected(
-    _auth: Auth,
     state: State<AppState>,
     headers: HeaderMap,
     events: Json<serde_json::Value>,

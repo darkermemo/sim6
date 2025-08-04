@@ -205,7 +205,7 @@ setup_database() {
     
     if [ -f "../database_setup.sql" ]; then
         log_info "Initializing ClickHouse database schema..."
-        clickhouse-client --multiquery < ../database_setup.sql 2>/dev/null || log_warn "Database setup failed or already exists"
+        clickhouse client --multiquery < ../database_setup.sql 2>/dev/null || log_warn "Database setup failed or already exists"
         log_success "Database schema setup completed"
     else
         log_warn "Database setup file not found, skipping schema initialization"
@@ -239,4 +239,4 @@ main() {
     echo "🔧 Process IDs: load_testing/pids/"
 }
 
-main "$@" 
+main "$@"

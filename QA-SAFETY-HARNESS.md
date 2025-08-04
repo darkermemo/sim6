@@ -103,7 +103,7 @@ These tests verify:
 - Ensure all required tools are installed and in PATH
 - Use `rustup` to manage Rust toolchain versions
 - Use `nvm` or similar to manage Node.js versions
-- Verify ClickHouse is accessible via `clickhouse-client`
+- Verify ClickHouse is accessible via `clickhouse client`
 
 #### Smoke Test Failures
 - Check that ClickHouse and Redis are running and accessible

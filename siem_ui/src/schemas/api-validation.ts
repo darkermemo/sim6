@@ -23,8 +23,85 @@ const UUIDSchema = z.string().refine(
 export const AlertSeveritySchema = z.enum(['critical', 'high', 'medium', 'low', 'info']);
 export const AlertStatusSchema = z.enum(['open', 'investigating', 'resolved', 'closed', 'false_positive']);
 
-// Event Detail schema - matches Rust EventDetail
-export const EventDetailSchema = z.object({
+// Time Range schema
+export const TimeRangeSchema = z.object({
+  start: z.string(),
+  end: z.string(),
+  timezone: z.string().optional()
+});
+
+// Pagination schema
+export const PaginationSchema = z.object({
+  page: z.number().int().min(0),
+  size: z.number().int().min(1).max(1000),
+  cursor: z.string().optional(),
+  include_total: z.boolean()
+}).transform((data) => ({
+  page: data.page,
+  size: data.size,
+  cursor: data.cursor,
+  includeTotal: data.include_total
+}));
+
+// Sort field schema
+export const SortFieldSchema = z.object({
+  field: z.string(),
+  direction: z.enum(['asc', 'desc'])
+});
+
+// Filter value schema
+export const FilterValueSchema = z.union([
+  z.string(),
+  z.number(),
+  z.boolean(),
+  z.array(z.string()),
+  z.array(z.number())
+]);
+
+// Search options schema
+export const SearchOptionsSchema = z.object({
+  include_raw: z.boolean().optional(),
+  highlight_matches: z.boolean().optional(),
+  timeout: z.number().optional()
+}).transform((data) => ({
+  includeRaw: data.include_raw,
+  highlightMatches: data.highlight_matches,
+  timeout: data.timeout
+}));
+
+// Aggregation request schema
+export const AggregationRequestSchema = z.object({
+  type: z.enum(['terms', 'date_histogram', 'histogram', 'stats']),
+  field: z.string(),
+  size: z.number().optional(),
+  interval: z.string().optional()
+});
+
+// Event search request schema (matches backend SearchRequest)
+export const EventSearchRequestSchema = z.object({
+  query: z.string().optional(),
+  time_range: TimeRangeSchema.optional(),
+  filters: z.record(z.string(), FilterValueSchema).optional(),
+  pagination: PaginationSchema.optional(),
+  sort: z.array(SortFieldSchema).optional(),
+  fields: z.array(z.string()).optional(),
+  options: SearchOptionsSchema.optional(),
+  tenant_id: z.string().optional(),
+  aggregations: z.record(z.string(), AggregationRequestSchema).optional()
+}).transform((data) => ({
+  query: data.query,
+  timeRange: data.time_range,
+  filters: data.filters,
+  pagination: data.pagination,
+  sort: data.sort,
+  fields: data.fields,
+  options: data.options,
+  tenantId: data.tenant_id,
+  aggregations: data.aggregations
+}));
+
+// Event Detail schema - matches Rust EventDetailResponse (snake_case backend → camelCase frontend)
+export const EventDetailResponseSchema = z.object({
   id: UUIDSchema,
   timestamp: TimestampSchema,
   source: z.string(),
@@ -64,6 +141,9 @@ export const EventDetailSchema = z.object({
   updatedAt: data.updated_at
 }));
 
+// Legacy Event Detail schema for backward compatibility
+export const EventDetailSchema = EventDetailResponseSchema;
+
 export const RecentAlertSchema = z.object({
   id: UUIDSchema,
   name: z.string().min(1),
@@ -86,7 +166,14 @@ export const AlertDetailSchema = RecentAlertSchema.extend({
   updated_at: TimestampSchema.optional()
 });
 
-// Event Search Response - matches Rust EventSearchResponse
+// Event Search Response - matches Rust SearchEventsResponse
+export const SearchEventsResponseSchema = z.object({
+  events: z.array(EventDetailResponseSchema),
+  total: z.number().int().min(0),
+  status: z.string()
+});
+
+// Legacy Event Search Response for backward compatibility
 export const EventSearchResponseSchema = z.object({
   total: z.number().int().min(0),
   page: z.number().int().min(1),
@@ -99,6 +186,63 @@ export const EventSearchResponseSchema = z.object({
   pageSize: data.page_size,
   events: data.events,
   queryTimeMs: data.query_time_ms
+}));
+
+// Event filters for SSE streaming
+export const EventFiltersSchema = z.object({
+  page: z.number().int().optional(),
+  limit: z.number().int().optional(),
+  search: z.string().optional(),
+  severity: z.string().optional(),
+  source_type: z.string().optional(),
+  start_time: z.number().int().optional(),
+  end_time: z.number().int().optional(),
+  tenant_id: z.string().optional()
+}).transform((data) => ({
+  page: data.page,
+  limit: data.limit,
+  search: data.search,
+  severity: data.severity,
+  sourceType: data.source_type,
+  startTime: data.start_time,
+  endTime: data.end_time,
+  tenantId: data.tenant_id
+}));
+
+// Redis event frame for SSE (snake_case backend → camelCase frontend)
+export const RedisEventFrameSchema = z.object({
+  event_type: z.string(),
+  event_data: EventDetailResponseSchema,
+  stream_id: z.string(),
+  timestamp: TimestampSchema
+}).transform((data) => ({
+  eventType: data.event_type,
+  eventData: data.event_data,
+  streamId: data.stream_id,
+  timestamp: data.timestamp
+}));
+
+// SSE event data
+export const SSEEventDataSchema = z.object({
+  type: z.enum(['event', 'heartbeat', 'error']),
+  data: z.union([
+    RedisEventFrameSchema,
+    z.object({ type: z.string(), timestamp: z.string() }),
+    z.object({ error: z.string() })
+  ])
+});
+
+// Log volume metrics
+export const LogVolumeMetricsSchema = z.object({
+  total_events: z.number().int().min(0),
+  total_size_bytes: z.number().int().min(0),
+  events_per_second: z.number().min(0),
+  last_updated: TimestampSchema
+}).transform((data) => ({
+  totalEvents: data.total_events,
+  totalSizeBytes: data.total_size_bytes,
+  eventsPerSecond: data.events_per_second,
+  lastUpdated: data.last_updated
 }));
 
 export const AlertsResponseSchema = z.object({
@@ -408,6 +552,20 @@ export function safeValidateApiResponse<T>(
  * Type exports for TypeScript
  */
 // Type exports for all schemas
+// Type exports for all schemas
+export type TimeRange = z.infer<typeof TimeRangeSchema>;
+export type Pagination = z.infer<typeof PaginationSchema>;
+export type SortField = z.infer<typeof SortFieldSchema>;
+export type FilterValue = z.infer<typeof FilterValueSchema>;
+export type SearchOptions = z.infer<typeof SearchOptionsSchema>;
+export type AggregationRequest = z.infer<typeof AggregationRequestSchema>;
+export type EventSearchRequest = z.infer<typeof EventSearchRequestSchema>;
+export type EventDetailResponse = z.infer<typeof EventDetailResponseSchema>;
+export type SearchEventsResponse = z.infer<typeof SearchEventsResponseSchema>;
+export type EventFilters = z.infer<typeof EventFiltersSchema>;
+export type RedisEventFrame = z.infer<typeof RedisEventFrameSchema>;
+export type SSEEventData = z.infer<typeof SSEEventDataSchema>;
+export type LogVolumeMetrics = z.infer<typeof LogVolumeMetricsSchema>;
 export type EventDetail = z.infer<typeof EventDetailSchema>;
 export type EventSearchResponse = z.infer<typeof EventSearchResponseSchema>;
 export type RoutingRule = z.infer<typeof RoutingRuleSchema>;

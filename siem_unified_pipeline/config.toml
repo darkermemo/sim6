@@ -21,7 +21,7 @@ max_lifetime = 3600
 
 # Data Sources Configuration
 [sources.syslog_source]
-source_type = { type = "Syslog", port = 5142, protocol = "udp" }
+source_type = { type = "syslog", port = 5142, protocol = "udp" }
 enabled = false
 batch_size = 1000
 buffer_size = 10000
@@ -29,17 +29,17 @@ retry_attempts = 3
 retry_delay = 1000
 
 [sources.syslog_source.config]
-format = "Syslog"
+format = "syslog"
 encoding = "utf-8"
 fields = {}
 
 # Transformations Configuration
 [transformations.basic_transform]
 parallel = false
-error_handling = "Continue"
+error_handling = "continue"
 
 [[transformations.basic_transform.steps]]
-type = "Parse"
+type = "parse"
 parser = "json"
 config = {}
 
@@ -61,8 +61,8 @@ retention_days = 30
 
 [storage.cold_storage]
 s3_bucket = "siem-cold-storage"
-compression = "Zstd"
-format = "Parquet"
+compression = "zstd"
+format = "parquet"
 s3_region = "us-east-1"
 s3_access_key = "minioadmin"
 s3_secret_key = "minioadmin"
@@ -95,7 +95,7 @@ retention_days = 365
 
 [routing]
 default_destination = "redis_cache"
-load_balancing = "RoundRobin"
+load_balancing = "round_robin"
 
 [[routing.rules]]
 name = "all_events"
@@ -111,14 +111,14 @@ flush_interval = 5000
 retry_attempts = 3
 
 [destinations.redis_cache.destination_type]
-type = "Redis"
+type = "redis"
 connection_string = "redis://localhost:6379/0"
 key_pattern = "siem:events:{timestamp}:{source}"
 ttl = 3600
 
 [destinations.redis_cache.config]
-format = "Json"
-compression = "Gzip"
+format = "json"
+compression = "gzip"
 
 
 

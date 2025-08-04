@@ -76,7 +76,7 @@ export const useLogStream = (options: UseLogStreamOptions = {}): UseLogStreamRes
         headers['Authorization'] = `Bearer ${authToken}`;
       }
 
-      const response = await fetch(`${import.meta.env.VITE_API_BASE || 'http://localhost:8080'}/api/v1/events/search`, {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE || 'http://localhost:8084'}/api/v1/events/search`, {
         method: 'POST',
         headers,
         body: JSON.stringify(searchRequest)
@@ -133,7 +133,7 @@ export const useLogStream = (options: UseLogStreamOptions = {}): UseLogStreamRes
     const authToken = accessToken || token || 'demo-access-token'; // fallback for demo
 
     // Create EventSource with authorization header
-    const url = new URL(`${import.meta.env.VITE_API_BASE || 'http://localhost:8080'}/api/v1/events/stream`);
+    const url = new URL(`${import.meta.env.VITE_API_BASE || 'http://localhost:8084'}/api/v1/events/stream`);
     
     // For EventSource, we need to pass the token as a query parameter since we can't set headers
     url.searchParams.set('token', authToken);

@@ -35,12 +35,16 @@ export interface EventSearchRequest {
   limit?: number;
   offset?: number;
   sort?: SortConfig;
+  cursor?: string; // For cursor-based pagination
+  enable_streaming?: boolean; // Enable streaming for large datasets
 }
 
 export interface EventSearchResponse {
   events: Event[];
   total_count: number;
   has_more: boolean;
+  next_cursor?: string; // Next cursor for pagination
+  previous_cursor?: string; // Previous cursor for pagination
 }
 
 export interface EventFiltersState {

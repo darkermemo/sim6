@@ -5,6 +5,7 @@ Combines Rust backend route extraction with frontend usage analysis
 Generates comprehensive API mapping report with coverage analysis
 """
 
+import argparse
 import json
 import os
 import subprocess
@@ -224,6 +225,32 @@ class APIRouteMapper:
         
         return report
     
+    def load_backend_routes(self, file_path: str):
+        """
+        Load backend routes from external JSON file
+        """
+        try:
+            with open(file_path, 'r') as f:
+                data = json.load(f)
+                self.backend_routes = data.get('routes', []) if isinstance(data, dict) else data
+                print(f"✅ Loaded {len(self.backend_routes)} backend routes from {file_path}")
+        except Exception as e:
+            print(f"❌ Failed to load backend routes from {file_path}: {e}")
+            sys.exit(1)
+    
+    def load_frontend_usage(self, file_path: str):
+        """
+        Load frontend usage from external JSON file
+        """
+        try:
+            with open(file_path, 'r') as f:
+                self.frontend_usage = json.load(f)
+                endpoint_count = len(self.frontend_usage.get('endpoints', []))
+                print(f"✅ Loaded {endpoint_count} frontend endpoints from {file_path}")
+        except Exception as e:
+            print(f"❌ Failed to load frontend usage from {file_path}: {e}")
+            sys.exit(1)
+    
     def print_summary(self, report: Dict[str, Any]):
         """
         Print a formatted summary of the analysis
@@ -302,10 +329,60 @@ class APIRouteMapper:
 
 def main():
     """
-    Main execution function
+    Main execution function with command line argument support
     """
+    parser = argparse.ArgumentParser(description='API Route Mapper - Analyze backend/frontend API alignment')
+    parser.add_argument('--backend', help='Path to backend routes JSON file')
+    parser.add_argument('--frontend', help='Path to frontend endpoints JSON file')
+    parser.add_argument('--fail-unmatched', action='store_true', help='Exit with error code if unmatched routes found')
+    parser.add_argument('--out', help='Output file path for the mapping report')
+    
+    args = parser.parse_args()
+    
     mapper = APIRouteMapper()
-    mapper.run_full_analysis()
+    
+    # Load external files if provided
+    if args.backend:
+        mapper.load_backend_routes(args.backend)
+    else:
+        mapper.extract_rust_routes()
+        
+    if args.frontend:
+        mapper.load_frontend_usage(args.frontend)
+    else:
+        mapper.extract_frontend_usage()
+    
+    # Generate comprehensive report
+    report = mapper.generate_comprehensive_report()
+    
+    # Display results
+    mapper.print_summary(report)
+    
+    # Save to file
+    output_file = args.out if args.out else "api_route_map.json"
+    mapper.save_report(report, output_file)
+    
+    # Check for unmatched routes if --fail-unmatched is set
+    if args.fail_unmatched:
+        coverage = report.get('coverage_analysis', {})
+        orphaned_frontend = coverage.get('frontend_only', [])
+        unused_backend = coverage.get('backend_only', [])
+        
+        if orphaned_frontend or unused_backend:
+            print(f"\n❌ API contract validation failed:")
+            if orphaned_frontend:
+                print(f"   - {len(orphaned_frontend)} orphaned frontend endpoints")
+            if unused_backend:
+                print(f"   - {len(unused_backend)} unused backend routes")
+            sys.exit(1)
+    
+    print("\n✨ API route mapping analysis complete!")
+    if not args.fail_unmatched:
+        print("\n💡 Next steps:")
+        print("   1. Review orphaned frontend endpoints")
+        print("   2. Implement missing backend routes")
+        print("   3. Add frontend usage for unused backend routes")
+        print("   4. Consider generating a dashboard to visualize this data")
 
 if __name__ == "__main__":
     main()

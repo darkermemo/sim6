@@ -7,6 +7,10 @@ edition = "2021"
 name = "massive_log_gen"
 path = "src/bin/massive_log_gen.rs"
 
+[[bin]]
+name = "gen_events"
+path = "src/bin/gen_events.rs"
+
 [dependencies]
 tokio = { version = "1.0", features = ["full"] }
 clap = { version = "4.0", features = ["derive"] }
@@ -20,3 +24,5 @@ anyhow = "1.0"
 log = "0.4"
 env_logger = "0.10"
 rayon = "1.7"
+rdkafka = { version = "0.36", features = ["cmake-build", "ssl", "sasl"] }
+uuid = { version = "1.0", features = ["v4", "serde"] }

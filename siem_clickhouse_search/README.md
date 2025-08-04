@@ -103,7 +103,7 @@ Create the SIEM database and user:
 
 ```bash
 # Connect to ClickHouse
-clickhouse-client
+clickhouse client
 ```
 
 ```sql
@@ -516,14 +516,14 @@ cp -r /etc/siem-clickhouse-search /backup/config/
 RUST_LOG=debug cargo run
 
 # Enable ClickHouse query logging
-echo "SET send_logs_level = 'debug'" | clickhouse-client
+echo "SET send_logs_level = 'debug'" | clickhouse client
 ```
 
 ### Performance Analysis
 
 ```bash
 # Check ClickHouse performance
-clickhouse-client --query="SELECT * FROM system.query_log ORDER BY event_time DESC LIMIT 10"
+clickhouse client --query="SELECT * FROM system.query_log ORDER BY event_time DESC LIMIT 10"
 
 # Monitor resource usage
 top -p $(pgrep siem_clickhouse_search)

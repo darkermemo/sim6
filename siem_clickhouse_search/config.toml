@@ -5,24 +5,17 @@
 # HTTP server configuration
 host = "0.0.0.0"              # Server bind address
 port = 8084                    # Server port (different from main SIEM to avoid conflicts)
-workers = 4                    # Number of worker threads
-max_connections = 1000         # Maximum concurrent connections
 request_timeout_secs = 30      # Request timeout in seconds
-keep_alive_timeout_secs = 75   # Keep-alive timeout
-max_request_size = 10          # Maximum request size in MB
+max_request_size = 10485760    # Maximum request size in bytes (10MB)
 enable_cors = true             # Enable CORS
 cors_origins = ["*"]           # Allowed CORS origins
 
 [clickhouse]
 # ClickHouse database configuration
 url = "http://localhost:8123"   # ClickHouse HTTP interface URL
-host = "localhost"             # ClickHouse server host
-port = 9000                    # ClickHouse native port
 database = "dev"               # Database name (changed to connect to existing dev.events table)
 username = "default"           # Username
 password = ""                  # Password (empty for default)
-compress = true                # Enable compression
-ssl = false                    # Enable SSL/TLS
 
 # Connection pool configuration
 [clickhouse.pool]
@@ -57,13 +50,7 @@ time_interval = "monthly"      # Monthly partitioning
 retention_days = 90           # 90 days retention
 auto_prune = true             # Enable automatic pruning
 
-# ClickHouse performance tuning
-[clickhouse.performance]
-max_threads = 8                # Maximum threads per query
-max_block_size = 65536         # Maximum block size
-max_insert_block_size = 1048576 # Maximum insert block size
-use_uncompressed_cache = true  # Use uncompressed cache
-load_balancing = "random"      # Load balancing strategy
+# ClickHouse performance tuning section removed - not defined in ClickHouseConfig struct
 
 [security]
 # Security and authentication configuration
@@ -75,14 +62,7 @@ rate_limit_per_tenant = 1000                      # Requests per minute per tena
 enable_audit_logging = true                       # Enable audit logging
 allowed_tenants = []                              # Allowed tenant IDs (empty = all allowed)
 
-# Additional security settings
-[security.advanced]
-enable_ip_whitelist = false                       # Enable IP whitelisting
-allowed_ips = []                                  # Allowed IP addresses/ranges
-max_login_attempts = 5                            # Maximum login attempts
-lockout_duration_secs = 900                       # Account lockout duration (15 minutes)
-enable_2fa = false                                # Enable two-factor authentication
-session_timeout_secs = 28800                      # Session timeout (8 hours)
+# Additional security settings removed - not defined in SecurityConfig struct
 
 [search]
 # Search behavior configuration
@@ -95,24 +75,7 @@ enable_analytics = true                           # Enable search analytics
 ranking_algorithm = "relevance"                   # Search result ranking algorithm
 enable_suggestions = true                         # Enable search suggestions
 
-# Search performance tuning
-[search.performance]
-enable_parallel_processing = true                 # Enable parallel query processing
-max_parallel_queries = 10                         # Maximum parallel queries per request
-enable_query_optimization = true                  # Enable automatic query optimization
-use_materialized_views = true                     # Use materialized views for common queries
-enable_result_streaming = true                    # Enable result streaming for large datasets
-stream_buffer_size = 10000                        # Stream buffer size
-
-# Full-text search configuration
-[search.fulltext]
-enable_fulltext_search = true                     # Enable full-text search capabilities
-min_search_length = 3                             # Minimum search term length
-max_search_terms = 20                             # Maximum number of search terms
-enable_fuzzy_search = true                        # Enable fuzzy/approximate matching
-fuzzy_distance = 2                                # Maximum edit distance for fuzzy search
-enable_regex_search = true                        # Enable regex search
-max_regex_complexity = 1000                       # Maximum regex complexity
+# Search performance and fulltext subsections removed - not defined in SearchConfig struct
 
 [redis]
 # Redis configuration for caching
@@ -123,11 +86,7 @@ default_ttl_secs = 3600           # Default TTL for cached items in seconds
 max_cache_size = 1073741824       # Maximum cache size in bytes (1GB)
 enable_compression = true          # Enable cache compression
 
-# Redis clustering (if using Redis Cluster)
-[redis.cluster]
-enable_cluster = false         # Enable Redis Cluster mode
-nodes = []                     # Cluster node addresses
-read_from_replicas = true      # Allow reading from replica nodes
+# Redis clustering subsection removed - not defined in RedisConfig struct
 
 [monitoring]
 # Monitoring and observability
@@ -140,152 +99,12 @@ performance_interval_secs = 60           # Performance metrics collection interv
 enable_query_logging = true              # Enable query logging
 slow_query_threshold_ms = 5000           # Log slow queries threshold in milliseconds
 
-# Metrics collection intervals
-[monitoring.intervals]
-metrics_collection_secs = 30   # Metrics collection interval
-health_check_secs = 60         # Health check interval
-performance_stats_secs = 300   # Performance statistics interval
+# Metrics collection intervals subsection removed - not defined in MonitoringConfig struct
 
-[retention]
-# Data retention policies
-enable_retention = true        # Enable automatic data retention
-default_retention_days = 90    # Default retention period in days
-max_retention_days = 365       # Maximum retention period
+# Retention section removed - retention is configured in [clickhouse.tables.partition]
 
-# Tenant-specific retention (optional)
-[retention.tenants]
-# tenant1 = 30                 # Custom retention for tenant1 (30 days)
-# tenant2 = 180                # Custom retention for tenant2 (180 days)
+# Detection section removed - not defined in Config struct
 
-[detection]
-# Detection rules integration
-enable_detection_rules = true  # Enable detection rules during search
-rules_cache_ttl_secs = 600     # Rules cache TTL (10 minutes)
-max_rules_per_query = 50       # Maximum rules to apply per query
-enable_rule_performance_tracking = true # Track rule performance
+# API and features sections removed - not defined in Config struct
 
-# Rule execution settings
-[detection.execution]
-max_rule_execution_time_ms = 1000 # Maximum rule execution time
-enable_parallel_rule_execution = true # Enable parallel rule execution
-rule_timeout_action = "skip"   # Action on rule timeout (skip, fail, warn)
-
-[api]
-# API configuration
-enable_swagger = true          # Enable Swagger/OpenAPI documentation
-swagger_path = "/docs"         # Swagger UI path
-enable_cors = true             # Enable CORS
-cors_origins = ["*"]           # Allowed CORS origins
-max_request_size_mb = 10       # Maximum request size in MB
-enable_compression = true      # Enable response compression
-
-# API versioning
-[api.versioning]
-enable_versioning = true       # Enable API versioning
-default_version = "v1"         # Default API version
-supported_versions = ["v1"]    # Supported API versions
-
-[features]
-# Feature flags
-enable_experimental_features = false # Enable experimental features
-enable_advanced_analytics = true     # Enable advanced analytics
-enable_machine_learning = false      # Enable ML-based features
-enable_graph_queries = false         # Enable graph-based queries
-enable_time_series_analysis = true   # Enable time series analysis
-
-# Experimental features (when enabled)
-[features.experimental]
-enable_auto_indexing = false         # Automatic index creation
-enable_query_suggestions = false     # Query auto-completion
-enable_anomaly_detection = false     # Real-time anomaly detection
-enable_predictive_caching = false    # Predictive result caching
-
-[backup]
-# Backup and disaster recovery
-enable_backup = false          # Enable automatic backups
-backup_interval_hours = 24     # Backup interval in hours
-backup_retention_days = 30     # Backup retention period
-backup_location = "/var/backups/siem" # Backup storage location
-enable_incremental_backup = true # Enable incremental backups
-
-[development]
-# Development and debugging settings
-enable_debug_mode = false      # Enable debug mode
-enable_query_profiling = false # Enable query profiling
-enable_memory_profiling = false # Enable memory profiling
-enable_hot_reload = false      # Enable configuration hot reload
-log_queries = false            # Log all executed queries
-log_query_plans = false        # Log query execution plans
-
-# Performance testing
-[development.testing]
-enable_load_testing = false    # Enable built-in load testing
-test_data_size = 1000000       # Test data size for benchmarks
-enable_chaos_testing = false   # Enable chaos engineering features
-
-# Example tenant configurations
-# Uncomment and modify as needed
-
-# [tenants.tenant1]
-# name = "Organization 1"
-# retention_days = 90
-# max_queries_per_minute = 500
-# allowed_fields = ["*"]
-# restricted_fields = []
-# custom_indexes = ["source_ip", "user_id"]
-
-# [tenants.tenant2]
-# name = "Organization 2"
-# retention_days = 180
-# max_queries_per_minute = 1000
-# allowed_fields = ["*"]
-# restricted_fields = ["sensitive_data"]
-# custom_indexes = ["event_type", "severity"]
-
-# Database schema configuration
-[schema]
-# Table and column configurations
-table_name = "events"          # Main events table name
-partition_by = "toYYYYMM(timestamp)" # Partitioning strategy
-order_by = "(tenant_id, timestamp, event_id)" # Ordering key
-ttl_expression = "timestamp + INTERVAL 90 DAY" # TTL expression
-
-# Column mappings
-[schema.columns]
-timestamp = "timestamp"        # Timestamp column
-tenant_id = "tenant_id"        # Tenant ID column
-event_id = "event_id"          # Event ID column
-source_ip = "source_ip"        # Source IP column
-destination_ip = "dest_ip"     # Destination IP column
-event_type = "event_type"      # Event type column
-severity = "severity"          # Severity column
-message = "message"            # Message column
-raw_log = "raw_log"            # Raw log column
-metadata = "metadata"          # Metadata column (JSON)
-
-# Index configurations
-[schema.indexes]
-# Automatically created indexes
-auto_indexes = [
-    "tenant_id",
-    "timestamp",
-    "event_type",
-    "severity",
-    "source_ip"
-]
-
-# Custom indexes for specific use cases
-custom_indexes = [
-    # "(tenant_id, event_type, timestamp)",
-    # "(source_ip, destination_ip)",
-    # "(user_id, timestamp)"
-]
-
-# Materialized views for common queries
-[schema.materialized_views]
-enable_materialized_views = true
-views = [
-    # "hourly_event_counts",
-    # "daily_ip_statistics",
-    # "security_events_summary"
-]
+# Configuration file cleaned - only sections defined in Config struct remain

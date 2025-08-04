@@ -1,13 +1,16 @@
 //! Input validation module for search requests and security
 //! Provides comprehensive validation, sanitization, and security checks
 
-use crate::dto::{SearchRequest, TimeRange, Pagination, FilterValue};
+use crate::dto::{SearchRequest, TimeRange, Pagination, FilterValue, EventFilters, LogEvent};
 use crate::security::Claims;
+use crate::database::traits::ValidationService as ValidationServiceTrait;
 use anyhow::{Context, Result};
 use chrono::{DateTime, Utc, Duration};
 use regex::Regex;
 use std::collections::HashMap;
 use tracing::{debug, warn};
+use async_trait::async_trait;
+use uuid::Uuid;
 
 /// Maximum allowed query length
 const MAX_QUERY_LENGTH: usize = 256;
@@ -320,6 +323,139 @@ impl ValidationService {
 impl Default for ValidationService {
     fn default() -> Self {
         Self::new().expect("Failed to create validation service")
+    }
+}
+
+/// Implementation of ValidationServiceTrait for the existing ValidationService
+#[async_trait]
+impl ValidationServiceTrait for ValidationService {
+    fn validate_search_request(&self, request: &SearchRequest) -> Result<()> {
+        // Use existing validation logic but adapt to trait interface
+        let claims = Claims {
+            sub: "system".to_string(),
+            tenant_id: "system".to_string(),
+            roles: vec![],
+            iat: chrono::Utc::now().timestamp(),
+            exp: Some((chrono::Utc::now() + chrono::Duration::hours(1)).timestamp()),
+            iss: "siem".to_string(),
+            aud: "siem-api".to_string(),
+            jti: Uuid::new_v4().to_string(),
+            custom: None,
+        };
+        
+        // Clone request for validation (the existing method expects owned value)
+        let request_clone = request.clone();
+        self.validate_search_request(request_clone, &claims, false)?;
+        Ok(())
+    }
+    
+    fn validate_event_filters(&self, filters: &EventFilters) -> Result<()> {
+        // Validate pagination
+        if let Some(page) = filters.page {
+            if page == 0 {
+                return Err(anyhow::anyhow!("Page number must be greater than 0"));
+            }
+            if page > 10000 {
+                return Err(anyhow::anyhow!("Page number too large (max: 10000)"));
+            }
+        }
+        
+        if let Some(limit) = filters.limit {
+            if limit == 0 {
+                return Err(anyhow::anyhow!("Limit must be greater than 0"));
+            }
+            if limit > MAX_PAGE_SIZE {
+                return Err(anyhow::anyhow!("Limit too large (max: {})", MAX_PAGE_SIZE));
+            }
+        }
+        
+        // Validate search term
+        if let Some(search) = &filters.search {
+            self.validate_query_string(search)?;
+        }
+        
+        // Validate severity
+        if let Some(severity) = &filters.severity {
+            let allowed_severities = ["low", "medium", "high", "critical", "info", "warning", "error"];
+            if !allowed_severities.contains(&severity.to_lowercase().as_str()) {
+                return Err(anyhow::anyhow!("Invalid severity value: {}", severity));
+            }
+        }
+        
+        // Validate source_type
+        if let Some(source_type) = &filters.source_type {
+            if source_type.len() > 100 {
+                return Err(anyhow::anyhow!("Source type too long (max: 100 characters)"));
+            }
+        }
+        
+        // Validate tenant_id (should be UUID format)
+        if let Some(tenant_id) = &filters.tenant_id {
+            if tenant_id.len() != 36 || !tenant_id.chars().all(|c| c.is_alphanumeric() || c == '-') {
+                return Err(anyhow::anyhow!("Invalid tenant_id format (expected UUID)"));
+            }
+        }
+        
+        Ok(())
+    }
+    
+    fn validate_log_event(&self, event: &LogEvent) -> Result<()> {
+        // Validate required fields
+        if event.event_id.is_empty() || event.event_id.len() > 100 {
+            return Err(anyhow::anyhow!("Invalid event_id length"));
+        }
+        
+        if event.tenant_id.len() != 36 {
+            return Err(anyhow::anyhow!("Invalid tenant_id format (expected UUID)"));
+        }
+        
+        if event.source_ip.is_empty() || event.source_ip.len() > 45 {
+            return Err(anyhow::anyhow!("Invalid source_ip length"));
+        }
+        
+        if event.source_type.is_empty() || event.source_type.len() > 100 {
+            return Err(anyhow::anyhow!("Invalid source_type length"));
+        }
+        
+        // Validate optional fields
+        if let Some(message) = &event.message {
+            if message.len() > 10000 {
+                return Err(anyhow::anyhow!("Message too long (max: 10000 characters)"));
+            }
+        }
+        
+        // Validate timestamp is not in the future
+        let now = chrono::Utc::now();
+        if event.event_timestamp > now {
+            return Err(anyhow::anyhow!("Event timestamp cannot be in the future"));
+        }
+        
+        // Validate timestamp is not too old (more than 1 year)
+        let one_year_ago = now - chrono::Duration::days(365);
+        if event.event_timestamp < one_year_ago {
+            return Err(anyhow::anyhow!("Event timestamp is too old (more than 1 year)"));
+        }
+        
+        Ok(())
+    }
+    
+    fn validate_field_name(&self, field_name: &str) -> Result<()> {
+        if !self.is_valid_field_name(field_name) {
+            return Err(anyhow::anyhow!("Field '{}' is not allowed", field_name));
+        }
+        Ok(())
+    }
+    
+    fn sanitize_input(&self, input: &str) -> Result<String> {
+        // Use existing sanitization logic
+        let sanitized = self.sanitize_query_string(input);
+        
+        // Additional validation after sanitization
+        if sanitized.is_empty() && !input.is_empty() {
+            return Err(anyhow::anyhow!("Input was completely sanitized (likely contained only dangerous characters)"));
+        }
+        
+        Ok(sanitized)
     }
 }
 

@@ -1,3 +1,7 @@
+> **Phase-1 note**  
+> React UI (`siem_ui`) is intentionally disabled.  
+> Do not modify or test it until the backend milestone is complete.
+
 # SIEM Platform
 
 A comprehensive Security Information and Event Management (SIEM) platform built with Rust, ClickHouse, and React TypeScript.
@@ -103,7 +107,7 @@ graph TD
 3. **Setup database**:
    ```bash
    # Apply schema
-   clickhouse-client < database_setup.sql
+   clickhouse client < database_setup.sql
    ```
 
 4. **Validate schema**:
@@ -122,6 +126,17 @@ graph TD
    # UI Development Server
    cd siem_ui && npm run dev
    ```
+
+## 🌐 UI Endpoints
+
+| Audience | URL | Purpose |
+|----------|-----|---------|
+| Analysts (Prod) | `/` | React SIEM dashboard |
+| Engineers | `/dev/events` | Raw ClickHouse event table |
+| Engineers | `/dev/metrics/live` | Live ingestion diagram |
+| Engineers | `/dev/metrics/stream` | SSE JSON counters |
+
+**Note**: All `/dev/*` endpoints are for engineering diagnostics and are separate from the production React UI.
 
 ## 🧪 Testing
 
@@ -208,6 +223,7 @@ KAFKA_BROKERS=localhost:9092
 - ✅ No hardcoded database names
 - ✅ Consistent naming across layers
 - ✅ Documentation updated if needed
+- ✅ `./scripts/verify-rust.sh` now enforces backend ↔ frontend API contract integrity and blocks unimplemented handlers
 
 ## 🚨 Troubleshooting
 

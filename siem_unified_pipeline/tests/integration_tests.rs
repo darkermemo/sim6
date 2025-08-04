@@ -174,7 +174,7 @@ async fn test_routing_rules_list_happy_path() {
         .oneshot(
             Request::builder()
                 .method("GET")
-                .uri("/routing/rules")
+                .uri("/api/v1/routing/rules")
                 .body(Body::empty())
                 .unwrap(),
         )
@@ -205,7 +205,7 @@ async fn test_routing_rules_error_path() {
         .oneshot(
             Request::builder()
                 .method("POST")
-                .uri("/routing/rules")
+                .uri("/api/v1/routing/rules")
                 .header("content-type", "application/json")
                 .body(Body::from(serde_json::to_string(&invalid_rule).unwrap()))
                 .unwrap(),
@@ -237,7 +237,7 @@ async fn test_routing_rules_crud_operations() {
         .oneshot(
             Request::builder()
                 .method("POST")
-                .uri("/routing/rules")
+                .uri("/api/v1/routing/rules")
                 .header("content-type", "application/json")
                 .body(Body::from(serde_json::to_string(&new_rule).unwrap()))
                 .unwrap(),
@@ -255,5 +255,293 @@ async fn test_routing_rules_crud_operations() {
         assert_eq!(result.name, "test-rule");
         assert!(result.enabled);
         assert_eq!(result.priority, 1);
+    }
+}
+
+// Admin Console Integration Tests
+
+#[tokio::test]
+async fn test_admin_console_dashboard() {
+    let app = create_test_app().await;
+    
+    // Test the console route (without trailing slash since that works)
+    let request = Request::builder()
+        .uri("/console")
+        .body(Body::empty())
+        .unwrap();
+    
+    let response = app.oneshot(request).await.unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+    
+    let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
+    let html = String::from_utf8(body.to_vec()).unwrap();
+    
+    // Check for expected HTML content
+    assert!(html.contains("SIEM Admin Console"));
+    assert!(html.contains("System Overview"));
+    assert!(html.contains("Total Events"));
+    assert!(html.contains("Events/Second"));
+}
+
+#[tokio::test]
+async fn test_admin_console_health_page() {
+    let app = create_test_app().await;
+    
+    let request = Request::builder()
+        .uri("/console/health")
+        .body(Body::empty())
+        .unwrap();
+    
+    let response = app.oneshot(request).await.unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+    
+    let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
+    let html = String::from_utf8(body.to_vec()).unwrap();
+    
+    // Check for expected HTML content
+    assert!(html.contains("System Health Status"));
+    assert!(html.contains("Loading health status"));
+}
+
+#[tokio::test]
+async fn test_admin_console_metrics_page() {
+    let app = create_test_app().await;
+    
+    let request = Request::builder()
+        .uri("/console/metrics")
+        .body(Body::empty())
+        .unwrap();
+    
+    let response = app.oneshot(request).await.unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+    
+    let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
+    let html = String::from_utf8(body.to_vec()).unwrap();
+    
+    // Check for expected HTML content
+    assert!(html.contains("System Metrics"));
+    assert!(html.contains("Loading metrics"));
+}
+
+#[tokio::test]
+async fn test_admin_console_events_page() {
+    let app = create_test_app().await;
+    
+    let request = Request::builder()
+        .uri("/console/events")
+        .body(Body::empty())
+        .unwrap();
+    
+    let response = app.oneshot(request).await.unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+    
+    let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
+    let html = String::from_utf8(body.to_vec()).unwrap();
+    
+    // Check for expected HTML content
+    assert!(html.contains("Recent Events"));
+    assert!(html.contains("Loading events"));
+}
+
+#[tokio::test]
+async fn test_admin_console_config_page() {
+    let app = create_test_app().await;
+    
+    let request = Request::builder()
+        .uri("/console/config")
+        .body(Body::empty())
+        .unwrap();
+    
+    let response = app.oneshot(request).await.unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+    
+    let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
+    let html = String::from_utf8(body.to_vec()).unwrap();
+    
+    // Check for expected HTML content
+    assert!(html.contains("Configuration Management"));
+    assert!(html.contains("admin token"));
+    assert!(html.contains("Loading configuration"));
+}
+
+#[tokio::test]
+async fn test_admin_console_api_health() {
+    let app = create_test_app().await;
+    
+    let request = Request::builder()
+        .uri("/console/api/health")
+        .body(Body::empty())
+        .unwrap();
+    
+    let response = app.oneshot(request).await.unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+    
+    let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
+    let response_json: serde_json::Value = serde_json::from_slice(&body).unwrap();
+    
+    // Should return health data
+    assert!(response_json.get("status").is_some());
+}
+
+#[tokio::test]
+async fn test_admin_console_api_metrics() {
+    let app = create_test_app().await;
+    
+    let request = Request::builder()
+        .uri("/console/api/metrics")
+        .body(Body::empty())
+        .unwrap();
+    
+    let response = app.oneshot(request).await.unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+    
+    let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
+    let response_json: serde_json::Value = serde_json::from_slice(&body).unwrap();
+    
+    // Should return metrics data (structure may vary)
+    assert!(response_json.is_object());
+}
+
+#[tokio::test]
+async fn test_admin_console_api_events() {
+    let app = create_test_app().await;
+    
+    let request = Request::builder()
+        .uri("/console/api/events?limit=10")
+        .body(Body::empty())
+        .unwrap();
+    
+    let response = app.oneshot(request).await.unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+    
+    let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
+    let response_json: serde_json::Value = serde_json::from_slice(&body).unwrap();
+    
+    // Should return events data structure
+    assert!(response_json.is_object());
+}
+
+#[tokio::test]
+async fn test_admin_console_api_config() {
+    let app = create_test_app().await;
+    
+    let request = Request::builder()
+        .uri("/console/api/config")
+        .body(Body::empty())
+        .unwrap();
+    
+    let response = app.oneshot(request).await.unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+    
+    let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
+    let response_json: serde_json::Value = serde_json::from_slice(&body).unwrap();
+    
+    // Should return config data
+    assert!(response_json.is_object());
+}
+
+#[tokio::test]
+async fn test_admin_console_config_update_without_token() {
+    let app = create_test_app().await;
+    
+    let config_update = json!({
+        "server": {
+            "host": "127.0.0.1",
+            "port": 8080
+        }
+    });
+    
+    let request = Request::builder()
+        .uri("/console/config")
+        .method("POST")
+        .header("content-type", "application/json")
+        .body(Body::from(config_update.to_string()))
+        .unwrap();
+    
+    let response = app.oneshot(request).await.unwrap();
+    assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+    
+    let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
+    let body_str = String::from_utf8(body.to_vec()).unwrap();
+    assert!(body_str.contains("Admin token required"));
+}
+
+#[tokio::test]
+async fn test_admin_console_config_update_with_valid_token() {
+    let app = create_test_app().await;
+    
+    let config_update = json!({
+        "server": {
+            "host": "127.0.0.1",
+            "port": 8080
+        }
+    });
+    
+    let request = Request::builder()
+        .uri("/console/config")
+        .method("POST")
+        .header("content-type", "application/json")
+        .header("X-Admin-Token", "valid-admin-token-123456789")
+        .body(Body::from(config_update.to_string()))
+        .unwrap();
+    
+    let response = app.oneshot(request).await.unwrap();
+    // Should not be unauthorized (may be 200 or other status depending on handler implementation)
+    assert_ne!(response.status(), StatusCode::UNAUTHORIZED);
+}
+
+#[tokio::test]
+async fn test_admin_console_config_update_with_invalid_token() {
+    let app = create_test_app().await;
+    
+    let config_update = json!({
+        "server": {
+            "host": "127.0.0.1",
+            "port": 8080
+        }
+    });
+    
+    let request = Request::builder()
+        .uri("/console/config")
+        .method("POST")
+        .header("content-type", "application/json")
+        .header("X-Admin-Token", "short")
+        .body(Body::from(config_update.to_string()))
+        .unwrap();
+    
+    let response = app.oneshot(request).await.unwrap();
+    assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+}
+
+#[tokio::test]
+async fn test_admin_console_navigation_links() {
+    let app = create_test_app().await;
+    
+    // Test that all navigation pages are accessible
+    let pages = vec![
+        "/console",
+        "/console/health",
+        "/console/metrics", 
+        "/console/events",
+        "/console/config",
+        "/console/routing",
+        "/console/system",
+    ];
+    
+    for page in pages {
+        let request = Request::builder()
+            .uri(page)
+            .body(Body::empty())
+            .unwrap();
+        
+        let response = app.clone().oneshot(request).await.unwrap();
+        assert_eq!(response.status(), StatusCode::OK, "Failed to load page: {}", page);
+        
+        let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
+        let html = String::from_utf8(body.to_vec()).unwrap();
+        
+        // All pages should have the common navigation
+        assert!(html.contains("SIEM Admin Console"), "Page {} missing header", page);
+        assert!(html.contains("Dashboard"), "Page {} missing navigation", page);
     }
 }

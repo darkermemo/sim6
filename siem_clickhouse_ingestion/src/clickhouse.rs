@@ -23,38 +23,247 @@ use crate::{
 /// ClickHouse row representation for log events
 #[derive(Debug, Clone, Serialize, Deserialize, Row)]
 pub struct ClickHouseLogRow {
+    // Core identification
+    pub event_id: String,
     pub tenant_id: String,
+    pub raw_event: String, // Original raw log data
+    pub parsing_status: String, // "structured", "parsed", "raw", "failed"
+    pub parse_error_msg: Option<String>,
+    
+    // Temporal fields
     pub timestamp: u64, // Unix timestamp in milliseconds
+    pub ingestion_time: u64, // Unix timestamp when ingested
+    
+    // Core log fields
     pub level: String,
     pub message: String,
-    pub source: String,
-    pub fields: String, // JSON string of additional fields
-    pub ingestion_time: u64, // Unix timestamp when ingested
+    pub source: Option<String>,
+    
+    // CIM Security fields
+    pub source_ip: Option<String>,
+    pub dest_ip: Option<String>,
+    pub source_port: Option<u16>,
+    pub dest_port: Option<u16>,
+    pub protocol: Option<String>,
+    pub action: Option<String>,
+    pub result: Option<String>,
+    
+    // Identity fields
+    pub user_name: Option<String>,
+    pub user_id: Option<String>,
+    pub user_domain: Option<String>,
+    pub user_category: Option<String>,
+    
+    // Process fields
+    pub process_name: Option<String>,
+    pub process_id: Option<u32>,
+    pub process_path: Option<String>,
+    pub parent_process_name: Option<String>,
+    pub parent_process_id: Option<u32>,
+    
+    // File fields
+    pub file_name: Option<String>,
+    pub file_path: Option<String>,
+    pub file_hash: Option<String>,
+    pub file_size: Option<u64>,
+    
+    // Network/Web fields
+    pub url: Option<String>,
+    pub http_method: Option<String>,
+    pub http_status: Option<u16>,
+    pub user_agent: Option<String>,
+    pub referer: Option<String>,
+    
+    // System fields
+    pub host_name: Option<String>,
+    pub os: Option<String>,
+    pub severity: Option<String>,
+    pub category: Option<String>,
+    pub vendor: Option<String>,
+    pub product: Option<String>,
+    pub version: Option<String>,
+    
+    // Flexible storage for unmapped fields
+    pub custom_fields: String, // JSON string for fields not mapped to CIM
 }
 
 impl From<LogEvent> for ClickHouseLogRow {
     fn from(event: LogEvent) -> Self {
-        let timestamp = event.timestamp
+        let timestamp_ms = event.timestamp
             .duration_since(UNIX_EPOCH)
             .unwrap_or_default()
             .as_millis() as u64;
         
-        let ingestion_time = SystemTime::now()
+        let ingestion_time_ms = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap_or_default()
             .as_millis() as u64;
         
-        let fields = serde_json::to_string(&event.fields)
+        // Extract CIM fields from the fields HashMap
+        let mut remaining_fields = event.fields.clone();
+        
+        // Helper function to extract and remove field
+        let extract_string = |fields: &mut HashMap<String, serde_json::Value>, key: &str| -> Option<String> {
+            fields.remove(key).and_then(|v| v.as_str().map(|s| s.to_string()))
+        };
+        
+        let extract_u16 = |fields: &mut HashMap<String, serde_json::Value>, key: &str| -> Option<u16> {
+            fields.remove(key).and_then(|v| v.as_u64().and_then(|n| u16::try_from(n).ok()))
+        };
+        
+        let extract_u32 = |fields: &mut HashMap<String, serde_json::Value>, key: &str| -> Option<u32> {
+            fields.remove(key).and_then(|v| v.as_u64().and_then(|n| u32::try_from(n).ok()))
+        };
+        
+        let extract_u64 = |fields: &mut HashMap<String, serde_json::Value>, key: &str| -> Option<u64> {
+            fields.remove(key).and_then(|v| v.as_u64())
+        };
+        
+        // Extract CIM fields
+        let source_ip = extract_string(&mut remaining_fields, "source_ip")
+            .or_else(|| extract_string(&mut remaining_fields, "src_ip"))
+            .or_else(|| extract_string(&mut remaining_fields, "client_ip"));
+        
+        let dest_ip = extract_string(&mut remaining_fields, "dest_ip")
+            .or_else(|| extract_string(&mut remaining_fields, "dst_ip"))
+            .or_else(|| extract_string(&mut remaining_fields, "server_ip"));
+        
+        let source_port = extract_u16(&mut remaining_fields, "source_port")
+            .or_else(|| extract_u16(&mut remaining_fields, "src_port"));
+        
+        let dest_port = extract_u16(&mut remaining_fields, "dest_port")
+            .or_else(|| extract_u16(&mut remaining_fields, "dst_port"));
+        
+        let protocol = extract_string(&mut remaining_fields, "protocol")
+            .or_else(|| extract_string(&mut remaining_fields, "proto"));
+        
+        let action = extract_string(&mut remaining_fields, "action")
+            .or_else(|| extract_string(&mut remaining_fields, "event_action"));
+        
+        let result = extract_string(&mut remaining_fields, "result")
+            .or_else(|| extract_string(&mut remaining_fields, "outcome"));
+        
+        let user_name = extract_string(&mut remaining_fields, "user_name")
+            .or_else(|| extract_string(&mut remaining_fields, "username"))
+            .or_else(|| extract_string(&mut remaining_fields, "user"));
+        
+        let user_id = extract_string(&mut remaining_fields, "user_id")
+            .or_else(|| extract_string(&mut remaining_fields, "uid"));
+        
+        let user_domain = extract_string(&mut remaining_fields, "user_domain")
+            .or_else(|| extract_string(&mut remaining_fields, "domain"));
+        
+        let user_category = extract_string(&mut remaining_fields, "user_category")
+            .or_else(|| extract_string(&mut remaining_fields, "user_type"));
+        
+        let process_name = extract_string(&mut remaining_fields, "process_name")
+            .or_else(|| extract_string(&mut remaining_fields, "proc_name"));
+        
+        let process_id = extract_u32(&mut remaining_fields, "process_id")
+            .or_else(|| extract_u32(&mut remaining_fields, "pid"));
+        
+        let process_path = extract_string(&mut remaining_fields, "process_path")
+            .or_else(|| extract_string(&mut remaining_fields, "proc_path"));
+        
+        let parent_process_name = extract_string(&mut remaining_fields, "parent_process_name")
+            .or_else(|| extract_string(&mut remaining_fields, "ppid_name"));
+        
+        let parent_process_id = extract_u32(&mut remaining_fields, "parent_process_id")
+            .or_else(|| extract_u32(&mut remaining_fields, "ppid"));
+        
+        let file_name = extract_string(&mut remaining_fields, "file_name")
+            .or_else(|| extract_string(&mut remaining_fields, "filename"));
+        
+        let file_path = extract_string(&mut remaining_fields, "file_path")
+            .or_else(|| extract_string(&mut remaining_fields, "filepath"));
+        
+        let file_hash = extract_string(&mut remaining_fields, "file_hash")
+            .or_else(|| extract_string(&mut remaining_fields, "hash"));
+        
+        let file_size = extract_u64(&mut remaining_fields, "file_size")
+            .or_else(|| extract_u64(&mut remaining_fields, "size"));
+        
+        let url = extract_string(&mut remaining_fields, "url")
+            .or_else(|| extract_string(&mut remaining_fields, "uri"));
+        
+        let http_method = extract_string(&mut remaining_fields, "http_method")
+            .or_else(|| extract_string(&mut remaining_fields, "method"));
+        
+        let http_status = extract_u16(&mut remaining_fields, "http_status")
+            .or_else(|| extract_u16(&mut remaining_fields, "status_code"))
+            .or_else(|| extract_u16(&mut remaining_fields, "status"));
+        
+        let user_agent = extract_string(&mut remaining_fields, "user_agent")
+            .or_else(|| extract_string(&mut remaining_fields, "useragent"));
+        
+        let referer = extract_string(&mut remaining_fields, "referer")
+            .or_else(|| extract_string(&mut remaining_fields, "referrer"));
+        
+        let host_name = extract_string(&mut remaining_fields, "host_name")
+            .or_else(|| extract_string(&mut remaining_fields, "hostname"))
+            .or_else(|| extract_string(&mut remaining_fields, "host"));
+        
+        let os = extract_string(&mut remaining_fields, "os")
+            .or_else(|| extract_string(&mut remaining_fields, "operating_system"));
+        
+        let severity = extract_string(&mut remaining_fields, "severity")
+            .or_else(|| extract_string(&mut remaining_fields, "sev"));
+        
+        let category = extract_string(&mut remaining_fields, "category")
+            .or_else(|| extract_string(&mut remaining_fields, "cat"));
+        
+        let vendor = extract_string(&mut remaining_fields, "vendor");
+        let product = extract_string(&mut remaining_fields, "product");
+        let version = extract_string(&mut remaining_fields, "version");
+        
+        // Store remaining unmapped fields as JSON
+        let custom_fields = serde_json::to_string(&remaining_fields)
             .unwrap_or_else(|_| "{}".to_string());
         
         Self {
+            event_id: event.event_id.unwrap_or_else(|| uuid::Uuid::new_v4().to_string()),
             tenant_id: event.tenant_id,
-            timestamp,
+            raw_event: event.raw_event.unwrap_or_else(|| event.message.clone()),
+            parsing_status: event.parsing_status.unwrap_or_else(|| "structured".to_string()),
+            parse_error_msg: event.parse_error_msg,
+            timestamp: timestamp_ms,
+            ingestion_time: ingestion_time_ms,
             level: event.level,
             message: event.message,
-            source: event.source.unwrap_or_else(|| "unknown".to_string()),
-            fields,
-            ingestion_time,
+            source: event.source,
+            source_ip,
+            dest_ip,
+            source_port,
+            dest_port,
+            protocol,
+            action,
+            result,
+            user_name,
+            user_id,
+            user_domain,
+            user_category,
+            process_name,
+            process_id,
+            process_path,
+            parent_process_name,
+            parent_process_id,
+            file_name,
+            file_path,
+            file_hash,
+            file_size,
+            url,
+            http_method,
+            http_status,
+            user_agent,
+            referer,
+            host_name,
+            os,
+            severity,
+            category,
+            vendor,
+            product,
+            version,
+            custom_fields,
         }
     }
 }
@@ -185,16 +394,71 @@ impl ClickHouseWriter {
         let create_table_sql = format!(
             r#"
             CREATE TABLE IF NOT EXISTS {table_name} (
+                -- Core identification
+                event_id String,
                 tenant_id String,
+                raw_event String,
+                parsing_status String,
+                parse_error_msg Nullable(String),
+                
+                -- Temporal fields
                 timestamp UInt64,
+                ingestion_time UInt64,
+                
+                -- Core log fields
                 level String,
                 message String,
-                source String,
-                fields String,
-                ingestion_time UInt64
+                source Nullable(String),
+                
+                -- CIM Security fields
+                source_ip Nullable(String),
+                dest_ip Nullable(String),
+                source_port Nullable(UInt16),
+                dest_port Nullable(UInt16),
+                protocol Nullable(String),
+                action Nullable(String),
+                result Nullable(String),
+                
+                -- Identity fields
+                user_name Nullable(String),
+                user_id Nullable(String),
+                user_domain Nullable(String),
+                user_category Nullable(String),
+                
+                -- Process fields
+                process_name Nullable(String),
+                process_id Nullable(UInt32),
+                process_path Nullable(String),
+                parent_process_name Nullable(String),
+                parent_process_id Nullable(UInt32),
+                
+                -- File fields
+                file_name Nullable(String),
+                file_path Nullable(String),
+                file_hash Nullable(String),
+                file_size Nullable(UInt64),
+                
+                -- Network/Web fields
+                url Nullable(String),
+                http_method Nullable(String),
+                http_status Nullable(UInt16),
+                user_agent Nullable(String),
+                referer Nullable(String),
+                
+                -- System fields
+                host_name Nullable(String),
+                os Nullable(String),
+                severity Nullable(String),
+                category Nullable(String),
+                vendor Nullable(String),
+                product Nullable(String),
+                version Nullable(String),
+                
+                -- Flexible storage
+                custom_fields String
             ) ENGINE = MergeTree()
             PARTITION BY toYYYYMM(toDateTime(timestamp / 1000))
-            ORDER BY (tenant_id, timestamp)
+            ORDER BY (tenant_id, timestamp, event_id)
             SETTINGS index_granularity = 8192
             "#,
             table_name = validated_table_name

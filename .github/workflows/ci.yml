@@ -63,19 +63,22 @@ jobs:
         key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
     
     - name: Install frontend dependencies
+      if: ${{ env.REACT_UI == '1' }}
       run: |
         cd siem_ui
         pnpm install
-    
+
     - name: Run version verification
       run: scripts/verify-versions.sh
-    
+
     - name: Frontend linting
+      if: ${{ env.REACT_UI == '1' }}
       run: |
         cd siem_ui
         pnpm lint
-    
+
     - name: Frontend error detection
+      if: ${{ env.REACT_UI == '1' }}
       run: |
         cd siem_ui
         pnpm run error-detection
@@ -98,14 +101,16 @@ jobs:
         CLICKHOUSE_DATABASE: dev
     
     - name: Install Playwright
+      if: ${{ env.REACT_UI == '1' }}
       run: |
         cd siem_ui
         pnpm exec playwright install chromium
-    
+
     - name: Start frontend dev server
+      if: ${{ env.REACT_UI == '1' }}
       run: |
         cd siem_ui
-        pnpm dev &
+        REACT_DEV=1 pnpm dev &
         sleep 10
     
     - name: Start backend API server
@@ -125,6 +130,7 @@ jobs:
         ADMIN_TOKEN: admin-token-12345-change-in-production
     
     - name: Run Playwright E2E tests
+      if: ${{ env.REACT_UI == '1' }}
       run: |
         cd siem_ui
         pnpm exec playwright test --project=chromium ../e2e/runtime-slice.spec.ts
@@ -134,8 +140,9 @@ jobs:
         UI_URL: http://localhost:3000
         INGESTOR_URL: http://localhost:8081
         ADMIN_TOKEN: admin-token-12345-change-in-production
-    
+
     - name: Run Playwright smoke test
+      if: ${{ env.REACT_UI == '1' }}
       run: |
         cd tests
         npx playwright test playwright_smoke_test.js

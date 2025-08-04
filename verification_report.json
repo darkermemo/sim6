@@ -1,0 +1,103 @@
+{
+  "database_tests": {
+    "total_events": {
+      "count": 8,
+      "status": "pass"
+    },
+    "tenant_distribution": {
+      "data": {
+        "default": 8
+      },
+      "status": "fail"
+    },
+    "log_source_distribution": {
+      "data": {
+        "firewall": 6,
+        "ids": 1,
+        "web_server": 1
+      },
+      "status": "fail"
+    },
+    "timestamp_range": {
+      "min_timestamp": 1735689600,
+      "max_timestamp": 1753956000,
+      "range_days": 211.41666666666666,
+      "status": "pass"
+    },
+    "error": "HTTPDriver for http://localhost:8123 received ClickHouse error code 47\n Code: 47. DB::Exception: Unknown expression identifier `host_name` in scope SELECT source_ip, user_name, host_name FROM events WHERE source_ip != '' LIMIT 10. (UNKNOWN_IDENTIFIER) (version 25.6.4.12 (official build))\n"
+  },
+  "api_tests": {
+    "health_check_ingestion": {
+      "status_code": 200,
+      "status": "pass",
+      "service": "ingestion"
+    },
+    "health_check_search": {
+      "status_code": 200,
+      "status": "pass",
+      "service": "search"
+    },
+    "events_search": {
+      "status_code": 404,
+      "status": "fail",
+      "service": "search"
+    },
+    "events_ingest": {
+      "status_code": 405,
+      "status": "pass",
+      "service": "ingestion"
+    },
+    "log_sources": {
+      "status_code": 404,
+      "status": "fail",
+      "service": "search"
+    }
+  },
+  "search_tests": {
+    "tenant_filter": {
+      "status_code": 404,
+      "response_time": 0.001155853271484375,
+      "status": "fail"
+    },
+    "ip_search": {
+      "status_code": 404,
+      "response_time": 0.0013751983642578125,
+      "status": "fail"
+    },
+    "log_source_filter": {
+      "status_code": 404,
+      "response_time": 0.0013718605041503906,
+      "status": "fail"
+    },
+    "time_range_filter": {
+      "status_code": 404,
+      "response_time": 0.0013039112091064453,
+      "status": "fail"
+    },
+    "user_search": {
+      "status_code": 404,
+      "response_time": 0.0012133121490478516,
+      "status": "fail"
+    }
+  },
+  "performance_tests": {
+    "large_query": {
+      "status_code": 404,
+      "response_time": 0.0011022090911865234,
+      "status": "fail"
+    },
+    "db_performance": {
+      "query_time": 0.00710296630859375,
+      "result_count": 6,
+      "status": "pass"
+    }
+  },
+  "data_integrity_tests": {},
+  "summary": {
+    "total_tests": 16,
+    "passed_tests": 6,
+    "failed_tests": 10,
+    "success_rate": 37.5,
+    "timestamp": "2025-08-01T04:58:57.126230"
+  }
+}

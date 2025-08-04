@@ -161,7 +161,7 @@ EOF
     # Initialize database
     if [[ -f "${SCRIPT_DIR}/../../database_setup.sql" ]]; then
         log INFO "Initializing SIEM database schema..."
-        clickhouse-client --multiquery < "${SCRIPT_DIR}/../../database_setup.sql"
+        clickhouse client --multiquery < "${SCRIPT_DIR}/../../database_setup.sql"
     fi
     
     log SUCCESS "ClickHouse node setup completed"
@@ -450,4 +450,4 @@ main() {
     log INFO "  4. Check logs: journalctl -u siem-$NODE_TYPE -f"
 }
 
-main "$@" 
+main "$@"

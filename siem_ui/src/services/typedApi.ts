@@ -24,7 +24,7 @@ type PaginationParams = ApiComponents['schemas']['PaginationParams'];
  * Typed Axios instance with JWT authentication
  */
 const typedApiClient: AxiosInstance = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE || 'http://localhost:8080',
+  baseURL: import.meta.env.VITE_API_BASE || 'http://localhost:8084',
   timeout: 30000,
   headers: {
     'Content-Type': 'application/json',
@@ -65,7 +65,7 @@ typedApiClient.interceptors.response.use(
       if (refreshToken) {
         try {
           const response = await axios.post(
-            `${import.meta.env.VITE_API_BASE || 'http://localhost:8080'}/api/v1/auth/refresh`,
+            `${import.meta.env.VITE_API_BASE || 'http://localhost:8084'}/api/v1/auth/refresh`,
             { refresh_token: refreshToken },
             {
               timeout: 10000,

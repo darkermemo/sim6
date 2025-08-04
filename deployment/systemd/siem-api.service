@@ -1,0 +1,52 @@
+[Unit]
+Description=SIEM API Service
+Documentation=https://github.com/company/siem
+After=network.target clickhouse-server.service
+Wants=clickhouse-server.service
+Requires=network.target
+
+[Service]
+# Service configuration
+Type=simple
+User=siem
+Group=siem
+WorkingDirectory=/opt/siem
+ExecStart=/opt/siem/bin/siem_api
+ExecReload=/bin/kill -HUP $MAINPID
+KillMode=mixed
+KillSignal=SIGTERM
+TimeoutStopSec=30
+
+# Restart configuration
+Restart=always
+RestartSec=10
+StartLimitInterval=60
+StartLimitBurst=3
+
+# Environment
+EnvironmentFile=/etc/siem/siem.env
+Environment=RUST_LOG=info
+Environment=RUST_BACKTRACE=1
+
+# Security settings
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/log/siem /var/lib/siem /tmp
+CapabilityBoundingSet=CAP_NET_BIND_SERVICE
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+
+# Resource limits
+LimitNOFILE=65536
+LimitNPROC=4096
+MemoryMax=2G
+CPUQuota=200%
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=siem-api
+
+[Install]
+WantedBy=multi-user.target

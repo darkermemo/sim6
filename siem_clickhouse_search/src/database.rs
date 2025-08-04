@@ -15,6 +15,10 @@ use tracing::{debug, error, info, warn};
 use uuid::Uuid;
 use regex::Regex;
 use phf::phf_set;
+use async_trait::async_trait;
+
+pub mod traits;
+pub use traits::*;
 
 
 
@@ -342,7 +346,7 @@ impl ClickHouseService {
                 source: LogEvent {
                     event_id: row.event_id,
                     tenant_id: row.tenant_id,
-                    event_timestamp: Utc.timestamp_opt(row.event_timestamp as i64, 0).single().unwrap_or_else(|| Utc::now()),
+                    event_timestamp: row.event_timestamp,
                     source_ip: row.source_ip,
                     source_type: row.source_type,
                     raw_event: row.raw_event,
@@ -420,7 +424,7 @@ impl ClickHouseService {
                     message: row.message,
                     details: row.details,
                     custom_fields: row.custom_fields,
-                    ingestion_timestamp: Utc.timestamp_opt(row.ingestion_timestamp as i64, 0).single().unwrap_or_else(|| Utc::now()),
+                    ingestion_timestamp: row.ingestion_timestamp,
                 },
                 highlight: None,
                 sort: None,
@@ -430,11 +434,27 @@ impl ClickHouseService {
         let default_pagination = Pagination::default();
         let pagination = request.pagination.as_ref().unwrap_or(&default_pagination);
         
+        // Generate next cursor for efficient pagination
+        let next_cursor = if hits.len() == pagination.size as usize {
+            // Create cursor from last item: "timestamp:event_id"
+            hits.last().map(|hit| {
+                format!("{}:{}", 
+                    hit.source.event_timestamp.timestamp(),
+                    hit.source.event_id)
+            })
+        } else {
+            None
+        };
+        
+        // Determine if there are more pages
+        let has_next = hits.len() == pagination.size as usize;
+        let has_previous = pagination.cursor.is_some() || pagination.page > 0;
+        
         Ok(SearchHits {
             total: if pagination.include_total {
                 Some(TotalHits {
                     value: hits.len() as u64,
-                    relation: TotalRelation::Equal,
+                    relation: TotalRelation::GreaterThanOrEqual, // We don't know exact total for large datasets
                 })
             } else {
                 None
@@ -444,10 +464,10 @@ impl ClickHouseService {
             pagination: PaginationInfo {
                 current_page: pagination.page,
                 page_size: pagination.size,
-                total_pages: None,
-                has_next: false, // TODO: Implement proper pagination
-                has_previous: pagination.page > 0,
-                next_cursor: None,
+                total_pages: None, // Cannot calculate for cursor-based pagination
+                has_next,
+                has_previous,
+                next_cursor,
                 previous_cursor: None,
             },
         })
@@ -576,7 +596,7 @@ impl ClickHouseService {
     }
     
     /// Get dashboard data with aggregated metrics
-    pub async fn get_dashboard_data(&self, time_range: Option<TimeRange>) -> Result<DashboardV2Response> {
+    pub async fn get_dashboard_data(&self, time_range: Option<TimeRange>, tenant_id: Option<String>) -> Result<DashboardV2Response> {
         let client = self.get_client();
         let table_name = self.config.clickhouse.tables.default_table.clone();
         
@@ -587,41 +607,47 @@ impl ClickHouseService {
             None => end_time - chrono::Duration::hours(24),
         };
         
+        // Build tenant filter clause
+        let tenant_filter = match &tenant_id {
+            Some(tid) => format!(" AND tenant_id = '{}'", tid),
+            None => String::new(),
+        };
+        
         // Get total events count - handle empty table gracefully
         let total_events_sql = format!(
-            "SELECT count() as total FROM {} WHERE event_timestamp >= ? AND event_timestamp < ?",
-            table_name
+            "SELECT count() as total FROM {} WHERE event_timestamp >= ? AND event_timestamp < ?{}",
+            table_name, tenant_filter
         );
         
         let total_events: u64 = client.query(&total_events_sql)
-            .bind(start_time.timestamp())
-            .bind(end_time.timestamp())
+            .bind(start_time.timestamp() as u32)
+            .bind(end_time.timestamp() as u32)
             .fetch_one()
             .await
             .unwrap_or(0); // Default to 0 if query fails
         
         // Get total alerts count (events with severity 'high' or 'critical') - handle gracefully
         let total_alerts_sql = format!(
-            "SELECT count() as total FROM {} WHERE event_timestamp >= ? AND event_timestamp < ? AND (lower(severity) IN ('high', 'critical') OR lower(event_category) LIKE '%alert%' OR lower(event_category) LIKE '%security%')",
-            table_name
+            "SELECT count() as total FROM {} WHERE event_timestamp >= ? AND event_timestamp < ? AND (severity IN ('high', 'critical', 'medium') OR event_category LIKE '%alert%' OR event_category LIKE '%security%'){}",
+            table_name, tenant_filter
         );
         
         let total_alerts: u64 = client.query(&total_alerts_sql)
-            .bind(start_time.timestamp())
-            .bind(end_time.timestamp())
+            .bind(start_time.timestamp() as u32)
+            .bind(end_time.timestamp() as u32)
             .fetch_one()
             .await
             .unwrap_or(0); // Default to 0 if query fails
         
         // Get alerts over time (last 24 hours, hourly buckets) - handle gracefully
         let alerts_over_time_sql = format!(
-            "SELECT toStartOfHour(toDateTime(event_timestamp)) as bucket, count() as count FROM {} WHERE event_timestamp >= ? AND event_timestamp < ? AND (lower(severity) IN ('high', 'critical') OR lower(event_category) LIKE '%alert%' OR lower(event_category) LIKE '%security%') GROUP BY bucket ORDER BY bucket",
-            table_name
+            "SELECT toStartOfHour(toDateTime(event_timestamp)) as bucket, count() as count FROM {} WHERE event_timestamp >= ? AND event_timestamp < ? AND (severity IN ('high', 'critical', 'medium') OR event_category LIKE '%alert%' OR event_category LIKE '%security%'){} GROUP BY bucket ORDER BY bucket",
+            table_name, tenant_filter
         );
         
         let alerts_over_time_rows: Vec<AlertsOverTimeRow> = client.query(&alerts_over_time_sql)
-            .bind(start_time.timestamp())
-            .bind(end_time.timestamp())
+            .bind(start_time.timestamp() as u32)
+            .bind(end_time.timestamp() as u32)
             .fetch_all()
             .await
             .unwrap_or_else(|_| Vec::new()); // Default to empty vec if query fails
@@ -629,7 +655,7 @@ impl ClickHouseService {
         let alerts_over_time: Vec<AlertsOverTimeData> = alerts_over_time_rows
             .into_iter()
             .map(|row| AlertsOverTimeData {
-                ts: row.bucket.and_utc().timestamp(),
+                ts: row.bucket.timestamp(),
                 critical: row.count as i64,
                 high: 0,
                 medium: 0,
@@ -639,13 +665,13 @@ impl ClickHouseService {
         
         // Get top sources - handle gracefully
         let top_sources_sql = format!(
-            "SELECT source_ip, count() as count FROM {} WHERE event_timestamp >= ? AND event_timestamp < ? AND source_ip IS NOT NULL GROUP BY source_ip ORDER BY count DESC LIMIT 10",
-            table_name
+            "SELECT source_ip, count() as count FROM {} WHERE event_timestamp >= ? AND event_timestamp < ? AND source_ip IS NOT NULL{} GROUP BY source_ip ORDER BY count DESC LIMIT 10",
+            table_name, tenant_filter
         );
         
         let top_sources_rows: Vec<TopSourceRow> = client.query(&top_sources_sql)
-            .bind(start_time.timestamp())
-            .bind(end_time.timestamp())
+            .bind(start_time.timestamp() as u32)
+            .bind(end_time.timestamp() as u32)
             .fetch_all()
             .await
             .unwrap_or_else(|_| Vec::new()); // Default to empty vec if query fails
@@ -661,13 +687,13 @@ impl ClickHouseService {
         // Get recent alerts (last 10 high/critical severity events)
         // Handle NULL values and case-insensitive matching, use COALESCE for NULL fields
         let recent_alerts_sql = format!(
-            "SELECT event_timestamp, COALESCE(severity, 'unknown') as severity, COALESCE(message, '') as message FROM {} WHERE event_timestamp >= ? AND event_timestamp < ? AND (lower(COALESCE(severity, '')) IN ('high', 'critical') OR lower(event_category) LIKE '%alert%' OR lower(event_category) LIKE '%security%') ORDER BY event_timestamp DESC LIMIT 10",
-            table_name
+            "SELECT event_timestamp, COALESCE(severity, 'unknown') as severity, COALESCE(message, '') as message FROM {} WHERE event_timestamp >= ? AND event_timestamp < ? AND (severity IN ('high', 'critical', 'medium') OR lower(event_category) LIKE '%alert%' OR lower(event_category) LIKE '%security%'){} ORDER BY event_timestamp DESC LIMIT 10",
+            table_name, tenant_filter
         );
         
         let recent_alerts_rows: Vec<RecentAlertRow> = client.query(&recent_alerts_sql)
-            .bind(start_time.timestamp())
-            .bind(end_time.timestamp())
+            .bind(start_time.timestamp() as u32)
+            .bind(end_time.timestamp() as u32)
             .fetch_all()
             .await
             .unwrap_or_else(|_| Vec::new()); // Default to empty vec if query fails
@@ -676,7 +702,7 @@ impl ClickHouseService {
             .into_iter()
             .map(|row| RecentAlertV2 {
                 alert_id: Uuid::new_v4().to_string(),
-                ts: row.event_timestamp as i64,
+                ts: row.event_timestamp.timestamp(),
                 title: if row.message.is_empty() { "Security Alert".to_string() } else { row.message },
                 severity: if row.severity.is_empty() { "unknown".to_string() } else { row.severity },
                 source_ip: "".to_string(),
@@ -789,12 +815,12 @@ impl ClickHouseService {
         // Add time range filters if present
         if let Some(start_time) = filters.start_time {
             conditions.push("event_timestamp >= ?".to_string());
-            bind_values.push(start_time.to_string());
+            bind_values.push(start_time.timestamp().to_string());
         }
         
         if let Some(end_time) = filters.end_time {
             conditions.push("event_timestamp <= ?".to_string());
-            bind_values.push(end_time.to_string());
+            bind_values.push(end_time.timestamp().to_string());
         }
         
         if !conditions.is_empty() {
@@ -834,7 +860,7 @@ impl ClickHouseService {
 /// ClickHouse row structure for log events matching dev.events table schema
 #[derive(Debug, Row, Deserialize)]
 struct AlertsOverTimeRow {
-    bucket: chrono::NaiveDateTime,
+    bucket: chrono::DateTime<chrono::Utc>,
     count: u64,
 }
 
@@ -846,7 +872,7 @@ struct TopSourceRow {
 
 #[derive(Debug, Row, Deserialize)]
 struct RecentAlertRow {
-    event_timestamp: u32,
+    event_timestamp: DateTime<Utc>,
     severity: String,
     message: String,
 }
@@ -855,7 +881,7 @@ struct RecentAlertRow {
 struct LogEventRow {
     event_id: String,
     tenant_id: String,
-    event_timestamp: u32,
+    event_timestamp: DateTime<Utc>,
     source_ip: String,
     source_type: String,
     raw_event: String,
@@ -933,7 +959,7 @@ struct LogEventRow {
     message: Option<String>,
     details: Option<String>,
     custom_fields: Option<HashMap<String, String>>,
-    ingestion_timestamp: u32,
+    ingestion_timestamp: DateTime<Utc>,
 }
 
 /// Query builder for ClickHouse SQL generation
@@ -1017,7 +1043,7 @@ impl<'a> QueryBuilder<'a> {
             sql.push_str(" ORDER BY event_timestamp DESC");
         }
         
-        // LIMIT clause
+        // LIMIT clause with cursor-based pagination optimization
         let default_pagination = Pagination {
             page: 0,
             size: 100,
@@ -1026,8 +1052,32 @@ impl<'a> QueryBuilder<'a> {
         };
         let pagination = self.request.pagination.as_ref().unwrap_or(&default_pagination);
         let limit = std::cmp::min(pagination.size, self.config.clickhouse.query.max_page_size);
-        let offset = pagination.page * pagination.size;
-        sql.push_str(&format!(" LIMIT {} OFFSET {}", limit, offset));
+        
+        // Use cursor-based pagination for large datasets to avoid OFFSET performance issues
+        if let Some(cursor) = &pagination.cursor {
+            // Cursor format: "timestamp:event_id" for deterministic ordering
+            if let Some((cursor_timestamp, cursor_event_id)) = cursor.split_once(':') {
+                // Add cursor condition to WHERE clause for efficient pagination
+                let cursor_condition = if sql.contains("WHERE") {
+                    format!(" AND (event_timestamp < {} OR (event_timestamp = {} AND event_id < '{}'))", 
+                           cursor_timestamp, cursor_timestamp, cursor_event_id)
+                } else {
+                    format!(" WHERE (event_timestamp < {} OR (event_timestamp = {} AND event_id < '{}'))", 
+                           cursor_timestamp, cursor_timestamp, cursor_event_id)
+                };
+                sql.push_str(&cursor_condition);
+            }
+            sql.push_str(&format!(" LIMIT {}", limit));
+        } else {
+            // For small offsets (< 10000), use traditional OFFSET for compatibility
+            let offset = pagination.page * pagination.size;
+            if offset < 10000 {
+                sql.push_str(&format!(" LIMIT {} OFFSET {}", limit, offset));
+            } else {
+                // For large offsets, force cursor-based pagination
+                sql.push_str(&format!(" LIMIT {}", limit));
+            }
+        }
         
         Ok((sql, params))
     }
@@ -1176,5 +1226,60 @@ impl<'a> QueryBuilder<'a> {
         }
         
         Ok(table_name.to_string())
+    }
+}
+
+/// Implementation of DatabaseService trait for ClickHouseService
+/// 
+/// This implementation provides the concrete database operations for ClickHouse.
+#[async_trait]
+impl DatabaseService for ClickHouseService {
+    async fn search(&self, request: SearchRequest) -> Result<SearchResponse> {
+        self.search(request).await
+    }
+    
+    async fn get_dashboard_data(
+        &self, 
+        time_range: Option<TimeRange>, 
+        tenant_id: Option<String>
+    ) -> Result<DashboardV2Response> {
+        self.get_dashboard_data(time_range, tenant_id).await
+    }
+    
+    async fn get_events(
+        &self, 
+        filters: EventFilters
+    ) -> Result<Vec<Event>, Box<dyn std::error::Error + Send + Sync>> {
+        self.get_events(filters).await
+    }
+    
+    async fn health_check(&self) -> Result<()> {
+        self.health_check().await
+    }
+    
+    fn get_metrics(&self) -> DatabaseMetrics {
+        self.get_metrics()
+    }
+}
+
+/// Implementation of IngestService trait for ClickHouseService
+#[async_trait]
+impl IngestService for ClickHouseService {
+    async fn ingest_event(&self, event: LogEvent) -> Result<IngestResponse> {
+        // TODO: Implement single event ingestion
+        // This should validate the event and insert it into ClickHouse
+        todo!("Single event ingestion not yet implemented")
+    }
+    
+    async fn ingest_batch(&self, events: Vec<LogEvent>) -> Result<BatchIngestResponse> {
+        // TODO: Implement batch event ingestion
+        // This should validate all events and perform a batch insert
+        todo!("Batch event ingestion not yet implemented")
+    }
+    
+    async fn get_size(&self, tenant_id: Option<String>) -> Result<SizeResponse> {
+        // TODO: Implement getting current ingest queue/buffer size
+        // This could return the number of pending events or buffer size
+        todo!("Ingest size retrieval not yet implemented")
     }
 }

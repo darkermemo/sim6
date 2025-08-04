@@ -59,7 +59,7 @@ apiClient.interceptors.response.use(
         try {
           // Use vanilla axios to prevent infinite interceptor loops
           const response = await axios.post(
-            `${import.meta.env.VITE_API_BASE || 'http://localhost:8080'}/api/v1/auth/refresh`,
+            `${import.meta.env.VITE_API_BASE || 'http://localhost:8084'}/api/v1/auth/refresh`,
             { refresh_token: refreshToken },
             {
               timeout: 10000, // Short timeout to prevent hanging

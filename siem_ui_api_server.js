@@ -207,7 +207,7 @@ async function proxySSE(req, res, endpoint) {
 // Enhanced dashboard proxy with fallback to mock data
 app.all('/api/v1/dashboard*', async (req, res) => {
   try {
-    const rustPath = req.path.replace('/api/v1', '');
+    const rustPath = req.path; // Keep the full path including /api/v1
     console.log(`[PROXY] ${req.method} ${req.path} -> ${RUST_API_BASE}${rustPath}`);
     
     // Require proper authentication - no fallback token generation

@@ -10,22 +10,42 @@
 
 use crate::database_manager::{DatabaseConfig, DatabaseManager};
 use crate::error_handling::{SiemError, SiemResult};
-use axum::{extract::Query, http::StatusCode, response::Json, routing::get, Router};
+use axum::{extract::{Query, State}, http::StatusCode, response::{Html, Json}, routing::get, Router};
+use clickhouse::Client;
+use chrono::{DateTime, Utc};
 
 use anyhow::Result as AnyhowResult;
+use maud::{html, Markup};
 use serde::{Deserialize, Serialize};
 use std::{env, sync::Arc, time::Duration};
 use tokio::time::timeout;
 use tracing::{error, info, warn};
 
-/// Shared application state containing the database manager
+/// Shared application state containing the database manager and ClickHouse client
 #[derive(Clone)]
 pub struct AppState {
     pub database_manager: Arc<DatabaseManager>,
+    pub ch_client: Client,
+}
+
+impl AppState {
+    /// Query all events from dev.events table with a limit
+    /// Returns a vector of RowSlim structs for HTML display
+    pub async fn all_events(&self, limit: u32) -> anyhow::Result<Vec<RowSlim>> {
+        let sql = format!(
+            "SELECT event_id, tenant_id, event_timestamp, source_ip, source_type, message \
+             FROM dev.events ORDER BY event_timestamp DESC LIMIT {limit}"
+        );
+        
+        let rows = self.ch_client.query(&sql).fetch_all::<RowSlim>().await
+            .map_err(|e| anyhow::anyhow!("Failed to execute query: {}", e))?;
+        
+        Ok(rows)
+    }
 }
 
 /// Global database manager instance
-static DATABASE_MANAGER: tokio::sync::OnceCell<Arc<DatabaseManager>> =
+pub static DATABASE_MANAGER: tokio::sync::OnceCell<Arc<DatabaseManager>> =
     tokio::sync::OnceCell::const_new();
 
 /// Get or initialize the database manager
@@ -38,6 +58,17 @@ async fn get_database_manager() -> SiemResult<Arc<DatabaseManager>> {
         })
         .await
         .map(Arc::clone)
+}
+
+/// EventRow represents a row from the ClickHouse dev.events table for HTML display
+#[derive(Debug, clickhouse::Row, serde::Deserialize)]
+pub struct EventRow {
+    pub event_id: String,
+    pub tenant_id: String,
+    pub event_timestamp: u32,
+    pub source_ip: String,
+    pub source_type: String,
+    pub message: Option<String>,
 }
 
 /// DevEventCore represents the minimal set of fields we actually query from the database
@@ -234,6 +265,7 @@ where
 /// - `start_time`: Filter events after this timestamp (Unix timestamp)
 /// - `end_time`: Filter events before this timestamp (Unix timestamp)
 pub async fn get_dev_events(
+    State(state): State<Arc<AppState>>,
     Query(params): Query<EventQueryParams>,
 ) -> Result<Json<DevEventsResponse>, (StatusCode, Json<ErrorResponse>)> {
     let start_time = std::time::Instant::now();
@@ -247,21 +279,8 @@ pub async fn get_dev_events(
         limit, offset, params
     );
 
-    // Get database manager
-    let db_manager = match get_database_manager().await {
-        Ok(manager) => manager,
-        Err(e) => {
-            error!("Failed to get database manager: {:?}", e);
-            return Err((
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(ErrorResponse {
-                    error: "Database connection error".to_string(),
-                    message: "Failed to connect to database".to_string(),
-                    code: "DB_CONNECTION_ERROR".to_string(),
-                }),
-            ));
-        }
-    };
+    // Get database manager from state
+    let db_manager = &state.database_manager;
 
     // Execute the query with proper error handling
     match query_dev_events_internal(&db_manager, &params, start_time).await {
@@ -510,11 +529,74 @@ async fn query_dev_events_internal(
     })
 }
 
+/// Simplified row structure for HTML display
+#[derive(Debug, clickhouse::Row, serde::Deserialize)]
+pub struct RowSlim {
+    pub event_id: String,
+    pub tenant_id: String,
+    pub event_timestamp: u32,
+    pub source_ip: String,
+    pub source_type: String,
+    pub message: Option<String>,
+}
+
+/// HTML handler that renders events as an HTML table
+/// This provides a simple web interface to view events from dev.events table
+pub async fn events_html(State(state): State<Arc<AppState>>) -> Html<String> {
+    tracing::info!("events_html handler called!");
+    let (rows, error_msg) = match state.all_events(50).await {
+        Ok(events) => (events, None),
+        Err(e) => {
+            error!("Failed to query events for HTML display: {:?}", e);
+            (Vec::new(), Some(format!("Error: {}", e)))
+        }
+    };
+
+    let page: Markup = html! {
+        (maud::DOCTYPE)
+        html {
+            head { meta charset="utf-8"; title { "Event dump" } }
+            body {
+                h1 { "dev.events (latest 50)" }
+                @if let Some(ref error) = error_msg {
+                    div style="color: red; background: #ffe6e6; padding: 10px; margin: 10px 0; border: 1px solid red;" {
+                        strong { "Database Error: " } (error)
+                    }
+                }
+                @if rows.is_empty() && error_msg.is_none() {
+                    div style="color: orange; background: #fff3cd; padding: 10px; margin: 10px 0; border: 1px solid orange;" {
+                        "No events found in the database."
+                    }
+                }
+                table border="1" cellpadding="4" {
+                    tr {
+                        th { "time" } th { "tenant" } th { "src ip" } th { "type" } th { "message" }
+                    }
+                    @for r in &rows {
+                        tr {
+                            td { (DateTime::from_timestamp(r.event_timestamp as i64, 0).unwrap().naive_utc()) }
+                            td { (&r.tenant_id) }
+                            td { (&r.source_ip) }
+                            td { (&r.source_type) }
+                            td { (r.message.as_deref().unwrap_or("-")) }
+                        }
+                    }
+                }
+                p style="margin-top: 20px; color: #666;" {
+                    "Total events displayed: " (rows.len())
+                }
+            }
+        }
+    };
+
+    Html(page.into_string())
+}
+
 /// Create router for dev events endpoints
 ///
 /// This function creates an Axum router with the dev events endpoint.
 /// Mount this router at your desired path (e.g., "/api/v1").
-pub fn create_dev_events_router() -> Router {
+pub fn create_dev_events_router() -> Router<Arc<AppState>> {
     Router::new().route("/dev-events", get(get_dev_events))
 }
 

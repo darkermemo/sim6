@@ -1,10 +1,10 @@
 {
   "summary": {
-    "totalEndpoints": 54,
-    "totalUsages": 69,
-    "componentUsages": 21,
-    "hookUsages": 19,
-    "serviceUsages": 20
+    "totalEndpoints": 58,
+    "totalUsages": 80,
+    "componentUsages": 16,
+    "hookUsages": 20,
+    "serviceUsages": 26
   },
   "endpoints": {
     "/api/v1/agents/fleet": [
@@ -203,15 +203,15 @@
         "type": "component",
         "context": [
           {
-            "line": 47,
-            "context": "setLoading(true);\n      const token = localStorage.getItem('access_token');\n      const response = await fetch('/api/v1/tenants', {\n        headers: {\n          'Authorization': `Bearer ${token}`,"
+            "line": 48,
+            "context": "// TODO: Replace with typed API call when tenant API is implemented\n      const token = localStorage.getItem('access_token');\n      const response = await fetch('/api/v1/tenants', {\n        headers: {\n          'Authorization': `Bearer ${token}`,"
           },
           {
-            "line": 78,
+            "line": 79,
             "context": "};\n\n      const response = await fetch('/api/v1/tenants', {\n        method: 'POST',\n        headers: {"
           },
           {
-            "line": 109,
+            "line": 110,
             "context": "};\n\n      const response = await fetch(`/api/v1/tenants/${selectedTenant.tenant_id}`, {\n        method: 'PUT',\n        headers: {"
           }
         ]
@@ -243,156 +243,32 @@
         "type": "component",
         "context": [
           {
-            "line": 109,
+            "line": 110,
             "context": "};\n\n      const response = await fetch(`/api/v1/tenants/${selectedTenant.tenant_id}`, {\n        method: 'PUT',\n        headers: {"
-          }
-        ]
-      }
-    ],
-    "/api/v1/tenants/metrics?tenant_id=${selectedTenant}": [
-      {
-        "file": "siem_ui/src/components/TenantMetricsDashboard.tsx",
-        "type": "component",
-        "context": [
-          {
-            "line": 88,
-            "context": "// Fetch tenant metrics\n      const metricsUrl = selectedTenant \n        ? `/api/v1/tenants/metrics?tenant_id=${selectedTenant}`\n        : '/api/v1/tenants/metrics';"
-          }
-        ]
-      }
-    ],
-    "/api/v1/tenants/metrics": [
-      {
-        "file": "siem_ui/src/components/TenantMetricsDashboard.tsx",
-        "type": "component",
-        "context": [
-          {
-            "line": 61,
-            "context": "* \n * Backend endpoints:\n * - GET /api/v1/tenants/metrics - Tenant performance metrics\n * - GET /api/v1/stats/eps - Events per second statistics\n * - GET /api/v1/tenants/{id}/parsing-errors - Parsing error details"
-          },
-          {
-            "line": 88,
-            "context": "// Fetch tenant metrics\n      const metricsUrl = selectedTenant \n        ? `/api/v1/tenants/metrics?tenant_id=${selectedTenant}`\n        : '/api/v1/tenants/metrics';"
-          },
-          {
-            "line": 89,
-            "context": "const metricsUrl = selectedTenant \n        ? `/api/v1/tenants/metrics?tenant_id=${selectedTenant}`\n        : '/api/v1/tenants/metrics';\n      \n      const metricsResponse = await fetch(metricsUrl, {"
-          }
-        ]
-      }
-    ],
-    "/api/v1/stats/eps?tenant_id=${selectedTenant}&hours=24": [
-      {
-        "file": "siem_ui/src/components/TenantMetricsDashboard.tsx",
-        "type": "component",
-        "context": [
-          {
-            "line": 107,
-            "context": "// Fetch EPS stats\n      const epsUrl = selectedTenant \n        ? `/api/v1/stats/eps?tenant_id=${selectedTenant}&hours=24`\n        : '/api/v1/stats/eps?hours=24';"
-          }
-        ]
-      }
-    ],
-    "/api/v1/stats/eps?hours=24": [
-      {
-        "file": "siem_ui/src/components/TenantMetricsDashboard.tsx",
-        "type": "component",
-        "context": [
-          {
-            "line": 108,
-            "context": "const epsUrl = selectedTenant \n        ? `/api/v1/stats/eps?tenant_id=${selectedTenant}&hours=24`\n        : '/api/v1/stats/eps?hours=24';\n      \n      const epsResponse = await fetch(epsUrl, {"
-          }
-        ]
-      }
-    ],
-    "/api/v1/tenants/${selectedTenant}/parsing-errors": [
-      {
-        "file": "siem_ui/src/components/TenantMetricsDashboard.tsx",
-        "type": "component",
-        "context": [
-          {
-            "line": 124,
-            "context": "// Fetch parsing errors for selected tenant\n      if (selectedTenant) {\n        const errorsResponse = await fetch(`/api/v1/tenants/${selectedTenant}/parsing-errors`, {\n          headers: {\n            'Authorization': `Bearer ${token}`,"
-          }
-        ]
-      }
-    ],
-    "/api/v1/alerts/${alertId}": [
-      {
-        "file": "siem_ui/src/hooks/api/useAlertDetail.ts",
-        "type": "hook",
-        "context": [
-          {
-            "line": 51,
-            "context": "*/\nasync function fetchAlertDetail(alertId: string): Promise<AlertDetail> {\n  const response = await apiClient.get(`/api/v1/alerts/${alertId}`);\n  return response.data;\n}"
-          }
-        ]
-      },
-      {
-        "file": "siem_ui/src/hooks/useAlerts.ts",
-        "type": "hook",
-        "context": [
-          {
-            "line": 106,
-            "context": "setError(null);\n      \n      const response = await fetch(`/api/v1/alerts/${alertId}`, {\n        headers: getAuthHeaders(),\n      });"
-          },
-          {
-            "line": 125,
-            "context": "const updateStatus = async (status: string): Promise<boolean> => {\n    try {\n      const response = await fetch(`/api/v1/alerts/${alertId}/status`, {\n        method: 'PUT',\n        headers: getAuthHeaders(),"
-          },
-          {
-            "line": 145,
-            "context": "const updateAssignee = async (assigneeId: string | null): Promise<boolean> => {\n    try {\n      const response = await fetch(`/api/v1/alerts/${alertId}/assignee`, {\n        method: 'PUT',\n        headers: getAuthHeaders(),"
-          },
-          {
-            "line": 189,
-            "context": "setError(null);\n      \n      const response = await fetch(`/api/v1/alerts/${alertId}/notes`, {\n        headers: getAuthHeaders(),\n      });"
-          },
-          {
-            "line": 208,
-            "context": "const addNote = async (content: string): Promise<boolean> => {\n    try {\n      const response = await fetch(`/api/v1/alerts/${alertId}/notes`, {\n        method: 'POST',\n        headers: getAuthHeaders(),"
-          }
-        ]
-      }
-    ],
-    "/api/v1/alerts/${alertId}/notes": [
-      {
-        "file": "siem_ui/src/hooks/api/useAlertNotes.ts",
-        "type": "hook",
-        "context": [
-          {
-            "line": 86,
-            "context": "// Make API call\n      const response = await apiClient.post(\n        `/api/v1/alerts/${alertId}/notes`,\n        { content } as CreateAlertNoteRequest\n      );"
-          },
-          {
-            "line": 138,
-            "context": "*/\nasync function fetchAlertNotes(alertId: string): Promise<AlertNote[]> {\n  const response = await apiClient.get(`/api/v1/alerts/${alertId}/notes`);\n  \n  // Handle ClickHouse JSON format"
-          }
-        ]
-      },
-      {
-        "file": "siem_ui/src/hooks/useAlerts.ts",
-        "type": "hook",
-        "context": [
-          {
-            "line": 189,
-            "context": "setError(null);\n      \n      const response = await fetch(`/api/v1/alerts/${alertId}/notes`, {\n        headers: getAuthHeaders(),\n      });"
-          },
-          {
-            "line": 208,
-            "context": "const addNote = async (content: string): Promise<boolean> => {\n    try {\n      const response = await fetch(`/api/v1/alerts/${alertId}/notes`, {\n        method: 'POST',\n        headers: getAuthHeaders(),"
           }
         ]
       }
     ],
     "/api/v1/log_sources": [
       {
-        "file": "siem_ui/src/hooks/api/useLogSources.ts",
-        "type": "hook",
+        "file": "siem_ui/src/generated/api-types.ts",
+        "type": "other",
         "context": [
           {
-            "line": 23,
-            "context": "// Stabilize SWR key to prevent infinite re-renders\n  const key = useMemo(() => {\n    return filters ? [`/api/v1/log_sources`, JSON.stringify(filters)] : '/api/v1/log_sources';\n  }, [filters?.page, filters?.limit, filters?.search, filters?.source_type]);"
+            "line": 7,
+            "context": "export interface paths {\n    \"/api/v1/log_sources\": {\n        parameters: {\n            query?: never;"
+          },
+          {
+            "line": 33,
+            "context": "trace?: never;\n    };\n    \"/api/v1/log_sources/by_ip/{ip}\": {\n        parameters: {\n            query?: never;"
+          },
+          {
+            "line": 54,
+            "context": "trace?: never;\n    };\n    \"/api/v1/log_sources/cache\": {\n        parameters: {\n            query?: never;"
+          },
+          {
+            "line": 75,
+            "context": "trace?: never;\n    };\n    \"/api/v1/log_sources/{source_id}\": {\n        parameters: {\n            query?: never;"
           }
         ]
       },
@@ -459,19 +335,541 @@
             "context": "// POST /v1/log_sources/groups - Create log source group\n  createLogSourceGroup: async (data: import('@/types/api').CreateLogSourceGroupRequest): Promise<{ message: string; group_id: string }> => {\n    const response = await apiClient.post('/api/v1/log_sources/groups', data);\n    return response.data;\n  }"
           }
         ]
-      }
-    ],
-    "/api/v1/rules": [
+      },
       {
-        "file": "siem_ui/src/hooks/api/useRules.ts",
-        "type": "hook",
+        "file": "siem_ui/src/services/typedApi.ts",
+        "type": "service",
         "context": [
           {
-            "line": 18,
-            "context": "// Stabilize the SWR key to prevent infinite re-renders\n  const key = useMemo(() => {\n    return filters ? [`/api/v1/rules`, JSON.stringify(filters)] : '/api/v1/rules';\n  }, [\n    filters?.page,"
+            "line": 113,
+            "context": "*/\n  async list(): Promise<LogSourceListResponse> {\n    const response = await typedApiClient.get('/api/v1/log_sources');\n    return response.data;\n  },"
+          },
+          {
+            "line": 121,
+            "context": "*/\n  async create(data: CreateLogSourceRequest): Promise<CreateLogSourceResponse> {\n    const response = await typedApiClient.post('/api/v1/log_sources', data);\n    return response.data;\n  },"
+          },
+          {
+            "line": 129,
+            "context": "*/\n  async delete(sourceId: string): Promise<void> {\n    await typedApiClient.delete(`/api/v1/log_sources/${sourceId}`);\n  },"
+          },
+          {
+            "line": 136,
+            "context": "*/\n  async getByIp(ip: string): Promise<LogSourceLookupResponse> {\n    const response = await typedApiClient.get(`/api/v1/log_sources/by_ip/${ip}`);\n    return response.data;\n  },"
+          },
+          {
+            "line": 144,
+            "context": "*/\n  async getCache(): Promise<string[][]> {\n    const response = await typedApiClient.get('/api/v1/log_sources/cache');\n    return response.data;\n  },"
+          }
+        ]
+      }
+    ],
+    "/api/v1/log_sources/by_ip/{ip}": [
+      {
+        "file": "siem_ui/src/generated/api-types.ts",
+        "type": "other",
+        "context": [
+          {
+            "line": 33,
+            "context": "trace?: never;\n    };\n    \"/api/v1/log_sources/by_ip/{ip}\": {\n        parameters: {\n            query?: never;"
+          }
+        ]
+      }
+    ],
+    "/api/v1/log_sources/cache": [
+      {
+        "file": "siem_ui/src/generated/api-types.ts",
+        "type": "other",
+        "context": [
+          {
+            "line": 54,
+            "context": "trace?: never;\n    };\n    \"/api/v1/log_sources/cache\": {\n        parameters: {\n            query?: never;"
           }
         ]
       },
+      {
+        "file": "siem_ui/src/services/typedApi.ts",
+        "type": "service",
+        "context": [
+          {
+            "line": 144,
+            "context": "*/\n  async getCache(): Promise<string[][]> {\n    const response = await typedApiClient.get('/api/v1/log_sources/cache');\n    return response.data;\n  },"
+          }
+        ]
+      }
+    ],
+    "/api/v1/log_sources/{source_id}": [
+      {
+        "file": "siem_ui/src/generated/api-types.ts",
+        "type": "other",
+        "context": [
+          {
+            "line": 75,
+            "context": "trace?: never;\n    };\n    \"/api/v1/log_sources/{source_id}\": {\n        parameters: {\n            query?: never;"
+          }
+        ]
+      }
+    ],
+    "/api/v1/ueba/baselines": [
+      {
+        "file": "siem_ui/src/generated/api-types.ts",
+        "type": "other",
+        "context": [
+          {
+            "line": 96,
+            "context": "trace?: never;\n    };\n    \"/api/v1/ueba/baselines\": {\n        parameters: {\n            query?: never;"
+          },
+          {
+            "line": 114,
+            "context": "trace?: never;\n    };\n    \"/api/v1/ueba/baselines/entity/{entity_id}\": {\n        parameters: {\n            query?: never;"
+          }
+        ]
+      },
+      {
+        "file": "siem_ui/src/services/typedApi.ts",
+        "type": "service",
+        "context": [
+          {
+            "line": 157,
+            "context": "*/\n  async listBaselines(params?: PaginationParams): Promise<BaselinesListResponse> {\n    const response = await typedApiClient.get('/api/v1/ueba/baselines', { params });\n    return response.data;\n  },"
+          },
+          {
+            "line": 165,
+            "context": "*/\n  async createBaselines(data: CreateBaselinesRequest): Promise<void> {\n    await typedApiClient.post('/api/v1/ueba/baselines', data);\n  },"
+          },
+          {
+            "line": 172,
+            "context": "*/\n  async getEntityBaselines(entityId: string): Promise<EntityBaselinesResponse> {\n    const response = await typedApiClient.get(`/api/v1/ueba/baselines/entity/${entityId}`);\n    return response.data;\n  },"
+          }
+        ]
+      }
+    ],
+    "/api/v1/ueba/baselines/entity/{entity_id}": [
+      {
+        "file": "siem_ui/src/generated/api-types.ts",
+        "type": "other",
+        "context": [
+          {
+            "line": 114,
+            "context": "trace?: never;\n    };\n    \"/api/v1/ueba/baselines/entity/{entity_id}\": {\n        parameters: {\n            query?: never;"
+          }
+        ]
+      }
+    ],
+    "/api/v1/dashboard": [
+      {
+        "file": "siem_ui/src/hooks/api/__tests__/useDashboardV2.test.ts",
+        "type": "hook",
+        "context": [
+          {
+            "line": 30,
+            "context": "*/\nconst filters = { tenant_id: 'tenant-x' };\nconst swrKey = ['/api/v1/dashboard', filters, 'test-jwt'];\n\nconst successFallback = {"
+          },
+          {
+            "line": 146,
+            "context": "expect(result.current.error).toBeUndefined();\n      expect(mockFetch).toHaveBeenCalledWith(\n        '/api/v1/dashboard?tenant_id=tenant-x',\n        expect.objectContaining({\n          headers: expect.objectContaining({"
+          }
+        ]
+      },
+      {
+        "file": "siem_ui/src/hooks/api/useDashboardV2.ts",
+        "type": "hook",
+        "context": [
+          {
+            "line": 23,
+            "context": "/**\n * Fetcher function for the new /api/v1/dashboard endpoint\n * Validates response against DashboardV2ResponseSchema\n * Includes authentication headers for secure API access"
+          },
+          {
+            "line": 51,
+            "context": "const queryString = params.toString();\n  const url = `/api/v1/dashboard${queryString ? `?${queryString}` : ''}`;\n  \n  const headers = {"
+          },
+          {
+            "line": 140,
+            "context": "onError: (error) => {\n        // Use proper error handling\n        const apiError = isApiError(error) ? error : ErrorHandler.categorizeError(error, '/api/v1/dashboard');\n        ErrorHandler.logError(apiError, 'useDashboardV2');\n      },"
+          }
+        ]
+      },
+      {
+        "file": "siem_ui/src/mocks/handlers.ts",
+        "type": "other",
+        "context": [
+          {
+            "line": 150,
+            "context": "// Dashboard KPIs - using real data from backend\n  http.get('/api/v1/dashboard/kpis', () => {\n    return HttpResponse.json({\n      success: true,"
+          },
+          {
+            "line": 164,
+            "context": "// Dashboard endpoint - matches DashboardV2ResponseSchema\n  http.get('/api/v1/dashboard', () => {\n    return HttpResponse.json({\n      total_events: 125000,"
+          }
+        ]
+      },
+      {
+        "file": "siem_ui/src/services/api.ts",
+        "type": "service",
+        "context": [
+          {
+            "line": 151,
+            "context": "limit?: number;\n  }) => {\n    const response = await apiClient.get('/api/v1/dashboard', { params });\n    return response.data;\n  },"
+          }
+        ]
+      }
+    ],
+    "/api/v1/dashboard?tenant_id=tenant-x": [
+      {
+        "file": "siem_ui/src/hooks/api/__tests__/useDashboardV2.test.ts",
+        "type": "hook",
+        "context": [
+          {
+            "line": 146,
+            "context": "expect(result.current.error).toBeUndefined();\n      expect(mockFetch).toHaveBeenCalledWith(\n        '/api/v1/dashboard?tenant_id=tenant-x',\n        expect.objectContaining({\n          headers: expect.objectContaining({"
+          }
+        ]
+      }
+    ],
+    "/api/v1/events/search": [
+      {
+        "file": "siem_ui/src/hooks/api/useAlertDetail.ts",
+        "type": "hook",
+        "context": [
+          {
+            "line": 113,
+            "context": "/**\n * Fetch alert detail from events API and transform to AlertDetail\n * Uses the /api/v1/events/search endpoint to find event by ID\n */\nasync function fetchAlertDetail(alertId: string): Promise<AlertDetail> {"
+          },
+          {
+            "line": 119,
+            "context": "try {\n    const searchResponse = await fetch('/api/v1/events/search', {\n      method: 'POST',\n      headers: {"
+          }
+        ]
+      }
+    ],
+    "/api/v1/dashboard${queryString ? ": [
+      {
+        "file": "siem_ui/src/hooks/api/useDashboardV2.ts",
+        "type": "hook",
+        "context": [
+          {
+            "line": 51,
+            "context": "const queryString = params.toString();\n  const url = `/api/v1/dashboard${queryString ? `?${queryString}` : ''}`;\n  \n  const headers = {"
+          }
+        ]
+      },
+      {
+        "file": "siem_ui/src/hooks/useDashboard.ts",
+        "type": "hook",
+        "context": [
+          {
+            "line": 24,
+            "context": "const queryString = params.toString();\n      const url = `/api/v1/dashboard${queryString ? `?${queryString}` : ''}`;\n      \n      const response = await apiClient.get<DashboardResponse>(url);"
+          }
+        ]
+      }
+    ],
+    "/api/v1/alerts/${alertId}": [
+      {
+        "file": "siem_ui/src/hooks/api/useUpdateAlertStatus.ts",
+        "type": "hook",
+        "context": [
+          {
+            "line": 53,
+            "context": "// Make API call - using correct endpoint from backend\n      const response = await apiClient.patch(`/api/v1/alerts/${alertId}`, {\n        status: newStatus\n      });"
+          },
+          {
+            "line": 135,
+            "context": "try {\n          await apiClient.patch(`/api/v1/alerts/${alertId}/status`, { status });\n          results.push({ alertId, success: true });\n        } catch (error) {"
+          }
+        ]
+      },
+      {
+        "file": "siem_ui/src/hooks/useAlerts.ts",
+        "type": "hook",
+        "context": [
+          {
+            "line": 139,
+            "context": "setError(null);\n      \n      const response = await fetch(`/api/v1/alerts/${alertId}`, {\n        headers: getAuthHeaders(),\n      });"
+          },
+          {
+            "line": 158,
+            "context": "const updateStatus = async (status: string): Promise<boolean> => {\n    try {\n      const response = await fetch(`/api/v1/alerts/${alertId}/status`, {\n        method: 'PUT',\n        headers: getAuthHeaders(),"
+          },
+          {
+            "line": 178,
+            "context": "const updateAssignee = async (assigneeId: string | null): Promise<boolean> => {\n    try {\n      const response = await fetch(`/api/v1/alerts/${alertId}/assignee`, {\n        method: 'PUT',\n        headers: getAuthHeaders(),"
+          },
+          {
+            "line": 222,
+            "context": "setError(null);\n      \n      const response = await fetch(`/api/v1/alerts/${alertId}/notes`, {\n        headers: getAuthHeaders(),\n      });"
+          },
+          {
+            "line": 241,
+            "context": "const addNote = async (content: string): Promise<boolean> => {\n    try {\n      const response = await fetch(`/api/v1/alerts/${alertId}/notes`, {\n        method: 'POST',\n        headers: getAuthHeaders(),"
+          }
+        ]
+      }
+    ],
+    "/api/v1/alerts/${alertId}/status": [
+      {
+        "file": "siem_ui/src/hooks/api/useUpdateAlertStatus.ts",
+        "type": "hook",
+        "context": [
+          {
+            "line": 135,
+            "context": "try {\n          await apiClient.patch(`/api/v1/alerts/${alertId}/status`, { status });\n          results.push({ alertId, success: true });\n        } catch (error) {"
+          }
+        ]
+      },
+      {
+        "file": "siem_ui/src/hooks/useAlerts.ts",
+        "type": "hook",
+        "context": [
+          {
+            "line": 158,
+            "context": "const updateStatus = async (status: string): Promise<boolean> => {\n    try {\n      const response = await fetch(`/api/v1/alerts/${alertId}/status`, {\n        method: 'PUT',\n        headers: getAuthHeaders(),"
+          }
+        ]
+      },
+      {
+        "file": "siem_ui/src/services/api.ts",
+        "type": "service",
+        "context": [
+          {
+            "line": 177,
+            "context": "*/\n  updateStatus: async (alertId: string, status: string) => {\n    const response = await apiClient.post(`/api/v1/alerts/${alertId}/status`, {\n      status,\n    });"
+          }
+        ]
+      }
+    ],
+    "/api/v1/users": [
+      {
+        "file": "siem_ui/src/hooks/useAdmin.ts",
+        "type": "hook",
+        "context": [
+          {
+            "line": 50,
+            "context": "setError(null);\n      \n      const response = await fetch('/api/v1/users', {\n        headers: getAuthHeaders(),\n      });"
+          },
+          {
+            "line": 71,
+            "context": "setError(null);\n      \n      const response = await fetch('/api/v1/users', {\n        method: 'POST',\n        headers: getAuthHeaders(),"
+          },
+          {
+            "line": 95,
+            "context": "setError(null);\n      \n      const response = await fetch(`/api/v1/users/${userId}/roles`, {\n        method: 'POST',\n        headers: getAuthHeaders(),"
+          },
+          {
+            "line": 138,
+            "context": "setError(null);\n      \n      const response = await fetch(`/api/v1/users/${userId}`, {\n        headers: getAuthHeaders(),\n      });"
+          },
+          {
+            "line": 215,
+            "context": "const getUserDetails = async (userId: string): Promise<UserResponse | null> => {\n    try {\n      const response = await fetch(`/api/v1/users/${userId}`, {\n        headers: getAuthHeaders(),\n      });"
+          },
+          {
+            "line": 231,
+            "context": "const assignRole = async (userId: string, roleData: AssignRoleRequest): Promise<boolean> => {\n    try {\n      const response = await fetch(`/api/v1/users/${userId}/roles`, {\n        method: 'POST',\n        headers: getAuthHeaders(),"
+          }
+        ]
+      }
+    ],
+    "/api/v1/users/${userId}/roles": [
+      {
+        "file": "siem_ui/src/hooks/useAdmin.ts",
+        "type": "hook",
+        "context": [
+          {
+            "line": 95,
+            "context": "setError(null);\n      \n      const response = await fetch(`/api/v1/users/${userId}/roles`, {\n        method: 'POST',\n        headers: getAuthHeaders(),"
+          },
+          {
+            "line": 231,
+            "context": "const assignRole = async (userId: string, roleData: AssignRoleRequest): Promise<boolean> => {\n    try {\n      const response = await fetch(`/api/v1/users/${userId}/roles`, {\n        method: 'POST',\n        headers: getAuthHeaders(),"
+          }
+        ]
+      }
+    ],
+    "/api/v1/users/${userId}": [
+      {
+        "file": "siem_ui/src/hooks/useAdmin.ts",
+        "type": "hook",
+        "context": [
+          {
+            "line": 95,
+            "context": "setError(null);\n      \n      const response = await fetch(`/api/v1/users/${userId}/roles`, {\n        method: 'POST',\n        headers: getAuthHeaders(),"
+          },
+          {
+            "line": 138,
+            "context": "setError(null);\n      \n      const response = await fetch(`/api/v1/users/${userId}`, {\n        headers: getAuthHeaders(),\n      });"
+          },
+          {
+            "line": 215,
+            "context": "const getUserDetails = async (userId: string): Promise<UserResponse | null> => {\n    try {\n      const response = await fetch(`/api/v1/users/${userId}`, {\n        headers: getAuthHeaders(),\n      });"
+          },
+          {
+            "line": 231,
+            "context": "const assignRole = async (userId: string, roleData: AssignRoleRequest): Promise<boolean> => {\n    try {\n      const response = await fetch(`/api/v1/users/${userId}/roles`, {\n        method: 'POST',\n        headers: getAuthHeaders(),"
+          }
+        ]
+      }
+    ],
+    "/api/v1/roles": [
+      {
+        "file": "siem_ui/src/hooks/useAdmin.ts",
+        "type": "hook",
+        "context": [
+          {
+            "line": 179,
+            "context": "setError(null);\n      \n      const response = await fetch('/api/v1/roles', {\n        headers: getAuthHeaders(),\n      });"
+          }
+        ]
+      }
+    ],
+    "/api/v1/events": [
+      {
+        "file": "siem_ui/src/hooks/useAlerts.ts",
+        "type": "hook",
+        "context": [
+          {
+            "line": 54,
+            "context": "// Fetch events from the events endpoint instead of alerts\n      const response = await fetch('/api/v1/events', {\n        headers: getAuthHeaders(),\n      });"
+          }
+        ]
+      },
+      {
+        "file": "siem_ui/src/mocks/handlers.ts",
+        "type": "other",
+        "context": [
+          {
+            "line": 200,
+            "context": "// Events endpoint\n  http.get('/api/v1/events', () => {\n    return HttpResponse.json({\n      events: ["
+          }
+        ]
+      }
+    ],
+    "/api/v1/alerts/${alertId}/assignee": [
+      {
+        "file": "siem_ui/src/hooks/useAlerts.ts",
+        "type": "hook",
+        "context": [
+          {
+            "line": 178,
+            "context": "const updateAssignee = async (assigneeId: string | null): Promise<boolean> => {\n    try {\n      const response = await fetch(`/api/v1/alerts/${alertId}/assignee`, {\n        method: 'PUT',\n        headers: getAuthHeaders(),"
+          }
+        ]
+      }
+    ],
+    "/api/v1/alerts/${alertId}/notes": [
+      {
+        "file": "siem_ui/src/hooks/useAlerts.ts",
+        "type": "hook",
+        "context": [
+          {
+            "line": 222,
+            "context": "setError(null);\n      \n      const response = await fetch(`/api/v1/alerts/${alertId}/notes`, {\n        headers: getAuthHeaders(),\n      });"
+          },
+          {
+            "line": 241,
+            "context": "const addNote = async (content: string): Promise<boolean> => {\n    try {\n      const response = await fetch(`/api/v1/alerts/${alertId}/notes`, {\n        method: 'POST',\n        headers: getAuthHeaders(),"
+          }
+        ]
+      }
+    ],
+    "/api/v1/cases": [
+      {
+        "file": "siem_ui/src/hooks/useCases.ts",
+        "type": "hook",
+        "context": [
+          {
+            "line": 44,
+            "context": "setError(null);\n      \n      const response = await fetch('/api/v1/cases', {\n        headers: getAuthHeaders(),\n      });"
+          },
+          {
+            "line": 66,
+            "context": "setError(null);\n      \n      const response = await fetch('/api/v1/cases', {\n        method: 'POST',\n        headers: getAuthHeaders(),"
+          },
+          {
+            "line": 109,
+            "context": "setError(null);\n      \n      const response = await fetch(`/api/v1/cases/${caseId}`, {\n        headers: getAuthHeaders(),\n      });"
+          },
+          {
+            "line": 128,
+            "context": "const updateCase = async (updates: UpdateCaseRequest): Promise<boolean> => {\n    try {\n      const response = await fetch(`/api/v1/cases/${caseId}`, {\n        method: 'PUT',\n        headers: getAuthHeaders(),"
+          }
+        ]
+      }
+    ],
+    "/api/v1/cases/${caseId}": [
+      {
+        "file": "siem_ui/src/hooks/useCases.ts",
+        "type": "hook",
+        "context": [
+          {
+            "line": 109,
+            "context": "setError(null);\n      \n      const response = await fetch(`/api/v1/cases/${caseId}`, {\n        headers: getAuthHeaders(),\n      });"
+          },
+          {
+            "line": 128,
+            "context": "const updateCase = async (updates: UpdateCaseRequest): Promise<boolean> => {\n    try {\n      const response = await fetch(`/api/v1/cases/${caseId}`, {\n        method: 'PUT',\n        headers: getAuthHeaders(),"
+          }
+        ]
+      }
+    ],
+    "/api/v1/auth/login": [
+      {
+        "file": "siem_ui/src/mocks/handlers.ts",
+        "type": "other",
+        "context": [
+          {
+            "line": 76,
+            "context": "export const handlers = [\n  // Authentication endpoints\n  http.post('/api/v1/auth/login', () => {\n    return HttpResponse.json({\n      success: true,"
+          }
+        ]
+      },
+      {
+        "file": "siem_ui/src/services/api.ts",
+        "type": "service",
+        "context": [
+          {
+            "line": 114,
+            "context": "*/\n  login: async (credentials: { email: string; password: string }) => {\n    const response = await apiClient.post('/api/v1/auth/login', credentials);\n    return response.data;\n  },"
+          }
+        ]
+      }
+    ],
+    "/api/v1/health": [
+      {
+        "file": "siem_ui/src/mocks/handlers.ts",
+        "type": "other",
+        "context": [
+          {
+            "line": 92,
+            "context": "// Health check\n  http.get('/api/v1/health', () => {\n    return HttpResponse.json({ status: 'healthy', timestamp: new Date().toISOString() });\n  }),"
+          }
+        ]
+      }
+    ],
+    "/api/v1/alerts": [
+      {
+        "file": "siem_ui/src/mocks/handlers.ts",
+        "type": "other",
+        "context": [
+          {
+            "line": 121,
+            "context": "// Alerts\n  http.get('/api/v1/alerts', () => {\n    return HttpResponse.json({ success: true, data: mockAlerts });\n  }),"
+          }
+        ]
+      }
+    ],
+    "/api/v1/metrics": [
+      {
+        "file": "siem_ui/src/mocks/handlers.ts",
+        "type": "other",
+        "context": [
+          {
+            "line": 126,
+            "context": "// Metrics\n  http.get('/api/v1/metrics', () => {\n    return HttpResponse.json({ success: true, data: mockMetrics });\n  }),"
+          }
+        ]
+      }
+    ],
+    "/api/v1/rules": [
       {
         "file": "siem_ui/src/mocks/handlers.ts",
         "type": "other",
@@ -525,282 +923,6 @@
         ]
       }
     ],
-    "/api/v1/alerts/${alertId}/status": [
-      {
-        "file": "siem_ui/src/hooks/api/useUpdateAlertStatus.ts",
-        "type": "hook",
-        "context": [
-          {
-            "line": 53,
-            "context": "// Make API call\n      const response = await apiClient.patch(`/api/v1/alerts/${alertId}/status`, {\n        status: newStatus\n      });"
-          },
-          {
-            "line": 135,
-            "context": "try {\n          await apiClient.patch(`/api/v1/alerts/${alertId}/status`, { status });\n          results.push({ alertId, success: true });\n        } catch (error) {"
-          }
-        ]
-      },
-      {
-        "file": "siem_ui/src/hooks/useAlerts.ts",
-        "type": "hook",
-        "context": [
-          {
-            "line": 125,
-            "context": "const updateStatus = async (status: string): Promise<boolean> => {\n    try {\n      const response = await fetch(`/api/v1/alerts/${alertId}/status`, {\n        method: 'PUT',\n        headers: getAuthHeaders(),"
-          }
-        ]
-      },
-      {
-        "file": "siem_ui/src/services/api.ts",
-        "type": "service",
-        "context": [
-          {
-            "line": 177,
-            "context": "*/\n  updateStatus: async (alertId: string, status: string) => {\n    const response = await apiClient.post(`/api/v1/alerts/${alertId}/status`, {\n      status,\n    });"
-          }
-        ]
-      }
-    ],
-    "/api/v1/users": [
-      {
-        "file": "siem_ui/src/hooks/useAdmin.ts",
-        "type": "hook",
-        "context": [
-          {
-            "line": 50,
-            "context": "setError(null);\n      \n      const response = await fetch('/api/v1/users', {\n        headers: getAuthHeaders(),\n      });"
-          },
-          {
-            "line": 71,
-            "context": "setError(null);\n      \n      const response = await fetch('/api/v1/users', {\n        method: 'POST',\n        headers: getAuthHeaders(),"
-          },
-          {
-            "line": 95,
-            "context": "setError(null);\n      \n      const response = await fetch(`/api/v1/users/${userId}/roles`, {\n        method: 'POST',\n        headers: getAuthHeaders(),"
-          },
-          {
-            "line": 138,
-            "context": "setError(null);\n      \n      const response = await fetch(`/api/v1/users/${userId}`, {\n        headers: getAuthHeaders(),\n      });"
-          },
-          {
-            "line": 215,
-            "context": "const getUserDetails = async (userId: string): Promise<UserResponse | null> => {\n    try {\n      const response = await fetch(`/api/v1/users/${userId}`, {\n        headers: getAuthHeaders(),\n      });"
-          },
-          {
-            "line": 231,
-            "context": "const assignRole = async (data: AssignRoleRequest): Promise<boolean> => {\n    try {\n      const response = await fetch(`/api/v1/users/${data.user_id}/roles`, {\n        method: 'POST',\n        headers: getAuthHeaders(),"
-          }
-        ]
-      }
-    ],
-    "/api/v1/users/${userId}/roles": [
-      {
-        "file": "siem_ui/src/hooks/useAdmin.ts",
-        "type": "hook",
-        "context": [
-          {
-            "line": 95,
-            "context": "setError(null);\n      \n      const response = await fetch(`/api/v1/users/${userId}/roles`, {\n        method: 'POST',\n        headers: getAuthHeaders(),"
-          }
-        ]
-      }
-    ],
-    "/api/v1/users/${userId}": [
-      {
-        "file": "siem_ui/src/hooks/useAdmin.ts",
-        "type": "hook",
-        "context": [
-          {
-            "line": 95,
-            "context": "setError(null);\n      \n      const response = await fetch(`/api/v1/users/${userId}/roles`, {\n        method: 'POST',\n        headers: getAuthHeaders(),"
-          },
-          {
-            "line": 138,
-            "context": "setError(null);\n      \n      const response = await fetch(`/api/v1/users/${userId}`, {\n        headers: getAuthHeaders(),\n      });"
-          },
-          {
-            "line": 215,
-            "context": "const getUserDetails = async (userId: string): Promise<UserResponse | null> => {\n    try {\n      const response = await fetch(`/api/v1/users/${userId}`, {\n        headers: getAuthHeaders(),\n      });"
-          }
-        ]
-      }
-    ],
-    "/api/v1/roles": [
-      {
-        "file": "siem_ui/src/hooks/useAdmin.ts",
-        "type": "hook",
-        "context": [
-          {
-            "line": 179,
-            "context": "setError(null);\n      \n      const response = await fetch('/api/v1/roles', {\n        headers: getAuthHeaders(),\n      });"
-          }
-        ]
-      }
-    ],
-    "/api/v1/users/${data.user_id}/roles": [
-      {
-        "file": "siem_ui/src/hooks/useAdmin.ts",
-        "type": "hook",
-        "context": [
-          {
-            "line": 231,
-            "context": "const assignRole = async (data: AssignRoleRequest): Promise<boolean> => {\n    try {\n      const response = await fetch(`/api/v1/users/${data.user_id}/roles`, {\n        method: 'POST',\n        headers: getAuthHeaders(),"
-          }
-        ]
-      }
-    ],
-    "/api/v1/alerts": [
-      {
-        "file": "siem_ui/src/hooks/useAlerts.ts",
-        "type": "hook",
-        "context": [
-          {
-            "line": 53,
-            "context": "setError(null);\n      \n      const response = await fetch('/api/v1/alerts', {\n        headers: getAuthHeaders(),\n      });"
-          },
-          {
-            "line": 106,
-            "context": "setError(null);\n      \n      const response = await fetch(`/api/v1/alerts/${alertId}`, {\n        headers: getAuthHeaders(),\n      });"
-          },
-          {
-            "line": 125,
-            "context": "const updateStatus = async (status: string): Promise<boolean> => {\n    try {\n      const response = await fetch(`/api/v1/alerts/${alertId}/status`, {\n        method: 'PUT',\n        headers: getAuthHeaders(),"
-          },
-          {
-            "line": 145,
-            "context": "const updateAssignee = async (assigneeId: string | null): Promise<boolean> => {\n    try {\n      const response = await fetch(`/api/v1/alerts/${alertId}/assignee`, {\n        method: 'PUT',\n        headers: getAuthHeaders(),"
-          },
-          {
-            "line": 189,
-            "context": "setError(null);\n      \n      const response = await fetch(`/api/v1/alerts/${alertId}/notes`, {\n        headers: getAuthHeaders(),\n      });"
-          },
-          {
-            "line": 208,
-            "context": "const addNote = async (content: string): Promise<boolean> => {\n    try {\n      const response = await fetch(`/api/v1/alerts/${alertId}/notes`, {\n        method: 'POST',\n        headers: getAuthHeaders(),"
-          }
-        ]
-      },
-      {
-        "file": "siem_ui/src/mocks/handlers.ts",
-        "type": "other",
-        "context": [
-          {
-            "line": 121,
-            "context": "// Alerts\n  http.get('/api/v1/alerts', () => {\n    return HttpResponse.json({ success: true, data: mockAlerts });\n  }),"
-          }
-        ]
-      }
-    ],
-    "/api/v1/alerts/${alertId}/assignee": [
-      {
-        "file": "siem_ui/src/hooks/useAlerts.ts",
-        "type": "hook",
-        "context": [
-          {
-            "line": 145,
-            "context": "const updateAssignee = async (assigneeId: string | null): Promise<boolean> => {\n    try {\n      const response = await fetch(`/api/v1/alerts/${alertId}/assignee`, {\n        method: 'PUT',\n        headers: getAuthHeaders(),"
-          }
-        ]
-      }
-    ],
-    "/api/v1/cases": [
-      {
-        "file": "siem_ui/src/hooks/useCases.ts",
-        "type": "hook",
-        "context": [
-          {
-            "line": 44,
-            "context": "setError(null);\n      \n      const response = await fetch('/api/v1/cases', {\n        headers: getAuthHeaders(),\n      });"
-          },
-          {
-            "line": 66,
-            "context": "setError(null);\n      \n      const response = await fetch('/api/v1/cases', {\n        method: 'POST',\n        headers: getAuthHeaders(),"
-          },
-          {
-            "line": 109,
-            "context": "setError(null);\n      \n      const response = await fetch(`/api/v1/cases/${caseId}`, {\n        headers: getAuthHeaders(),\n      });"
-          },
-          {
-            "line": 128,
-            "context": "const updateCase = async (updates: UpdateCaseRequest): Promise<boolean> => {\n    try {\n      const response = await fetch(`/api/v1/cases/${caseId}`, {\n        method: 'PUT',\n        headers: getAuthHeaders(),"
-          }
-        ]
-      }
-    ],
-    "/api/v1/cases/${caseId}": [
-      {
-        "file": "siem_ui/src/hooks/useCases.ts",
-        "type": "hook",
-        "context": [
-          {
-            "line": 109,
-            "context": "setError(null);\n      \n      const response = await fetch(`/api/v1/cases/${caseId}`, {\n        headers: getAuthHeaders(),\n      });"
-          },
-          {
-            "line": 128,
-            "context": "const updateCase = async (updates: UpdateCaseRequest): Promise<boolean> => {\n    try {\n      const response = await fetch(`/api/v1/cases/${caseId}`, {\n        method: 'PUT',\n        headers: getAuthHeaders(),"
-          }
-        ]
-      }
-    ],
-    "/api/v1/dashboard${queryString ? ": [
-      {
-        "file": "siem_ui/src/hooks/useDashboard.ts",
-        "type": "hook",
-        "context": [
-          {
-            "line": 24,
-            "context": "const queryString = params.toString();\n      const url = `/api/v1/dashboard${queryString ? `?${queryString}` : ''}`;\n      \n      const response = await apiClient.get<DashboardResponse>(url);"
-          }
-        ]
-      }
-    ],
-    "/api/v1/auth/login": [
-      {
-        "file": "siem_ui/src/mocks/handlers.ts",
-        "type": "other",
-        "context": [
-          {
-            "line": 76,
-            "context": "export const handlers = [\n  // Authentication endpoints\n  http.post('/api/v1/auth/login', () => {\n    return HttpResponse.json({\n      success: true,"
-          }
-        ]
-      },
-      {
-        "file": "siem_ui/src/services/api.ts",
-        "type": "service",
-        "context": [
-          {
-            "line": 114,
-            "context": "*/\n  login: async (credentials: { email: string; password: string }) => {\n    const response = await apiClient.post('/api/v1/auth/login', credentials);\n    return response.data;\n  },"
-          }
-        ]
-      }
-    ],
-    "/api/v1/health": [
-      {
-        "file": "siem_ui/src/mocks/handlers.ts",
-        "type": "other",
-        "context": [
-          {
-            "line": 92,
-            "context": "// Health check\n  http.get('/api/v1/health', () => {\n    return HttpResponse.json({ status: 'healthy', timestamp: new Date().toISOString() });\n  }),"
-          }
-        ]
-      }
-    ],
-    "/api/v1/metrics": [
-      {
-        "file": "siem_ui/src/mocks/handlers.ts",
-        "type": "other",
-        "context": [
-          {
-            "line": 126,
-            "context": "// Metrics\n  http.get('/api/v1/metrics', () => {\n    return HttpResponse.json({ success: true, data: mockMetrics });\n  }),"
-          }
-        ]
-      }
-    ],
     "/api/v1/dashboard/kpis": [
       {
         "file": "siem_ui/src/mocks/handlers.ts",
@@ -808,7 +930,19 @@
         "context": [
           {
             "line": 150,
-            "context": "// Dashboard KPIs\n  http.get('/api/v1/dashboard/kpis', () => {\n    return HttpResponse.json({\n      success: true,"
+            "context": "// Dashboard KPIs - using real data from backend\n  http.get('/api/v1/dashboard/kpis', () => {\n    return HttpResponse.json({\n      success: true,"
+          }
+        ]
+      }
+    ],
+    "/api/v1/search": [
+      {
+        "file": "siem_ui/src/mocks/handlers.ts",
+        "type": "other",
+        "context": [
+          {
+            "line": 220,
+            "context": "// Search endpoint\n  http.post('/api/v1/search', () => {\n    return HttpResponse.json({\n      results: [],"
           }
         ]
       }
@@ -819,7 +953,7 @@
         "type": "other",
         "context": [
           {
-            "line": 164,
+            "line": 230,
             "context": "// Error simulation for testing error handling\n  http.get('/api/v1/simulate-error', () => {\n    return HttpResponse.json({ success: false, error: 'Simulated server error' }, { status: 500 });\n  }),"
           }
         ]
@@ -832,7 +966,7 @@
         "context": [
           {
             "line": 62,
-            "context": "// Use vanilla axios to prevent infinite interceptor loops\n          const response = await axios.post(\n            `${import.meta.env.VITE_API_BASE || 'http://localhost:8080'}/api/v1/auth/refresh`,\n            { refresh_token: refreshToken },\n            {"
+            "context": "// Use vanilla axios to prevent infinite interceptor loops\n          const response = await axios.post(\n            `${import.meta.env.VITE_API_BASE || 'http://localhost:8084'}/api/v1/auth/refresh`,\n            { refresh_token: refreshToken },\n            {"
           },
           {
             "line": 122,
@@ -849,18 +983,6 @@
           {
             "line": 132,
             "context": "*/\n  logout: async () => {\n    const response = await apiClient.post('/api/v1/auth/logout');\n    return response.data;\n  },"
-          }
-        ]
-      }
-    ],
-    "/api/v1/dashboard": [
-      {
-        "file": "siem_ui/src/services/api.ts",
-        "type": "service",
-        "context": [
-          {
-            "line": 151,
-            "context": "limit?: number;\n  }) => {\n    const response = await apiClient.get('/api/v1/dashboard', { params });\n    return response.data;\n  },"
           }
         ]
       }
@@ -967,6 +1089,16 @@
             "context": "// DELETE /v1/log_sources/{source_id} - Delete enhanced log source\n  deleteEnhancedLogSource: async (sourceId: string): Promise<{ message: string }> => {\n    const response = await apiClient.delete(`/api/v1/log_sources/${sourceId}`);\n    return response.data;\n  },"
           }
         ]
+      },
+      {
+        "file": "siem_ui/src/services/typedApi.ts",
+        "type": "service",
+        "context": [
+          {
+            "line": 129,
+            "context": "*/\n  async delete(sourceId: string): Promise<void> {\n    await typedApiClient.delete(`/api/v1/log_sources/${sourceId}`);\n  },"
+          }
+        ]
       }
     ],
     "/api/v1/log_sources/by_ip/${ip}": [
@@ -977,6 +1109,16 @@
           {
             "line": 292,
             "context": "// GET /v1/log_sources/by_ip/{ip} - Internal lookup by IP\n  getLogSourceByIp: async (ip: string): Promise<LogSourceLookupResponse> => {\n    const response = await apiClient.get<LogSourceLookupResponse>(`/api/v1/log_sources/by_ip/${ip}`);\n    return response.data;\n  }"
+          }
+        ]
+      },
+      {
+        "file": "siem_ui/src/services/typedApi.ts",
+        "type": "service",
+        "context": [
+          {
+            "line": 136,
+            "context": "*/\n  async getByIp(ip: string): Promise<LogSourceLookupResponse> {\n    const response = await typedApiClient.get(`/api/v1/log_sources/by_ip/${ip}`);\n    return response.data;\n  },"
           }
         ]
       }
@@ -1045,6 +1187,18 @@
           {
             "line": 36,
             "context": "}\n    \n    const response = await apiClient.get(`/api/v1/fields/values/multiple?${params.toString()}`);\n    return response.data;\n  },"
+          }
+        ]
+      }
+    ],
+    "/api/v1/ueba/baselines/entity/${entityId}": [
+      {
+        "file": "siem_ui/src/services/typedApi.ts",
+        "type": "service",
+        "context": [
+          {
+            "line": 172,
+            "context": "*/\n  async getEntityBaselines(entityId: string): Promise<EntityBaselinesResponse> {\n    const response = await typedApiClient.get(`/api/v1/ueba/baselines/entity/${entityId}`);\n    return response.data;\n  },"
           }
         ]
       }
@@ -1248,15 +1402,15 @@
           "type": "component",
           "context": [
             {
-              "line": 47,
-              "context": "setLoading(true);\n      const token = localStorage.getItem('access_token');\n      const response = await fetch('/api/v1/tenants', {\n        headers: {\n          'Authorization': `Bearer ${token}`,"
+              "line": 48,
+              "context": "// TODO: Replace with typed API call when tenant API is implemented\n      const token = localStorage.getItem('access_token');\n      const response = await fetch('/api/v1/tenants', {\n        headers: {\n          'Authorization': `Bearer ${token}`,"
             },
             {
-              "line": 78,
+              "line": 79,
               "context": "};\n\n      const response = await fetch('/api/v1/tenants', {\n        method: 'POST',\n        headers: {"
             },
             {
-              "line": 109,
+              "line": 110,
               "context": "};\n\n      const response = await fetch(`/api/v1/tenants/${selectedTenant.tenant_id}`, {\n        method: 'PUT',\n        headers: {"
             }
           ]
@@ -1268,182 +1422,106 @@
           "type": "component",
           "context": [
             {
-              "line": 109,
+              "line": 110,
               "context": "};\n\n      const response = await fetch(`/api/v1/tenants/${selectedTenant.tenant_id}`, {\n        method: 'PUT',\n        headers: {"
-            }
-          ]
-        }
-      ],
-      "/api/v1/tenants/metrics?tenant_id=${selectedTenant}": [
-        {
-          "file": "siem_ui/src/components/TenantMetricsDashboard.tsx",
-          "type": "component",
-          "context": [
-            {
-              "line": 88,
-              "context": "// Fetch tenant metrics\n      const metricsUrl = selectedTenant \n        ? `/api/v1/tenants/metrics?tenant_id=${selectedTenant}`\n        : '/api/v1/tenants/metrics';"
-            }
-          ]
-        }
-      ],
-      "/api/v1/tenants/metrics": [
-        {
-          "file": "siem_ui/src/components/TenantMetricsDashboard.tsx",
-          "type": "component",
-          "context": [
-            {
-              "line": 61,
-              "context": "* \n * Backend endpoints:\n * - GET /api/v1/tenants/metrics - Tenant performance metrics\n * - GET /api/v1/stats/eps - Events per second statistics\n * - GET /api/v1/tenants/{id}/parsing-errors - Parsing error details"
-            },
-            {
-              "line": 88,
-              "context": "// Fetch tenant metrics\n      const metricsUrl = selectedTenant \n        ? `/api/v1/tenants/metrics?tenant_id=${selectedTenant}`\n        : '/api/v1/tenants/metrics';"
-            },
-            {
-              "line": 89,
-              "context": "const metricsUrl = selectedTenant \n        ? `/api/v1/tenants/metrics?tenant_id=${selectedTenant}`\n        : '/api/v1/tenants/metrics';\n      \n      const metricsResponse = await fetch(metricsUrl, {"
-            }
-          ]
-        }
-      ],
-      "/api/v1/stats/eps?tenant_id=${selectedTenant}&hours=24": [
-        {
-          "file": "siem_ui/src/components/TenantMetricsDashboard.tsx",
-          "type": "component",
-          "context": [
-            {
-              "line": 107,
-              "context": "// Fetch EPS stats\n      const epsUrl = selectedTenant \n        ? `/api/v1/stats/eps?tenant_id=${selectedTenant}&hours=24`\n        : '/api/v1/stats/eps?hours=24';"
-            }
-          ]
-        }
-      ],
-      "/api/v1/stats/eps?hours=24": [
-        {
-          "file": "siem_ui/src/components/TenantMetricsDashboard.tsx",
-          "type": "component",
-          "context": [
-            {
-              "line": 108,
-              "context": "const epsUrl = selectedTenant \n        ? `/api/v1/stats/eps?tenant_id=${selectedTenant}&hours=24`\n        : '/api/v1/stats/eps?hours=24';\n      \n      const epsResponse = await fetch(epsUrl, {"
-            }
-          ]
-        }
-      ],
-      "/api/v1/tenants/${selectedTenant}/parsing-errors": [
-        {
-          "file": "siem_ui/src/components/TenantMetricsDashboard.tsx",
-          "type": "component",
-          "context": [
-            {
-              "line": 124,
-              "context": "// Fetch parsing errors for selected tenant\n      if (selectedTenant) {\n        const errorsResponse = await fetch(`/api/v1/tenants/${selectedTenant}/parsing-errors`, {\n          headers: {\n            'Authorization': `Bearer ${token}`,"
             }
           ]
         }
       ]
     },
     "hooks": {
-      "/api/v1/alerts/${alertId}": [
+      "/api/v1/dashboard": [
+        {
+          "file": "siem_ui/src/hooks/api/__tests__/useDashboardV2.test.ts",
+          "type": "hook",
+          "context": [
+            {
+              "line": 30,
+              "context": "*/\nconst filters = { tenant_id: 'tenant-x' };\nconst swrKey = ['/api/v1/dashboard', filters, 'test-jwt'];\n\nconst successFallback = {"
+            },
+            {
+              "line": 146,
+              "context": "expect(result.current.error).toBeUndefined();\n      expect(mockFetch).toHaveBeenCalledWith(\n        '/api/v1/dashboard?tenant_id=tenant-x',\n        expect.objectContaining({\n          headers: expect.objectContaining({"
+            }
+          ]
+        },
+        {
+          "file": "siem_ui/src/hooks/api/useDashboardV2.ts",
+          "type": "hook",
+          "context": [
+            {
+              "line": 23,
+              "context": "/**\n * Fetcher function for the new /api/v1/dashboard endpoint\n * Validates response against DashboardV2ResponseSchema\n * Includes authentication headers for secure API access"
+            },
+            {
+              "line": 51,
+              "context": "const queryString = params.toString();\n  const url = `/api/v1/dashboard${queryString ? `?${queryString}` : ''}`;\n  \n  const headers = {"
+            },
+            {
+              "line": 140,
+              "context": "onError: (error) => {\n        // Use proper error handling\n        const apiError = isApiError(error) ? error : ErrorHandler.categorizeError(error, '/api/v1/dashboard');\n        ErrorHandler.logError(apiError, 'useDashboardV2');\n      },"
+            }
+          ]
+        }
+      ],
+      "/api/v1/dashboard?tenant_id=tenant-x": [
+        {
+          "file": "siem_ui/src/hooks/api/__tests__/useDashboardV2.test.ts",
+          "type": "hook",
+          "context": [
+            {
+              "line": 146,
+              "context": "expect(result.current.error).toBeUndefined();\n      expect(mockFetch).toHaveBeenCalledWith(\n        '/api/v1/dashboard?tenant_id=tenant-x',\n        expect.objectContaining({\n          headers: expect.objectContaining({"
+            }
+          ]
+        }
+      ],
+      "/api/v1/events/search": [
         {
           "file": "siem_ui/src/hooks/api/useAlertDetail.ts",
           "type": "hook",
           "context": [
             {
+              "line": 113,
+              "context": "/**\n * Fetch alert detail from events API and transform to AlertDetail\n * Uses the /api/v1/events/search endpoint to find event by ID\n */\nasync function fetchAlertDetail(alertId: string): Promise<AlertDetail> {"
+            },
+            {
+              "line": 119,
+              "context": "try {\n    const searchResponse = await fetch('/api/v1/events/search', {\n      method: 'POST',\n      headers: {"
+            }
+          ]
+        }
+      ],
+      "/api/v1/dashboard${queryString ? ": [
+        {
+          "file": "siem_ui/src/hooks/api/useDashboardV2.ts",
+          "type": "hook",
+          "context": [
+            {
               "line": 51,
-              "context": "*/\nasync function fetchAlertDetail(alertId: string): Promise<AlertDetail> {\n  const response = await apiClient.get(`/api/v1/alerts/${alertId}`);\n  return response.data;\n}"
+              "context": "const queryString = params.toString();\n  const url = `/api/v1/dashboard${queryString ? `?${queryString}` : ''}`;\n  \n  const headers = {"
             }
           ]
         },
         {
-          "file": "siem_ui/src/hooks/useAlerts.ts",
+          "file": "siem_ui/src/hooks/useDashboard.ts",
           "type": "hook",
           "context": [
             {
-              "line": 106,
-              "context": "setError(null);\n      \n      const response = await fetch(`/api/v1/alerts/${alertId}`, {\n        headers: getAuthHeaders(),\n      });"
-            },
-            {
-              "line": 125,
-              "context": "const updateStatus = async (status: string): Promise<boolean> => {\n    try {\n      const response = await fetch(`/api/v1/alerts/${alertId}/status`, {\n        method: 'PUT',\n        headers: getAuthHeaders(),"
-            },
-            {
-              "line": 145,
-              "context": "const updateAssignee = async (assigneeId: string | null): Promise<boolean> => {\n    try {\n      const response = await fetch(`/api/v1/alerts/${alertId}/assignee`, {\n        method: 'PUT',\n        headers: getAuthHeaders(),"
-            },
-            {
-              "line": 189,
-              "context": "setError(null);\n      \n      const response = await fetch(`/api/v1/alerts/${alertId}/notes`, {\n        headers: getAuthHeaders(),\n      });"
-            },
-            {
-              "line": 208,
-              "context": "const addNote = async (content: string): Promise<boolean> => {\n    try {\n      const response = await fetch(`/api/v1/alerts/${alertId}/notes`, {\n        method: 'POST',\n        headers: getAuthHeaders(),"
+              "line": 24,
+              "context": "const queryString = params.toString();\n      const url = `/api/v1/dashboard${queryString ? `?${queryString}` : ''}`;\n      \n      const response = await apiClient.get<DashboardResponse>(url);"
             }
           ]
         }
       ],
-      "/api/v1/alerts/${alertId}/notes": [
-        {
-          "file": "siem_ui/src/hooks/api/useAlertNotes.ts",
-          "type": "hook",
-          "context": [
-            {
-              "line": 86,
-              "context": "// Make API call\n      const response = await apiClient.post(\n        `/api/v1/alerts/${alertId}/notes`,\n        { content } as CreateAlertNoteRequest\n      );"
-            },
-            {
-              "line": 138,
-              "context": "*/\nasync function fetchAlertNotes(alertId: string): Promise<AlertNote[]> {\n  const response = await apiClient.get(`/api/v1/alerts/${alertId}/notes`);\n  \n  // Handle ClickHouse JSON format"
-            }
-          ]
-        },
-        {
-          "file": "siem_ui/src/hooks/useAlerts.ts",
-          "type": "hook",
-          "context": [
-            {
-              "line": 189,
-              "context": "setError(null);\n      \n      const response = await fetch(`/api/v1/alerts/${alertId}/notes`, {\n        headers: getAuthHeaders(),\n      });"
-            },
-            {
-              "line": 208,
-              "context": "const addNote = async (content: string): Promise<boolean> => {\n    try {\n      const response = await fetch(`/api/v1/alerts/${alertId}/notes`, {\n        method: 'POST',\n        headers: getAuthHeaders(),"
-            }
-          ]
-        }
-      ],
-      "/api/v1/log_sources": [
-        {
-          "file": "siem_ui/src/hooks/api/useLogSources.ts",
-          "type": "hook",
-          "context": [
-            {
-              "line": 23,
-              "context": "// Stabilize SWR key to prevent infinite re-renders\n  const key = useMemo(() => {\n    return filters ? [`/api/v1/log_sources`, JSON.stringify(filters)] : '/api/v1/log_sources';\n  }, [filters?.page, filters?.limit, filters?.search, filters?.source_type]);"
-            }
-          ]
-        }
-      ],
-      "/api/v1/rules": [
-        {
-          "file": "siem_ui/src/hooks/api/useRules.ts",
-          "type": "hook",
-          "context": [
-            {
-              "line": 18,
-              "context": "// Stabilize the SWR key to prevent infinite re-renders\n  const key = useMemo(() => {\n    return filters ? [`/api/v1/rules`, JSON.stringify(filters)] : '/api/v1/rules';\n  }, [\n    filters?.page,"
-            }
-          ]
-        }
-      ],
-      "/api/v1/alerts/${alertId}/status": [
+      "/api/v1/alerts/${alertId}": [
         {
           "file": "siem_ui/src/hooks/api/useUpdateAlertStatus.ts",
           "type": "hook",
           "context": [
             {
               "line": 53,
-              "context": "// Make API call\n      const response = await apiClient.patch(`/api/v1/alerts/${alertId}/status`, {\n        status: newStatus\n      });"
+              "context": "// Make API call - using correct endpoint from backend\n      const response = await apiClient.patch(`/api/v1/alerts/${alertId}`, {\n        status: newStatus\n      });"
             },
             {
               "line": 135,
@@ -1456,7 +1534,45 @@
           "type": "hook",
           "context": [
             {
-              "line": 125,
+              "line": 139,
+              "context": "setError(null);\n      \n      const response = await fetch(`/api/v1/alerts/${alertId}`, {\n        headers: getAuthHeaders(),\n      });"
+            },
+            {
+              "line": 158,
+              "context": "const updateStatus = async (status: string): Promise<boolean> => {\n    try {\n      const response = await fetch(`/api/v1/alerts/${alertId}/status`, {\n        method: 'PUT',\n        headers: getAuthHeaders(),"
+            },
+            {
+              "line": 178,
+              "context": "const updateAssignee = async (assigneeId: string | null): Promise<boolean> => {\n    try {\n      const response = await fetch(`/api/v1/alerts/${alertId}/assignee`, {\n        method: 'PUT',\n        headers: getAuthHeaders(),"
+            },
+            {
+              "line": 222,
+              "context": "setError(null);\n      \n      const response = await fetch(`/api/v1/alerts/${alertId}/notes`, {\n        headers: getAuthHeaders(),\n      });"
+            },
+            {
+              "line": 241,
+              "context": "const addNote = async (content: string): Promise<boolean> => {\n    try {\n      const response = await fetch(`/api/v1/alerts/${alertId}/notes`, {\n        method: 'POST',\n        headers: getAuthHeaders(),"
+            }
+          ]
+        }
+      ],
+      "/api/v1/alerts/${alertId}/status": [
+        {
+          "file": "siem_ui/src/hooks/api/useUpdateAlertStatus.ts",
+          "type": "hook",
+          "context": [
+            {
+              "line": 135,
+              "context": "try {\n          await apiClient.patch(`/api/v1/alerts/${alertId}/status`, { status });\n          results.push({ alertId, success: true });\n        } catch (error) {"
+            }
+          ]
+        },
+        {
+          "file": "siem_ui/src/hooks/useAlerts.ts",
+          "type": "hook",
+          "context": [
+            {
+              "line": 158,
               "context": "const updateStatus = async (status: string): Promise<boolean> => {\n    try {\n      const response = await fetch(`/api/v1/alerts/${alertId}/status`, {\n        method: 'PUT',\n        headers: getAuthHeaders(),"
             }
           ]
@@ -1489,7 +1605,7 @@
             },
             {
               "line": 231,
-              "context": "const assignRole = async (data: AssignRoleRequest): Promise<boolean> => {\n    try {\n      const response = await fetch(`/api/v1/users/${data.user_id}/roles`, {\n        method: 'POST',\n        headers: getAuthHeaders(),"
+              "context": "const assignRole = async (userId: string, roleData: AssignRoleRequest): Promise<boolean> => {\n    try {\n      const response = await fetch(`/api/v1/users/${userId}/roles`, {\n        method: 'POST',\n        headers: getAuthHeaders(),"
             }
           ]
         }
@@ -1502,6 +1618,10 @@
             {
               "line": 95,
               "context": "setError(null);\n      \n      const response = await fetch(`/api/v1/users/${userId}/roles`, {\n        method: 'POST',\n        headers: getAuthHeaders(),"
+            },
+            {
+              "line": 231,
+              "context": "const assignRole = async (userId: string, roleData: AssignRoleRequest): Promise<boolean> => {\n    try {\n      const response = await fetch(`/api/v1/users/${userId}/roles`, {\n        method: 'POST',\n        headers: getAuthHeaders(),"
             }
           ]
         }
@@ -1522,6 +1642,10 @@
             {
               "line": 215,
               "context": "const getUserDetails = async (userId: string): Promise<UserResponse | null> => {\n    try {\n      const response = await fetch(`/api/v1/users/${userId}`, {\n        headers: getAuthHeaders(),\n      });"
+            },
+            {
+              "line": 231,
+              "context": "const assignRole = async (userId: string, roleData: AssignRoleRequest): Promise<boolean> => {\n    try {\n      const response = await fetch(`/api/v1/users/${userId}/roles`, {\n        method: 'POST',\n        headers: getAuthHeaders(),"
             }
           ]
         }
@@ -1538,46 +1662,14 @@
           ]
         }
       ],
-      "/api/v1/users/${data.user_id}/roles": [
-        {
-          "file": "siem_ui/src/hooks/useAdmin.ts",
-          "type": "hook",
-          "context": [
-            {
-              "line": 231,
-              "context": "const assignRole = async (data: AssignRoleRequest): Promise<boolean> => {\n    try {\n      const response = await fetch(`/api/v1/users/${data.user_id}/roles`, {\n        method: 'POST',\n        headers: getAuthHeaders(),"
-            }
-          ]
-        }
-      ],
-      "/api/v1/alerts": [
+      "/api/v1/events": [
         {
           "file": "siem_ui/src/hooks/useAlerts.ts",
           "type": "hook",
           "context": [
             {
-              "line": 53,
-              "context": "setError(null);\n      \n      const response = await fetch('/api/v1/alerts', {\n        headers: getAuthHeaders(),\n      });"
-            },
-            {
-              "line": 106,
-              "context": "setError(null);\n      \n      const response = await fetch(`/api/v1/alerts/${alertId}`, {\n        headers: getAuthHeaders(),\n      });"
-            },
-            {
-              "line": 125,
-              "context": "const updateStatus = async (status: string): Promise<boolean> => {\n    try {\n      const response = await fetch(`/api/v1/alerts/${alertId}/status`, {\n        method: 'PUT',\n        headers: getAuthHeaders(),"
-            },
-            {
-              "line": 145,
-              "context": "const updateAssignee = async (assigneeId: string | null): Promise<boolean> => {\n    try {\n      const response = await fetch(`/api/v1/alerts/${alertId}/assignee`, {\n        method: 'PUT',\n        headers: getAuthHeaders(),"
-            },
-            {
-              "line": 189,
-              "context": "setError(null);\n      \n      const response = await fetch(`/api/v1/alerts/${alertId}/notes`, {\n        headers: getAuthHeaders(),\n      });"
-            },
-            {
-              "line": 208,
-              "context": "const addNote = async (content: string): Promise<boolean> => {\n    try {\n      const response = await fetch(`/api/v1/alerts/${alertId}/notes`, {\n        method: 'POST',\n        headers: getAuthHeaders(),"
+              "line": 54,
+              "context": "// Fetch events from the events endpoint instead of alerts\n      const response = await fetch('/api/v1/events', {\n        headers: getAuthHeaders(),\n      });"
             }
           ]
         }
@@ -1588,8 +1680,24 @@
           "type": "hook",
           "context": [
             {
-              "line": 145,
+              "line": 178,
               "context": "const updateAssignee = async (assigneeId: string | null): Promise<boolean> => {\n    try {\n      const response = await fetch(`/api/v1/alerts/${alertId}/assignee`, {\n        method: 'PUT',\n        headers: getAuthHeaders(),"
+            }
+          ]
+        }
+      ],
+      "/api/v1/alerts/${alertId}/notes": [
+        {
+          "file": "siem_ui/src/hooks/useAlerts.ts",
+          "type": "hook",
+          "context": [
+            {
+              "line": 222,
+              "context": "setError(null);\n      \n      const response = await fetch(`/api/v1/alerts/${alertId}/notes`, {\n        headers: getAuthHeaders(),\n      });"
+            },
+            {
+              "line": 241,
+              "context": "const addNote = async (content: string): Promise<boolean> => {\n    try {\n      const response = await fetch(`/api/v1/alerts/${alertId}/notes`, {\n        method: 'POST',\n        headers: getAuthHeaders(),"
             }
           ]
         }
@@ -1634,18 +1742,6 @@
           ]
         }
       ],
-      "/api/v1/dashboard${queryString ? ": [
-        {
-          "file": "siem_ui/src/hooks/useDashboard.ts",
-          "type": "hook",
-          "context": [
-            {
-              "line": 24,
-              "context": "const queryString = params.toString();\n      const url = `/api/v1/dashboard${queryString ? `?${queryString}` : ''}`;\n      \n      const response = await apiClient.get<DashboardResponse>(url);"
-            }
-          ]
-        }
-      ],
       "/api/v1/tenants": [
         {
           "file": "siem_ui/src/hooks/useTenants.ts",
@@ -1679,7 +1775,7 @@
           "context": [
             {
               "line": 62,
-              "context": "// Use vanilla axios to prevent infinite interceptor loops\n          const response = await axios.post(\n            `${import.meta.env.VITE_API_BASE || 'http://localhost:8080'}/api/v1/auth/refresh`,\n            { refresh_token: refreshToken },\n            {"
+              "context": "// Use vanilla axios to prevent infinite interceptor loops\n          const response = await axios.post(\n            `${import.meta.env.VITE_API_BASE || 'http://localhost:8084'}/api/v1/auth/refresh`,\n            { refresh_token: refreshToken },\n            {"
             },
             {
               "line": 122,
@@ -1898,6 +1994,32 @@
               "context": "// POST /v1/log_sources/groups - Create log source group\n  createLogSourceGroup: async (data: import('@/types/api').CreateLogSourceGroupRequest): Promise<{ message: string; group_id: string }> => {\n    const response = await apiClient.post('/api/v1/log_sources/groups', data);\n    return response.data;\n  }"
             }
           ]
+        },
+        {
+          "file": "siem_ui/src/services/typedApi.ts",
+          "type": "service",
+          "context": [
+            {
+              "line": 113,
+              "context": "*/\n  async list(): Promise<LogSourceListResponse> {\n    const response = await typedApiClient.get('/api/v1/log_sources');\n    return response.data;\n  },"
+            },
+            {
+              "line": 121,
+              "context": "*/\n  async create(data: CreateLogSourceRequest): Promise<CreateLogSourceResponse> {\n    const response = await typedApiClient.post('/api/v1/log_sources', data);\n    return response.data;\n  },"
+            },
+            {
+              "line": 129,
+              "context": "*/\n  async delete(sourceId: string): Promise<void> {\n    await typedApiClient.delete(`/api/v1/log_sources/${sourceId}`);\n  },"
+            },
+            {
+              "line": 136,
+              "context": "*/\n  async getByIp(ip: string): Promise<LogSourceLookupResponse> {\n    const response = await typedApiClient.get(`/api/v1/log_sources/by_ip/${ip}`);\n    return response.data;\n  },"
+            },
+            {
+              "line": 144,
+              "context": "*/\n  async getCache(): Promise<string[][]> {\n    const response = await typedApiClient.get('/api/v1/log_sources/cache');\n    return response.data;\n  },"
+            }
+          ]
         }
       ],
       "/api/v1/log_sources/${sourceId}": [
@@ -1918,6 +2040,16 @@
               "context": "// DELETE /v1/log_sources/{source_id} - Delete enhanced log source\n  deleteEnhancedLogSource: async (sourceId: string): Promise<{ message: string }> => {\n    const response = await apiClient.delete(`/api/v1/log_sources/${sourceId}`);\n    return response.data;\n  },"
             }
           ]
+        },
+        {
+          "file": "siem_ui/src/services/typedApi.ts",
+          "type": "service",
+          "context": [
+            {
+              "line": 129,
+              "context": "*/\n  async delete(sourceId: string): Promise<void> {\n    await typedApiClient.delete(`/api/v1/log_sources/${sourceId}`);\n  },"
+            }
+          ]
         }
       ],
       "/api/v1/log_sources/by_ip/${ip}": [
@@ -1928,6 +2060,16 @@
             {
               "line": 292,
               "context": "// GET /v1/log_sources/by_ip/{ip} - Internal lookup by IP\n  getLogSourceByIp: async (ip: string): Promise<LogSourceLookupResponse> => {\n    const response = await apiClient.get<LogSourceLookupResponse>(`/api/v1/log_sources/by_ip/${ip}`);\n    return response.data;\n  }"
+            }
+          ]
+        },
+        {
+          "file": "siem_ui/src/services/typedApi.ts",
+          "type": "service",
+          "context": [
+            {
+              "line": 136,
+              "context": "*/\n  async getByIp(ip: string): Promise<LogSourceLookupResponse> {\n    const response = await typedApiClient.get(`/api/v1/log_sources/by_ip/${ip}`);\n    return response.data;\n  },"
             }
           ]
         }
@@ -1996,6 +2138,50 @@
             {
               "line": 36,
               "context": "}\n    \n    const response = await apiClient.get(`/api/v1/fields/values/multiple?${params.toString()}`);\n    return response.data;\n  },"
+            }
+          ]
+        }
+      ],
+      "/api/v1/log_sources/cache": [
+        {
+          "file": "siem_ui/src/services/typedApi.ts",
+          "type": "service",
+          "context": [
+            {
+              "line": 144,
+              "context": "*/\n  async getCache(): Promise<string[][]> {\n    const response = await typedApiClient.get('/api/v1/log_sources/cache');\n    return response.data;\n  },"
+            }
+          ]
+        }
+      ],
+      "/api/v1/ueba/baselines": [
+        {
+          "file": "siem_ui/src/services/typedApi.ts",
+          "type": "service",
+          "context": [
+            {
+              "line": 157,
+              "context": "*/\n  async listBaselines(params?: PaginationParams): Promise<BaselinesListResponse> {\n    const response = await typedApiClient.get('/api/v1/ueba/baselines', { params });\n    return response.data;\n  },"
+            },
+            {
+              "line": 165,
+              "context": "*/\n  async createBaselines(data: CreateBaselinesRequest): Promise<void> {\n    await typedApiClient.post('/api/v1/ueba/baselines', data);\n  },"
+            },
+            {
+              "line": 172,
+              "context": "*/\n  async getEntityBaselines(entityId: string): Promise<EntityBaselinesResponse> {\n    const response = await typedApiClient.get(`/api/v1/ueba/baselines/entity/${entityId}`);\n    return response.data;\n  },"
+            }
+          ]
+        }
+      ],
+      "/api/v1/ueba/baselines/entity/${entityId}": [
+        {
+          "file": "siem_ui/src/services/typedApi.ts",
+          "type": "service",
+          "context": [
+            {
+              "line": 172,
+              "context": "*/\n  async getEntityBaselines(entityId: string): Promise<EntityBaselinesResponse> {\n    const response = await typedApiClient.get(`/api/v1/ueba/baselines/entity/${entityId}`);\n    return response.data;\n  },"
             }
           ]
         }

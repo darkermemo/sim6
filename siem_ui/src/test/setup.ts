@@ -4,7 +4,7 @@ import { vi, afterEach } from 'vitest';
 // Mock environment variables
 Object.defineProperty(import.meta, 'env', {
   value: {
-    VITE_API_BASE: 'http://localhost:8080',
+    VITE_API_BASE: 'http://localhost:8084',
     MODE: 'test',
     DEV: false,
     PROD: false,

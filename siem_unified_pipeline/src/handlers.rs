@@ -1,7 +1,7 @@
 use axum::{
     extract::{Path, Query, State},
     http::StatusCode,
-    response::{IntoResponse, Json, Sse, sse::Event},
+    response::{Html, IntoResponse, Json, Sse, sse::Event},
     routing::{get, post, put, delete},
     Router,
 };
@@ -218,7 +218,7 @@ pub struct PageInfo {
 }
 
 // Create the router with all endpoints
-pub fn create_router(state: AppState) -> Router {
+pub fn create_router(state: AppState) -> Router<AppState> {
     let api_v1_router = Router::new()
         // Health and status endpoints
         .route("/health", get(health_check))
@@ -366,14 +366,128 @@ pub fn create_router(state: AppState) -> Router {
         
         .with_state(state.clone());
     
-    Router::new()
+    // Create main router without state first
+    info!("Creating main router with API routes");
+    let mut main_router = Router::new()
         .nest("/api/v1", api_v1_router)
         // Keep legacy routes for backward compatibility
         .route("/health", get(health_check))
         .route("/metrics", get(get_metrics))
-        .route("/events/ingest", post(ingest_single_event))
-        .route("/events/search", get(search_events))
-        .with_state(state)
+        // Add Hello World HTML page
+        .route("/", get(hello_world))
+        .route("/hello", get(hello_world));
+    info!("Main router created with API routes: /api/v1/*, /health, /metrics");
+
+    // Add web UI routes if feature is enabled
+    #[cfg(feature = "web-ui")]
+    {
+        info!("Adding web UI routes to main router");
+        
+        // Apply state to main router first
+        let main_router_with_state = main_router.with_state(state.clone());
+        
+        // Create UI router (returns Router<AppState> with state already applied)
+        let ui_router = crate::web_ui::create_ui_router(state);
+        info!("UI router created successfully");
+        
+        // Merge the routers with matching state types
+        info!("About to merge UI router with main router");
+        let merged_router = main_router_with_state.merge(ui_router);
+        info!("Web UI routes merged successfully - routes should be available at: /, /test-ui, /events, /alerts, /rules, /settings, /console, /static");
+        
+        return merged_router;
+    }
+    #[cfg(not(feature = "web-ui"))]
+    {
+        info!("Web UI feature is NOT enabled - routes will not be available");
+    }
+
+    // Apply state to the complete router (for non-web-ui case)
+    main_router.with_state(state)
+}
+
+/// Simple Hello World HTML page handler
+/// Returns a basic HTML page with "Hello World" message
+pub async fn hello_world() -> impl IntoResponse {
+    let html_content = r#"
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hello World - SIEM Pipeline</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            color: white;
+        }
+        .container {
+            text-align: center;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 2rem;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+        h1 {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        p {
+            font-size: 1.2rem;
+            margin-bottom: 2rem;
+        }
+        .info {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 1rem;
+            border-radius: 10px;
+            margin-top: 2rem;
+        }
+        .links {
+            margin-top: 2rem;
+        }
+        .links a {
+            color: #fff;
+            text-decoration: none;
+            margin: 0 1rem;
+            padding: 0.5rem 1rem;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 5px;
+            transition: background 0.3s;
+        }
+        .links a:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 Hello World!</h1>
+        <p>Welcome to the SIEM Unified Pipeline</p>
+        <div class="info">
+            <p><strong>Server Status:</strong> Running</p>
+            <p><strong>Version:</strong> 0.1.0</p>
+            <p><strong>Framework:</strong> Rust + Axum</p>
+        </div>
+        <div class="links">
+            <a href="/health">Health Check</a>
+            <a href="/api/v1/health">API Health</a>
+            <a href="/metrics">Metrics</a>
+        </div>
+    </div>
+</body>
+</html>
+    "#;
+    
+    Html(html_content)
 }
 
 // Health check handlers
@@ -1038,11 +1152,10 @@ pub async fn get_routing_rules(State(state): State<AppState>) -> Result<impl Int
     info!("Retrieving all routing rules");
     
     // Get routing manager from pipeline
-    // TODO: Add proper routing manager access when needed
+    let routing_manager = state.pipeline.get_routing_manager();
     
     // Retrieve all routing rules
-    // TODO: Implement proper routing manager access when available
-    let rules = vec![];
+    let rules = routing_manager.get_rules().await;
     
     // Convert to response format
     let rule_responses: Vec<crate::schemas::RoutingRuleResponse> = rules
@@ -1072,12 +1185,11 @@ pub async fn create_routing_rule(
     }
     
     // Get routing manager from pipeline
-    // TODO: Add proper routing manager access when needed
+    let routing_manager = state.pipeline.get_routing_manager();
     
     // Check if rule with same name already exists
-    // TODO: Implement proper routing manager access when available
-    let existing_rule: Option<crate::routing::RoutingRule> = None;
-    if let Some(existing_rule) = existing_rule {
+    let existing_rules = routing_manager.get_rules().await;
+    if existing_rules.iter().any(|r| r.name == request.name) {
         warn!("Routing rule with name '{}' already exists", request.name);
         return Err(PipelineError::bad_request(format!("Rule with name '{}' already exists", request.name)));
     }
@@ -1108,8 +1220,7 @@ pub async fn create_routing_rule(
     };
     
     // Add rule to routing manager
-    // TODO: Implement proper routing manager access when available
-    let add_result: crate::error::Result<()> = Ok(());
+    let add_result = routing_manager.add_rule(new_rule.clone()).await;
     match add_result {
         Ok(_) => {
             info!("Routing rule '{}' created successfully with ID: {}", new_rule.name, new_rule.id);
@@ -1136,11 +1247,10 @@ pub async fn get_routing_rule(
     info!("Retrieving routing rule: {}", name);
     
     // Get routing manager from pipeline
-    // TODO: Add proper routing manager access when needed
+    let routing_manager = state.pipeline.get_routing_manager();
     
     // Retrieve specific routing rule
-    // TODO: Implement proper routing manager access when available
-    let rule_result: Option<crate::routing::RoutingRule> = None;
+    let rule_result = routing_manager.get_rule_by_name(&name).await;
     match rule_result {
         Some(rule) => {
             info!("Routing rule found: {}", name);
@@ -1168,11 +1278,10 @@ pub async fn update_routing_rule(
     }
     
     // Get routing manager from pipeline
-    // TODO: Add proper routing manager access when needed
+    let routing_manager = state.pipeline.get_routing_manager();
     
     // Check if rule exists
-    // TODO: Implement proper routing manager access when available
-    let rule_result: Option<crate::routing::RoutingRule> = None;
+    let rule_result = routing_manager.get_rule_by_name(&name).await;
     let mut existing_rule = match rule_result {
         Some(rule) => rule,
         None => {
@@ -1214,8 +1323,7 @@ pub async fn update_routing_rule(
     }
     
     // Update rule in routing manager
-    // TODO: Implement proper routing manager access when available
-    let update_result: crate::error::Result<()> = Ok(());
+    let update_result = routing_manager.update_rule_by_name(&name, existing_rule.clone()).await;
     match update_result {
         Ok(_) => {
             info!("Routing rule '{}' updated successfully", name);
@@ -1236,20 +1344,17 @@ pub async fn delete_routing_rule(
     info!("Deleting routing rule: {}", name);
     
     // Get routing manager from pipeline
-    // TODO: Add proper routing manager access when needed
+    let routing_manager = state.pipeline.get_routing_manager();
     
     // Check if rule exists before deletion
-    // TODO: Implement proper routing manager access when available
-    let rule_exists: Option<crate::routing::RoutingRule> = None;
-    let rule_exists = rule_exists.is_some();
-    if !rule_exists {
+    let rule_exists = routing_manager.get_rule_by_name(&name).await;
+    if rule_exists.is_none() {
         warn!("Routing rule not found for deletion: {}", name);
         return Err(PipelineError::not_found(format!("Routing rule '{}' not found", name)));
     }
     
     // Delete rule from routing manager
-    // TODO: Implement proper routing manager access when available
-    let delete_result: crate::error::Result<()> = Ok(());
+    let delete_result = routing_manager.delete_rule_by_name(&name).await;
     match delete_result {
         Ok(_) => {
             info!("Routing rule '{}' deleted successfully", name);
@@ -2115,10 +2220,15 @@ pub async fn test_rule(State(_state): State<AppState>, Json(_request): Json<serd
 }
 
 // Dashboard Handlers
+/// Get dashboard data with metrics and recent alerts
+/// Returns data matching the DashboardV2ResponseSchema expected by the frontend
 pub async fn get_dashboard(State(_state): State<AppState>) -> Result<impl IntoResponse> {
     let dashboard = serde_json::json!({
-        "widgets": [],
-        "layout": "default"
+        "total_events": 0,
+        "total_alerts": 0,
+        "alerts_over_time": [],
+        "top_log_sources": [],
+        "recent_alerts": []
     });
     Ok(Json(dashboard))
 }

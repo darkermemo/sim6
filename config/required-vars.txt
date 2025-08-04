@@ -1,0 +1,30 @@
+# Required Environment Variables for SIEM System
+# This file lists all mandatory environment variables that must be set
+# Format: VARIABLE_NAME (description)
+
+# Core System
+PROJECT_ROOT
+ENVIRONMENT
+
+# Database Configuration
+CLICKHOUSE_URL
+CLICKHOUSE_DATABASE
+CLICKHOUSE_USER
+
+# Service Ports
+API_PORT
+INGESTOR_PORT
+UI_PORT
+
+# Authentication
+JWT_SECRET
+ADMIN_TOKEN
+
+# Message Queue
+KAFKA_BROKERS
+KAFKA_TOPIC
+KAFKA_GROUP_ID
+
+# Logging
+LOG_LEVEL
+RUST_LOG

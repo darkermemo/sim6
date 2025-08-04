@@ -1,0 +1,242 @@
+[
+  {
+    "test_case": "malformed_json",
+    "description": "Malformed JSON with syntax errors",
+    "data_size": 42,
+    "siem_ingestor": {
+      "success": false,
+      "status_code": 415,
+      "response": "Expected request with `Content-Type: application/json`",
+      "error": null
+    },
+    "clickhouse_ingestion": {
+      "success": false,
+      "status_code": null,
+      "response": null,
+      "error": "HTTPConnectionPool(host='localhost', port=8083): Max retries exceeded with url: /ingest/tenant-test (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x1070de710>: Failed to establish a new connection: [Errno 61] Connection refused'))"
+    },
+    "clickhouse_verification": {
+      "found": false,
+      "count": 0,
+      "rows": [],
+      "error": "HTTPDriver for http://localhost:8123 received ClickHouse error code 60\n Code: 60. DB::Exception: Unknown table expression identifier 'events' in scope SELECT event_id, tenant_id, raw_event, parsing_status, parse_error_msg, event_timestamp, ingestion_timestamp FROM events WHERE (raw_event LIKE '%malformed_json%') OR ((custom_fields['test_case']) = 'malformed_json') ORDER BY ingestion_timestamp DESC LIMIT 10. (UNKNOWN_TABLE) (version 25.7.1.3997 (official build))\n"
+    },
+    "timestamp": "2025-08-02T20:09:00.132366"
+  },
+  {
+    "test_case": "plain_text",
+    "description": "Plain text log message",
+    "data_size": 50,
+    "siem_ingestor": {
+      "success": false,
+      "status_code": 415,
+      "response": "Expected request with `Content-Type: application/json`",
+      "error": null
+    },
+    "clickhouse_ingestion": {
+      "success": false,
+      "status_code": null,
+      "response": null,
+      "error": "HTTPConnectionPool(host='localhost', port=8083): Max retries exceeded with url: /ingest/tenant-test (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x10703a520>: Failed to establish a new connection: [Errno 61] Connection refused'))"
+    },
+    "clickhouse_verification": {
+      "found": false,
+      "count": 0,
+      "rows": [],
+      "error": "HTTPDriver for http://localhost:8123 received ClickHouse error code 60\n Code: 60. DB::Exception: Unknown table expression identifier 'events' in scope SELECT event_id, tenant_id, raw_event, parsing_status, parse_error_msg, event_timestamp, ingestion_timestamp FROM events WHERE (raw_event LIKE '%plain_text%') OR ((custom_fields['test_case']) = 'plain_text') ORDER BY ingestion_timestamp DESC LIMIT 10. (UNKNOWN_TABLE) (version 25.7.1.3997 (official build))\n"
+    },
+    "timestamp": "2025-08-02T20:09:05.164345"
+  },
+  {
+    "test_case": "mixed_format",
+    "description": "Mixed format with timestamp, level, and JSON",
+    "data_size": 91,
+    "siem_ingestor": {
+      "success": false,
+      "status_code": 415,
+      "response": "Expected request with `Content-Type: application/json`",
+      "error": null
+    },
+    "clickhouse_ingestion": {
+      "success": false,
+      "status_code": null,
+      "response": null,
+      "error": "HTTPConnectionPool(host='localhost', port=8083): Max retries exceeded with url: /ingest/tenant-test (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x1070c67a0>: Failed to establish a new connection: [Errno 61] Connection refused'))"
+    },
+    "clickhouse_verification": {
+      "found": false,
+      "count": 0,
+      "rows": [],
+      "error": "HTTPDriver for http://localhost:8123 received ClickHouse error code 60\n Code: 60. DB::Exception: Unknown table expression identifier 'events' in scope SELECT event_id, tenant_id, raw_event, parsing_status, parse_error_msg, event_timestamp, ingestion_timestamp FROM events WHERE (raw_event LIKE '%mixed_format%') OR ((custom_fields['test_case']) = 'mixed_format') ORDER BY ingestion_timestamp DESC LIMIT 10. (UNKNOWN_TABLE) (version 25.7.1.3997 (official build))\n"
+    },
+    "timestamp": "2025-08-02T20:09:10.193647"
+  },
+  {
+    "test_case": "syslog_format",
+    "description": "Standard syslog format",
+    "data_size": 111,
+    "siem_ingestor": {
+      "success": false,
+      "status_code": 415,
+      "response": "Expected request with `Content-Type: application/json`",
+      "error": null
+    },
+    "clickhouse_ingestion": {
+      "success": false,
+      "status_code": null,
+      "response": null,
+      "error": "HTTPConnectionPool(host='localhost', port=8083): Max retries exceeded with url: /ingest/tenant-test (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x1070c6cf0>: Failed to establish a new connection: [Errno 61] Connection refused'))"
+    },
+    "clickhouse_verification": {
+      "found": false,
+      "count": 0,
+      "rows": [],
+      "error": "HTTPDriver for http://localhost:8123 received ClickHouse error code 60\n Code: 60. DB::Exception: Unknown table expression identifier 'events' in scope SELECT event_id, tenant_id, raw_event, parsing_status, parse_error_msg, event_timestamp, ingestion_timestamp FROM events WHERE (raw_event LIKE '%syslog_format%') OR ((custom_fields['test_case']) = 'syslog_format') ORDER BY ingestion_timestamp DESC LIMIT 10. (UNKNOWN_TABLE) (version 25.7.1.3997 (official build))\n"
+    },
+    "timestamp": "2025-08-02T20:09:15.226900"
+  },
+  {
+    "test_case": "binary_encoded",
+    "description": "Base64 encoded binary data",
+    "data_size": 32,
+    "siem_ingestor": {
+      "success": false,
+      "status_code": 415,
+      "response": "Expected request with `Content-Type: application/json`",
+      "error": null
+    },
+    "clickhouse_ingestion": {
+      "success": false,
+      "status_code": null,
+      "response": null,
+      "error": "HTTPConnectionPool(host='localhost', port=8083): Max retries exceeded with url: /ingest/tenant-test (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x1070c68b0>: Failed to establish a new connection: [Errno 61] Connection refused'))"
+    },
+    "clickhouse_verification": {
+      "found": false,
+      "count": 0,
+      "rows": [],
+      "error": "HTTPDriver for http://localhost:8123 received ClickHouse error code 60\n Code: 60. DB::Exception: Unknown table expression identifier 'events' in scope SELECT event_id, tenant_id, raw_event, parsing_status, parse_error_msg, event_timestamp, ingestion_timestamp FROM events WHERE (raw_event LIKE '%binary_encoded%') OR ((custom_fields['test_case']) = 'binary_encoded') ORDER BY ingestion_timestamp DESC LIMIT 10. (UNKNOWN_TABLE) (version 25.7.1.3997 (official build))\n"
+    },
+    "timestamp": "2025-08-02T20:09:20.256283"
+  },
+  {
+    "test_case": "large_payload",
+    "description": "Large payload (10KB+)",
+    "data_size": 10017,
+    "siem_ingestor": {
+      "success": false,
+      "status_code": 415,
+      "response": "Expected request with `Content-Type: application/json`",
+      "error": null
+    },
+    "clickhouse_ingestion": {
+      "success": false,
+      "status_code": null,
+      "response": null,
+      "error": "HTTPConnectionPool(host='localhost', port=8083): Max retries exceeded with url: /ingest/tenant-test (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x1070c6f10>: Failed to establish a new connection: [Errno 61] Connection refused'))"
+    },
+    "clickhouse_verification": {
+      "found": false,
+      "count": 0,
+      "rows": [],
+      "error": "HTTPDriver for http://localhost:8123 received ClickHouse error code 60\n Code: 60. DB::Exception: Unknown table expression identifier 'events' in scope SELECT event_id, tenant_id, raw_event, parsing_status, parse_error_msg, event_timestamp, ingestion_timestamp FROM events WHERE (raw_event LIKE '%large_payload%') OR ((custom_fields['test_case']) = 'large_payload') ORDER BY ingestion_timestamp DESC LIMIT 10. (UNKNOWN_TABLE) (version 25.7.1.3997 (official build))\n"
+    },
+    "timestamp": "2025-08-02T20:09:25.293218"
+  },
+  {
+    "test_case": "empty_log",
+    "description": "Empty log message",
+    "data_size": 0,
+    "siem_ingestor": {
+      "success": false,
+      "status_code": 415,
+      "response": "Expected request with `Content-Type: application/json`",
+      "error": null
+    },
+    "clickhouse_ingestion": {
+      "success": false,
+      "status_code": null,
+      "response": null,
+      "error": "HTTPConnectionPool(host='localhost', port=8083): Max retries exceeded with url: /ingest/tenant-test (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x1070c7020>: Failed to establish a new connection: [Errno 61] Connection refused'))"
+    },
+    "clickhouse_verification": {
+      "found": false,
+      "count": 0,
+      "rows": [],
+      "error": "HTTPDriver for http://localhost:8123 received ClickHouse error code 60\n Code: 60. DB::Exception: Unknown table expression identifier 'events' in scope SELECT event_id, tenant_id, raw_event, parsing_status, parse_error_msg, event_timestamp, ingestion_timestamp FROM events WHERE (raw_event LIKE '%empty_log%') OR ((custom_fields['test_case']) = 'empty_log') ORDER BY ingestion_timestamp DESC LIMIT 10. (UNKNOWN_TABLE) (version 25.7.1.3997 (official build))\n"
+    },
+    "timestamp": "2025-08-02T20:09:30.329300"
+  },
+  {
+    "test_case": "special_characters",
+    "description": "Log with special characters and escape sequences",
+    "data_size": 31,
+    "siem_ingestor": {
+      "success": false,
+      "status_code": 415,
+      "response": "Expected request with `Content-Type: application/json`",
+      "error": null
+    },
+    "clickhouse_ingestion": {
+      "success": false,
+      "status_code": null,
+      "response": null,
+      "error": "HTTPConnectionPool(host='localhost', port=8083): Max retries exceeded with url: /ingest/tenant-test (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x1070c69c0>: Failed to establish a new connection: [Errno 61] Connection refused'))"
+    },
+    "clickhouse_verification": {
+      "found": false,
+      "count": 0,
+      "rows": [],
+      "error": "HTTPDriver for http://localhost:8123 received ClickHouse error code 60\n Code: 60. DB::Exception: Unknown table expression identifier 'events' in scope SELECT event_id, tenant_id, raw_event, parsing_status, parse_error_msg, event_timestamp, ingestion_timestamp FROM events WHERE (raw_event LIKE '%special_characters%') OR ((custom_fields['test_case']) = 'special_characters') ORDER BY ingestion_timestamp DESC LIMIT 10. (UNKNOWN_TABLE) (version 25.7.1.3997 (official build))\n"
+    },
+    "timestamp": "2025-08-02T20:09:35.355802"
+  },
+  {
+    "test_case": "nested_json",
+    "description": "Valid nested JSON structure",
+    "data_size": 181,
+    "siem_ingestor": {
+      "success": false,
+      "status_code": 415,
+      "response": "Expected request with `Content-Type: application/json`",
+      "error": null
+    },
+    "clickhouse_ingestion": {
+      "success": false,
+      "status_code": null,
+      "response": null,
+      "error": "HTTPConnectionPool(host='localhost', port=8083): Max retries exceeded with url: /ingest/tenant-test (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x1070c68b0>: Failed to establish a new connection: [Errno 61] Connection refused'))"
+    },
+    "clickhouse_verification": {
+      "found": false,
+      "count": 0,
+      "rows": [],
+      "error": "HTTPDriver for http://localhost:8123 received ClickHouse error code 60\n Code: 60. DB::Exception: Unknown table expression identifier 'events' in scope SELECT event_id, tenant_id, raw_event, parsing_status, parse_error_msg, event_timestamp, ingestion_timestamp FROM events WHERE (raw_event LIKE '%nested_json%') OR ((custom_fields['test_case']) = 'nested_json') ORDER BY ingestion_timestamp DESC LIMIT 10. (UNKNOWN_TABLE) (version 25.7.1.3997 (official build))\n"
+    },
+    "timestamp": "2025-08-02T20:09:40.391270"
+  },
+  {
+    "test_case": "xml_format",
+    "description": "XML formatted log",
+    "data_size": 128,
+    "siem_ingestor": {
+      "success": false,
+      "status_code": 415,
+      "response": "Expected request with `Content-Type: application/json`",
+      "error": null
+    },
+    "clickhouse_ingestion": {
+      "success": false,
+      "status_code": null,
+      "response": null,
+      "error": "HTTPConnectionPool(host='localhost', port=8083): Max retries exceeded with url: /ingest/tenant-test (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x1070c6cf0>: Failed to establish a new connection: [Errno 61] Connection refused'))"
+    },
+    "clickhouse_verification": {
+      "found": false,
+      "count": 0,
+      "rows": [],
+      "error": "HTTPDriver for http://localhost:8123 received ClickHouse error code 60\n Code: 60. DB::Exception: Unknown table expression identifier 'events' in scope SELECT event_id, tenant_id, raw_event, parsing_status, parse_error_msg, event_timestamp, ingestion_timestamp FROM events WHERE (raw_event LIKE '%xml_format%') OR ((custom_fields['test_case']) = 'xml_format') ORDER BY ingestion_timestamp DESC LIMIT 10. (UNKNOWN_TABLE) (version 25.7.1.3997 (official build))\n"
+    },
+    "timestamp": "2025-08-02T20:09:45.427147"
+  }
+]

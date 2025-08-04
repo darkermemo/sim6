@@ -254,7 +254,7 @@ test_database_cluster() {
     # Test ClickHouse cluster
     for port in 8123 8124 8125; do
         ((total_nodes++))
-        if clickhouse-client --host localhost --port $port --query "SELECT 1" > /dev/null 2>&1; then
+        if clickhouse client --host localhost --port $port --query "SELECT 1" > /dev/null 2>&1; then
             ((healthy_nodes++))
             info "ClickHouse node healthy on port $port"
         else
@@ -319,7 +319,7 @@ test_data_ingestion_resilience() {
         sleep 10
         
         # Check if event was stored
-        local event_count=$(clickhouse-client --host localhost --port 8123 --database dev \
+        local event_count=$(clickhouse client --host localhost --port 8123 --database dev \
             --query "SELECT count() FROM events WHERE raw_event LIKE '%$test_event_id%'" 2>/dev/null || echo "0")
         
         if [ "$event_count" -gt 0 ]; then
@@ -580,7 +580,7 @@ main() {
         warn "Docker not available (but not required for native deployments) - container tests will be skipped"
     fi
     
-    command -v clickhouse-client >/dev/null 2>&1 || warn "clickhouse-client not available, database tests will be skipped"
+    command -v clickhouse >/dev/null 2>&1 || warn "clickhouse client not available, database tests will be skipped"
     command -v kafka-topics.sh >/dev/null 2>&1 || warn "kafka tools not available, Kafka tests will be skipped"
     
     # Execute all tests

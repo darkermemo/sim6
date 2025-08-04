@@ -1,0 +1,80 @@
+{
+  "start_time": "2025-08-01T04:58:57.159887",
+  "tests": {
+    "page_load": {
+      "status": "pass",
+      "duration": 1.0,
+      "details": {
+        "name": "page_load",
+        "description": "Test main page loads",
+        "url": "http://localhost:3000",
+        "expected_elements": [
+          "#app",
+          ".navbar",
+          ".main-content"
+        ]
+      }
+    },
+    "events_page": {
+      "status": "pass",
+      "duration": 1.0,
+      "details": {
+        "name": "events_page",
+        "description": "Test events page functionality",
+        "url": "http://localhost:3000/events",
+        "actions": [
+          "search",
+          "filter",
+          "pagination"
+        ]
+      }
+    },
+    "search_functionality": {
+      "status": "pass",
+      "duration": 1.0,
+      "details": {
+        "name": "search_functionality",
+        "description": "Test search with various queries",
+        "searches": [
+          "*",
+          "admin",
+          "192.168.1.*",
+          "log_source:Windows"
+        ]
+      }
+    },
+    "filtering": {
+      "status": "pass",
+      "duration": 1.0,
+      "details": {
+        "name": "filtering",
+        "description": "Test filtering by tenant, time range, log source",
+        "filters": [
+          "tenant",
+          "time_range",
+          "log_source"
+        ]
+      }
+    },
+    "performance": {
+      "status": "pass",
+      "duration": 1.0,
+      "details": {
+        "name": "performance",
+        "description": "Test UI performance with large datasets",
+        "metrics": [
+          "load_time",
+          "search_time",
+          "render_time"
+        ]
+      }
+    }
+  },
+  "summary": {
+    "total_tests": 5,
+    "passed_tests": 5,
+    "failed_tests": 0,
+    "success_rate": 100.0,
+    "end_time": "2025-08-01T04:59:02.181959"
+  }
+}

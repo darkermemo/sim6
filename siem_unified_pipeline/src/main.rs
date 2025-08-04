@@ -11,6 +11,11 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use tracing::{error, info, warn};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
+use tower::ServiceBuilder;
+use axum::ServiceExt;
+use tower_http::cors::CorsLayer;
+use tower_http::trace::TraceLayer;
+// use axum::ServiceExt; // Commented out to avoid trait conflicts
 // use redis::AsyncCommands; // Unused import
 
 /// SIEM Unified Pipeline - High-performance security event processing
@@ -344,8 +349,14 @@ async fn run_server(
         redis_client,
     };
 
-    // Create router
-    let app = handlers::create_router(app_state);
+    // Create router with middleware
+    let app = handlers::create_router(app_state.clone())
+        .layer(TraceLayer::new_for_http())
+        .layer(CorsLayer::new()
+            .allow_origin(tower_http::cors::Any)
+            .allow_methods([axum::http::Method::GET, axum::http::Method::POST, axum::http::Method::PUT, axum::http::Method::DELETE, axum::http::Method::OPTIONS])
+            .allow_headers(tower_http::cors::Any)
+        );
 
     // Determine if we should use high-throughput mode
     let use_high_throughput = should_use_high_throughput_mode(&config);
@@ -402,7 +413,7 @@ async fn run_server(
 
     // Start the server
     tokio::select! {
-        result = axum::serve(listener, app) => {
+        result = axum::serve(listener, app.into_make_service()) => {
             match result {
                 Ok(_) => info!("Server started successfully"),
                 Err(e) => {

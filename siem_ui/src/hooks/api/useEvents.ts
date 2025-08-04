@@ -1,6 +1,6 @@
 import useSWR from 'swr';
 import { useCallback } from 'react';
-import { EventSearchRequest, EventSearchResponse } from '../../types/events';
+import { EventSearchResponse } from '../../types/events';
 import { useAuthStore } from '../../stores/authStore';
 import axios from 'axios';
 
@@ -16,6 +16,8 @@ interface EventsParams {
   eventOutcome?: string;
   eventAction?: string;
   sourceType?: string;
+  cursor?: string; // For cursor-based pagination
+  enableStreaming?: boolean; // Enable streaming for large datasets
 }
 
 interface EventCountParams {
@@ -35,79 +37,83 @@ interface EventStreamParams {
 }
 
 /**
- * API function to search events
+ * API function to search events using the new backend API
  */
 export const getEvents = async (params: EventsParams): Promise<EventSearchResponse> => {
   const { accessToken } = useAuthStore.getState();
   
-  // Build search request
-  const searchRequest: EventSearchRequest = {
-    time_range: params.startTime && params.endTime ? {
-      start_unix: params.startTime,
-      end_unix: params.endTime
-    } : undefined,
-    free_text: params.query || undefined,
-    filters: [],
-    sort: {
-      field: 'event_timestamp',
-      direction: 'desc'
-    },
-    limit: params.limit || 50,
-    offset: ((params.page || 1) - 1) * (params.limit || 50)
-  };
-
-  // Add structured filters
+  // Build query parameters for GET request matching new backend API
+  const queryParams = new URLSearchParams();
+  
+  // Add tenant ID (required)
+  queryParams.append('tenantId', params.tenantId || 'default');
+  
+  // Add pagination (offset-based)
+  if (params.page && params.limit) {
+    const offset = (params.page - 1) * params.limit;
+    queryParams.append('offset', offset.toString());
+  }
+  if (params.limit) {
+    queryParams.append('limit', params.limit.toString());
+  }
+  
+  // Add search query
+  if (params.query) {
+    queryParams.append('query', params.query);
+  }
+  
+  // Add time range (ISO format)
+  if (params.startTime) {
+    queryParams.append('startTime', new Date(params.startTime * 1000).toISOString());
+  }
+  if (params.endTime) {
+    queryParams.append('endTime', new Date(params.endTime * 1000).toISOString());
+  }
+  
+  // Add individual filters (camelCase for backend)
   if (params.sourceIp) {
-    searchRequest.filters?.push({
-      field: 'source_ip',
-      operator: '=',
-      value: params.sourceIp
-    });
+    queryParams.append('sourceIp', params.sourceIp);
   }
   if (params.eventCategory) {
-    searchRequest.filters?.push({
-      field: 'event_category',
-      operator: '=',
-      value: params.eventCategory
-    });
-  }
-  if (params.eventOutcome) {
-    searchRequest.filters?.push({
-      field: 'event_outcome',
-      operator: '=',
-      value: params.eventOutcome
-    });
-  }
-  if (params.eventAction) {
-    searchRequest.filters?.push({
-      field: 'event_action',
-      operator: '=',
-      value: params.eventAction
-    });
+    queryParams.append('eventType', params.eventCategory); // Map to eventType
   }
   if (params.sourceType) {
-    searchRequest.filters?.push({
-      field: 'source_type',
-      operator: '=',
-      value: params.sourceType
-    });
+    queryParams.append('source', params.sourceType); // Map to source
   }
 
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json'
-  };
+  const headers: Record<string, string> = {};
   
   if (accessToken) {
     headers['Authorization'] = `Bearer ${accessToken}`;
   }
 
-  const response = await axios.post(
-    `${import.meta.env.VITE_API_BASE || 'http://localhost:8080'}/api/v1/events/search`,
-    searchRequest,
+  const response = await axios.get(
+    `${import.meta.env.VITE_API_BASE || 'http://localhost:8000'}/api/v1/events/search?${queryParams.toString()}`,
     { headers }
   );
 
-  return response.data;
+  // Transform the PagedEvents response to match EventSearchResponse format
+  const transformedData: EventSearchResponse = {
+    events: response.data.events?.map((event: any) => ({
+      event_id: event.eventId || '',
+      tenant_id: event.tenantId || 'default',
+      event_timestamp: event.eventTimestamp || Math.floor(Date.now() / 1000),
+      source_ip: event.sourceIp || '',
+      source_type: event.source || 'unknown',
+      source_name: event.source || 'unknown',
+      raw_event: event.message || event.details || '',
+      event_category: event.eventType || event.eventCategory || 'unknown',
+      event_outcome: event.eventOutcome || 'unknown',
+      event_action: event.eventAction || 'unknown',
+      is_threat: 0, // Not available in new backend
+    })) || [],
+    total_count: response.data.total || 0,
+    has_more: response.data.hasMore || false,
+    next_cursor: response.data.nextCursor,
+    previous_cursor: response.data.previousCursor,
+  };
+
+  return transformedData;
 };
 
 /**
@@ -133,7 +139,7 @@ export const getEventCount = async (params: EventCountParams): Promise<{ total_c
   }
 
   const response = await axios.get(
-    `${import.meta.env.VITE_API_BASE || 'http://localhost:8080'}/api/v1/events/count?${queryParams.toString()}`,
+    `${import.meta.env.VITE_API_BASE || 'http://localhost:8084'}/api/v1/events/count?${queryParams.toString()}`,
     { headers }
   );
 
@@ -152,7 +158,7 @@ export const useEventStream = (params: EventStreamParams) => {
       queryParams.append('token', accessToken);
     }
     
-    const url = `${import.meta.env.VITE_API_BASE || 'http://localhost:8080'}/api/v1/events/stream?${queryParams.toString()}`;
+    const url = `${import.meta.env.VITE_API_BASE || 'http://localhost:8084'}/api/v1/events/stream?${queryParams.toString()}`;
     return new EventSource(url);
   }, [accessToken, params.tenantId]);
 
@@ -177,6 +183,8 @@ export function useEvents(params: EventsParams = {}) {
     events: data?.events || [],
     totalCount: data?.total_count || 0,
     hasMore: data?.has_more || false,
+    nextCursor: data?.next_cursor,
+    previousCursor: data?.previous_cursor,
     isLoading,
     error,
     mutate,

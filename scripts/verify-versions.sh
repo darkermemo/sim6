@@ -47,10 +47,10 @@ echo "✅ pnpm: $PNPM_VERSION"
 
 # Check ClickHouse version (optional for local development)
 echo "Checking ClickHouse version..."
-if ! command -v clickhouse-client &> /dev/null; then
-    echo "⚠️  WARNING: clickhouse-client not found in PATH (optional for local dev)"
+if ! command -v clickhouse &> /dev/null; then
+    echo "⚠️  WARNING: clickhouse client not found in PATH (optional for local dev)"
 else
-    CLICKHOUSE_VERSION=$(clickhouse-client --query "SELECT version()" 2>/dev/null || echo "ERROR")
+    CLICKHOUSE_VERSION=$(clickhouse client --query "SELECT version()" 2>/dev/null || echo "ERROR")
     if [ "$CLICKHOUSE_VERSION" = "ERROR" ]; then
         echo "⚠️  WARNING: Failed to connect to ClickHouse server"
     else

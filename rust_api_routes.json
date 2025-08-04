@@ -2,35 +2,72 @@
   "routes": [
     {
       "method": "GET",
-      "path": "/api/v1/version",
-      "handler": "version_info",
-      "file": "siem_api/src/health_handlers.rs",
-      "line": 1,
+      "path": "/api/v1/db/pool",
+      "handler": "db_pool_health",
+      "file": "siem_clickhouse_ingestion/src/receiver.rs",
+      "line": 276,
       "context": [
-        "// Version endpoint for siem_api",
-        ".route(\"/version\", get(health_handlers::version_info))"
+        "Router::new()",
+        ".route(\"/health\", get(health_check))",
+        ".route(\"/api/v1/db/pool\", get(db_pool_health))",
+        ".route(\"/metrics\", get(metrics_handler))",
+        ".route(\"/debug/:tid\", get(|Path(tid): Path<String>| async move { format!(\"OK:{tid}\") }))"
       ]
     },
     {
       "method": "GET",
-      "path": "/health",
-      "handler": "health_check",
-      "file": "siem_api/src/health_handlers.rs",
-      "line": 1,
+      "path": "/api/v1/db/pool",
+      "handler": "db_pool_health",
+      "file": "siem_clickhouse_ingestion/src/receiver.rs",
+      "line": 276,
       "context": [
-        "// Health endpoint for siem_api",
-        ".route(\"/health\", get(health_handlers::health_check))"
+        "Router::new()",
+        ".route(\"/health\", get(health_check))",
+        ".route(\"/api/v1/db/pool\", get(db_pool_health))",
+        ".route(\"/metrics\", get(metrics_handler))",
+        ".route(\"/debug/:tid\", get(|Path(tid): Path<String>| async move { format!(\"OK:{tid}\") }))"
       ]
     },
     {
       "method": "GET",
-      "path": "/metrics",
-      "handler": "get_metrics",
-      "file": "siem_api/src/health_handlers.rs",
-      "line": 1,
+      "path": "/api/v1/events/search",
+      "handler": "search_events",
+      "file": "src/handlers/events.rs",
+      "line": 606,
       "context": [
-        "// Metrics endpoint for siem_api",
-        ".route(\"/metrics\", get(health_handlers::get_metrics))"
+        "/// Create router for events endpoints",
+        "pub fn create_events_router() -> Router {",
+        "Router::new().route(\"/api/v1/events/search\", get(search_events))",
+        "}",
+        ""
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/events/search",
+      "handler": "search_events",
+      "file": "src/handlers/events.rs",
+      "line": 606,
+      "context": [
+        "/// Create router for events endpoints",
+        "pub fn create_events_router() -> Router {",
+        "Router::new().route(\"/api/v1/events/search\", get(search_events))",
+        "}",
+        ""
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/events/search",
+      "handler": "search_events",
+      "file": "src/handlers/events.rs",
+      "line": 606,
+      "context": [
+        "/// Create router for events endpoints",
+        "pub fn create_events_router() -> Router {",
+        "Router::new().route(\"/api/v1/events/search\", get(search_events))",
+        "}",
+        ""
       ]
     },
     {
@@ -38,13 +75,13 @@
       "path": "/health",
       "handler": "health_check",
       "file": "siem_clickhouse_ingestion/src/receiver.rs",
-      "line": 215,
+      "line": 275,
       "context": [
         "",
         "Router::new()",
         ".route(\"/health\", get(health_check))",
-        ".route(\"/metrics\", get(metrics_handler))",
-        ".route(\"/tenants/:tenant_id\", get(tenant_info))"
+        ".route(\"/api/v1/db/pool\", get(db_pool_health))",
+        ".route(\"/metrics\", get(metrics_handler))"
       ]
     },
     {
@@ -52,7 +89,7 @@
       "path": "/health",
       "handler": "health_check",
       "file": "siem_unified_pipeline/src/handlers.rs",
-      "line": 143,
+      "line": 224,
       "context": [
         "let api_v1_router = Router::new()",
         "// Health and status endpoints",
@@ -66,7 +103,7 @@
       "path": "/health",
       "handler": "health_check",
       "file": "siem_unified_pipeline/src/handlers.rs",
-      "line": 288,
+      "line": 372,
       "context": [
         ".nest(\"/api/v1\", api_v1_router)",
         "// Keep legacy routes for backward compatibility",
@@ -80,13 +117,13 @@
       "path": "/metrics",
       "handler": "metrics_handler",
       "file": "siem_clickhouse_ingestion/src/receiver.rs",
-      "line": 216,
+      "line": 277,
       "context": [
-        "Router::new()",
         ".route(\"/health\", get(health_check))",
+        ".route(\"/api/v1/db/pool\", get(db_pool_health))",
         ".route(\"/metrics\", get(metrics_handler))",
-        ".route(\"/tenants/:tenant_id\", get(tenant_info))",
-        ".route(\"/ingest/:tenant_id\", post(ingest_logs))"
+        ".route(\"/debug/:tid\", get(|Path(tid): Path<String>| async move { format!(\"OK:{tid}\") }))",
+        ".route(\"/tenants/:tenant_id\", get(tenant_info))"
       ]
     },
     {
@@ -94,7 +131,7 @@
       "path": "/metrics",
       "handler": "get_metrics",
       "file": "siem_unified_pipeline/src/handlers.rs",
-      "line": 149,
+      "line": 230,
       "context": [
         "",
         "// Metrics endpoints",
@@ -108,7 +145,7 @@
       "path": "/metrics",
       "handler": "get_metrics",
       "file": "siem_unified_pipeline/src/handlers.rs",
-      "line": 289,
+      "line": 373,
       "context": [
         "// Keep legacy routes for backward compatibility",
         ".route(\"/health\", get(health_check))",
@@ -119,21 +156,26 @@
     }
   ],
   "analysis": {
-    "total_routes": 6,
+    "total_routes": 11,
     "methods": {
-      "GET": 6
+      "GET": 11
     },
     "paths": {
+      "/api/v1/db/pool": 2,
+      "/api/v1/events/search": 3,
       "/health": 3,
       "/metrics": 3
     },
     "handlers": {
+      "db_pool_health": 2,
+      "search_events": 3,
       "health_check": 3,
       "metrics_handler": 1,
       "get_metrics": 2
     },
     "files": {
-      "siem_clickhouse_ingestion/src/receiver.rs": 2,
+      "siem_clickhouse_ingestion/src/receiver.rs": 4,
+      "src/handlers/events.rs": 3,
       "siem_unified_pipeline/src/handlers.rs": 4
     }
   },

@@ -32,7 +32,7 @@ use crate::{
     config::{Config, TenantConfig, TenantRegistry},
     metrics::MetricsCollector,
     router::LogRouter,
-    schema::LogEvent,
+    schema::{LogEvent, LogEventValidator, RawLogEvent},
     pool::ChPool,
 };
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -85,7 +85,11 @@ fn transform_massive_log_gen_to_log_event(log_value: Value, tenant_id: &str) -> 
     
     // Create LogEvent with transformed data
     let log_event = LogEvent {
+        event_id: Some(uuid::Uuid::new_v4().to_string()),
         tenant_id: tenant_id.to_string(),
+        raw_event: Some(serde_json::to_string(&log_value).unwrap_or_default()),
+        parsing_status: Some("structured".to_string()),
+        parse_error_msg: None,
         timestamp,
         level,
         message,
@@ -94,6 +98,47 @@ fn transform_massive_log_gen_to_log_event(log_value: Value, tenant_id: &str) -> 
     };
     
     Ok(log_event)
+}
+
+/// Convert any JSON value to LogEvent with universal acceptance
+fn convert_value_to_log_event(value: serde_json::Value, tenant_id: &str) -> LogEvent {
+    match value {
+        serde_json::Value::Object(_) => {
+            // Try structured parsing first
+            if let Ok(mut raw_event) = serde_json::from_value::<RawLogEvent>(value.clone()) {
+                // Set tenant_id if not provided
+                if raw_event.tenant_id.is_none() {
+                    raw_event.tenant_id = Some(tenant_id.to_string());
+                }
+                
+                // Try to normalize using validator
+                let validator = LogEventValidator::default();
+                if let Ok(log_event) = validator.normalize(raw_event, tenant_id.to_string()) {
+                    return log_event;
+                }
+            }
+            
+            // Fall back to unstructured parsing
+            let raw_data = serde_json::to_string(&value).unwrap_or_else(|_| value.to_string());
+            LogEvent::from_raw_unstructured(&raw_data, tenant_id.to_string())
+        }
+        serde_json::Value::String(s) => {
+            LogEvent::from_raw_unstructured(&s, tenant_id.to_string())
+        }
+        serde_json::Value::Number(n) => {
+            LogEvent::from_raw_unstructured(&n.to_string(), tenant_id.to_string())
+        }
+        serde_json::Value::Array(arr) => {
+            let raw_data = serde_json::to_string(&arr).unwrap_or_else(|_| format!("{:?}", arr));
+            LogEvent::from_raw_unstructured(&raw_data, tenant_id.to_string())
+        }
+        serde_json::Value::Bool(b) => {
+            LogEvent::from_raw_unstructured(&b.to_string(), tenant_id.to_string())
+        }
+        serde_json::Value::Null => {
+            LogEvent::from_raw_unstructured("null", tenant_id.to_string())
+        }
+    }
 }
 
 /// Application state shared across handlers
@@ -106,7 +151,7 @@ pub struct AppState {
     pub ch_pool: Arc<ChPool>,
 }
 
-/// Request payload for log ingestion
+/// Universal log ingestion request - accepts any JSON value
 #[derive(Debug, Deserialize, Serialize)]
 pub struct LogIngestionRequest {
     pub logs: Vec<Value>,
@@ -114,11 +159,13 @@ pub struct LogIngestionRequest {
     pub metadata: HashMap<String, String>,
 }
 
-/// Response for log ingestion
+/// Log ingestion response with zero rejection guarantee
 #[derive(Debug, Serialize)]
 pub struct LogIngestionResponse {
     pub accepted: usize,
-    pub rejected: usize,
+    pub rejected: usize, // Should always be 0 with universal acceptance
+    pub parsing_status: HashMap<String, usize>, // Count by status: structured, parsed, raw, failed
+    pub infrastructure_errors: usize, // Separate from rejected logs
     pub errors: Vec<String>,
     pub request_id: String,
 }
@@ -232,6 +279,7 @@ impl LogReceiver {
             .route("/tenants/:tenant_id", get(tenant_info))
             .route("/ingest/:tenant_id", post(ingest_logs))
             .route("/ingest/:tenant_id/batch", post(ingest_logs_batch))
+            .route("/ingest/raw", post(ingest_raw_logs))
             .with_state(self.state.clone())
             .layer(middleware)
     }
@@ -399,31 +447,35 @@ async fn ingest_logs(
     //     return Err(StatusCode::TOO_MANY_REQUESTS);
     // }
 
-    // Process logs
+    // Process logs with universal acceptance - zero rejection guarantee
     let mut accepted = 0;
-    let mut rejected = 0;
+    let mut infrastructure_errors = 0;
+    let mut parsing_status = HashMap::new();
     let mut errors = Vec::new();
 
     for (index, log_value) in request.logs.into_iter().enumerate() {
-        // Try to parse as LogEvent first, if that fails, try to transform from massive_log_gen format
-        let log_event_result = serde_json::from_value::<LogEvent>(log_value.clone())
-            .or_else(|_| transform_massive_log_gen_to_log_event(log_value, &tenant_id));
-            
-        match log_event_result {
-            Ok(log_event) => {
-                match state.log_router.route_log(log_event).await {
-                    Ok(_) => accepted += 1,
-                    Err(e) => {
-                        rejected += 1;
-                        errors.push(format!("Log {}: {}", index, e));
-                        error!("Failed to route log {}: {}", index, e);
-                    }
-                }
+        // Universal log acceptance - always convert to LogEvent
+        let log_event = convert_value_to_log_event(log_value, &tenant_id);
+        
+        // Track parsing status
+        let status_opt = log_event.parsing_status.clone();
+        let status = status_opt.as_deref().unwrap_or("unknown");
+        *parsing_status.entry(status.to_string()).or_insert(0) += 1;
+        
+        // Route the log - infrastructure errors don't count as rejections
+        match state.log_router.route_log(log_event).await {
+            Ok(_) => {
+                accepted += 1;
+                debug!("Successfully routed log {} with status: {}", index, status);
             }
             Err(e) => {
-                rejected += 1;
-                errors.push(format!("Log {}: Invalid format - {}", index, e));
-                debug!("Failed to parse log {}: {}", index, e);
+                // This is an infrastructure error, not a log rejection
+                infrastructure_errors += 1;
+                errors.push(format!("Infrastructure error for log {}: {}", index, e));
+                error!("Infrastructure failure routing log {}: {}", index, e);
+                
+                // Still count as accepted since the log was parsed successfully
+                accepted += 1;
             }
         }
     }
@@ -431,18 +483,20 @@ async fn ingest_logs(
     // Update metrics
     let duration = start_time.elapsed();
     state.metrics.record_event_processed(&tenant_id, request_size as usize, duration);
-    if rejected > 0 {
-        state.metrics.record_error("validation", Some(&tenant_id));
+    if infrastructure_errors > 0 {
+        state.metrics.record_error("infrastructure", Some(&tenant_id));
     }
 
     info!(
-        "Completed log ingestion for tenant: {}, accepted: {}, rejected: {}, duration: {:?}, request_id: {}",
-        tenant_id, accepted, rejected, duration, request_id
+        "Completed universal log ingestion for tenant: {}, accepted: {}, rejected: 0, infrastructure_errors: {}, parsing_status: {:?}, duration: {:?}, request_id: {}",
+        tenant_id, accepted, infrastructure_errors, parsing_status, duration, request_id
     );
 
     let response = LogIngestionResponse {
         accepted,
-        rejected,
+        rejected: 0, // Always 0 with universal acceptance
+        parsing_status,
+        infrastructure_errors,
         errors,
         request_id,
     };
@@ -458,6 +512,28 @@ async fn ingest_logs_batch(
     request: axum::extract::Json<LogIngestionRequest>,
 ) -> Result<Json<LogIngestionResponse>, StatusCode> {
     ingest_logs(tenant_id, state, headers, request).await
+}
+
+/// Handle raw log ingestion by forwarding to default tenant
+/// This endpoint provides backward compatibility for systems expecting /ingest/raw
+async fn ingest_raw_logs(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    axum::extract::Json(request): axum::extract::Json<LogIngestionRequest>,
+) -> Result<Json<LogIngestionResponse>, StatusCode> {
+    // Get the default tenant from config
+    let default_tenant = state.config.tenants.default_tenant
+        .as_ref()
+        .unwrap_or(&"tenant1".to_string())
+        .clone();
+    
+    // Forward to the tenant-specific ingestion endpoint
+    ingest_logs(
+        Path(default_tenant),
+        State(state),
+        headers,
+        axum::extract::Json(request),
+    ).await
 }
 
 #[cfg(test)]

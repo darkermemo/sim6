@@ -316,8 +316,8 @@ log "Test 13: Creating mock update entry for testing..."
 # Try to insert a test update entry
 UPDATE_INSERT_SQL="INSERT INTO dev.agent_updates (update_id, version, supported_os, supported_arch, download_url, checksum, release_notes, release_date, created_at) VALUES ('test-update-1', '0.2.0', 'linux', 'x86_64', 'https://example.com/agent-0.2.0-linux-x86_64', 'dummy-checksum', 'Test update for verification', $(date +%s), $(date +%s))"
 
-if command -v clickhouse-client >/dev/null 2>&1; then
-    if echo "$UPDATE_INSERT_SQL" | clickhouse-client 2>/dev/null; then
+if command -v clickhouse >/dev/null 2>&1; then
+            if echo "$UPDATE_INSERT_SQL" | clickhouse client 2>/dev/null; then
         test_result 0 "Mock update entry created in database"
         
         # Test update check again
@@ -394,4 +394,4 @@ if [ $TESTS_FAILED -eq 0 ]; then
 else
     error "Phase 12.3: Some tests failed. Review the results above."
     exit 1
-fi 
+fi

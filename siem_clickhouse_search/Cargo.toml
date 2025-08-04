@@ -41,6 +41,7 @@ arc-swap = "1.6"
 dashmap = "5.5"
 async-stream = "0.3"
 tokio-stream = "0.1"
+async-trait = "0.1"
 
 # Query building and SQL
 sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "postgres", "chrono", "uuid"] }

@@ -37,7 +37,7 @@ export function AuthGuard({ children }: AuthGuardProps) {
     console.log('Setting up demo authentication with valid JWT token...');
     
     // Generate a valid JWT token for development that matches backend expectations
-    const validToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhZG1pbi11c2VyIiwidGVuYW50X2lkIjoidGVuYW50LUEiLCJyb2xlcyI6WyJBZG1pbiJdLCJpYXQiOjE3NTM5NjE0MTQsImV4cCI6MTc1Mzk2NTAxNCwiaXNzIjoic2llbS1hdXRoIiwiYXVkIjoic2llbS1zZWFyY2giLCJqdGkiOiJ0ZXN0LXNlc3Npb24tMTIzIn0.NluIfDU6ajLBK0Q5SoxzbV4NbyxNBpkuOCEPsfYkhTw';
+    const validToken = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhZG1pbi11c2VyIiwidGlkIjoidGVuYW50LUEiLCJyb2xlcyI6WyJBZG1pbiIsIlN1cGVyQWRtaW4iXSwiZXhwIjoxNzU0MTYxNzQ1fQ.l1lJJ2nbhJtjxGL12B38r4IxSqGml--13ytjmZaPlJo';
     
     // Get tenant_id from environment variable or use default for demo
     const tenantId = import.meta.env.VITE_DEFAULT_TENANT_ID || 'tenant-A';

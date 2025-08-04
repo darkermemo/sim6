@@ -381,34 +381,591 @@ pub mod web_ui {
     use tower_http::services::ServeDir;
     
     /// Create the web UI router
-    pub fn create_ui_router() -> Router {
-        Router::new()
+    pub fn create_ui_router(state: crate::handlers::AppState) -> Router<crate::handlers::AppState> {
+        tracing::info!("Creating UI router with routes: /, /test-ui, /events, /alerts, /rules, /settings, /console, /static");
+        let router = Router::new()
             .route("/", axum::routing::get(dashboard))
+            .route("/test-ui", axum::routing::get(|| async { 
+                tracing::info!("Test UI route handler called from web_ui module");
+                "Test UI route works from web_ui module!" 
+            }))
             .route("/events", axum::routing::get(events_page))
             .route("/alerts", axum::routing::get(alerts_page))
             .route("/rules", axum::routing::get(rules_page))
             .route("/settings", axum::routing::get(settings_page))
+            .nest("/console", console::create_console_router())
             .nest_service("/static", ServeDir::new("static"))
+            .with_state(state);
+        tracing::info!("UI router created successfully");
+        router
     }
     
-    async fn dashboard() -> Html<&'static str> {
-        Html(include_str!("../web/dashboard.html"))
+    async fn dashboard() -> Html<String> {
+        tracing::info!("Dashboard route handler called");
+        Html("<html><body><h1>Dashboard</h1><p>Welcome to the SIEM Dashboard</p></body></html>".to_string())
     }
     
-    async fn events_page() -> Html<&'static str> {
-        Html(include_str!("../web/events.html"))
+    async fn events_page() -> Html<String> {
+        Html("<html><body><h1>Events</h1><p>Event management page</p></body></html>".to_string())
     }
     
-    async fn alerts_page() -> Html<&'static str> {
-        Html(include_str!("../web/alerts.html"))
+    async fn alerts_page() -> Html<String> {
+        Html("<html><body><h1>Alerts</h1><p>Alert management page</p></body></html>".to_string())
     }
     
-    async fn rules_page() -> Html<&'static str> {
-        Html(include_str!("../web/rules.html"))
+    async fn rules_page() -> Html<String> {
+        Html("<html><body><h1>Rules</h1><p>Rule management page</p></body></html>".to_string())
     }
     
-    async fn settings_page() -> Html<&'static str> {
-        Html(include_str!("../web/settings.html"))
+    async fn settings_page() -> Html<String> {
+        Html("<html><body><h1>Settings</h1><p>Settings page</p></body></html>".to_string())
+    }
+    
+    /// Admin Console module for system administration
+    pub mod console {
+        use axum::{
+            extract::{State, Path, Query},
+            http::{StatusCode, HeaderMap},
+            response::{Html, IntoResponse},
+            routing::{get, post},
+            Router, Json,
+        };
+        use maud::{html, Markup, DOCTYPE};
+        use serde::{Deserialize, Serialize};
+        use std::collections::HashMap;
+        use crate::handlers::AppState;
+        use crate::error::Result;
+        
+        /// Admin token header for write operations
+        const ADMIN_TOKEN_HEADER: &str = "X-Admin-Token";
+        
+        /// Create the admin console router
+        pub fn create_console_router() -> Router<crate::handlers::AppState> {
+            Router::new()
+                .route("/", get(console_dashboard))
+                .route("/health", get(health_console))
+                .route("/metrics", get(metrics_console))
+                .route("/events", get(events_console))
+                .route("/config", get(config_console))
+                .route("/config", post(update_config_console))
+                .route("/routing", get(routing_console))
+                .route("/system", get(system_console))
+                .route("/api/health", get(api_health_data))
+                .route("/api/metrics", get(api_metrics_data))
+                .route("/api/events", get(api_events_data))
+                .route("/api/config", get(api_config_data))
+        }
+        
+        /// Check if admin token is valid for write operations
+        fn check_admin_token(headers: &HeaderMap) -> bool {
+            if let Some(token) = headers.get(ADMIN_TOKEN_HEADER) {
+                if let Ok(token_str) = token.to_str() {
+                    // In production, this should validate against a secure token
+                    // For now, we'll use a simple check
+                    return !token_str.is_empty() && token_str.len() > 8;
+                }
+            }
+            false
+        }
+        
+        /// Generate the base HTML layout
+        fn base_layout(title: &str, content: Markup) -> Markup {
+            html! {
+                (DOCTYPE)
+                html lang="en" {
+                    head {
+                        meta charset="utf-8";
+                        meta name="viewport" content="width=device-width, initial-scale=1";
+                        title { "SIEM Admin Console - " (title) }
+                        style {
+                            "
+                            * { margin: 0; padding: 0; box-sizing: border-box; }
+                            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; }
+                            .header { background: #2c3e50; color: white; padding: 1rem 2rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+                            .header h1 { font-size: 1.5rem; font-weight: 600; }
+                            .nav { background: white; border-bottom: 1px solid #e0e0e0; padding: 0 2rem; }
+                            .nav ul { list-style: none; display: flex; }
+                            .nav li { margin-right: 2rem; }
+                            .nav a { display: block; padding: 1rem 0; text-decoration: none; color: #333; border-bottom: 2px solid transparent; }
+                            .nav a:hover, .nav a.active { color: #3498db; border-bottom-color: #3498db; }
+                            .container { max-width: 1200px; margin: 2rem auto; padding: 0 2rem; }
+                            .card { background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 2rem; }
+                            .card-header { padding: 1.5rem; border-bottom: 1px solid #e0e0e0; }
+                            .card-header h2 { font-size: 1.25rem; font-weight: 600; color: #2c3e50; }
+                            .card-body { padding: 1.5rem; }
+                            .status-healthy { color: #27ae60; font-weight: 600; }
+                            .status-warning { color: #f39c12; font-weight: 600; }
+                            .status-error { color: #e74c3c; font-weight: 600; }
+                            .btn { display: inline-block; padding: 0.5rem 1rem; background: #3498db; color: white; text-decoration: none; border-radius: 4px; border: none; cursor: pointer; }
+                            .btn:hover { background: #2980b9; }
+                            .btn-danger { background: #e74c3c; }
+                            .btn-danger:hover { background: #c0392b; }
+                            .table { width: 100%; border-collapse: collapse; }
+                            .table th, .table td { padding: 0.75rem; text-align: left; border-bottom: 1px solid #e0e0e0; }
+                            .table th { background: #f8f9fa; font-weight: 600; }
+                            .form-group { margin-bottom: 1rem; }
+                            .form-label { display: block; margin-bottom: 0.5rem; font-weight: 600; }
+                            .form-input { width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px; }
+                            .alert { padding: 1rem; border-radius: 4px; margin-bottom: 1rem; }
+                            .alert-info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+                            .alert-warning { background: #fff3cd; color: #856404; border: 1px solid #ffeaa7; }
+                            .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem; }
+                            .metric { text-align: center; }
+                            .metric-value { font-size: 2rem; font-weight: bold; color: #2c3e50; }
+                            .metric-label { color: #7f8c8d; margin-top: 0.5rem; }
+                            "
+                        }
+                    }
+                    body {
+                        header class="header" {
+                            h1 { "SIEM Admin Console" }
+                        }
+                        nav class="nav" {
+                            ul {
+                                li { a href="/console/" { "Dashboard" } }
+                                li { a href="/console/health" { "Health" } }
+                                li { a href="/console/metrics" { "Metrics" } }
+                                li { a href="/console/events" { "Events" } }
+                                li { a href="/console/config" { "Config" } }
+                                li { a href="/console/routing" { "Routing" } }
+                                li { a href="/console/system" { "System" } }
+                            }
+                        }
+                        main class="container" {
+                            (content)
+                        }
+                    }
+                }
+            }
+        }
+        
+        /// Console dashboard page
+        async fn console_dashboard(State(state): State<crate::handlers::AppState>) -> Result<impl IntoResponse> {
+            let content = html! {
+                div class="card" {
+                    div class="card-header" {
+                        h2 { "System Overview" }
+                    }
+                    div class="card-body" {
+                        div class="grid" {
+                            div class="metric" {
+                                div class="metric-value" id="total-events" { "Loading..." }
+                                div class="metric-label" { "Total Events" }
+                            }
+                            div class="metric" {
+                                div class="metric-value" id="events-per-second" { "Loading..." }
+                                div class="metric-label" { "Events/Second" }
+                            }
+                            div class="metric" {
+                                div class="metric-value" id="active-sources" { "Loading..." }
+                                div class="metric-label" { "Active Sources" }
+                            }
+                            div class="metric" {
+                                div class="metric-value" id="system-health" { "Loading..." }
+                                div class="metric-label" { "System Health" }
+                            }
+                        }
+                    }
+                }
+                
+                div class="card" {
+                    div class="card-header" {
+                        h2 { "Quick Actions" }
+                    }
+                    div class="card-body" {
+                        a href="/console/health" class="btn" { "View Health Status" }
+                        " "
+                        a href="/console/metrics" class="btn" { "View Metrics" }
+                        " "
+                        a href="/console/events" class="btn" { "Browse Events" }
+                    }
+                }
+                
+                script {
+                    "
+                    // Auto-refresh dashboard data
+                    async function refreshDashboard() {
+                        try {
+                            const [healthRes, metricsRes] = await Promise.all([
+                                fetch('/console/api/health'),
+                                fetch('/console/api/metrics')
+                            ]);
+                            
+                            if (healthRes.ok && metricsRes.ok) {
+                                const health = await healthRes.json();
+                                const metrics = await metricsRes.json();
+                                
+                                document.getElementById('system-health').textContent = health.status;
+                                document.getElementById('total-events').textContent = metrics.total_events || '0';
+                                document.getElementById('events-per-second').textContent = metrics.events_per_second || '0';
+                                document.getElementById('active-sources').textContent = metrics.active_sources || '0';
+                            }
+                        } catch (error) {
+                            console.error('Failed to refresh dashboard:', error);
+                        }
+                    }
+                    
+                    // Refresh every 5 seconds
+                    refreshDashboard();
+                    setInterval(refreshDashboard, 5000);
+                    "
+                }
+            };
+            
+            Ok(Html(base_layout("Dashboard", content).into_string()))
+        }
+        
+        /// Health status console page
+        async fn health_console(State(_state): State<crate::handlers::AppState>) -> Result<impl IntoResponse> {
+            let content = html! {
+                div class="card" {
+                    div class="card-header" {
+                        h2 { "System Health Status" }
+                    }
+                    div class="card-body" {
+                        div id="health-status" { "Loading health status..." }
+                    }
+                }
+                
+                script {
+                    "
+                    async function loadHealthStatus() {
+                        try {
+                            const response = await fetch('/console/api/health');
+                            if (response.ok) {
+                                const health = await response.json();
+                                const statusDiv = document.getElementById('health-status');
+                                
+                                let html = '<table class=\"table\">';
+                                html += '<thead><tr><th>Component</th><th>Status</th><th>Last Check</th><th>Response Time</th></tr></thead><tbody>';
+                                
+                                for (const [name, component] of Object.entries(health.components || {})) {
+                                    const statusClass = component.status === 'Healthy' ? 'status-healthy' : 
+                                                       component.status === 'Degraded' ? 'status-warning' : 'status-error';
+                                    html += `<tr>`;
+                                    html += `<td>${name}</td>`;
+                                    html += `<td class=\"${statusClass}\">${component.status}</td>`;
+                                    html += `<td>${new Date(component.last_check).toLocaleString()}</td>`;
+                                    html += `<td>${component.response_time_ms.toFixed(2)}ms</td>`;
+                                    html += `</tr>`;
+                                }
+                                
+                                html += '</tbody></table>';
+                                statusDiv.innerHTML = html;
+                            }
+                        } catch (error) {
+                            document.getElementById('health-status').innerHTML = '<div class=\"alert alert-warning\">Failed to load health status</div>';
+                        }
+                    }
+                    
+                    loadHealthStatus();
+                    setInterval(loadHealthStatus, 10000);
+                    "
+                }
+            };
+            
+            Ok(Html(base_layout("Health", content).into_string()))
+        }
+        
+        /// Metrics console page
+        async fn metrics_console(State(_state): State<crate::handlers::AppState>) -> Result<impl IntoResponse> {
+            let content = html! {
+                div class="card" {
+                    div class="card-header" {
+                        h2 { "System Metrics" }
+                    }
+                    div class="card-body" {
+                        div id="metrics-data" { "Loading metrics..." }
+                    }
+                }
+                
+                script {
+                    "
+                    async function loadMetrics() {
+                        try {
+                            const response = await fetch('/console/api/metrics');
+                            if (response.ok) {
+                                const metrics = await response.json();
+                                const metricsDiv = document.getElementById('metrics-data');
+                                
+                                let html = '<div class=\"grid\">';
+                                
+                                // System metrics
+                                if (metrics.system) {
+                                    html += '<div class=\"card\">';
+                                    html += '<div class=\"card-header\"><h3>System</h3></div>';
+                                    html += '<div class=\"card-body\">';
+                                    html += `<p>CPU Usage: ${(metrics.system.cpu_usage * 100).toFixed(1)}%</p>`;
+                                    html += `<p>Memory Usage: ${(metrics.system.memory_usage * 100).toFixed(1)}%</p>`;
+                                    html += `<p>Disk Usage: ${(metrics.system.disk_usage * 100).toFixed(1)}%</p>`;
+                                    html += '</div></div>';
+                                }
+                                
+                                // Pipeline metrics
+                                if (metrics.pipeline) {
+                                    html += '<div class=\"card\">';
+                                    html += '<div class=\"card-header\"><h3>Pipeline</h3></div>';
+                                    html += '<div class=\"card-body\">';
+                                    html += `<p>Events Processed: ${metrics.pipeline.events_processed || 0}</p>`;
+                                    html += `<p>Events Per Second: ${metrics.pipeline.events_per_second || 0}</p>`;
+                                    html += `<p>Processing Errors: ${metrics.pipeline.processing_errors || 0}</p>`;
+                                    html += '</div></div>';
+                                }
+                                
+                                html += '</div>';
+                                metricsDiv.innerHTML = html;
+                            }
+                        } catch (error) {
+                            document.getElementById('metrics-data').innerHTML = '<div class=\"alert alert-warning\">Failed to load metrics</div>';
+                        }
+                    }
+                    
+                    loadMetrics();
+                    setInterval(loadMetrics, 5000);
+                    "
+                }
+            };
+            
+            Ok(Html(base_layout("Metrics", content).into_string()))
+        }
+        
+        /// Events console page
+        async fn events_console(State(state): State<crate::handlers::AppState>) -> Result<impl IntoResponse> {
+            let content = html! {
+                div class="card" {
+                    div class="card-header" {
+                        h2 { "Recent Events" }
+                    }
+                    div class="card-body" {
+                        div class="alert alert-info" {
+                            "This page shows the most recent events. Use the search filters to narrow down results."
+                        }
+                        div id="events-data" { "Loading events..." }
+                    }
+                }
+                
+                script {
+                    "
+                    async function loadEvents() {
+                        try {
+                            const response = await fetch('/console/api/events?limit=50');
+                            if (response.ok) {
+                                const data = await response.json();
+                                const eventsDiv = document.getElementById('events-data');
+                                
+                                if (data.events && data.events.length > 0) {
+                                    let html = '<table class=\"table\">';
+                                    html += '<thead><tr><th>Timestamp</th><th>Source</th><th>Severity</th><th>Message</th></tr></thead><tbody>';
+                                    
+                                    data.events.forEach(event => {
+                                        html += `<tr>`;
+                                        html += `<td>${new Date(event.timestamp).toLocaleString()}</td>`;
+                                        html += `<td>${event.source || 'Unknown'}</td>`;
+                                        html += `<td>${event.severity || 'Info'}</td>`;
+                                        html += `<td>${(event.message || '').substring(0, 100)}${(event.message || '').length > 100 ? '...' : ''}</td>`;
+                                        html += `</tr>`;
+                                    });
+                                    
+                                    html += '</tbody></table>';
+                                    eventsDiv.innerHTML = html;
+                                } else {
+                                    eventsDiv.innerHTML = '<div class=\"alert alert-info\">No events found</div>';
+                                }
+                            }
+                        } catch (error) {
+                            document.getElementById('events-data').innerHTML = '<div class=\"alert alert-warning\">Failed to load events</div>';
+                        }
+                    }
+                    
+                    loadEvents();
+                    setInterval(loadEvents, 10000);
+                    "
+                }
+            };
+            
+            Ok(Html(base_layout("Events", content).into_string()))
+        }
+        
+        /// Configuration console page
+        async fn config_console(State(_state): State<crate::handlers::AppState>) -> Result<impl IntoResponse> {
+            let content = html! {
+                div class="card" {
+                    div class="card-header" {
+                        h2 { "Configuration Management" }
+                    }
+                    div class="card-body" {
+                        div class="alert alert-warning" {
+                            "⚠️ Configuration changes require admin token in X-Admin-Token header for write operations."
+                        }
+                        div id="config-data" { "Loading configuration..." }
+                    }
+                }
+                
+                script {
+                    "
+                    async function loadConfig() {
+                        try {
+                            const response = await fetch('/console/api/config');
+                            if (response.ok) {
+                                const config = await response.json();
+                                const configDiv = document.getElementById('config-data');
+                                
+                                let html = '<pre style=\"background: #f8f9fa; padding: 1rem; border-radius: 4px; overflow-x: auto;\">';
+                                html += JSON.stringify(config, null, 2);
+                                html += '</pre>';
+                                
+                                configDiv.innerHTML = html;
+                            }
+                        } catch (error) {
+                            document.getElementById('config-data').innerHTML = '<div class=\"alert alert-warning\">Failed to load configuration</div>';
+                        }
+                    }
+                    
+                    loadConfig();
+                    "
+                }
+            };
+            
+            Ok(Html(base_layout("Configuration", content).into_string()))
+        }
+        
+        /// Update configuration (requires admin token)
+        async fn update_config_console(
+            State(state): State<crate::handlers::AppState>,
+            headers: HeaderMap,
+            Json(config): Json<serde_json::Value>,
+        ) -> Result<impl IntoResponse> {
+            if !check_admin_token(&headers) {
+                return Ok((StatusCode::UNAUTHORIZED, "Admin token required").into_response());
+            }
+            
+            // Delegate to existing config update handler
+            let request = crate::handlers::ConfigUpdateRequest {
+                config,
+                restart_required: Some(false),
+            };
+            
+            match crate::handlers::update_config(State(state), Json(request)).await {
+                Ok(response) => Ok(response.into_response()),
+                Err(e) => Ok((StatusCode::INTERNAL_SERVER_ERROR, format!("Config update failed: {}", e)).into_response()),
+            }
+        }
+        
+        /// Routing console page
+        async fn routing_console(State(_state): State<crate::handlers::AppState>) -> Result<impl IntoResponse> {
+            let content = html! {
+                div class="card" {
+                    div class="card-header" {
+                        h2 { "Routing Rules" }
+                    }
+                    div class="card-body" {
+                        div class="alert alert-info" {
+                            "Routing rules determine how events are processed and forwarded to destinations."
+                        }
+                        a href="/api/v1/routing/rules" class="btn" target="_blank" { "View Raw JSON" }
+                    }
+                }
+            };
+            
+            Ok(Html(base_layout("Routing", content).into_string()))
+        }
+        
+        /// System console page
+        async fn system_console(State(_state): State<crate::handlers::AppState>) -> Result<impl IntoResponse> {
+            let content = html! {
+                div class="card" {
+                    div class="card-header" {
+                        h2 { "System Administration" }
+                    }
+                    div class="card-body" {
+                        div class="alert alert-warning" {
+                            "⚠️ System operations require admin token and may affect service availability."
+                        }
+                        
+                        h3 { "Pipeline Control" }
+                        p {
+                            a href="/api/v1/pipeline/start" class="btn" { "Start Pipeline" }
+                            " "
+                            a href="/api/v1/pipeline/stop" class="btn btn-danger" { "Stop Pipeline" }
+                            " "
+                            a href="/api/v1/pipeline/restart" class="btn" { "Restart Pipeline" }
+                        }
+                        
+                        h3 style="margin-top: 2rem;" { "System Information" }
+                        p {
+                            a href="/api/v1/system/status" class="btn" target="_blank" { "System Status" }
+                            " "
+                            a href="/api/v1/debug" class="btn" target="_blank" { "Debug Info" }
+                            " "
+                            a href="/api/v1/version" class="btn" target="_blank" { "Version Info" }
+                        }
+                    }
+                }
+            };
+            
+            Ok(Html(base_layout("System", content).into_string()))
+        }
+        
+        // API endpoints for AJAX data loading
+        
+        /// API endpoint for health data
+        async fn api_health_data(State(state): State<crate::handlers::AppState>) -> Result<impl IntoResponse> {
+            // Delegate to existing health check handler
+            crate::handlers::detailed_health_check(State(state)).await
+        }
+        
+        /// API endpoint for metrics data
+        async fn api_metrics_data(State(state): State<crate::handlers::AppState>) -> Result<impl IntoResponse> {
+            // Delegate to existing metrics handler
+            crate::handlers::get_metrics(State(state), Query(crate::handlers::MetricsQuery {
+                format: None,
+                component: None,
+                hours: Some(1),
+            })).await
+        }
+        
+        /// API endpoint for events data
+        async fn api_events_data(
+            State(state): State<crate::handlers::AppState>,
+            Query(params): Query<HashMap<String, String>>,
+        ) -> Result<impl IntoResponse> {
+            // Convert query params to EventSearchRequest
+            let limit = params.get("limit")
+                .and_then(|s| s.parse().ok())
+                .unwrap_or(50);
+            
+            let search_request = crate::schemas::EventSearchRequest {
+                tenant_id: None,
+                source_ip: params.get("source_ip").cloned(),
+                event_type: params.get("event_type").cloned(),
+                start_time: None, // Use default time range
+                end_time: None,
+                limit: Some(limit),
+                offset: Some(0),
+                query: params.get("query").cloned(),
+                severity: params.get("severity").cloned(),
+                source: params.get("source").cloned(),
+            };
+            
+            // Delegate to existing search handler
+            crate::handlers::search_events(State(state), Query(search_request)).await
+        }
+        
+        /// API endpoint for config data
+        async fn api_config_data(State(state): State<crate::handlers::AppState>) -> Result<impl IntoResponse> {
+            // Delegate to existing config handler
+            crate::handlers::get_config(State(state)).await
+        }
+    }
+}
+
+/// Stub for create_ui_router when web-ui feature is not enabled
+#[cfg(not(feature = "web-ui"))]
+pub mod web_ui {
+    use axum::Router;
+    
+    pub fn create_ui_router() -> Router<crate::handlers::AppState> {
+        Router::new()
     }
 }
 

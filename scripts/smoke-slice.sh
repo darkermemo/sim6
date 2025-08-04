@@ -104,7 +104,7 @@ sleep 3
 # Query ClickHouse to verify the event was stored (only if ClickHouse is available)
 if [ "$CLICKHOUSE_AVAILABLE" = "true" ]; then
     echo "Querying ClickHouse for the test event..."
-    COUNT=$(clickhouse-client --query "SELECT count() FROM events_tenant1 WHERE user='demo' AND event_category='Authentication'" 2>/dev/null || echo "0")
+    COUNT=$(clickhouse client --query "SELECT count() FROM events_tenant1 WHERE user='demo' AND event_category='Authentication'" 2>/dev/null || echo "0")
     
     echo "Found $COUNT matching events in ClickHouse"
     

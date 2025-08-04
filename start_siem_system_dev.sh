@@ -130,7 +130,7 @@ fi
 # 8. Start SIEM API
 log_message "Starting SIEM API..."
 cd "${PROJECT_ROOT}/siem_api"
-nohup cargo run > "${LOGS_DIR}/siem_api.log" 2>&1 &
+nohup cargo run --bin siem_api > "${LOGS_DIR}/siem_api.log" 2>&1 &
 sleep 5
 
 # 9. Wait for SIEM API to be ready

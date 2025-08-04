@@ -9,12 +9,25 @@ use std::{
 };
 use tracing::{debug, warn};
 use uuid::Uuid;
+use regex::Regex;
 
 /// Canonical log event structure
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LogEvent {
+    /// Unique event identifier
+    pub event_id: Option<String>,
+    
     /// Tenant identifier
     pub tenant_id: String,
+    
+    /// Original raw log data
+    pub raw_event: Option<String>,
+    
+    /// Parsing status: "structured", "parsed", "raw", "failed"
+    pub parsing_status: Option<String>,
+    
+    /// Parse error message if parsing failed
+    pub parse_error_msg: Option<String>,
     
     /// Event timestamp
     #[serde(with = "timestamp_serde")]
@@ -96,6 +109,232 @@ pub struct ValidationResult {
     pub is_valid: bool,
     pub errors: Vec<ValidationError>,
     pub warnings: Vec<ValidationError>,
+}
+
+impl LogEvent {
+    /// Create LogEvent from raw unstructured data with intelligent parsing
+    pub fn from_raw_unstructured(raw_data: &str, tenant_id: String) -> Self {
+        let event_id = Some(Uuid::new_v4().to_string());
+        let raw_event = Some(raw_data.to_string());
+        let mut parsing_status = "raw".to_string();
+        let parse_error_msg = None;
+        let mut fields = HashMap::new();
+        let mut level = "info".to_string();
+        let mut message = raw_data.to_string();
+        let mut source = None;
+        
+        // Try JSON parsing first
+        if let Ok(json_value) = serde_json::from_str::<serde_json::Value>(raw_data) {
+            parsing_status = "parsed".to_string();
+            
+            if let Some(obj) = json_value.as_object() {
+                // Extract standard fields
+                if let Some(msg) = obj.get("message").and_then(|v| v.as_str()) {
+                    message = msg.to_string();
+                }
+                if let Some(lvl) = obj.get("level").and_then(|v| v.as_str()) {
+                    level = lvl.to_string();
+                }
+                if let Some(src) = obj.get("source").and_then(|v| v.as_str()) {
+                    source = Some(src.to_string());
+                }
+                
+                // Store all fields
+                for (k, v) in obj {
+                    if !["message", "level", "source", "tenant_id", "timestamp"].contains(&k.as_str()) {
+                        fields.insert(k.clone(), v.clone());
+                    }
+                }
+            }
+        } else {
+            // Try syslog parsing
+            if let Some(syslog_match) = Self::parse_syslog(raw_data) {
+                parsing_status = "parsed".to_string();
+                level = syslog_match.level;
+                message = syslog_match.message;
+                source = syslog_match.source;
+                fields = syslog_match.fields;
+            } else if let Some(kv_fields) = Self::parse_key_value(raw_data) {
+                // Try key-value parsing
+                parsing_status = "parsed".to_string();
+                
+                if let Some(msg) = kv_fields.get("message").and_then(|v| v.as_str()) {
+                    message = msg.to_string();
+                }
+                if let Some(lvl) = kv_fields.get("level").and_then(|v| v.as_str()) {
+                    level = lvl.to_string();
+                }
+                if let Some(src) = kv_fields.get("source").and_then(|v| v.as_str()) {
+                    source = Some(src.to_string());
+                }
+                
+                fields = kv_fields;
+            } else {
+                // Try common log patterns
+                if let Some(pattern_match) = Self::parse_common_patterns(raw_data) {
+                    parsing_status = "parsed".to_string();
+                    level = pattern_match.level;
+                    message = pattern_match.message;
+                    source = pattern_match.source;
+                    fields = pattern_match.fields;
+                }
+            }
+        }
+        
+        Self {
+            event_id,
+            tenant_id,
+            raw_event,
+            parsing_status: Some(parsing_status),
+            parse_error_msg,
+            timestamp: SystemTime::now(),
+            level,
+            message,
+            source,
+            fields,
+        }
+    }
+    
+    /// Parse syslog format
+    fn parse_syslog(data: &str) -> Option<ParsedLog> {
+        // RFC3164 syslog pattern: <priority>timestamp hostname tag: message
+        let syslog_regex = Regex::new(r"^<(\d+)>([A-Za-z]{3}\s+\d{1,2}\s+\d{2}:\d{2}:\d{2})\s+(\S+)\s+(\S+):\s*(.*)$").ok()?;
+        
+        if let Some(captures) = syslog_regex.captures(data) {
+            let priority = captures.get(1)?.as_str().parse::<u8>().ok()?;
+            let facility = priority >> 3;
+            let severity = priority & 7;
+            
+            let level = match severity {
+                0..=3 => "error",
+                4 => "warn",
+                5..=6 => "info",
+                7 => "debug",
+                _ => "info",
+            }.to_string();
+            
+            let hostname = captures.get(3)?.as_str().to_string();
+            let tag = captures.get(4)?.as_str().to_string();
+            let message = captures.get(5)?.as_str().to_string();
+            
+            let mut fields = HashMap::new();
+            fields.insert("facility".to_string(), serde_json::Value::Number(facility.into()));
+            fields.insert("severity".to_string(), serde_json::Value::Number(severity.into()));
+            fields.insert("hostname".to_string(), serde_json::Value::String(hostname.clone()));
+            fields.insert("tag".to_string(), serde_json::Value::String(tag.clone()));
+            
+            return Some(ParsedLog {
+                level,
+                message,
+                source: Some(format!("{}:{}", hostname, tag)),
+                fields,
+            });
+        }
+        
+        None
+    }
+    
+    /// Parse key-value format
+    fn parse_key_value(data: &str) -> Option<HashMap<String, serde_json::Value>> {
+        let kv_regex = Regex::new(r#"(\w+)=([^\s]+|"[^"]*")"#).ok()?;
+        let mut fields = HashMap::new();
+        
+        for captures in kv_regex.captures_iter(data) {
+            let key = captures.get(1)?.as_str();
+            let value = captures.get(2)?.as_str();
+            
+            // Remove quotes if present
+            let clean_value = if value.starts_with('"') && value.ends_with('"') {
+                &value[1..value.len()-1]
+            } else {
+                value
+            };
+            
+            // Try to parse as number, otherwise store as string
+            let json_value = if let Ok(num) = clean_value.parse::<i64>() {
+                serde_json::Value::Number(num.into())
+            } else if let Ok(float) = clean_value.parse::<f64>() {
+                serde_json::Value::Number(serde_json::Number::from_f64(float)?)
+            } else {
+                serde_json::Value::String(clean_value.to_string())
+            };
+            
+            fields.insert(key.to_string(), json_value);
+        }
+        
+        if fields.is_empty() {
+            None
+        } else {
+            Some(fields)
+        }
+    }
+    
+    /// Parse common log patterns (Apache, Nginx, etc.)
+    fn parse_common_patterns(data: &str) -> Option<ParsedLog> {
+        // Apache Common Log Format
+        let apache_regex = Regex::new(r#"^(\S+)\s+\S+\s+\S+\s+\[([^\]]+)\]\s+"([^"]+)"\s+(\d+)\s+(\d+|-)$"#).ok()?;
+        
+        if let Some(captures) = apache_regex.captures(data) {
+            let ip = captures.get(1)?.as_str();
+            let _timestamp = captures.get(2)?.as_str();
+            let request = captures.get(3)?.as_str();
+            let status = captures.get(4)?.as_str();
+            let size = captures.get(5)?.as_str();
+            
+            let mut fields = HashMap::new();
+            fields.insert("client_ip".to_string(), serde_json::Value::String(ip.to_string()));
+            fields.insert("request".to_string(), serde_json::Value::String(request.to_string()));
+            fields.insert("status".to_string(), serde_json::Value::String(status.to_string()));
+            fields.insert("size".to_string(), serde_json::Value::String(size.to_string()));
+            
+            let level = match status.parse::<u16>().unwrap_or(200) {
+                400..=499 => "warn",
+                500..=599 => "error",
+                _ => "info",
+            }.to_string();
+            
+            return Some(ParsedLog {
+                level,
+                message: format!("HTTP {} {} {}", request, status, size),
+                source: Some("apache".to_string()),
+                fields,
+            });
+        }
+        
+        // Try to extract timestamp and level from common patterns
+        let timestamp_regex = Regex::new(r"\d{4}-\d{2}-\d{2}[T\s]\d{2}:\d{2}:\d{2}").ok()?;
+        let level_regex = Regex::new(r"(?i)\b(error|warn|warning|info|debug|trace|fatal|critical)\b").ok()?;
+        
+        let mut fields = HashMap::new();
+        let mut level = "info".to_string();
+        
+        if let Some(ts_match) = timestamp_regex.find(data) {
+            fields.insert("extracted_timestamp".to_string(), serde_json::Value::String(ts_match.as_str().to_string()));
+        }
+        
+        if let Some(level_match) = level_regex.find(data) {
+            level = level_match.as_str().to_lowercase();
+        }
+        
+        if !fields.is_empty() || level != "info" {
+            return Some(ParsedLog {
+                level,
+                message: data.to_string(),
+                source: None,
+                fields,
+            });
+        }
+        
+        None
+    }
+}
+
+#[derive(Debug)]
+struct ParsedLog {
+    level: String,
+    message: String,
+    source: Option<String>,
+    fields: HashMap<String, serde_json::Value>,
 }
 
 /// Schema validator for log events
@@ -316,7 +555,11 @@ impl LogEventValidator {
         raw_event.fields.remove("source");
         
         Ok(LogEvent {
+            event_id: Some(uuid::Uuid::new_v4().to_string()),
             tenant_id,
+            raw_event: None, // Will be set by caller if needed
+            parsing_status: Some("normalized".to_string()),
+            parse_error_msg: None,
             timestamp,
             level,
             message: raw_event.message,

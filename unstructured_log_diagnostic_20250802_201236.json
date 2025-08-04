@@ -1,0 +1,242 @@
+[
+  {
+    "test_case": "malformed_json",
+    "description": "Malformed JSON with syntax errors",
+    "data_size": 42,
+    "siem_ingestor": {
+      "success": true,
+      "status_code": 200,
+      "response": "{\"accepted\":1,\"rejected\":0,\"parsing_status\":{\"raw\":1},\"infrastructure_errors\":0,\"errors\":[],\"request_id\":\"b0d708f9-baa6-4197-978f-a7db45763bd2\"}",
+      "error": null
+    },
+    "clickhouse_ingestion": {
+      "success": false,
+      "status_code": 404,
+      "response": "",
+      "error": null
+    },
+    "clickhouse_verification": {
+      "found": false,
+      "count": 0,
+      "rows": [],
+      "error": "HTTPDriver for http://localhost:8123 received ClickHouse error code 47\n Code: 47. DB::Exception: Unknown expression identifier `event_timestamp` in scope SELECT event_id, tenant_id, raw_event, parsing_status, parse_error_msg, event_timestamp, ingestion_timestamp FROM events_tenant1 WHERE raw_event LIKE '%malformed_json%' ORDER BY ingestion_timestamp DESC LIMIT 10. (UNKNOWN_IDENTIFIER) (version 25.7.1.3997 (official build))\n"
+    },
+    "timestamp": "2025-08-02T20:11:50.623568"
+  },
+  {
+    "test_case": "plain_text",
+    "description": "Plain text log message",
+    "data_size": 50,
+    "siem_ingestor": {
+      "success": true,
+      "status_code": 200,
+      "response": "{\"accepted\":1,\"rejected\":0,\"parsing_status\":{\"raw\":1},\"infrastructure_errors\":0,\"errors\":[],\"request_id\":\"89573e0c-f1a0-4641-94d3-43fec37883ee\"}",
+      "error": null
+    },
+    "clickhouse_ingestion": {
+      "success": false,
+      "status_code": 404,
+      "response": "",
+      "error": null
+    },
+    "clickhouse_verification": {
+      "found": false,
+      "count": 0,
+      "rows": [],
+      "error": "HTTPDriver for http://localhost:8123 received ClickHouse error code 47\n Code: 47. DB::Exception: Unknown expression identifier `event_timestamp` in scope SELECT event_id, tenant_id, raw_event, parsing_status, parse_error_msg, event_timestamp, ingestion_timestamp FROM events_tenant1 WHERE raw_event LIKE '%plain_text%' ORDER BY ingestion_timestamp DESC LIMIT 10. (UNKNOWN_IDENTIFIER) (version 25.7.1.3997 (official build))\n"
+    },
+    "timestamp": "2025-08-02T20:11:55.678978"
+  },
+  {
+    "test_case": "mixed_format",
+    "description": "Mixed format with timestamp, level, and JSON",
+    "data_size": 91,
+    "siem_ingestor": {
+      "success": true,
+      "status_code": 200,
+      "response": "{\"accepted\":1,\"rejected\":0,\"parsing_status\":{\"parsed\":1},\"infrastructure_errors\":0,\"errors\":[],\"request_id\":\"0cc75364-a24a-4932-b8fd-19a82e042236\"}",
+      "error": null
+    },
+    "clickhouse_ingestion": {
+      "success": false,
+      "status_code": 404,
+      "response": "",
+      "error": null
+    },
+    "clickhouse_verification": {
+      "found": false,
+      "count": 0,
+      "rows": [],
+      "error": "HTTPDriver for http://localhost:8123 received ClickHouse error code 47\n Code: 47. DB::Exception: Unknown expression identifier `event_timestamp` in scope SELECT event_id, tenant_id, raw_event, parsing_status, parse_error_msg, event_timestamp, ingestion_timestamp FROM events_tenant1 WHERE raw_event LIKE '%mixed_format%' ORDER BY ingestion_timestamp DESC LIMIT 10. (UNKNOWN_IDENTIFIER) (version 25.7.1.3997 (official build))\n"
+    },
+    "timestamp": "2025-08-02T20:12:00.740391"
+  },
+  {
+    "test_case": "syslog_format",
+    "description": "Standard syslog format",
+    "data_size": 111,
+    "siem_ingestor": {
+      "success": true,
+      "status_code": 200,
+      "response": "{\"accepted\":1,\"rejected\":0,\"parsing_status\":{\"parsed\":1},\"infrastructure_errors\":0,\"errors\":[],\"request_id\":\"7d471359-c41b-4a1d-bd72-c4fa33256fe9\"}",
+      "error": null
+    },
+    "clickhouse_ingestion": {
+      "success": false,
+      "status_code": 404,
+      "response": "",
+      "error": null
+    },
+    "clickhouse_verification": {
+      "found": false,
+      "count": 0,
+      "rows": [],
+      "error": "HTTPDriver for http://localhost:8123 received ClickHouse error code 47\n Code: 47. DB::Exception: Unknown expression identifier `event_timestamp` in scope SELECT event_id, tenant_id, raw_event, parsing_status, parse_error_msg, event_timestamp, ingestion_timestamp FROM events_tenant1 WHERE raw_event LIKE '%syslog_format%' ORDER BY ingestion_timestamp DESC LIMIT 10. (UNKNOWN_IDENTIFIER) (version 25.7.1.3997 (official build))\n"
+    },
+    "timestamp": "2025-08-02T20:12:05.772217"
+  },
+  {
+    "test_case": "binary_encoded",
+    "description": "Base64 encoded binary data",
+    "data_size": 32,
+    "siem_ingestor": {
+      "success": true,
+      "status_code": 200,
+      "response": "{\"accepted\":1,\"rejected\":0,\"parsing_status\":{\"raw\":1},\"infrastructure_errors\":0,\"errors\":[],\"request_id\":\"f6619a89-7dfa-499c-a63a-d9d62ff18a85\"}",
+      "error": null
+    },
+    "clickhouse_ingestion": {
+      "success": false,
+      "status_code": 404,
+      "response": "",
+      "error": null
+    },
+    "clickhouse_verification": {
+      "found": false,
+      "count": 0,
+      "rows": [],
+      "error": "HTTPDriver for http://localhost:8123 received ClickHouse error code 47\n Code: 47. DB::Exception: Unknown expression identifier `event_timestamp` in scope SELECT event_id, tenant_id, raw_event, parsing_status, parse_error_msg, event_timestamp, ingestion_timestamp FROM events_tenant1 WHERE raw_event LIKE '%binary_encoded%' ORDER BY ingestion_timestamp DESC LIMIT 10. (UNKNOWN_IDENTIFIER) (version 25.7.1.3997 (official build))\n"
+    },
+    "timestamp": "2025-08-02T20:12:10.823158"
+  },
+  {
+    "test_case": "large_payload",
+    "description": "Large payload (10KB+)",
+    "data_size": 10017,
+    "siem_ingestor": {
+      "success": true,
+      "status_code": 200,
+      "response": "{\"accepted\":1,\"rejected\":0,\"parsing_status\":{\"raw\":1},\"infrastructure_errors\":0,\"errors\":[],\"request_id\":\"0c905a70-24e8-4689-bda6-581215b9da4c\"}",
+      "error": null
+    },
+    "clickhouse_ingestion": {
+      "success": false,
+      "status_code": 404,
+      "response": "",
+      "error": null
+    },
+    "clickhouse_verification": {
+      "found": false,
+      "count": 0,
+      "rows": [],
+      "error": "HTTPDriver for http://localhost:8123 received ClickHouse error code 47\n Code: 47. DB::Exception: Unknown expression identifier `event_timestamp` in scope SELECT event_id, tenant_id, raw_event, parsing_status, parse_error_msg, event_timestamp, ingestion_timestamp FROM events_tenant1 WHERE raw_event LIKE '%large_payload%' ORDER BY ingestion_timestamp DESC LIMIT 10. (UNKNOWN_IDENTIFIER) (version 25.7.1.3997 (official build))\n"
+    },
+    "timestamp": "2025-08-02T20:12:15.881935"
+  },
+  {
+    "test_case": "empty_log",
+    "description": "Empty log message",
+    "data_size": 0,
+    "siem_ingestor": {
+      "success": true,
+      "status_code": 200,
+      "response": "{\"accepted\":1,\"rejected\":0,\"parsing_status\":{\"raw\":1},\"infrastructure_errors\":0,\"errors\":[],\"request_id\":\"f2cab379-622b-4c17-b78a-445f2de0ec93\"}",
+      "error": null
+    },
+    "clickhouse_ingestion": {
+      "success": false,
+      "status_code": 404,
+      "response": "",
+      "error": null
+    },
+    "clickhouse_verification": {
+      "found": false,
+      "count": 0,
+      "rows": [],
+      "error": "HTTPDriver for http://localhost:8123 received ClickHouse error code 47\n Code: 47. DB::Exception: Unknown expression identifier `event_timestamp` in scope SELECT event_id, tenant_id, raw_event, parsing_status, parse_error_msg, event_timestamp, ingestion_timestamp FROM events_tenant1 WHERE raw_event LIKE '%empty_log%' ORDER BY ingestion_timestamp DESC LIMIT 10. (UNKNOWN_IDENTIFIER) (version 25.7.1.3997 (official build))\n"
+    },
+    "timestamp": "2025-08-02T20:12:20.939931"
+  },
+  {
+    "test_case": "special_characters",
+    "description": "Log with special characters and escape sequences",
+    "data_size": 31,
+    "siem_ingestor": {
+      "success": true,
+      "status_code": 200,
+      "response": "{\"accepted\":1,\"rejected\":0,\"parsing_status\":{\"raw\":1},\"infrastructure_errors\":0,\"errors\":[],\"request_id\":\"285d2f2f-6a52-4a69-88d3-63036395d520\"}",
+      "error": null
+    },
+    "clickhouse_ingestion": {
+      "success": false,
+      "status_code": 404,
+      "response": "",
+      "error": null
+    },
+    "clickhouse_verification": {
+      "found": false,
+      "count": 0,
+      "rows": [],
+      "error": "HTTPDriver for http://localhost:8123 received ClickHouse error code 47\n Code: 47. DB::Exception: Unknown expression identifier `event_timestamp` in scope SELECT event_id, tenant_id, raw_event, parsing_status, parse_error_msg, event_timestamp, ingestion_timestamp FROM events_tenant1 WHERE raw_event LIKE '%special_characters%' ORDER BY ingestion_timestamp DESC LIMIT 10. (UNKNOWN_IDENTIFIER) (version 25.7.1.3997 (official build))\n"
+    },
+    "timestamp": "2025-08-02T20:12:25.998666"
+  },
+  {
+    "test_case": "nested_json",
+    "description": "Valid nested JSON structure",
+    "data_size": 181,
+    "siem_ingestor": {
+      "success": true,
+      "status_code": 200,
+      "response": "{\"accepted\":1,\"rejected\":0,\"parsing_status\":{\"parsed\":1},\"infrastructure_errors\":0,\"errors\":[],\"request_id\":\"283482e1-df55-4a11-83da-07eca136a5d2\"}",
+      "error": null
+    },
+    "clickhouse_ingestion": {
+      "success": false,
+      "status_code": 404,
+      "response": "",
+      "error": null
+    },
+    "clickhouse_verification": {
+      "found": false,
+      "count": 0,
+      "rows": [],
+      "error": "HTTPDriver for http://localhost:8123 received ClickHouse error code 47\n Code: 47. DB::Exception: Unknown expression identifier `event_timestamp` in scope SELECT event_id, tenant_id, raw_event, parsing_status, parse_error_msg, event_timestamp, ingestion_timestamp FROM events_tenant1 WHERE raw_event LIKE '%nested_json%' ORDER BY ingestion_timestamp DESC LIMIT 10. (UNKNOWN_IDENTIFIER) (version 25.7.1.3997 (official build))\n"
+    },
+    "timestamp": "2025-08-02T20:12:31.029370"
+  },
+  {
+    "test_case": "xml_format",
+    "description": "XML formatted log",
+    "data_size": 128,
+    "siem_ingestor": {
+      "success": true,
+      "status_code": 200,
+      "response": "{\"accepted\":1,\"rejected\":0,\"parsing_status\":{\"parsed\":1},\"infrastructure_errors\":0,\"errors\":[],\"request_id\":\"e5c83c0e-c192-4e6f-84af-539fd83b2e96\"}",
+      "error": null
+    },
+    "clickhouse_ingestion": {
+      "success": false,
+      "status_code": 404,
+      "response": "",
+      "error": null
+    },
+    "clickhouse_verification": {
+      "found": false,
+      "count": 0,
+      "rows": [],
+      "error": "HTTPDriver for http://localhost:8123 received ClickHouse error code 47\n Code: 47. DB::Exception: Unknown expression identifier `event_timestamp` in scope SELECT event_id, tenant_id, raw_event, parsing_status, parse_error_msg, event_timestamp, ingestion_timestamp FROM events_tenant1 WHERE raw_event LIKE '%xml_format%' ORDER BY ingestion_timestamp DESC LIMIT 10. (UNKNOWN_IDENTIFIER) (version 25.7.1.3997 (official build))\n"
+    },
+    "timestamp": "2025-08-02T20:12:36.078024"
+  }
+]

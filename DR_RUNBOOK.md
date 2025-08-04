@@ -416,12 +416,12 @@ sleep 60
 # Restore database schema
 echo "Restoring database schema..."
 cat backup_data/clickhouse/schema/database.json | jq -r '.data[].create_database_query' | \
-  clickhouse-client --host localhost --port 8123
+  clickhouse client --host localhost --port 8123
 
 # Restore table schemas
 echo "Restoring table schemas..."
 cat backup_data/clickhouse/schema/tables.json | jq -r '.data[].create_table_query' | \
-  clickhouse-client --host localhost --port 8123
+  clickhouse client --host localhost --port 8123
 
 # Restore data
 echo "Restoring table data..."
@@ -429,12 +429,12 @@ for table_file in backup_data/clickhouse/data/*.native; do
   table_name=$(basename "$table_file" .native)
   echo "Restoring table: $table_name"
   
-  clickhouse-client --host localhost --port 8123 --database dev \
+  clickhouse client --host localhost --port 8123 --database dev \
     --query "INSERT INTO $table_name FORMAT Native" < "$table_file"
 done
 
 # Verify data restoration
-clickhouse-client --host localhost --port 8123 --database dev \
+clickhouse client --host localhost --port 8123 --database dev \
   --query "SELECT table, count() FROM system.tables WHERE database = 'dev' GROUP BY table"
 ```
 
@@ -654,7 +654,7 @@ done
 # Test ClickHouse cluster
 echo "Testing ClickHouse cluster..."
 for port in 8123 8124 8125; do
-  echo "ClickHouse $port: $(clickhouse-client --host localhost --port $port --query 'SELECT 1' 2>/dev/null && echo 'OK' || echo 'FAIL')"
+  echo "ClickHouse $port: $(clickhouse client --host localhost --port $port --query 'SELECT 1' 2>/dev/null && echo 'OK' || echo 'FAIL')"
 done
 
 # Test Kafka cluster
@@ -663,7 +663,7 @@ kafka-topics.sh --list --bootstrap-server localhost:9092,localhost:9093,localhos
 
 # Test data integrity
 echo "Testing data integrity..."
-RECORD_COUNT=$(clickhouse-client --host localhost --port 8123 --database dev \
+RECORD_COUNT=$(clickhouse client --host localhost --port 8123 --database dev \
   --query "SELECT count() FROM events" 2>/dev/null)
 echo "Events table records: $RECORD_COUNT"
 
@@ -705,7 +705,7 @@ sleep 10
 
 # Verify event was stored
 echo "Verifying event storage..."
-clickhouse-client --host localhost --port 8123 --database dev \
+clickhouse client --host localhost --port 8123 --database dev \
   --query "SELECT count() FROM events WHERE raw_event LIKE '%disaster recovery verification%'"
 
 # Test agent config endpoint
@@ -779,12 +779,12 @@ grep -i "agent.*connect" /var/log/siem/*.log
 
 # Verify agent data ingestion
 echo "Verifying agent data ingestion..."
-INITIAL_COUNT=$(clickhouse-client --host localhost --port 8123 --database dev \
+INITIAL_COUNT=$(clickhouse client --host localhost --port 8123 --database dev \
   --query "SELECT count() FROM events")
 
 sleep 300  # Wait 5 minutes
 
-FINAL_COUNT=$(clickhouse-client --host localhost --port 8123 --database dev \
+FINAL_COUNT=$(clickhouse client --host localhost --port 8123 --database dev \
   --query "SELECT count() FROM events")
 
 NEW_EVENTS=$((FINAL_COUNT - INITIAL_COUNT))
@@ -812,7 +812,7 @@ ab -n 1000 -c 10 http://localhost:8080/v1/health
 # Data consistency checks
 echo "Performing data consistency checks..."
 for table in events alerts rules assets; do
-  COUNT=$(clickhouse-client --host localhost --port 8123 --database dev \
+  COUNT=$(clickhouse client --host localhost --port 8123 --database dev \
     --query "SELECT count() FROM $table" 2>/dev/null || echo "0")
   echo "$table: $COUNT records"
 done
@@ -920,4 +920,4 @@ echo "Recovery documentation created: recovery_report.md"
 - Verify backup schedule resumes automatically
 - Check agent connection stability
 - Review logs for any anomalies
-- Schedule post-incident review meeting 
+- Schedule post-incident review meeting

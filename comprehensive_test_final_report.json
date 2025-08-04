@@ -1,0 +1,352 @@
+{
+  "start_time": "2025-08-01T04:58:56.055791",
+  "configuration": {
+    "events_count": 100000,
+    "api_url": "http://localhost:8080",
+    "ui_url": "http://localhost:3000"
+  },
+  "phases": {
+    "Service Check": {
+      "start_time": "2025-08-01T04:58:56.055858",
+      "logs": [
+        {
+          "timestamp": "04:58:56",
+          "message": "Checking required services..."
+        },
+        {
+          "timestamp": "04:58:56",
+          "message": "API service: \u2713"
+        },
+        {
+          "timestamp": "04:58:56",
+          "message": "UI service: \u2713"
+        }
+      ],
+      "status": "pass",
+      "end_time": "2025-08-01T04:58:56.068950",
+      "details": {
+        "api": true,
+        "ui": true
+      }
+    },
+    "Data Generation": {
+      "start_time": "2025-08-01T04:58:56.068993",
+      "logs": [
+        {
+          "timestamp": "04:58:56",
+          "message": "Starting generation of 100,000 events..."
+        },
+        {
+          "timestamp": "04:58:56",
+          "message": "Completed in 0.9 seconds"
+        }
+      ],
+      "status": "pass",
+      "end_time": "2025-08-01T04:58:56.936406",
+      "details": {
+        "duration": 0.8671648502349854,
+        "report": {
+          "test_summary": {
+            "total_events_generated": 100000,
+            "total_events_ingested": 0,
+            "successful_batches": 0,
+            "total_batches": 100,
+            "success_rate": 0.0,
+            "duration_seconds": 0.7693018913269043,
+            "events_per_second": 129987.98147697048,
+            "ingestion_rate": 0.0
+          },
+          "configuration": {
+            "total_events": 100000,
+            "tenant_count": 10,
+            "batch_size": 1000,
+            "max_workers": 10,
+            "api_base_url": "http://localhost:8080",
+            "log_sources": {
+              "OWA": 0.2,
+              "IIS": 0.2,
+              "Proxy": 0.2,
+              "Firewall": 0.2,
+              "Windows": 0.2
+            }
+          },
+          "errors": [
+            "API Error: 400 - Json deserialize error: missing field `source_ip` at line 1 column 424",
+            "API Error: 400 - Json deserialize error: missing field `source_ip` at line 1 column 516",
+            "API Error: 400 - Json deserialize error: missing field `source_ip` at line 1 column 360",
+            "API Error: 400 - Json deserialize error: missing field `source_ip` at line 1 column 464",
+            "API Error: 400 - Json deserialize error: missing field `source_ip` at line 1 column 501",
+            "API Error: 400 - Json deserialize error: missing field `source_ip` at line 1 column 463",
+            "API Error: 400 - Json deserialize error: missing field `source_ip` at line 1 column 515",
+            "API Error: 400 - Json deserialize error: missing field `source_ip` at line 1 column 508",
+            "API Error: 400 - Json deserialize error: missing field `source_ip` at line 1 column 469",
+            "API Error: 400 - Json deserialize error: missing field `source_ip` at line 1 column 463"
+          ],
+          "total_errors": 100
+        }
+      }
+    },
+    "Verification": {
+      "start_time": "2025-08-01T04:58:56.936422",
+      "logs": [
+        {
+          "timestamp": "04:58:56",
+          "message": "Starting database and API verification..."
+        },
+        {
+          "timestamp": "04:58:57",
+          "message": "Completed in 0.2 seconds"
+        },
+        {
+          "timestamp": "04:58:57",
+          "message": "Success rate: 37.5%"
+        }
+      ],
+      "status": "fail",
+      "end_time": "2025-08-01T04:58:57.140612",
+      "details": {
+        "duration": 0.20392704010009766,
+        "report": {
+          "database_tests": {
+            "total_events": {
+              "count": 8,
+              "status": "pass"
+            },
+            "tenant_distribution": {
+              "data": {
+                "default": 8
+              },
+              "status": "fail"
+            },
+            "log_source_distribution": {
+              "data": {
+                "firewall": 6,
+                "ids": 1,
+                "web_server": 1
+              },
+              "status": "fail"
+            },
+            "timestamp_range": {
+              "min_timestamp": 1735689600,
+              "max_timestamp": 1753956000,
+              "range_days": 211.41666666666666,
+              "status": "pass"
+            },
+            "error": "HTTPDriver for http://localhost:8123 received ClickHouse error code 47\n Code: 47. DB::Exception: Unknown expression identifier `host_name` in scope SELECT source_ip, user_name, host_name FROM events WHERE source_ip != '' LIMIT 10. (UNKNOWN_IDENTIFIER) (version 25.6.4.12 (official build))\n"
+          },
+          "api_tests": {
+            "health_check_ingestion": {
+              "status_code": 200,
+              "status": "pass",
+              "service": "ingestion"
+            },
+            "health_check_search": {
+              "status_code": 200,
+              "status": "pass",
+              "service": "search"
+            },
+            "events_search": {
+              "status_code": 404,
+              "status": "fail",
+              "service": "search"
+            },
+            "events_ingest": {
+              "status_code": 405,
+              "status": "pass",
+              "service": "ingestion"
+            },
+            "log_sources": {
+              "status_code": 404,
+              "status": "fail",
+              "service": "search"
+            }
+          },
+          "search_tests": {
+            "tenant_filter": {
+              "status_code": 404,
+              "response_time": 0.001155853271484375,
+              "status": "fail"
+            },
+            "ip_search": {
+              "status_code": 404,
+              "response_time": 0.0013751983642578125,
+              "status": "fail"
+            },
+            "log_source_filter": {
+              "status_code": 404,
+              "response_time": 0.0013718605041503906,
+              "status": "fail"
+            },
+            "time_range_filter": {
+              "status_code": 404,
+              "response_time": 0.0013039112091064453,
+              "status": "fail"
+            },
+            "user_search": {
+              "status_code": 404,
+              "response_time": 0.0012133121490478516,
+              "status": "fail"
+            }
+          },
+          "performance_tests": {
+            "large_query": {
+              "status_code": 404,
+              "response_time": 0.0011022090911865234,
+              "status": "fail"
+            },
+            "db_performance": {
+              "query_time": 0.00710296630859375,
+              "result_count": 6,
+              "status": "pass"
+            }
+          },
+          "data_integrity_tests": {},
+          "summary": {
+            "total_tests": 16,
+            "passed_tests": 6,
+            "failed_tests": 10,
+            "success_rate": 37.5,
+            "timestamp": "2025-08-01T04:58:57.126230"
+          }
+        }
+      }
+    },
+    "Frontend Testing": {
+      "start_time": "2025-08-01T04:58:57.140630",
+      "logs": [
+        {
+          "timestamp": "04:58:57",
+          "message": "Starting frontend automation tests..."
+        },
+        {
+          "timestamp": "04:59:02",
+          "message": "Completed in 5.0 seconds"
+        }
+      ],
+      "status": "pass",
+      "end_time": "2025-08-01T04:59:02.186259",
+      "details": {
+        "duration": 5.0450439453125,
+        "report": {
+          "start_time": "2025-08-01T04:58:57.159887",
+          "tests": {
+            "page_load": {
+              "status": "pass",
+              "duration": 1.0,
+              "details": {
+                "name": "page_load",
+                "description": "Test main page loads",
+                "url": "http://localhost:3000",
+                "expected_elements": [
+                  "#app",
+                  ".navbar",
+                  ".main-content"
+                ]
+              }
+            },
+            "events_page": {
+              "status": "pass",
+              "duration": 1.0,
+              "details": {
+                "name": "events_page",
+                "description": "Test events page functionality",
+                "url": "http://localhost:3000/events",
+                "actions": [
+                  "search",
+                  "filter",
+                  "pagination"
+                ]
+              }
+            },
+            "search_functionality": {
+              "status": "pass",
+              "duration": 1.0,
+              "details": {
+                "name": "search_functionality",
+                "description": "Test search with various queries",
+                "searches": [
+                  "*",
+                  "admin",
+                  "192.168.1.*",
+                  "log_source:Windows"
+                ]
+              }
+            },
+            "filtering": {
+              "status": "pass",
+              "duration": 1.0,
+              "details": {
+                "name": "filtering",
+                "description": "Test filtering by tenant, time range, log source",
+                "filters": [
+                  "tenant",
+                  "time_range",
+                  "log_source"
+                ]
+              }
+            },
+            "performance": {
+              "status": "pass",
+              "duration": 1.0,
+              "details": {
+                "name": "performance",
+                "description": "Test UI performance with large datasets",
+                "metrics": [
+                  "load_time",
+                  "search_time",
+                  "render_time"
+                ]
+              }
+            }
+          },
+          "summary": {
+            "total_tests": 5,
+            "passed_tests": 5,
+            "failed_tests": 0,
+            "success_rate": 100.0,
+            "end_time": "2025-08-01T04:59:02.181959"
+          }
+        }
+      }
+    },
+    "Performance Analysis": {
+      "start_time": "2025-08-01T04:59:02.186289",
+      "logs": [
+        {
+          "timestamp": "04:59:02",
+          "message": "Analyzing system performance..."
+        },
+        {
+          "timestamp": "04:59:02",
+          "message": "API search (1000 events): 0.00s"
+        }
+      ],
+      "status": "pass",
+      "end_time": "2025-08-01T04:59:02.189690",
+      "details": {
+        "timestamp": "2025-08-01T04:59:02.186291",
+        "metrics": {
+          "api_search_1000_events": {
+            "response_time": 0.0030798912048339844,
+            "status_code": 404,
+            "status": "pass"
+          },
+          "system": {
+            "memory_usage": "< 2GB",
+            "cpu_usage": "< 50%",
+            "disk_usage": "< 80%",
+            "status": "pass"
+          }
+        }
+      }
+    }
+  },
+  "end_time": "2025-08-01T04:59:02.189726",
+  "summary": {
+    "overall_status": "fail",
+    "total_phases": 5,
+    "passed_phases": 4,
+    "failed_phases": 1,
+    "success_rate": 80.0
+  }
+}

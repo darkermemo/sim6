@@ -12,6 +12,7 @@ import TenantMetricsDashboard from './components/TenantMetricsDashboard';
 import { InteractiveParserBuilder } from './components/InteractiveParserBuilder';
 import { EventInvestigation } from './components/EventInvestigation';
 import { LogActivities } from './components/LogActivities';
+import { EventInvestigationPage } from './components/EventInvestigationPage';
 
 import DevEventsTable from './components/DevEventsTable';
 import { AlertDetailDrawer } from './components/AlertDetailDrawer';
@@ -34,12 +35,18 @@ import { useUiStore } from './stores/uiStore';
  * Critical Quality Gate Rule 6: Comprehensive Error Boundary (ErrorBoundary)
  */
 function App() {
-  type PageType = 'dashboard' | 'alerts' | 'cases' | 'admin' | 'rules' | 'log-sources' | 'enhanced-log-sources' | 'tenant-metrics' | 'users' | 'parsers' | 'interactive-parser' | 'events' | 'vendor-mapping' | 'log-activity' | 'agent-fleet' | 'typed-api-example' | 'dev-events';
+  type PageType = 'dashboard' | 'alerts' | 'cases' | 'admin' | 'rules' | 'log-sources' | 'enhanced-log-sources' | 'tenant-metrics' | 'users' | 'parsers' | 'interactive-parser' | 'events' | 'vendor-mapping' | 'log-activity' | 'event-investigation' | 'agent-fleet' | 'typed-api-example' | 'dev-events';
   
   // Function to get page from URL path
   const getPageFromPath = (pathname: string): PageType => {
+    // Handle specific multi-segment paths first
+    if (pathname === '/events/live') {
+      return 'log-activity';
+    }
+    
+    // Handle single segment paths
     const path = pathname.replace('/', '') || 'dashboard';
-    const validPages: PageType[] = ['dashboard', 'alerts', 'cases', 'admin', 'rules', 'log-sources', 'enhanced-log-sources', 'tenant-metrics', 'users', 'parsers', 'interactive-parser', 'events', 'vendor-mapping', 'log-activity', 'agent-fleet', 'typed-api-example', 'dev-events'];
+    const validPages: PageType[] = ['dashboard', 'alerts', 'cases', 'admin', 'rules', 'log-sources', 'enhanced-log-sources', 'tenant-metrics', 'users', 'parsers', 'interactive-parser', 'events', 'vendor-mapping', 'log-activity', 'event-investigation', 'agent-fleet', 'typed-api-example', 'dev-events'];
     return validPages.includes(path as PageType) ? (path as PageType) : 'dashboard';
   };
   
@@ -59,7 +66,14 @@ function App() {
     const newPage = page as PageType;
     setCurrentPage(newPage);
     // Update URL without page reload
-    const newPath = newPage === 'dashboard' ? '/' : `/${newPage}`;
+    let newPath: string;
+    if (newPage === 'dashboard') {
+      newPath = '/';
+    } else if (newPage === 'log-activity') {
+      newPath = '/events/live';
+    } else {
+      newPath = `/${newPage}`;
+    }
     window.history.pushState({}, '', newPath);
   };
   const { ruleDrawerOpen, selectedRuleId, closeRuleDrawer } = useUiStore();
@@ -92,6 +106,8 @@ function App() {
         return <EventInvestigation />;
       case 'log-activity':
         return <LogActivities />;
+      case 'event-investigation':
+        return <EventInvestigationPage />;
       case 'vendor-mapping':
         return <VendorMappingPage />;
       case 'agent-fleet':

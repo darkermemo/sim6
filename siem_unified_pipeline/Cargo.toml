@@ -124,6 +124,9 @@ aws-sdk-s3 = { version = "1.0", optional = true }
 # Validation
 validator = { version = "0.16", features = ["derive"] }
 
+# HTML templating (for admin console)
+maud = { version = "0.25", features = ["axum"], optional = true }
+
 # Rate limiting
 governor = "0.6"
 
@@ -153,7 +156,7 @@ pcap-support = ["pcap"]
 ml = ["candle-core", "candle-nn", "candle-transformers"]
 
 aws = ["aws-config", "aws-sdk-s3"]
-web-ui = []
+web-ui = ["maud"]
 plugin-system = []
 
 # Performance features

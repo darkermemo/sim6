@@ -1,0 +1,76 @@
+#!/bin/bash
+
+# SIEM Development Environment Startup
+# Fail-fast, self-documenting development setup
+
+set -euo pipefail
+
+# Colors for output
+GREEN='\033[32m'
+YELLOW='\033[33m'
+RED='\033[31m'
+BLUE='\033[34m'
+RESET='\033[0m'
+
+# Get the project root (parent of bin directory)
+PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$PROJECT_ROOT"
+
+# Function to handle errors
+error_handler() {
+    local exit_code=$?
+    echo -e "${RED}❌ SIEM startup failed at step: $1${RESET}" >&2
+    echo -e "${YELLOW}💡 Check logs in ./logs/ for details${RESET}" >&2
+    echo -e "${YELLOW}💡 Run 'make clean' to reset and try again${RESET}" >&2
+    exit $exit_code
+}
+
+# Set up error handling
+trap 'error_handler "${BASH_COMMAND}"' ERR
+
+# Load environment if available
+if [[ -f ".env" ]]; then
+    set -a
+    source .env
+    set +a
+fi
+
+# Print banner
+echo -e "${BLUE}"
+echo "╔══════════════════════════════════════════════════════════════╗"
+echo "║                    SIEM Development Environment             ║"
+echo "║                     Fail-Fast Startup                       ║"
+echo "╚══════════════════════════════════════════════════════════════╝"
+echo -e "${RESET}"
+echo
+
+# Check if make is available
+if ! command -v make &> /dev/null; then
+    echo -e "${RED}❌ 'make' is not installed. Please install it first.${RESET}" >&2
+    exit 1
+fi
+
+# Check if Makefile exists
+if [[ ! -f "Makefile" ]]; then
+    echo -e "${RED}❌ Makefile not found in project root${RESET}" >&2
+    exit 1
+fi
+
+# Show help if requested
+if [[ "${1:-}" == "--help" ]] || [[ "${1:-}" == "-h" ]]; then
+    make help
+    exit 0
+fi
+
+# Run the main development setup
+echo -e "${YELLOW}🚀 Starting SIEM development environment...${RESET}"
+echo
+
+# Execute the main target
+make dev-up
+
+echo
+echo -e "${GREEN}🎉 Success! Your SIEM development environment is ready.${RESET}"
+echo -e "${BLUE}📖 Run 'make help' to see available commands${RESET}"
+echo -e "${BLUE}📊 Run 'make status' to check system health${RESET}"
+echo -e "${BLUE}📋 Run 'make logs' to view recent logs${RESET}"

@@ -401,7 +401,7 @@ docker-compose -f kafka-cluster.yml up -d
 docker-compose -f clickhouse-cluster.yml up -d
 
 # 4. Initialize database schemas
-clickhouse-client --host clickhouse-1 --multiquery < database_setup_ha.sql
+clickhouse client --host clickhouse-1 --multiquery < database_setup_ha.sql
 
 # 5. Deploy SIEM services
 docker-compose -f siem-services-ha.yml up -d
@@ -431,7 +431,7 @@ done
 
 echo "Checking ClickHouse cluster health..."
 for i in {1..3}; do
-    clickhouse-client --host clickhouse-$i --query "SELECT 1" || echo "ClickHouse $i is down"
+    clickhouse client --host clickhouse-$i --query "SELECT 1" || echo "ClickHouse $i is down"
 done
 
 echo "Checking Kafka cluster health..."
@@ -496,4 +496,4 @@ This HA deployment ensures:
 - **Automatic failover capabilities**
 - **Geographic distribution across availability zones**
 - **Horizontal and vertical scaling capabilities**
-- **Comprehensive health monitoring** 
+- **Comprehensive health monitoring**

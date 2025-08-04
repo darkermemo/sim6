@@ -1,1 +1,3 @@
-export { default as LogActivities } from './LogActivities.tsx';
+import LogActivities from './LogActivities.tsx';
+export { LogActivities };
+export default LogActivities;

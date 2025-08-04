@@ -348,14 +348,88 @@ export interface StatefulConfigData {
 }
 
 // Event Search Types
-export interface EventSearchRequest {
-  query: string;
-  page?: number;
-  limit?: number;
-  sort?: string;
-  direction?: 'asc' | 'desc';
+// Time Range for event filtering
+export interface TimeRange {
+  start: string; // ISO 8601 datetime
+  end: string; // ISO 8601 datetime
+  timezone?: string;
 }
 
+// Pagination configuration
+export interface Pagination {
+  page: number; // 0-based page number
+  size: number; // Page size
+  cursor?: string; // Cursor for pagination
+  includeTotal: boolean; // Include total count
+}
+
+// Sort field configuration
+export interface SortField {
+  field: string;
+  direction: 'asc' | 'desc';
+}
+
+// Filter value types
+export type FilterValue = string | number | boolean | string[] | number[];
+
+// Search options
+export interface SearchOptions {
+  includeRaw?: boolean;
+  highlightMatches?: boolean;
+  timeout?: number;
+}
+
+// Aggregation request
+export interface AggregationRequest {
+  type: 'terms' | 'date_histogram' | 'histogram' | 'stats';
+  field: string;
+  size?: number;
+  interval?: string;
+}
+
+// Event search request (matches backend SearchRequest)
+export interface EventSearchRequest {
+  query?: string;
+  timeRange?: TimeRange;
+  filters?: Record<string, FilterValue>;
+  pagination?: Pagination;
+  sort?: SortField[];
+  fields?: string[];
+  options?: SearchOptions;
+  tenantId?: string;
+  aggregations?: Record<string, AggregationRequest>;
+}
+
+// Event detail response (camelCase frontend interface)
+export interface EventDetailResponse {
+  id: string;
+  timestamp: string; // RFC3339 format
+  source: string;
+  sourceType: string;
+  severity: string;
+  facility: string;
+  hostname: string;
+  process: string;
+  message: string;
+  rawMessage: string;
+  sourceIp: string;
+  sourcePort: number;
+  protocol: string;
+  tags: string[];
+  fields: Record<string, any>;
+  processingStage: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Event search response
+export interface EventSearchResponse {
+  events: EventDetailResponse[];
+  total: number;
+  status: string;
+}
+
+// Legacy event search result (for backward compatibility)
 export interface EventSearchResult {
   event_id: string;
   event_timestamp: number;
@@ -369,13 +443,38 @@ export interface EventSearchResult {
   raw_event?: string;
 }
 
-export interface EventSearchResponse {
-  events: EventSearchResult[];
-  total: number;
-  page: number;
-  limit: number;
-  query_time_ms: number;
-  sql_query: string;
+// Event filters for SSE streaming
+export interface EventFilters {
+  page?: number;
+  limit?: number;
+  search?: string;
+  severity?: string;
+  sourceType?: string;
+  startTime?: number; // Unix timestamp
+  endTime?: number; // Unix timestamp
+  tenantId?: string;
+}
+
+// Redis event frame for SSE (camelCase frontend interface)
+export interface RedisEventFrame {
+  eventType: string;
+  eventData: EventDetailResponse;
+  streamId: string;
+  timestamp: string;
+}
+
+// SSE event types
+export interface SSEEventData {
+  type: 'event' | 'heartbeat' | 'error';
+  data: RedisEventFrame | { type: string; timestamp: string } | { error: string };
+}
+
+// Log volume metrics
+export interface LogVolumeMetrics {
+  totalEvents: number;
+  totalSizeBytes: number;
+  eventsPerSecond: number;
+  lastUpdated: string;
 }
 
 // Alert Management Types

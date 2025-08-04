@@ -49,7 +49,7 @@ export const useAuth = () => {
     setError(null);
     
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_BASE || 'http://localhost:8080'}/api/v1/auth/login`, {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE || 'http://localhost:8084'}/api/v1/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -92,7 +92,7 @@ export const useAuth = () => {
     }
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_BASE || 'http://localhost:8080'}/api/v1/auth/refresh`, {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE || 'http://localhost:8084'}/api/v1/auth/refresh`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

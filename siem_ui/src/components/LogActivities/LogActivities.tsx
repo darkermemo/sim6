@@ -46,6 +46,8 @@ const LogActivities: React.FC<LogActivitiesProps> = ({ className }) => {
   const [pageSize] = useState(50);
   const [liveEvents, setLiveEvents] = useState<Event[]>([]);
   const [eventSource, setEventSource] = useState<EventSource | null>(null);
+  const [currentCursor, setCurrentCursor] = useState<string | undefined>(undefined);
+  const [useCursorPagination, setUseCursorPagination] = useState(false);
   
   // Filter state
   const [filters, setFilters] = useState<FilterState>({
@@ -62,15 +64,17 @@ const LogActivities: React.FC<LogActivitiesProps> = ({ className }) => {
   const listRef = useRef<List>(null);
   const liveListRef = useRef<List>(null);
   
-  // API hooks
+  // API hooks with cursor-based pagination support
   const { 
     events: historicalEvents, 
     totalCount: historicalCount, 
-    isLoading: isLoadingEvents
+    isLoading: isLoadingEvents,
+    nextCursor,
+    previousCursor
   } = useEvents({
     tenantId: tenantId || undefined,
     query: filters.query || undefined,
-    page: currentPage,
+    page: useCursorPagination ? undefined : currentPage,
     limit: pageSize,
     startTime: filters.timeRange?.start_unix,
     endTime: filters.timeRange?.end_unix,
@@ -78,7 +82,9 @@ const LogActivities: React.FC<LogActivitiesProps> = ({ className }) => {
     eventCategory: filters.eventCategory || undefined,
     eventOutcome: filters.eventOutcome || undefined,
     eventAction: filters.eventAction || undefined,
-    sourceType: filters.sourceType || undefined
+    sourceType: filters.sourceType || undefined,
+    cursor: useCursorPagination ? currentCursor : undefined,
+    enableStreaming: useCursorPagination // Enable streaming for cursor-based pagination
   });
   
   const { 
@@ -143,6 +149,38 @@ const LogActivities: React.FC<LogActivitiesProps> = ({ className }) => {
     }
   }, [liveEvents, autoScroll, isLiveMode]);
 
+  // Automatically switch to cursor-based pagination for large datasets
+  useEffect(() => {
+    if (totalEventCount && totalEventCount > 100000) { // Switch to cursor pagination for datasets > 100k
+      setUseCursorPagination(true);
+      setCurrentPage(1); // Reset to first page when switching
+      setCurrentCursor(undefined); // Reset cursor
+    } else if (totalEventCount && totalEventCount <= 100000) {
+      setUseCursorPagination(false);
+      setCurrentCursor(undefined);
+    }
+  }, [totalEventCount]);
+
+  // Navigation functions for cursor-based pagination
+  const handleNextPage = useCallback(() => {
+    if (useCursorPagination && nextCursor) {
+      setCurrentCursor(nextCursor);
+    } else if (!useCursorPagination) {
+      setCurrentPage(prev => prev + 1);
+    }
+  }, [useCursorPagination, nextCursor]);
+
+  const handlePreviousPage = useCallback(() => {
+    if (useCursorPagination && previousCursor) {
+      setCurrentCursor(previousCursor);
+    } else if (!useCursorPagination && currentPage > 1) {
+      setCurrentPage(prev => prev - 1);
+    }
+  }, [useCursorPagination, previousCursor, currentPage]);
+
+  const canGoNext = useCursorPagination ? !!nextCursor : (currentPage * pageSize < (historicalCount || 0));
+  const canGoPrevious = useCursorPagination ? !!previousCursor : currentPage > 1;
+
   useEffect(() => {
     if (autoScroll && !isLiveMode && listRef.current && historicalEvents.length > 0) {
       listRef.current.scrollToItem(historicalEvents.length - 1, 'end');
@@ -168,10 +206,6 @@ const LogActivities: React.FC<LogActivitiesProps> = ({ className }) => {
     }
   }, [isLiveMode]);
 
-  const handlePageChange = useCallback((newPage: number) => {
-    setCurrentPage(newPage);
-  }, []);
-
   const clearAllFilters = useCallback(() => {
     setFilters({
       query: '',
@@ -183,6 +217,7 @@ const LogActivities: React.FC<LogActivitiesProps> = ({ className }) => {
       sourceType: ''
     });
     setCurrentPage(1);
+    setCurrentCursor(undefined); // Reset cursor when clearing filters
   }, []);
 
   // Utility functions
@@ -421,19 +456,28 @@ const LogActivities: React.FC<LogActivitiesProps> = ({ className }) => {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
-                  disabled={currentPage === 1}
+                  onClick={handlePreviousPage}
+                  disabled={!canGoPrevious}
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </Button>
                 <span className="text-sm">
-                  Page {currentPage} of {totalPages}
+                  {useCursorPagination ? (
+                    `Showing ${historicalEvents.length} events ${totalEventCount ? `(${totalEventCount.toLocaleString()} total)` : ''}`
+                  ) : (
+                    `Page ${currentPage} of ${totalPages}`
+                  )}
+                  {useCursorPagination && (
+                    <Badge variant="secondary" className="ml-2 text-xs">
+                      Optimized for large dataset
+                    </Badge>
+                  )}
                 </span>
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
-                  disabled={currentPage === totalPages}
+                  onClick={handleNextPage}
+                  disabled={!canGoNext}
                 >
                   <ChevronRight className="w-4 h-4" />
                 </Button>

@@ -4,6 +4,7 @@ Rust Route Extractor for SIEM Pipeline
 Extracts API routes from Rust handlers.rs file with enhanced categorization
 """
 
+import argparse
 import re
 import json
 import os

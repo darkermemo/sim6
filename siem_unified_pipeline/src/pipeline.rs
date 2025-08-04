@@ -542,6 +542,11 @@ impl Pipeline {
         stats_guard.clone()
     }
     
+    /// Get access to the routing manager
+    pub fn get_routing_manager(&self) -> Arc<RoutingManager> {
+        self.routing_manager.clone()
+    }
+    
     pub async fn process_event(&self, event: &mut PipelineEvent) -> Result<()> {
         // Transform the event
         self.transformation_manager.process_event(event).await?;
