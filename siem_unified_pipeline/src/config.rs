@@ -474,9 +474,14 @@ impl PipelineConfig {
             .map_err(|e| PipelineError::ConfigError(format!("Failed to read config file: {}", e)))?;
         
         // Try YAML first, then TOML
-        if let Ok(config) = serde_yaml::from_str::<PipelineConfig>(&content) {
-            config.validate()?;
-            return Ok(config);
+        match serde_yaml::from_str::<PipelineConfig>(&content) {
+            Ok(config) => {
+                config.validate()?;
+                return Ok(config);
+            }
+            Err(yaml_err) => {
+                eprintln!("YAML parsing failed: {}", yaml_err);
+            }
         }
         
         let config: PipelineConfig = toml::from_str(&content)

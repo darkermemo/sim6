@@ -85,3 +85,6 @@ dev-reset: clean dev-up ## 🔄 Complete reset and restart
 
 quick-start: verify-config start-services ## ⚡ Quick start (skip verification)
 	@echo "$(GREEN)✅ Quick start complete$(RESET)"
+
+report: ## 📄 Generate full-stack health report
+	./scripts/make_report.sh

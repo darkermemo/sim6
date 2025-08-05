@@ -1,0 +1,119 @@
+# IoT Device Log Parser Configuration
+# Handles logs from custom IoT sensors and devices
+
+name: "iot_device_sensor"
+description: "Parser for IoT Device sensor telemetry and event logs"
+version: "2.1.0"
+
+metadata:
+  author: "IoT Team"
+  vendor: "SmartSensors Ltd"
+  product: "Industrial IoT Gateway"
+  category: "iot"
+  tags: ["iot", "sensor", "telemetry", "industrial"]
+  created: "2025-01-21"
+  modified: "2025-01-21"
+
+detection:
+  required_patterns:
+    - 'IOT_GATEWAY'
+    - 'device_id=\w+'
+  optional_patterns:
+    - 'temperature=\d+'
+    - 'humidity=\d+'
+    - 'status=(ONLINE|OFFLINE|ERROR)'
+  exclusion_patterns:
+    - 'DEBUG'
+  min_length: 40
+  max_length: 1000
+  content_hints: ["iot", "sensor", "telemetry"]
+
+extraction:
+  primary_pattern: 'IOT_GATEWAY timestamp=(?P<timestamp>\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z) device_id=(?P<device_id>\w+) device_type=(?P<device_type>\w+) location=(?P<location>[\w\-]+) status=(?P<status>\w+)'
+  fallback_patterns:
+    - 'IOT_GATEWAY timestamp=(?P<timestamp>\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z) (?P<message>.*)'
+  capture_groups:
+    timestamp: "timestamp"
+    device_id: "device_id"
+    device_type: "device_type"
+    location: "device_location"
+    status: "device_status"
+    message: "message"
+  json_paths: {}
+  key_value_patterns:
+    - pattern: '(\w+)=([^\s]+)'
+      delimiter: '='
+      field_mappings:
+        temperature: "sensor_temperature"
+        humidity: "sensor_humidity"
+        pressure: "sensor_pressure"
+        battery: "battery_level"
+        signal: "signal_strength"
+        firmware: "firmware_version"
+
+field_mapping:
+  static_fields:
+    event_type: "iot_sensor"
+    device_vendor: "SmartSensors Ltd"
+    device_product: "Industrial IoT Gateway"
+    source_ip: "192.168.100.1"
+  transformations:
+    - source_field: "device_status"
+      target_field: "severity"
+      transformation_type: "Custom"
+      parameters:
+        ONLINE: "info"
+        OFFLINE: "warning" 
+        ERROR: "error"
+    - source_field: "device_location"
+      target_field: "location_normalized"
+      transformation_type: "RegexReplace"
+      parameters:
+        pattern: '-'
+        replacement: '_'
+  defaults:
+    tenant_id: "iot_operations"
+    protocol: "MQTT"
+  validations:
+    sensor_temperature:
+      rule_type: "NumericRange"
+      required: false
+      parameters:
+        min: "-50"
+        max: "200"
+    sensor_humidity:
+      rule_type: "NumericRange"
+      required: false
+      parameters:
+        min: "0"
+        max: "100"
+    battery_level:
+      rule_type: "NumericRange"
+      required: false
+      parameters:
+        min: "0"
+        max: "100"
+
+quality_rules:
+  min_fields_high_confidence: 5
+  min_fields_medium_confidence: 3
+  field_weights:
+    device_id: 0.25
+    device_type: 0.2
+    device_status: 0.15
+    device_location: 0.1
+    timestamp: 0.1
+  bonus_rules:
+    - condition: "has_field:sensor_temperature"
+      bonus: 0.1
+      description: "Bonus for temperature reading"
+    - condition: "has_field:sensor_humidity"
+      bonus: 0.1
+      description: "Bonus for humidity reading"
+    - condition: "has_field:battery_level"
+      bonus: 0.05
+      description: "Bonus for battery monitoring"
+  penalty_rules:
+    - condition: "field_not_empty:error"
+      penalty: 0.15
+      description: "Penalty for device errors"

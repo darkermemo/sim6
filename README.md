@@ -166,6 +166,41 @@ cd siem_ui && npm test
 ./scripts/run_integration_tests.sh
 ```
 
+## 🚧 Debug Utilities
+
+Debugging and test utilities are gated behind a Cargo feature to keep production builds clean:
+
+```bash
+# Production build (default)
+cargo build --release
+
+# Debug build with additional utilities
+cargo build --release --features debug_features
+
+# Testing with debug features
+cargo test --workspace --features debug_features
+```
+
+**⚠️ Never enable debug features in production deployments.**
+
+These utilities include:
+- Test endpoints (`/dev/*`)
+- Debug handlers for internal metrics
+- ClickHouse test data insertion and queries
+- Additional logging and diagnostic functions
+
+### Debug Feature Usage
+
+```bash
+# Development with debug utilities
+cargo run --features debug_features
+
+# Testing debug-specific functionality
+cargo test --features debug_features test_debug_endpoints
+
+# CI builds test both configurations automatically
+```
+
 ## 📊 Monitoring & Validation Reports
 
 ### Schema Validation Reports

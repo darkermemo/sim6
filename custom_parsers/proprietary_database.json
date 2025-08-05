@@ -1,0 +1,126 @@
+{
+  "name": "proprietary_database",
+  "description": "Parser for ProprietaryDB Enterprise Database logs",
+  "version": "1.2.0",
+  "metadata": {
+    "author": "Database Team",
+    "vendor": "ProprietaryDB Inc",
+    "product": "Enterprise Database",
+    "category": "database",
+    "tags": ["database", "sql", "enterprise"],
+    "created": "2025-01-21",
+    "modified": "2025-01-21"
+  },
+  "detection": {
+    "required_patterns": [
+      "\\[PROPDB\\]",
+      "\\d{4}\\/\\d{2}\\/\\d{2} \\d{2}:\\d{2}:\\d{2}"
+    ],
+    "optional_patterns": [
+      "SQL",
+      "QUERY",
+      "TRANSACTION"
+    ],
+    "exclusion_patterns": [],
+    "min_length": 30,
+    "max_length": 5000,
+    "content_hints": ["database", "sql"]
+  },
+  "extraction": {
+    "primary_pattern": "\\[PROPDB\\] (?P<timestamp>\\d{4}\\/\\d{2}\\/\\d{2} \\d{2}:\\d{2}:\\d{2}) PID:(?P<process_id>\\d+) User:(?P<username>\\w+) DB:(?P<database>\\w+) (?P<operation>\\w+): (?P<query>.*?) Duration:(?P<duration>\\d+)ms Result:(?P<result>\\w+)",
+    "fallback_patterns": [
+      "\\[PROPDB\\] (?P<timestamp>\\d{4}\\/\\d{2}\\/\\d{2} \\d{2}:\\d{2}:\\d{2}) (?P<message>.*)"
+    ],
+    "capture_groups": {
+      "timestamp": "timestamp",
+      "process_id": "process_id",
+      "username": "user_name",
+      "database": "database_name",
+      "operation": "operation_type",
+      "query": "sql_query",
+      "duration": "duration_ms",
+      "result": "operation_result",
+      "message": "message"
+    },
+    "json_paths": {},
+    "key_value_patterns": []
+  },
+  "field_mapping": {
+    "static_fields": {
+      "event_type": "proprietary_database",
+      "device_vendor": "ProprietaryDB Inc",
+      "device_product": "Enterprise Database",
+      "source_ip": "127.0.0.1"
+    },
+    "transformations": [
+      {
+        "source_field": "operation",
+        "target_field": "operation_normalized",
+        "transformation_type": "ToUpper",
+        "parameters": {}
+      },
+      {
+        "source_field": "query",
+        "target_field": "query_sanitized",
+        "transformation_type": "RegexReplace",
+        "parameters": {
+          "pattern": "'[^']*'",
+          "replacement": "'***'"
+        }
+      }
+    ],
+    "defaults": {
+      "tenant_id": "database_team",
+      "severity": "info",
+      "protocol": "TCP"
+    },
+    "validations": {
+      "duration_ms": {
+        "rule_type": "NumericRange",
+        "required": false,
+        "parameters": {
+          "min": "0",
+          "max": "300000"
+        }
+      },
+      "username": {
+        "rule_type": "StringLength",
+        "required": true,
+        "parameters": {
+          "min": "1",
+          "max": "50"
+        }
+      }
+    }
+  },
+  "quality_rules": {
+    "min_fields_high_confidence": 6,
+    "min_fields_medium_confidence": 4,
+    "field_weights": {
+      "username": 0.2,
+      "database_name": 0.15,
+      "operation_type": 0.15,
+      "sql_query": 0.1,
+      "duration_ms": 0.1
+    },
+    "bonus_rules": [
+      {
+        "condition": "has_field:sql_query",
+        "bonus": 0.15,
+        "description": "Bonus for having SQL query"
+      },
+      {
+        "condition": "has_field:duration_ms",
+        "bonus": 0.1,
+        "description": "Bonus for performance metrics"
+      }
+    ],
+    "penalty_rules": [
+      {
+        "condition": "has_field:error",
+        "penalty": 0.05,
+        "description": "Minor penalty for error conditions"
+      }
+    ]
+  }
+}

@@ -255,10 +255,10 @@
         <div class="errors-section">
             <h2 style="margin-bottom: 1.5rem; color: #495057;">Layer Coverage</h2>
             <div class="coverage-grid">
-                {% for layer, coverage in report.summary.layer_coverage %}
+                {% for (layer, coverage, css_class) in layer_coverage_vec %}
                 <div class="coverage-item">
-                    <div class="coverage-percentage {% if coverage >= 80 %}high{% elif coverage >= 50 %}medium{% else %}low{% endif %}">
-                        {{ coverage | round(1) }}%
+                    <div class="coverage-percentage {{ css_class }}">
+                        {{ coverage }}%
                     </div>
                     <div>{{ layer }}</div>
                 </div>
@@ -277,15 +277,15 @@
                 <div class="error-item">
                     <div class="error-header">
                         <h4>{{ error.error_type }}</h4>
-                        <span class="error-severity {{ error.severity | lower }}">{{ error.severity }}</span>
+                        <span class="error-severity {% if error.severity == "Critical" %}critical{% else %}warning{% endif %}">{{ error.severity }}</span>
                     </div>
                     <p><strong>Message:</strong> {{ error.message }}</p>
                     <div class="error-details">
                         <p><strong>File:</strong> {{ error.file_path }} (Line {{ error.line_number }})</p>
                         <p><strong>Layer:</strong> {{ error.layer }}</p>
-                        {% if error.suggestion %}
-                        <p><strong>Suggestion:</strong> {{ error.suggestion }}</p>
-                        {% endif %}
+                        {% if let Some(suggestion) = error.suggestion %}
+                <p><strong>Suggestion:</strong> {{ suggestion }}</p>
+                {% endif %}
                     </div>
                 </div>
                 {% endfor %}

@@ -300,7 +300,7 @@ impl StorageManager {
             .set("compression.type", "lz4")           // High performance compression
             .set("batch.size", "65536")              // 64KB batches
             .set("linger.ms", "5")                   // Low latency
-            .set("buffer.memory", "134217728")        // 128MB buffer
+            .set("queue.buffering.max.kbytes", "131072")  // 128MB buffer
             .set("delivery.timeout.ms", "300000")     // 5 minute delivery timeout
             .set("request.timeout.ms", "30000")       // 30 second request timeout
             .set("retry.backoff.ms", "100")          // 100ms retry backoff

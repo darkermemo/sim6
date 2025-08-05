@@ -1,3 +1,5 @@
+#![deny(warnings)]
+
 //! SIEM Schema Validator Library
 //!
 //! This library provides comprehensive schema validation and normalization

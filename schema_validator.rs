@@ -166,7 +166,7 @@ async fn validate_api_schema() -> Result<(), Box<dyn std::error::Error>> {
 
     // Test tenants endpoint
     let response = client
-        .get(&format!("{}/tenants", base_url))
+        .get(format!("{}/tenants", base_url))
         .header("Authorization", format!("Bearer {}", token))
         .send()
         .await?;
@@ -179,7 +179,7 @@ async fn validate_api_schema() -> Result<(), Box<dyn std::error::Error>> {
 
     // Test alerts endpoint
     let response = client
-        .get(&format!("{}/alerts", base_url))
+        .get(format!("{}/alerts", base_url))
         .header("Authorization", format!("Bearer {}", token))
         .send()
         .await?;

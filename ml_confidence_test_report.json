@@ -1,0 +1,298 @@
+{
+  "test_timestamp": "2025-08-05T23:30:54.026503",
+  "ml_system": "Enhanced Confidence Scoring",
+  "total_scenarios": 4,
+  "successful_scenarios": 3,
+  "overall_success_rate": 75.0,
+  "ml_score_statistics": {
+    "mean": 0.5809411764705883,
+    "median": 0.544,
+    "min": 0.311,
+    "max": 0.786,
+    "count": 17
+  },
+  "scenario_results": {
+    "High Quality Logs": {
+      "results": [
+        {
+          "log_entry": "Jan 21 15:30:45 f5-lb01 info: 192.168.1.100:54321 -> 10.0.1.50:80",
+          "parser_used": "F5 BIG-IP",
+          "base_confidence": "VeryHigh",
+          "final_confidence": "High",
+          "ml_score": "0.786",
+          "ml_reason": "ML downgrade: low ML score (0.79) or data quality issues",
+          "success": true
+        },
+        {
+          "log_entry": "{\"@timestamp\": \"2025-01-21T15:30:45Z\", \"event\": {\"category\": \"network\"}, \"source\": {\"ip\": \"192.168.1.100\"}, \"destination\": {\"ip\": \"10.0.1.50\"}}",
+          "parser_used": "JSON",
+          "base_confidence": "Medium",
+          "final_confidence": "Medium",
+          "ml_score": "0.596",
+          "ml_reason": "ML confirms base confidence assessment",
+          "success": true
+        },
+        {
+          "log_entry": "2025-01-21T15:30:45 source_ip=192.168.1.100 dest_ip=10.0.1.50 action=ALLOW protocol=TCP",
+          "parser_used": "Key-Value",
+          "base_confidence": "Medium",
+          "final_confidence": "Medium",
+          "ml_score": "0.642",
+          "ml_reason": "ML confirms base confidence assessment",
+          "success": true
+        },
+        {
+          "log_entry": "%ASA-6-302015: Built outbound UDP connection 12345 for outside:192.168.1.100/53 (192.168.1.100/53) to inside:10.0.1.50/53 (10.0.1.50/53)",
+          "parser_used": "Syslog",
+          "base_confidence": "Low",
+          "final_confidence": "Low",
+          "ml_score": "0.544",
+          "ml_reason": "ML confirms base confidence assessment",
+          "success": true
+        }
+      ],
+      "analysis": {
+        "total_tests": 4,
+        "successful_tests": 4,
+        "success_rate": 100.0,
+        "ml_score_stats": {
+          "mean": 0.642,
+          "median": 0.619,
+          "min": 0.544,
+          "max": 0.786,
+          "count": 4
+        },
+        "confidence_distribution": {
+          "High": 1,
+          "Medium": 2,
+          "Low": 1
+        },
+        "ml_adjustments": {
+          "downgrade": 1,
+          "no_change": 3
+        },
+        "expected_trend": "stable_or_upgrade",
+        "trend_match": false,
+        "summary": "\u26a0\ufe0f REVIEW - Avg ML Score: 0.642, Unexpected trend"
+      },
+      "ml_scores": [
+        0.786,
+        0.596,
+        0.642,
+        0.544
+      ]
+    },
+    "Medium Quality Logs": {
+      "results": [
+        {
+          "log_entry": "Jan 21 15:30:45 server1 some log entry with ip 192.168.1.100",
+          "parser_used": "Syslog",
+          "base_confidence": "Low",
+          "final_confidence": "Low",
+          "ml_score": "0.544",
+          "ml_reason": "ML confirms base confidence assessment",
+          "success": true
+        },
+        {
+          "log_entry": "timestamp=2025-01-21T15:30:45Z message=authentication successful",
+          "parser_used": "Syslog",
+          "base_confidence": "Low",
+          "final_confidence": "Low",
+          "ml_score": "0.516",
+          "ml_reason": "ML confirms base confidence assessment",
+          "success": true
+        },
+        {
+          "log_entry": "INFO: Connection from 192.168.1.100 established",
+          "parser_used": "Syslog",
+          "base_confidence": "Low",
+          "final_confidence": "Low",
+          "ml_score": "0.530",
+          "ml_reason": "ML confirms base confidence assessment",
+          "success": true
+        },
+        {
+          "log_entry": "ERROR: Failed to parse configuration file",
+          "parser_used": "Syslog",
+          "base_confidence": "Low",
+          "final_confidence": "Low",
+          "ml_score": "0.503",
+          "ml_reason": "ML confirms base confidence assessment",
+          "success": true
+        }
+      ],
+      "analysis": {
+        "total_tests": 4,
+        "successful_tests": 4,
+        "success_rate": 100.0,
+        "ml_score_stats": {
+          "mean": 0.52325,
+          "median": 0.523,
+          "min": 0.503,
+          "max": 0.544,
+          "count": 4
+        },
+        "confidence_distribution": {
+          "Low": 4
+        },
+        "ml_adjustments": {
+          "no_change": 4
+        },
+        "expected_trend": "mixed",
+        "trend_match": true,
+        "summary": "\u2705 PASS - Avg ML Score: 0.523, Dominant: Low"
+      },
+      "ml_scores": [
+        0.544,
+        0.516,
+        0.53,
+        0.503
+      ]
+    },
+    "Low Quality Logs": {
+      "results": [
+        {
+          "log_entry": "random text with no structure",
+          "parser_used": "Syslog",
+          "base_confidence": "Low",
+          "final_confidence": "VeryLow",
+          "ml_score": "0.326",
+          "ml_reason": "ML downgrade: low ML score (0.33) or data quality issues",
+          "success": true
+        },
+        {
+          "log_entry": "debug output here",
+          "parser_used": "Syslog",
+          "base_confidence": "Low",
+          "final_confidence": "VeryLow",
+          "ml_score": "0.311",
+          "ml_reason": "ML downgrade: low ML score (0.31) or data quality issues",
+          "success": true
+        },
+        {
+          "log_entry": "x=y",
+          "parser_used": "Syslog",
+          "base_confidence": "Low",
+          "final_confidence": "VeryLow",
+          "ml_score": "0.337",
+          "ml_reason": "ML downgrade: low ML score (0.34) or data quality issues",
+          "success": true
+        },
+        {
+          "log_entry": "incomplete log",
+          "parser_used": "Syslog",
+          "base_confidence": "Low",
+          "final_confidence": "VeryLow",
+          "ml_score": "0.311",
+          "ml_reason": "ML downgrade: low ML score (0.31) or data quality issues",
+          "success": true
+        }
+      ],
+      "analysis": {
+        "total_tests": 4,
+        "successful_tests": 4,
+        "success_rate": 100.0,
+        "ml_score_stats": {
+          "mean": 0.32125000000000004,
+          "median": 0.3185,
+          "min": 0.311,
+          "max": 0.337,
+          "count": 4
+        },
+        "confidence_distribution": {
+          "VeryLow": 4
+        },
+        "ml_adjustments": {
+          "downgrade": 4
+        },
+        "expected_trend": "downgrade",
+        "trend_match": true,
+        "summary": "\u2705 PASS - Avg ML Score: 0.321, Dominant: VeryLow"
+      },
+      "ml_scores": [
+        0.326,
+        0.311,
+        0.337,
+        0.311
+      ]
+    },
+    "Adaptive Learning Test": {
+      "results": [
+        {
+          "log_entry": "Jan 21 15:30:45 f5-lb01 info: 192.168.1.100:54321 -> 10.0.1.50:80",
+          "parser_used": "F5 BIG-IP",
+          "base_confidence": "VeryHigh",
+          "final_confidence": "High",
+          "ml_score": "0.786",
+          "ml_reason": "ML downgrade: low ML score (0.79) or data quality issues",
+          "success": true
+        },
+        {
+          "log_entry": "Jan 21 15:31:45 f5-lb01 info: 192.168.1.101:54322 -> 10.0.1.51:80",
+          "parser_used": "F5 BIG-IP",
+          "base_confidence": "VeryHigh",
+          "final_confidence": "High",
+          "ml_score": "0.786",
+          "ml_reason": "ML downgrade: low ML score (0.79) or data quality issues",
+          "success": true
+        },
+        {
+          "log_entry": "Jan 21 15:32:45 f5-lb01 info: 192.168.1.102:54323 -> 10.0.1.52:80",
+          "parser_used": "F5 BIG-IP",
+          "base_confidence": "VeryHigh",
+          "final_confidence": "High",
+          "ml_score": "0.786",
+          "ml_reason": "ML downgrade: low ML score (0.79) or data quality issues",
+          "success": true
+        },
+        {
+          "log_entry": "Jan 21 15:33:45 f5-lb01 info: 192.168.1.103:54324 -> 10.0.1.53:80",
+          "parser_used": "F5 BIG-IP",
+          "base_confidence": "VeryHigh",
+          "final_confidence": "High",
+          "ml_score": "0.786",
+          "ml_reason": "ML downgrade: low ML score (0.79) or data quality issues",
+          "success": true
+        },
+        {
+          "log_entry": "Jan 21 15:34:45 f5-lb01 info: 192.168.1.104:54325 -> 10.0.1.54:80",
+          "parser_used": "F5 BIG-IP",
+          "base_confidence": "VeryHigh",
+          "final_confidence": "High",
+          "ml_score": "0.786",
+          "ml_reason": "ML downgrade: low ML score (0.79) or data quality issues",
+          "success": true
+        }
+      ],
+      "analysis": {
+        "total_tests": 5,
+        "successful_tests": 5,
+        "success_rate": 100.0,
+        "ml_score_stats": {
+          "mean": 0.786,
+          "median": 0.786,
+          "min": 0.786,
+          "max": 0.786,
+          "count": 5
+        },
+        "confidence_distribution": {
+          "High": 5
+        },
+        "ml_adjustments": {
+          "downgrade": 5
+        },
+        "expected_trend": "learning_improvement",
+        "trend_match": true,
+        "summary": "\u2705 PASS - Avg ML Score: 0.786, Dominant: High"
+      },
+      "ml_scores": [
+        0.786,
+        0.786,
+        0.786,
+        0.786,
+        0.786
+      ]
+    }
+  },
+  "overall_assessment": "successful"
+}

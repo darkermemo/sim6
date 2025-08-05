@@ -10,6 +10,7 @@ use std::env;
 enum SchemaError {
     MissingColumn(String),
     TypeMismatch(String, String, String), // column, expected, actual
+    #[allow(dead_code)]
     ExtraColumn(String),
     ConnectionError(String),
     ParseError(String),
@@ -39,8 +40,10 @@ impl std::error::Error for SchemaError {}
 #[derive(Debug, Clone)]
 struct ColumnDef {
     name: String,
+    #[allow(dead_code)]
     rust_type: String,
     clickhouse_type: String,
+    #[allow(dead_code)]
     nullable: bool,
     required: bool,
 }
@@ -60,6 +63,7 @@ impl SchemaValidator {
         }
     }
 
+    #[allow(dead_code)]
     fn new_with_db(clickhouse_url: String, database_name: String) -> Self {
         Self {
             clickhouse_url,
@@ -321,7 +325,7 @@ impl SchemaValidator {
             // Check type compatibility if column exists
             if let Some(actual_col) = actual_columns.get(&expected.name) {
                 if let Some(actual_type) = actual_col.get("type").and_then(|t| t.as_str()) {
-                    if !self.types_compatible(&expected.clickhouse_type, actual_type) {
+                    if !Self::types_compatible(&expected.clickhouse_type, actual_type) {
                         errors.push(SchemaError::TypeMismatch(
                             expected.name.clone(),
                             expected.clickhouse_type.clone(),
@@ -420,7 +424,7 @@ impl SchemaValidator {
     }
 
     /// Check if ClickHouse type is compatible with expected type
-    fn types_compatible(&self, expected: &str, actual: &str) -> bool {
+    fn types_compatible(expected: &str, actual: &str) -> bool {
         // Handle exact matches
         if expected == actual {
             return true;
@@ -432,7 +436,7 @@ impl SchemaValidator {
                 .trim_start_matches("Nullable(")
                 .trim_end_matches(")");
             let actual_inner = actual.trim_start_matches("Nullable(").trim_end_matches(")");
-            return self.types_compatible(expected_inner, actual_inner);
+            return Self::types_compatible(expected_inner, actual_inner);
         }
 
         // Handle common type aliases
@@ -448,6 +452,7 @@ impl SchemaValidator {
 
 /// Generate schema migration SQL if needed
 struct SchemaMigrator {
+    #[allow(dead_code)]
     clickhouse_url: String,
 }
 
@@ -555,13 +560,13 @@ mod tests {
 
     #[test]
     fn test_type_compatibility() {
-        let validator = SchemaValidator::new("http://localhost:8123".to_string());
+        let _validator = SchemaValidator::new("http://localhost:8123".to_string());
 
-        assert!(validator.types_compatible("String", "String"));
-        assert!(validator.types_compatible("UInt32", "UInt32"));
-        assert!(validator.types_compatible("Nullable(String)", "Nullable(String)"));
-        assert!(validator.types_compatible("DateTime", "DateTime64(3)"));
-        assert!(!validator.types_compatible("String", "UInt32"));
+        assert!(SchemaValidator::types_compatible("String", "String"));
+        assert!(SchemaValidator::types_compatible("UInt32", "UInt32"));
+        assert!(SchemaValidator::types_compatible("Nullable(String)", "Nullable(String)"));
+        assert!(SchemaValidator::types_compatible("DateTime", "DateTime64(3)"));
+        assert!(!SchemaValidator::types_compatible("String", "UInt32"));
     }
 
     #[test]

@@ -5,7 +5,6 @@
 
 #[cfg(test)]
 mod tests {
-    use super::*;
 
     /// Test parameter binding safety
     #[test]

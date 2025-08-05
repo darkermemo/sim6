@@ -218,7 +218,7 @@ pub struct PageInfo {
 }
 
 // Create the router with all endpoints
-pub fn create_router(state: AppState) -> Router<AppState> {
+pub fn create_router(state: AppState) -> Router {
     let api_v1_router = Router::new()
         // Health and status endpoints
         .route("/health", get(health_check))

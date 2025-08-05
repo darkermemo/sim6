@@ -2,7 +2,6 @@
 //! Tests the complete ingest → search flow with the standardized 'dev' database
 
 use serde_json::{json, Value};
-use std::collections::HashMap;
 use std::env;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tokio::time::sleep;
@@ -88,7 +87,7 @@ impl ApiClient {
     async fn health_check(&self) -> Result<bool, Box<dyn std::error::Error>> {
         let response = self
             .client
-            .get(&format!("{}/health", self.config.api_url))
+            .get(format!("{}/health", self.config.api_url))
             .timeout(Duration::from_secs(5))
             .send()
             .await?;
@@ -99,7 +98,7 @@ impl ApiClient {
     async fn ingest_event(&self, event: &TestEvent) -> Result<Value, Box<dyn std::error::Error>> {
         let response = self
             .client
-            .post(&format!(
+            .post(format!(
                 "{}/api/v1/events/ingest",
                 self.config.ingestor_url
             ))
@@ -130,7 +129,7 @@ impl ApiClient {
 
         let response = self
             .client
-            .post(&format!("{}/api/v1/events/search", self.config.api_url))
+            .post(format!("{}/api/v1/events/search", self.config.api_url))
             .header(
                 "Authorization",
                 format!("Bearer {}", self.config.admin_token),

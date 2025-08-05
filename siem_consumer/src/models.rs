@@ -115,11 +115,11 @@ pub struct Event {
 }
 
 #[derive(Debug, Deserialize)]
-#[allow(dead_code)]
+#[allow(dead_code)]  // Fields are used by serde for deserialization
 pub struct KafkaMessage {
     pub event_id: String,
     pub tenant_id: String,
-    #[serde(alias = "timestamp")]
+    #[serde(alias = "timestamp", default = "default_timestamp")]
     pub event_timestamp: u32,
     pub source_ip: String,
     #[serde(default = "default_source_type")]
@@ -177,6 +177,14 @@ fn default_event_outcome() -> String {
 
 fn default_event_action() -> String {
     "Unknown".to_string()
+}
+
+fn default_timestamp() -> u32 {
+    // Use current time as fallback when timestamp is missing
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs() as u32
 }
 
 impl Event {

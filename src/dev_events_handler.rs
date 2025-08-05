@@ -8,11 +8,11 @@
 //! - Comprehensive error handling with retry logic
 //! - Support for all CIM (Common Information Model) fields
 
-use crate::database_manager::{DatabaseConfig, DatabaseManager};
+use crate::database_manager::DatabaseManager;
 use crate::error_handling::{SiemError, SiemResult};
 use axum::{extract::{Query, State}, http::StatusCode, response::{Html, Json}, routing::get, Router};
 use clickhouse::Client;
-use chrono::{DateTime, Utc};
+use chrono::DateTime;
 
 use anyhow::Result as AnyhowResult;
 use maud::{html, Markup};
@@ -47,18 +47,6 @@ impl AppState {
 /// Global database manager instance
 pub static DATABASE_MANAGER: tokio::sync::OnceCell<Arc<DatabaseManager>> =
     tokio::sync::OnceCell::const_new();
-
-/// Get or initialize the database manager
-async fn get_database_manager() -> SiemResult<Arc<DatabaseManager>> {
-    DATABASE_MANAGER
-        .get_or_try_init(|| async {
-            let config = DatabaseConfig::from_env()?;
-            let manager = DatabaseManager::new(config).await?;
-            Ok(Arc::new(manager))
-        })
-        .await
-        .map(Arc::clone)
-}
 
 /// EventRow represents a row from the ClickHouse dev.events table for HTML display
 #[derive(Debug, clickhouse::Row, serde::Deserialize)]
@@ -283,7 +271,7 @@ pub async fn get_dev_events(
     let db_manager = &state.database_manager;
 
     // Execute the query with proper error handling
-    match query_dev_events_internal(&db_manager, &params, start_time).await {
+    match query_dev_events_internal(db_manager, &params, start_time).await {
         Ok(response) => Ok(Json(response)),
         Err(e) => {
             error!("Failed to query dev events: {:?}", e);

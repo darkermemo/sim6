@@ -9,6 +9,9 @@ on:
 jobs:
   vertical-slice-test:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        features: ["", "--features debug_features"]
     
     services:
       redis:
@@ -83,9 +86,44 @@ jobs:
         cd siem_ui
         pnpm run error-detection
     
+    - name: Rustfmt
+      run: cargo fmt --all -- --check
+
+    - name: Clippy
+      run: cargo clippy --workspace --all-targets ${{ matrix.features }} -- -D warnings
+
+    - uses: reviewdog/action-clippy@v2
+      with:
+        reporter: github-pr-review
+        clippy_flags: "--all-targets ${{ matrix.features }}"
+
+    - name: Unit & integ tests
+      run: cargo test --workspace ${{ matrix.features }}
+
+    - name: Unused deps
+      run: |
+        cargo install cargo-udeps
+        cargo udeps --workspace --all-targets
+
+    - name: Vulnerability audit
+      run: |
+        cargo install cargo-audit
+        cargo audit
+
+    - name: Lint Vector config
+      run: |
+        curl -1sLf 'https://repositories.timber.io/public/vector/cfg/setup/bash.deb.sh' | sudo -E bash
+        sudo apt install vector
+        vector validate --no-environment config/vector.toml
+
+    - name: Lint OpenAPI
+      run: |
+        npm install -g @stoplight/spectral-cli
+        spectral lint openapi.yaml
+
     - name: Build Rust components
       run: |
-        cargo build --release
+        cargo build --release ${{ matrix.features }}
     
     - name: Set environment variables
       run: |
@@ -152,3 +190,13 @@ jobs:
         UI_URL: http://localhost:3000
         INGESTOR_URL: http://localhost:8081
         ADMIN_TOKEN: admin-token-12345-change-in-production
+
+    - name: Generate audit report
+      run: make report
+
+    - uses: actions/upload-artifact@v4
+      with:
+        name: siem-audit-report
+        path: |
+          target/audit/report.html
+          target/audit/summary.json

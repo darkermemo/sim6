@@ -8,7 +8,9 @@ struct ColumnMeta {
     table: String,
     name: String,
     r#type: String,
+    #[allow(dead_code)]
     default_kind: String,
+    #[allow(dead_code)]
     codec: Option<String>,
 }
 

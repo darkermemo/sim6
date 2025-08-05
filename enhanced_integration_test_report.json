@@ -1,0 +1,129 @@
+{
+  "test_start": "2025-08-05T23:15:54.359481",
+  "pipeline_tests": {
+    "Consumer Metrics": {
+      "url": "http://localhost:9091/metrics",
+      "status_code": 200,
+      "success": true,
+      "response_size": 327
+    },
+    "Consumer Dashboard": {
+      "url": "http://localhost:9091/dashboard",
+      "status_code": 200,
+      "success": true,
+      "response_size": 270742
+    },
+    "HTML Backend Events": {
+      "url": "http://localhost:8081/events",
+      "status_code": 200,
+      "success": true,
+      "response_size": 417745
+    },
+    "HTML Backend Dashboard": {
+      "url": "http://localhost:8081/dev/metrics/live",
+      "status_code": 200,
+      "success": true,
+      "response_size": 3919
+    }
+  },
+  "parser_tests": {
+    "ecs_json": {
+      "format_valid": true,
+      "json_parseable": true,
+      "size_bytes": 331
+    },
+    "splunk_cim": {
+      "format_valid": true,
+      "json_parseable": true,
+      "size_bytes": 182
+    },
+    "windows_event": {
+      "format_valid": true,
+      "json_parseable": true,
+      "size_bytes": 222
+    },
+    "summary": {
+      "total_formats_tested": 3,
+      "formats_valid": 3,
+      "clickhouse_stats": {
+        "total_events": 2635154,
+        "recent_events": 0,
+        "meets_minimum": true
+      },
+      "pipeline_working": true
+    }
+  },
+  "search_tests": {
+    "Total events count": {
+      "count": 2635154,
+      "expected_min": 1000000,
+      "success": true,
+      "query": "SELECT count() FROM dev.events"
+    },
+    "IP address search": {
+      "count": 20,
+      "expected_min": 100000,
+      "success": false,
+      "query": "SELECT count() FROM dev.events WHERE source_ip != ''"
+    },
+    "Raw event search": {
+      "count": 1420951,
+      "expected_min": 1000,
+      "success": true,
+      "query": "SELECT count() FROM dev.events WHERE raw_event LIKE '%192.168%'"
+    },
+    "Event types": {
+      "count": 2,
+      "expected_min": 5,
+      "success": false,
+      "query": "SELECT count(DISTINCT source_type) FROM dev.events"
+    }
+  },
+  "performance_tests": {
+    "consumer_metrics": {
+      "connections": {
+        "active_sources": 625,
+        "avg_eps_overall": 0.5184294871794872,
+        "idle_sources": 0,
+        "total_bytes": 435642,
+        "total_events": 1294,
+        "total_sources": 625
+      },
+      "errors": {
+        "clickhouse": 0,
+        "dlq_sent": 0,
+        "parse": 0,
+        "schema": 0,
+        "total": 0,
+        "validation": 0
+      },
+      "parsed": 1294,
+      "processed": 647,
+      "queued": 0,
+      "rates": {
+        "error_rate": 0.0,
+        "success_rate": 200.0
+      }
+    },
+    "performance_tests": {
+      "Parsing success rate": {
+        "value": 100.0,
+        "expected_min": 99.0,
+        "success": true
+      },
+      "Events with parsed fields": {
+        "value": 1079697.0,
+        "expected_min": 100000,
+        "success": true
+      },
+      "Recent processing rate": {
+        "value": 2395297.0,
+        "expected_min": 1,
+        "success": true
+      }
+    },
+    "performance_acceptable": true
+  },
+  "overall_status": "needs_attention",
+  "test_end": "2025-08-05T23:15:55.736015"
+}

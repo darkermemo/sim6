@@ -97,6 +97,8 @@ impl IngestionManager {
         let source_config = source_config.clone();
         let http_client = self.http_client.clone();
         
+        info!("Starting source '{}' with type: {:?}", source_name, source_config.source_type);
+        
         let task_handle = match source_config.source_type {
             SourceType::Syslog { .. } => {
                 let source_name = source_name.clone();
@@ -477,9 +479,10 @@ impl IngestionManager {
             .set("enable.auto.commit", "false")  // Manual commit for exactly-once
             .set("auto.offset.reset", "latest")
             .set("fetch.min.bytes", "1024")
-            .set("fetch.max.wait.ms", "100")
+            .set("fetch.wait.max.ms", "100")
+            .set("fetch.max.bytes", "1048576")  // 1MB
             .set("max.partition.fetch.bytes", "1048576")  // 1MB
-            .set("receive.message.max.bytes", "10485760")  // 10MB
+            .set("receive.message.max.bytes", "1049088")  // 1MB + 512
             .set("queued.min.messages", "100000")
             .set("queued.max.messages.kbytes", "65536")  // 64MB
             .set("batch.num.messages", "10000")

@@ -4,97 +4,127 @@
 
 server:
   host: "0.0.0.0"
-  port: 8080
+  port: 4000
   workers: 8  # Increased for high-throughput
   max_connections: 10000
   request_timeout: 30
-  keepalive_timeout: 75
+  enable_cors: true
+
+# Database Configuration
+database:
+  host: "localhost"
+  port: 5432
+  database: "dev"
+  username: "siem_user"
+  password: "siem_password"
+  max_connections: 20
+  min_connections: 5
+  connection_timeout: 30
+  idle_timeout: 600
+  max_lifetime: 3600
+
+# Rate Limiting Configuration
+rate_limiting:
+  enabled: true
+  requests_per_second: 10000
+  burst_size: 50000
   
 # Data Sources Configuration
 sources:
   # Enhanced Kafka source for Vector integration
   vector_kafka:
     enabled: true
-    source_type: "Kafka"
-    connection_string: "localhost:9092"
-    data_format: "Json"
-    parameters:
-      topic: "siem-events"
-      group_id: "siem-pipeline-consumer"
-      batch_size: 1000  # High-throughput batching
-      commit_interval_ms: 5000
-      auto_offset_reset: "latest"
-      enable_auto_commit: false  # Manual commit for exactly-once
-      session_timeout_ms: 30000
-      heartbeat_interval_ms: 3000
-      fetch_min_bytes: 1024
-      fetch_max_wait_ms: 100
-      max_partition_fetch_bytes: 1048576  # 1MB
-      receive_message_max_bytes: 10485760  # 10MB
-      queued_min_messages: 100000
-      queued_max_messages_kbytes: 65536  # 64MB
-      compression_codec: "snappy"
+    source_type:
+      type: "kafka"
+      topic: "vector-logs"
+      brokers: ["localhost:9092"]
+    config:
+      format: "json"
+      compression: null
+      encoding: "utf-8"
+      timestamp_field: "timestamp"
+      timestamp_format: "%Y-%m-%dT%H:%M:%S%.3fZ"
+      fields: {}
+    batch_size: 1000
+    buffer_size: 10000
+    retry_attempts: 3
+    retry_delay: 5000
     
   # Legacy syslog source (optional)
   syslog_udp:
     enabled: false
-    source_type: "Syslog"
-    connection_string: "0.0.0.0:514"
-    data_format: "Syslog"
-    parameters:
+    source_type:
+      type: "syslog"
+      port: 514
       protocol: "udp"
-      max_message_size: 65536
+    config:
+      format: "syslog"
+      compression: null
+      encoding: "utf-8"
+      timestamp_field: "timestamp"
+      timestamp_format: "%Y-%m-%dT%H:%M:%S%.3fZ"
+      fields: {}
+    batch_size: 1000
+    buffer_size: 10000
+    retry_attempts: 3
+    retry_delay: 5000
       
   # Legacy file source (optional)
   log_files:
     enabled: false
-    source_type: "File"
-    connection_string: "/var/log/**/*.log"
-    data_format: "Raw"
-    parameters:
-      watch_mode: true
-      start_at_beginning: false
-      max_line_length: 65536
+    source_type:
+      type: "file"
+      path: "/var/log/**/*.log"
+      watch: true
+    config:
+      format: "json"
+      compression: null
+      encoding: "utf-8"
+      timestamp_field: "timestamp"
+      timestamp_format: "%Y-%m-%dT%H:%M:%S%.3fZ"
+      fields: {}
+    batch_size: 1000
+    buffer_size: 10000
+    retry_attempts: 3
+    retry_delay: 5000
 
 # Transformation Pipeline
 transformations:
   # Standard normalization pipeline
   normalize_events:
     enabled: true
+    parallel: false
+    error_handling: "continue"
     steps:
-      - type: "ParseJson"
-        parameters:
+      - type: "parse"
+        parser: "json"
+        config:
           field: "message"
           target_field: "parsed"
-          ignore_errors: true
+          ignore_errors: "true"
           
-      - type: "ExtractFields"
-        parameters:
-          source_field: "parsed"
-          fields:
-            - "timestamp"
-            - "source_type"
-            - "hostname"
-            - "message"
-            - "severity"
-            - "facility"
+      - type: "map"
+        field_mappings:
+          "parsed.timestamp": "timestamp"
+          "parsed.source_type": "source_type"
+          "parsed.hostname": "hostname"
+          "parsed.message": "message"
+          "parsed.severity": "severity"
+          "parsed.facility": "facility"
             
-      - type: "NormalizeTimestamp"
-        parameters:
-          field: "timestamp"
-          formats:
-            - "%Y-%m-%dT%H:%M:%S%.3fZ"
-            - "%Y-%m-%d %H:%M:%S"
-            - "%b %d %H:%M:%S"
+      - type: "normalize"
+        schema: "ecs"
+        strict: false
             
-      - type: "AddFields"
-        parameters:
-          fields:
-            pipeline_version: "2.0.0"
-            processing_timestamp: "{{now}}"
+      - type: "enrich"
+        enricher: "metadata"
+        config:
+          pipeline_version: "2.0.0"
+          processing_timestamp: "{{now}}"
             
-      - type: "GeoIPEnrichment"
-        parameters:
+      - type: "enrich"
+        enricher: "geoip"
+        config:
           source_field: "source_ip"
           target_field: "geo"
           database_path: "/usr/share/GeoIP/GeoLite2-City.mmdb"
@@ -102,32 +132,25 @@ transformations:
   # Security event classification
   security_classification:
     enabled: true
+    parallel: false
+    error_handling: "continue"
     steps:
-      - type: "RegexMatch"
-        parameters:
-          field: "message"
-          patterns:
-            - pattern: "(?i)(attack|intrusion|malware|virus|breach|unauthorized|suspicious)"
-              action: "set_field"
-              target_field: "security_event"
-              value: true
+      - type: "filter"
+        condition: "message CONTAINS 'attack' OR message CONTAINS 'intrusion' OR message CONTAINS 'malware'"
+        action:
+          tag: "security_event"
               
-      - type: "ConditionalTransform"
-        parameters:
+      - type: "custom"
+        plugin: "security_classifier"
+        config:
           condition: "security_event == true"
-          transforms:
-            - type: "AddFields"
-              parameters:
-                fields:
-                  risk_level: "high"
-                  requires_investigation: true
+          risk_level: "high"
+          requires_investigation: "true"
 
 # Routing Configuration
 routing:
-  default_destinations:
-    - "redis_cache"
-    - "clickhouse_primary"
-    
+  default_destination: "redis_cache"
+  load_balancing: "round_robin"
   rules:
     # High-priority security events
     - name: "security_events"
@@ -136,6 +159,8 @@ routing:
         - "redis_cache"
         - "clickhouse_primary"
         - "kafka_alerts"
+      priority: 1
+      enabled: true
         
     # Standard events
     - name: "standard_events"
@@ -143,6 +168,8 @@ routing:
       destinations:
         - "redis_cache"
         - "clickhouse_primary"
+      priority: 2
+      enabled: true
         
     # Error events
     - name: "error_events"
@@ -151,73 +178,89 @@ routing:
         - "redis_cache"
         - "clickhouse_primary"
         - "kafka_errors"
+      priority: 1
+      enabled: true
 
 # Data Destinations
 destinations:
   # Redis cache for real-time UI streaming
   redis_cache:
     enabled: true
-    destination_type: "Redis"
-    connection_string: "redis://localhost:6379/0"
-    parameters:
+    destination_type:
+      type: "redis"
+      connection_string: "redis://localhost:6379/0"
       key_pattern: "siem:events:{timestamp}:{source}"
-      ttl: 3600  # 1 hour TTL for cache
-      stream_key: "siem:stream:{source}"
-      max_stream_length: 10000
+      ttl: 3600
+    config:
+      format: "json"
+      compression: null
+      partitioning: null
+    batch_size: 1000
+    flush_interval: 1000
+    retry_attempts: 3
       
   # Primary ClickHouse storage
   clickhouse_primary:
     enabled: true
-    destination_type: "ClickHouse"
-    connection_string: "tcp://localhost:9000/siem"
-    parameters:
+    destination_type:
+      type: "click_house"
+      connection_string: "http://localhost:8123"
       table: "siem_events"
-      batch_size: 10000  # High-throughput batching
-      flush_interval: 5000
+      database: "siem"
+    config:
+      format: "json"
       compression: "lz4"
-      max_insert_block_size: 1048576
+      partitioning: null
+    batch_size: 10000
+    flush_interval: 5000
+    retry_attempts: 3
       
   # Kafka output for alerts
   kafka_alerts:
     enabled: true
-    destination_type: "Kafka"
-    connection_string: "localhost:9092"
-    parameters:
+    destination_type:
+      type: "kafka"
       topic: "siem-alerts"
+      brokers: ["localhost:9092"]
+    config:
+      format: "json"
       compression: "snappy"
-      acks: "all"
-      enable_idempotence: true
-      retries: 2147483647
-      max_in_flight_requests_per_connection: 5
-      delivery_timeout_ms: 300000
-      request_timeout_ms: 30000
-      retry_backoff_ms: 100
-      batch_size: 65536
-      linger_ms: 5
-      buffer_memory: 134217728
+      partitioning: null
+    batch_size: 1000
+    flush_interval: 1000
+    retry_attempts: 3
       
   # Kafka output for errors
   kafka_errors:
     enabled: true
-    destination_type: "Kafka"
-    connection_string: "localhost:9092"
-    parameters:
+    destination_type:
+      type: "kafka"
       topic: "siem-errors"
+      brokers: ["localhost:9092"]
+    config:
+      format: "json"
       compression: "snappy"
-      acks: "all"
-      enable_idempotence: true
+      partitioning: null
+    batch_size: 1000
+    flush_interval: 1000
+    retry_attempts: 3
       
   # File backup (optional)
   file_backup:
     enabled: false
-    destination_type: "File"
-    connection_string: "/var/log/siem/events"
-    parameters:
+    destination_type:
+      type: "file"
+      path: "/var/log/siem/events"
       rotation:
-        max_size: "1GB"
-        max_age: "24h"
-        max_files: 30
-        compress: true
+        size_mb: 1024
+        time_hours: 24
+        keep_files: 30
+    config:
+      format: "json"
+      compression: "gzip"
+    batch_size: 1000
+    flush_interval: 5000
+    retry_attempts: 3
 
 # Storage Configuration
 storage:
@@ -225,53 +268,40 @@ storage:
   data_lake:
     enabled: true
     provider: "ClickHouse"
+    bucket: "siem-data-lake"
+    region: "us-east-1"
+    access_key: "admin"
+    secret_key: "password"
+    endpoint: "http://localhost:9000"
     connection_string: "tcp://localhost:9000/siem"
     
-  # Hot storage (Redis)
+  # Hot storage (ClickHouse)
   hot_storage:
     enabled: true
-    provider: "Redis"
-    connection_string: "redis://localhost:6379/0"
-    ttl: 3600  # 1 hour
+    clickhouse_url: "http://localhost:8123"
+    database: "siem_hot"
+    retention_days: 1
     
   # Cold storage (optional)
   cold_storage:
     enabled: false
-    provider: "S3"
-    connection_string: "s3://siem-cold-storage"
+    s3_bucket: "siem-cold-storage"
+    compression: "gzip"
+    format: "parquet"
     
   # Retention policies
   retention:
-    hot_storage_days: 1
-    warm_storage_days: 30
-    cold_storage_days: 365
+    hot_days: 1
+    warm_days: 30
+    cold_days: 365
     delete_after_days: 2555  # 7 years
 
 # Metrics and Monitoring
 metrics:
   enabled: true
-  prometheus:
-    enabled: true
-    endpoint: "/metrics"
-    port: 9090
-    
-  statsd:
-    enabled: false
-    host: "localhost"
-    port: 8125
-    
-  custom_metrics:
-    - name: "events_per_second"
-      type: "counter"
-      description: "Number of events processed per second"
-      
-    - name: "processing_latency"
-      type: "histogram"
-      description: "Event processing latency in milliseconds"
-      
-    - name: "error_rate"
-      type: "gauge"
-      description: "Error rate percentage"
+  port: 9092
+  path: "/metrics"
+  labels: {}
 
 # Security Configuration
 security:

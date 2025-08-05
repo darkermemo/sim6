@@ -437,7 +437,7 @@ impl SchemaValidator {
         for entry in WalkDir::new(source_dir)
             .into_iter()
             .filter_map(|e| e.ok())
-            .filter(|e| e.path().extension().map_or(false, |ext| ext == "rs"))
+            .filter(|e| e.path().extension().is_some_and(|ext| ext == "rs"))
         {
             let file_path = entry.path();
             if let Err(e) = self.scan_rust_file(file_path) {
@@ -466,7 +466,7 @@ impl SchemaValidator {
             .filter(|e| {
                 e.path()
                     .extension()
-                    .map_or(false, |ext| ext == "ts" || ext == "tsx")
+                    .is_some_and(|ext| ext == "ts" || ext == "tsx")
             })
         {
             let file_path = entry.path();
@@ -503,7 +503,7 @@ impl SchemaValidator {
 
         let lexer = Lexer::new(
             Syntax::Typescript(TsConfig {
-                tsx: file_path.extension().map_or(false, |ext| ext == "tsx"),
+                tsx: file_path.extension().is_some_and(|ext| ext == "tsx"),
                 decorators: true,
                 dts: false,
                 no_early_errors: true,
@@ -524,7 +524,7 @@ impl SchemaValidator {
 
         self.typescript_interfaces
             .entry(self.current_environment.clone())
-            .or_insert_with(Vec::new)
+            .or_default()
             .extend(interfaces);
 
         Ok(interface_count)
@@ -799,7 +799,7 @@ impl SchemaValidator {
         let mut markdown = String::new();
 
         // Header
-        markdown.push_str(&format!("# Multi-Layer Schema Validation Report\n\n"));
+        markdown.push_str("# Multi-Layer Schema Validation Report\n\n");
         markdown.push_str(&format!("**Environment:** {}\n", report.environment));
         markdown.push_str(&format!(
             "**Generated:** {}\n\n",
@@ -807,7 +807,7 @@ impl SchemaValidator {
         ));
 
         // Executive Summary
-        markdown.push_str(&format!("## 📊 Executive Summary\n\n"));
+        markdown.push_str("## 📊 Executive Summary\n\n");
         markdown.push_str(&format!(
             "- **Total Tables Loaded:** {}\n",
             report.total_tables_loaded
@@ -831,14 +831,14 @@ impl SchemaValidator {
         ));
 
         // Layer Coverage
-        markdown.push_str(&format!("## 🎯 Layer Coverage\n\n"));
+        markdown.push_str("## 🎯 Layer Coverage\n\n");
         for (layer, coverage) in &report.summary.layer_coverage {
             markdown.push_str(&format!("- **{:?}:** {:.1}%\n", layer, coverage));
         }
-        markdown.push_str("\n");
+        markdown.push('\n');
 
         // Cross-Layer Analysis
-        markdown.push_str(&format!("## 🔗 Cross-Layer Analysis\n\n"));
+        markdown.push_str("## 🔗 Cross-Layer Analysis\n\n");
 
         if !report
             .cross_layer_validation
@@ -858,7 +858,7 @@ impl SchemaValidator {
                     error.error_type, error.message, error.file_path, error.line_number
                 ));
             }
-            markdown.push_str("\n");
+            markdown.push('\n');
         }
 
         // Critical Issues

@@ -1,3 +1,5 @@
+#![deny(warnings)]
+
 //! SIEM Unified Pipeline
 //!
 //! A comprehensive Security Information and Event Management (SIEM) pipeline

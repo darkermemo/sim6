@@ -186,7 +186,7 @@ impl SchemaValidator {
         for entry in WalkDir::new(source_dir)
             .into_iter()
             .filter_map(|e| e.ok())
-            .filter(|e| e.path().extension().map_or(false, |ext| ext == "rs"))
+            .filter(|e| e.path().extension().is_some_and(|ext| ext == "rs"))
         {
             let file_path = entry.path();
             if let Err(e) = self.scan_rust_file(file_path) {
@@ -240,7 +240,7 @@ impl SchemaValidator {
                 for table in &parsed_query.tables_referenced {
                     if !self.database_schema.tables.contains_key(table) {
                         // Try without database prefix
-                        let table_without_db = table.split('.').last().unwrap_or(table);
+                        let table_without_db = table.split('.').next_back().unwrap_or(table);
                         let table_exists = self.database_schema.tables.keys().any(|t| {
                             t.ends_with(&format!(".{}", table_without_db)) || t == table_without_db
                         });
@@ -409,10 +409,10 @@ impl SchemaValidator {
             for item in &select.projection {
                 match item {
                     SelectItem::UnnamedExpr(expr) => {
-                        self.extract_column_names(expr, columns);
+                        Self::extract_column_names(expr, columns);
                     }
                     SelectItem::ExprWithAlias { expr, .. } => {
-                        self.extract_column_names(expr, columns);
+                        Self::extract_column_names(expr, columns);
                     }
                     SelectItem::Wildcard(_) => {
                         columns.push("*".to_string());
@@ -437,7 +437,7 @@ impl SchemaValidator {
     }
 
     /// Extract column names from expressions
-    fn extract_column_names(&self, expr: &Expr, columns: &mut Vec<String>) {
+    fn extract_column_names(expr: &Expr, columns: &mut Vec<String>) {
         match expr {
             Expr::Identifier(ident) => {
                 columns.push(ident.value.clone());
@@ -453,7 +453,7 @@ impl SchemaValidator {
                         sqlparser::ast::FunctionArgExpr::Expr(e),
                     ) = arg
                     {
-                        self.extract_column_names(e, columns);
+                        Self::extract_column_names(e, columns);
                     }
                 }
             }
@@ -526,13 +526,13 @@ impl SchemaValidator {
         let report = self.generate_report();
         let mut markdown = String::new();
 
-        markdown.push_str(&format!("# Schema Validation Report\n\n"));
+        markdown.push_str("# Schema Validation Report\n\n");
         markdown.push_str(&format!(
             "**Generated:** {}\n\n",
             report.timestamp.format("%Y-%m-%d %H:%M:%S UTC")
         ));
 
-        markdown.push_str(&format!("## Summary\n\n"));
+        markdown.push_str("## Summary\n\n");
         markdown.push_str(&format!(
             "- **Total Tables Loaded:** {}\n",
             report.total_tables_loaded
@@ -589,6 +589,7 @@ impl SchemaValidator {
 /// AST visitor for extracting SQL queries from Rust code
 struct SqlVisitor<'a> {
     file_path: String,
+    #[allow(dead_code)]
     source_code: &'a str,
     sql_references: Vec<SqlReference>,
 }
@@ -634,7 +635,7 @@ impl<'a> Visit<'a> for SqlVisitor<'a> {
     }
 }
 
-impl<'a> SqlVisitor<'a> {
+impl SqlVisitor<'_> {
     fn extract_sql_from_tokens(&self, tokens: &str) -> Option<String> {
         // Extract SQL from macro tokens (simplified)
         if let Some(start) = tokens.find('"') {
@@ -722,7 +723,6 @@ impl<'a> SqlVisitor<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::path::PathBuf;
 
     #[test]
     fn test_sql_parsing() {
@@ -743,7 +743,7 @@ mod tests {
 
     #[test]
     fn test_schema_loading() {
-        let mut validator = SchemaValidator::new();
+        let _validator = SchemaValidator::new();
         // This would need a test SQL file
         // let result = validator.load_database_schema(&PathBuf::from("test_schema.sql"));
         // assert!(result.is_ok());

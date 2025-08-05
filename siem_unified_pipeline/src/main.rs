@@ -1,3 +1,5 @@
+#![deny(warnings)]
+
 //! SIEM Unified Pipeline - Main Entry Point
 //!
 //! This is the main binary entry point for the SIEM unified pipeline.

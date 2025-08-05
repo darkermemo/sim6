@@ -1,10 +1,19 @@
+#![deny(warnings)]
+
 mod errors;
 mod models;
+mod dlq;
+mod connection_manager;
+mod html_dashboard;
+mod tcp_listener;
 
 use errors::{ConsumerError, Result};
 use futures::StreamExt;
 use log::{error, info, warn};
 use models::{Event, KafkaMessage};
+use connection_manager::ConnectionManager;
+use html_dashboard::generate_dashboard_html;
+// use dlq::DeadLetterQueue; // TODO: Integrate DLQ
 use rdkafka::config::ClientConfig;
 use rdkafka::consumer::{Consumer, StreamConsumer};
 use rdkafka::message::{BorrowedMessage, Message};
@@ -16,12 +25,11 @@ use siem_parser::{
 use std::collections::HashMap;
 use std::env;
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::RwLock;
+use std::sync::{RwLock, Arc};
 use std::time::{Duration, Instant};
 use tokio::time::interval;
-use axum::{extract::State, http::StatusCode, response::Json, routing::get, Router};
+use axum::{response::Json, routing::get, Router, response::Html};
 use serde_json::json;
-use tower::ServiceBuilder;
 use once_cell::sync::Lazy;
 use chrono::Utc;
 
@@ -31,6 +39,13 @@ pub static PROCESSED: AtomicU64 = AtomicU64::new(0);  // Messages read from Kafk
 pub static PARSED: AtomicU64 = AtomicU64::new(0);     // Successfully written to ClickHouse
 pub static ERRORS: AtomicU64 = AtomicU64::new(0);     // Processing errors
 pub static START_TIME: Lazy<Instant> = Lazy::new(Instant::now);
+
+// Categorized error metrics
+pub static SCHEMA_ERRORS: AtomicU64 = AtomicU64::new(0);      // Schema mismatch errors
+pub static PARSE_ERRORS: AtomicU64 = AtomicU64::new(0);       // JSON parsing errors
+pub static VALIDATION_ERRORS: AtomicU64 = AtomicU64::new(0);  // Field validation errors
+pub static CLICKHOUSE_ERRORS: AtomicU64 = AtomicU64::new(0);  // Database write errors
+pub static DLQ_SENT: AtomicU64 = AtomicU64::new(0);          // Messages sent to DLQ
 
 // Performance tracking
 static LAST_PROCESSED_COUNT: AtomicU64 = AtomicU64::new(0);
@@ -340,6 +355,7 @@ fn process_message(
     log_source_cache: &LogSourceCache,
     taxonomy_cache: &TaxonomyCache,
     threat_intel_cache: &ThreatIntelCache,
+    connection_manager: &ConnectionManager,
 ) -> Result<Event> {
     let payload = msg
         .payload()
@@ -347,37 +363,72 @@ fn process_message(
 
     let payload_str = std::str::from_utf8(payload)?;
 
-    // Try to deserialize with better error handling
+    // Register event with connection manager for tracking
+    connection_manager.register_event("unknown", payload.len());
+
+    // Try to deserialize with better error handling and categorization
     let kafka_msg: KafkaMessage = match serde_json::from_str(payload_str) {
         Ok(msg) => msg,
         Err(e) => {
-            error!(
-                "Failed to deserialize Kafka message: {}. Payload: {}",
-                e, payload_str
-            );
-            error!("Expected format: {{\"event_id\": \"string\", \"tenant_id\": \"string\", \"event_timestamp\": number, \"source_ip\": \"string\", \"raw_event\": \"string\"}}");
+            // Categorize the error type
+            let error_detail = e.to_string();
+            if error_detail.contains("missing field") {
+                SCHEMA_ERRORS.fetch_add(1, Ordering::Relaxed);
+                error!("Schema error - missing field: {}", error_detail);
+            } else if error_detail.contains("invalid type") {
+                PARSE_ERRORS.fetch_add(1, Ordering::Relaxed);
+                error!("Parse error - invalid type: {}", error_detail);
+            } else {
+                PARSE_ERRORS.fetch_add(1, Ordering::Relaxed);
+                error!("Parse error: {}", error_detail);
+            }
+            
+            // Log sample of problematic payload
+            let sample_len = payload_str.len().min(500);
+            error!("Failed payload sample (first {} chars): {}...", sample_len, &payload_str[..sample_len]);
+            
+            // Log available fields if we can parse as generic JSON
+            if let Ok(value) = serde_json::from_str::<serde_json::Value>(payload_str) {
+                if let Some(obj) = value.as_object() {
+                    let fields: Vec<_> = obj.keys().collect();
+                    error!("Available fields in message: {:?}", fields);
+                }
+            }
+            
+            ERRORS.fetch_add(1, Ordering::Relaxed);
             return Err(ConsumerError::Json(e));
         }
     };
 
+    // Update connection manager with actual source IP
+    connection_manager.register_event(&kafka_msg.source_ip, payload.len());
+
     // Validate required fields
     if kafka_msg.event_id.is_empty() {
         warn!("Missing or empty event_id in Kafka message");
+        VALIDATION_ERRORS.fetch_add(1, Ordering::Relaxed);
+        ERRORS.fetch_add(1, Ordering::Relaxed);
         return Err(ConsumerError::Config("Missing event_id field".to_string()));
     }
 
     if kafka_msg.tenant_id.is_empty() {
         warn!("Missing or empty tenant_id in Kafka message");
+        VALIDATION_ERRORS.fetch_add(1, Ordering::Relaxed);
+        ERRORS.fetch_add(1, Ordering::Relaxed);
         return Err(ConsumerError::Config("Missing tenant_id field".to_string()));
     }
 
     if kafka_msg.source_ip.is_empty() {
         warn!("Missing or empty source_ip in Kafka message");
+        VALIDATION_ERRORS.fetch_add(1, Ordering::Relaxed);
+        ERRORS.fetch_add(1, Ordering::Relaxed);
         return Err(ConsumerError::Config("Missing source_ip field".to_string()));
     }
 
     if kafka_msg.raw_event.is_empty() {
         warn!("Missing or empty raw_event in Kafka message");
+        VALIDATION_ERRORS.fetch_add(1, Ordering::Relaxed);
+        ERRORS.fetch_add(1, Ordering::Relaxed);
         return Err(ConsumerError::Config(
             "Missing raw_event field".to_string(),
         ));
@@ -686,6 +737,13 @@ async fn write_to_clickhouse(client: &Client, config: &Config, events: Vec<Event
             .text()
             .await
             .unwrap_or_else(|_| "Unknown error".to_string());
+        
+        // Categorize ClickHouse errors
+        CLICKHOUSE_ERRORS.fetch_add(events.len() as u64, Ordering::Relaxed);
+        ERRORS.fetch_add(events.len() as u64, Ordering::Relaxed);
+        
+        error!("ClickHouse insert failed for {} events: {}", events.len(), error_text);
+        
         return Err(ConsumerError::ClickHouse(format!(
             "Failed to insert events: {}",
             error_text
@@ -704,6 +762,7 @@ async fn build_log_source_cache(client: &Client, api_url: &str) -> Result<LogSou
 
     // For now, we'll make an unauthenticated call to the internal endpoint
     // In production, this could use a service account token or internal API key
+    // Use internal API endpoint without auth requirement
     let url = format!("{}/api/v1/log_sources/cache", api_url);
 
     info!("Attempting to fetch log source configurations from {}", url);
@@ -825,13 +884,66 @@ async fn build_threat_intel_cache(client: &Client) -> Result<ThreatIntelCache> {
 }
 
 /// HTTP endpoint to expose metrics as JSON
-async fn get_metrics() -> Json<serde_json::Value> {
+async fn get_metrics(
+    connection_manager: Arc<ConnectionManager>,
+) -> Json<serde_json::Value> {
+    let processed = PROCESSED.load(Ordering::Relaxed);
+    let parsed = PARSED.load(Ordering::Relaxed);
+    let total_errors = SCHEMA_ERRORS.load(Ordering::Relaxed) +
+                      PARSE_ERRORS.load(Ordering::Relaxed) +
+                      VALIDATION_ERRORS.load(Ordering::Relaxed) +
+                      CLICKHOUSE_ERRORS.load(Ordering::Relaxed);
+    
+    let success_rate = if processed > 0 {
+        ((parsed as f64) / (processed as f64)) * 100.0
+    } else {
+        0.0
+    };
+    
+    let error_rate = if processed > 0 {
+        ((total_errors as f64) / (processed as f64)) * 100.0
+    } else {
+        0.0
+    };
+    
+    let connection_stats = connection_manager.get_stats();
+    
     let metrics = json!({
         "queued": QUEUED.load(Ordering::Relaxed),
-        "processed": PROCESSED.load(Ordering::Relaxed),
-        "parsed": PARSED.load(Ordering::Relaxed)
+        "processed": processed,
+        "parsed": parsed,
+        "errors": {
+            "total": total_errors,
+            "schema": SCHEMA_ERRORS.load(Ordering::Relaxed),
+            "parse": PARSE_ERRORS.load(Ordering::Relaxed),
+            "validation": VALIDATION_ERRORS.load(Ordering::Relaxed),
+            "clickhouse": CLICKHOUSE_ERRORS.load(Ordering::Relaxed),
+            "dlq_sent": DLQ_SENT.load(Ordering::Relaxed),
+        },
+        "rates": {
+            "success_rate": success_rate,
+            "error_rate": error_rate,
+        },
+        "connections": {
+            "total_sources": connection_stats.total_sources,
+            "active_sources": connection_stats.active_sources,
+            "idle_sources": connection_stats.idle_sources,
+            "total_events": connection_stats.total_events,
+            "total_bytes": connection_stats.total_bytes,
+            "avg_eps_overall": connection_stats.avg_eps_overall,
+        }
     });
     Json(metrics)
+}
+
+/// Dashboard handler that shows connection status and log sources
+async fn dashboard_handler(connection_manager: Arc<ConnectionManager>) -> Html<String> {
+    let processed = PROCESSED.load(Ordering::Relaxed);
+    let parsed = PARSED.load(Ordering::Relaxed);
+    let queued = QUEUED.load(Ordering::Relaxed);
+    let errors = ERRORS.load(Ordering::Relaxed);
+    
+    generate_dashboard_html(connection_manager, processed, parsed, queued, errors)
 }
 
 /// Calculate enhanced metrics for advanced visualization
@@ -935,6 +1047,7 @@ async fn main() -> Result<()> {
 
     let consumer = create_consumer(&config).await?;
     let http_client = Client::new();
+    let connection_manager = Arc::new(ConnectionManager::new());
     let mut batch = EventBatch::new();
 
     // Initialize log source cache
@@ -959,16 +1072,32 @@ async fn main() -> Result<()> {
     let mut message_stream = consumer.stream();
 
     // Start HTTP metrics server on port 9090
-    tokio::spawn(async {
+    // Start metrics and dashboard server
+    let dashboard_connection_manager = Arc::clone(&connection_manager);
+    let metrics_connection_manager = Arc::clone(&connection_manager);
+    
+    tokio::spawn(async move {
         let app = Router::new()
-            .route("/metrics", get(get_metrics))
-            .route("/status", get(get_status));
+            .route("/metrics", get({
+                let cm = metrics_connection_manager.clone();
+                move || get_metrics(cm.clone())
+            }))
+            .route("/status", get(get_status))
+            .route("/", get({
+                let cm = dashboard_connection_manager.clone();
+                move || dashboard_handler(cm.clone())
+            }))
+            .route("/dashboard", get({
+                let cm = dashboard_connection_manager.clone();
+                move || dashboard_handler(cm.clone())
+            }));
         
         let listener = tokio::net::TcpListener::bind("0.0.0.0:9091")
             .await
             .expect("Failed to bind metrics server");
         
         info!("Metrics server listening on http://0.0.0.0:9091/metrics and http://0.0.0.0:9091/status");
+        info!("Dashboard available at http://0.0.0.0:9091/dashboard");
         
         axum::serve(listener, app)
             .await
@@ -1007,7 +1136,7 @@ async fn main() -> Result<()> {
                         }
 
                         let process_start = Instant::now();
-                        match process_message(&msg, &log_source_cache, &taxonomy_cache, &threat_intel_cache) {
+                        match process_message(&msg, &log_source_cache, &taxonomy_cache, &threat_intel_cache, &connection_manager) {
                             Ok(event) => {
                                 // Track processing time
                                 let processing_time = process_start.elapsed().as_millis() as u64;

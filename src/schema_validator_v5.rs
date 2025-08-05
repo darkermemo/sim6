@@ -14,7 +14,7 @@ use syn::{visit::Visit, LitStr, Macro};
 use walkdir::WalkDir;
 
 #[cfg(feature = "graphql-support")]
-use graphql_parser::{parse_schema, schema::Document as GraphQLDocument};
+use graphql_parser::parse_schema;
 
 #[cfg(feature = "html-reporting")]
 use askama::Template;
@@ -234,6 +234,18 @@ pub enum ValidationLayer {
     OpenAPI,
 }
 
+impl std::fmt::Display for ValidationLayer {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ValidationLayer::Database => write!(f, "Database"),
+            ValidationLayer::Backend => write!(f, "Backend"),
+            ValidationLayer::Frontend => write!(f, "Frontend"),
+            ValidationLayer::GraphQL => write!(f, "GraphQL"),
+            ValidationLayer::OpenAPI => write!(f, "OpenAPI"),
+        }
+    }
+}
+
 /// Enhanced validation error with layer context
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ValidationError {
@@ -302,6 +314,7 @@ pub struct ValidationMetrics {
     pub validation_warnings_total: Counter,
     pub files_scanned_total: Counter,
     pub sql_references_found: Gauge,
+    #[allow(dead_code)]
     pub validation_duration_seconds: Histogram,
     pub layer_coverage_percentage: Gauge,
 }
@@ -379,7 +392,7 @@ impl ValidationMetrics {
             .set(report.total_sql_references as f64);
 
         // Update layer coverage metrics
-        for (_layer, coverage) in &report.summary.layer_coverage {
+        for coverage in report.summary.layer_coverage.values() {
             // Note: In a real implementation, you'd want to use labels for different layers
             self.layer_coverage_percentage.set(*coverage);
         }
@@ -393,6 +406,34 @@ impl ValidationMetrics {
 pub struct ValidationReportTemplate {
     pub report: ValidationReport,
     pub generated_at: String,
+    pub layer_coverage_vec: Vec<(String, String, String)>, // (layer_name, coverage_value, css_class)
+}
+
+#[cfg(feature = "html-reporting")]
+impl ValidationReportTemplate {
+    /// Create a new template with converted layer coverage for easier template iteration
+    pub fn new(report: ValidationReport, generated_at: String) -> Self {
+        let layer_coverage_vec: Vec<(String, String, String)> = report.summary.layer_coverage
+            .iter()
+            .map(|(layer, coverage)| {
+                let coverage_int = coverage.round() as i32;
+                let css_class = if coverage_int > 79 {
+                    "high".to_string()
+                } else if coverage_int > 49 {
+                    "medium".to_string()
+                } else {
+                    "low".to_string()
+                };
+                (layer.to_string(), format!("{}", coverage_int), css_class)
+            })
+            .collect();
+        
+        Self {
+            report,
+            generated_at,
+            layer_coverage_vec,
+        }
+    }
 }
 
 /// Enhanced schema validator with multi-layer support
@@ -456,6 +497,7 @@ impl SchemaValidator {
 
     /// Initialize Prometheus metrics
     #[cfg(feature = "prometheus-metrics")]
+    #[allow(dead_code)]
     pub fn init_metrics(&mut self, registry: &Registry) -> Result<()> {
         self.metrics = Some(ValidationMetrics::new(registry)?);
         Ok(())
@@ -687,7 +729,7 @@ impl SchemaValidator {
         for entry in WalkDir::new(source_dir)
             .into_iter()
             .filter_map(|e| e.ok())
-            .filter(|e| e.path().extension().map_or(false, |ext| ext == "rs"))
+            .filter(|e| e.path().extension().is_some_and(|ext| ext == "rs"))
         {
             let file_path = entry.path();
             if let Err(e) = self.scan_rust_file(file_path) {
@@ -716,7 +758,7 @@ impl SchemaValidator {
             .filter(|e| {
                 e.path()
                     .extension()
-                    .map_or(false, |ext| ext == "ts" || ext == "tsx")
+                    .is_some_and(|ext| ext == "ts" || ext == "tsx")
             })
         {
             let file_path = entry.path();
@@ -753,7 +795,7 @@ impl SchemaValidator {
 
         let lexer = Lexer::new(
             Syntax::Typescript(TsConfig {
-                tsx: file_path.extension().map_or(false, |ext| ext == "tsx"),
+                tsx: file_path.extension().is_some_and(|ext| ext == "tsx"),
                 decorators: true,
                 dts: false,
                 no_early_errors: true,
@@ -774,7 +816,7 @@ impl SchemaValidator {
 
         self.typescript_interfaces
             .entry(self.current_environment.clone())
-            .or_insert_with(Vec::new)
+            .or_default()
             .extend(interfaces);
 
         Ok(interface_count)
@@ -813,7 +855,7 @@ impl SchemaValidator {
                         };
 
                         let type_annotation = if let Some(type_ann) = &prop.type_ann {
-                            self.typescript_type_to_string(&type_ann.type_ann)
+                            Self::typescript_type_to_string(&type_ann.type_ann)
                         } else {
                             "any".to_string()
                         };
@@ -845,7 +887,7 @@ impl SchemaValidator {
     }
 
     /// Convert TypeScript type to string representation
-    fn typescript_type_to_string(&self, ts_type: &TsType) -> String {
+    fn typescript_type_to_string(ts_type: &TsType) -> String {
         match ts_type {
             TsType::TsKeywordType(keyword) => match keyword.kind {
                 swc_ecma_ast::TsKeywordTypeKind::TsStringKeyword => "string".to_string(),
@@ -867,7 +909,7 @@ impl SchemaValidator {
             TsType::TsArrayType(array_type) => {
                 format!(
                     "{}[]",
-                    self.typescript_type_to_string(&array_type.elem_type)
+                    Self::typescript_type_to_string(&array_type.elem_type)
                 )
             }
             TsType::TsUnionOrIntersectionType(union_type) => match union_type {
@@ -875,7 +917,7 @@ impl SchemaValidator {
                     let types: Vec<String> = union
                         .types
                         .iter()
-                        .map(|t| self.typescript_type_to_string(t))
+                        .map(|t| Self::typescript_type_to_string(t))
                         .collect();
                     types.join(" | ")
                 }
@@ -883,7 +925,7 @@ impl SchemaValidator {
                     let types: Vec<String> = intersection
                         .types
                         .iter()
-                        .map(|t| self.typescript_type_to_string(t))
+                        .map(|t| Self::typescript_type_to_string(t))
                         .collect();
                     types.join(" & ")
                 }
@@ -926,7 +968,7 @@ impl SchemaValidator {
                                     for arg in field.arguments {
                                         let argument = GraphQLArgument {
                                             name: arg.name.to_string(),
-                                            type_name: self.graphql_type_to_string(&arg.value_type),
+                                            type_name: Self::graphql_type_to_string(&arg.value_type),
                                             nullable: !self
                                                 .is_graphql_type_non_null(&arg.value_type),
                                             default_value: arg
@@ -938,9 +980,9 @@ impl SchemaValidator {
 
                                     let graphql_field = GraphQLField {
                                         name: field.name.to_string(),
-                                        type_name: self.graphql_type_to_string(&field.field_type),
+                                        type_name: Self::graphql_type_to_string(&field.field_type),
                                         nullable: !self.is_graphql_type_non_null(&field.field_type),
-                                        list: self.is_graphql_type_list(&field.field_type),
+                                        list: Self::is_graphql_type_list(&field.field_type),
                                         arguments,
                                         directives: field
                                             .directives
@@ -985,13 +1027,13 @@ impl SchemaValidator {
                     }
                     graphql_parser::schema::Definition::SchemaDefinition(schema_def) => {
                         // Handle schema definition (Query, Mutation, Subscription)
-                        if let Some(query) = schema_def.query {
+                        if let Some(_query) = schema_def.query {
                             // Mark this type as the Query root
                         }
-                        if let Some(mutation) = schema_def.mutation {
+                        if let Some(_mutation) = schema_def.mutation {
                             // Mark this type as the Mutation root
                         }
-                        if let Some(subscription) = schema_def.subscription {
+                        if let Some(_subscription) = schema_def.subscription {
                             // Mark this type as the Subscription root
                         }
                     }
@@ -1013,14 +1055,14 @@ impl SchemaValidator {
     }
 
     #[cfg(feature = "graphql-support")]
-    fn graphql_type_to_string(&self, gql_type: &graphql_parser::schema::Type<String>) -> String {
+    fn graphql_type_to_string(gql_type: &graphql_parser::schema::Type<String>) -> String {
         match gql_type {
             graphql_parser::schema::Type::NamedType(name) => name.clone(),
             graphql_parser::schema::Type::ListType(list_type) => {
-                format!("[{}]", self.graphql_type_to_string(list_type))
+                format!("[{}]", Self::graphql_type_to_string(list_type))
             }
             graphql_parser::schema::Type::NonNullType(non_null_type) => {
-                format!("{}!", self.graphql_type_to_string(non_null_type))
+                format!("{}!", Self::graphql_type_to_string(non_null_type))
             }
         }
     }
@@ -1031,10 +1073,10 @@ impl SchemaValidator {
     }
 
     #[cfg(feature = "graphql-support")]
-    fn is_graphql_type_list(&self, gql_type: &graphql_parser::schema::Type<String>) -> bool {
+    fn is_graphql_type_list(gql_type: &graphql_parser::schema::Type<String>) -> bool {
         match gql_type {
             graphql_parser::schema::Type::ListType(_) => true,
-            graphql_parser::schema::Type::NonNullType(inner) => self.is_graphql_type_list(inner),
+            graphql_parser::schema::Type::NonNullType(inner) => Self::is_graphql_type_list(inner),
             _ => false,
         }
     }
@@ -1047,7 +1089,7 @@ impl SchemaValidator {
         // Determine if it's JSON or YAML based on file extension
         let spec: serde_json::Value = if spec_file
             .extension()
-            .map_or(false, |ext| ext == "yaml" || ext == "yml")
+            .is_some_and(|ext| ext == "yaml" || ext == "yml")
         {
             let yaml_value: serde_yaml::Value = serde_yaml::from_str(&content)
                 .with_context(|| "Failed to parse YAML OpenAPI spec")?;
@@ -1109,7 +1151,7 @@ impl SchemaValidator {
         if let Some(components_obj) = spec["components"].as_object() {
             if let Some(schemas_obj) = components_obj["schemas"].as_object() {
                 for (schema_name, schema_def) in schemas_obj {
-                    let schema = self.parse_openapi_schema(schema_def)?;
+                    let schema = Self::parse_openapi_schema(schema_def)?;
                     components.schemas.insert(schema_name.clone(), schema);
                 }
             }
@@ -1136,7 +1178,7 @@ impl SchemaValidator {
                     name: param["name"].as_str().unwrap_or("").to_string(),
                     location: param["in"].as_str().unwrap_or("query").to_string(),
                     required: param["required"].as_bool().unwrap_or(false),
-                    schema: self.parse_openapi_schema(&param["schema"])?,
+                    schema: Self::parse_openapi_schema(&param["schema"])?,
                 };
                 parameters.push(parameter);
             }
@@ -1150,7 +1192,7 @@ impl SchemaValidator {
             if let Some(content_obj) = req_body["content"].as_object() {
                 for (media_type, media_obj) in content_obj {
                     let media = OpenAPIMediaType {
-                        schema: self.parse_openapi_schema(&media_obj["schema"])?,
+                        schema: Self::parse_openapi_schema(&media_obj["schema"])?,
                     };
                     content.insert(media_type.clone(), media);
                 }
@@ -1172,7 +1214,7 @@ impl SchemaValidator {
                     let mut content_map = HashMap::new();
                     for (media_type, media_obj) in content_obj {
                         let media = OpenAPIMediaType {
-                            schema: self.parse_openapi_schema(&media_obj["schema"])?,
+                            schema: Self::parse_openapi_schema(&media_obj["schema"])?,
                         };
                         content_map.insert(media_type.clone(), media);
                     }
@@ -1199,7 +1241,7 @@ impl SchemaValidator {
     }
 
     /// Parse OpenAPI schema
-    fn parse_openapi_schema(&self, schema: &serde_json::Value) -> Result<OpenAPISchema> {
+    fn parse_openapi_schema(schema: &serde_json::Value) -> Result<OpenAPISchema> {
         let schema_type = schema["type"].as_str().unwrap_or("object").to_string();
         let format = schema["format"].as_str().map(|s| s.to_string());
         let reference = schema["$ref"].as_str().map(|s| s.to_string());
@@ -1209,7 +1251,7 @@ impl SchemaValidator {
             if let Some(props_obj) = schema["properties"].as_object() {
                 let mut props = HashMap::new();
                 for (prop_name, prop_schema) in props_obj {
-                    let prop = self.parse_openapi_schema(prop_schema)?;
+                    let prop = Self::parse_openapi_schema(prop_schema)?;
                     props.insert(prop_name.clone(), prop);
                 }
                 Some(props)
@@ -1223,7 +1265,7 @@ impl SchemaValidator {
         // Parse items for array types
         let items = if schema_type == "array" {
             if let Some(items_schema) = schema.get("items") {
-                Some(Box::new(self.parse_openapi_schema(items_schema)?))
+                Some(Box::new(Self::parse_openapi_schema(items_schema)?))
             } else {
                 None
             }
@@ -1370,14 +1412,14 @@ impl SchemaValidator {
         if let Some(graphql_schema) = self.graphql_schemas.get(&self.current_environment) {
             if let Some(database_schema) = self.database_schemas.get(&self.current_environment) {
                 // Validate GraphQL types against database tables
-                for (type_name, _graphql_type) in &graphql_schema.types {
+                for type_name in graphql_schema.types.keys() {
                     // Check if there's a corresponding database table
                     let table_exists = database_schema.tables.keys().any(|table_name| {
                         table_name
                             .to_lowercase()
                             .contains(&type_name.to_lowercase())
                             || type_name.to_lowercase().contains(
-                                &table_name.split('.').last().unwrap_or("").to_lowercase(),
+                                &table_name.split('.').next_back().unwrap_or("").to_lowercase(),
                             )
                     });
 
@@ -1419,13 +1461,13 @@ impl SchemaValidator {
         if let Some(openapi_spec) = self.openapi_specs.get(&self.current_environment) {
             // Validate OpenAPI schemas against database tables
             if let Some(database_schema) = self.database_schemas.get(&self.current_environment) {
-                for (schema_name, _openapi_schema) in &openapi_spec.components.schemas {
+                for schema_name in openapi_spec.components.schemas.keys() {
                     let table_exists = database_schema.tables.keys().any(|table_name| {
                         table_name
                             .to_lowercase()
                             .contains(&schema_name.to_lowercase())
                             || schema_name.to_lowercase().contains(
-                                &table_name.split('.').last().unwrap_or("").to_lowercase(),
+                                &table_name.split('.').next_back().unwrap_or("").to_lowercase(),
                             )
                     });
 
@@ -1707,10 +1749,10 @@ impl SchemaValidator {
     #[cfg(feature = "html-reporting")]
     pub fn export_html_report(&self, output_path: &Path) -> Result<()> {
         let report = self.generate_report();
-        let template = ValidationReportTemplate {
+        let template = ValidationReportTemplate::new(
             report,
-            generated_at: Utc::now().format("%Y-%m-%d %H:%M:%S UTC").to_string(),
-        };
+            Utc::now().format("%Y-%m-%d %H:%M:%S UTC").to_string(),
+        );
 
         let html_content = template
             .render()
@@ -1752,7 +1794,7 @@ impl SchemaValidator {
     fn generate_markdown_report(&self, report: &ValidationReport) -> String {
         let mut content = String::new();
 
-        content.push_str(&format!("# Schema Validation Report\n\n"));
+        content.push_str("# Schema Validation Report\n\n");
         content.push_str(&format!("**Environment:** {}\n", report.environment));
         content.push_str(&format!(
             "**Generated:** {}\n\n",
@@ -1794,7 +1836,7 @@ impl SchemaValidator {
         for (layer, coverage) in &report.summary.layer_coverage {
             content.push_str(&format!("- **{:?}:** {:.1}%\n", layer, coverage));
         }
-        content.push_str("\n");
+        content.push('\n');
 
         if !report.errors.is_empty() {
             content.push_str("## Validation Errors\n\n");
@@ -1956,7 +1998,7 @@ impl EnhancedSqlVisitor {
             for item in &select.projection {
                 match item {
                     SelectItem::UnnamedExpr(expr) | SelectItem::ExprWithAlias { expr, .. } => {
-                        self.extract_from_expr(expr, columns);
+                        Self::extract_from_expr(expr, columns);
                     }
                     SelectItem::Wildcard(_) => {
                         columns.push("*".to_string());
@@ -1991,7 +2033,7 @@ impl EnhancedSqlVisitor {
     }
 
     /// Extract column references from expression
-    fn extract_from_expr(&self, expr: &Expr, columns: &mut Vec<String>) {
+    fn extract_from_expr(expr: &Expr, columns: &mut Vec<String>) {
         match expr {
             Expr::Identifier(ident) => {
                 columns.push(ident.value.clone());
@@ -2010,13 +2052,13 @@ impl EnhancedSqlVisitor {
                         sqlparser::ast::FunctionArgExpr::Expr(e),
                     ) = arg
                     {
-                        self.extract_from_expr(e, columns);
+                        Self::extract_from_expr(e, columns);
                     }
                 }
             }
             Expr::BinaryOp { left, right, .. } => {
-                self.extract_from_expr(left, columns);
-                self.extract_from_expr(right, columns);
+                Self::extract_from_expr(left, columns);
+                Self::extract_from_expr(right, columns);
             }
             _ => {}
         }

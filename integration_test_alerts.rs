@@ -66,7 +66,7 @@ async fn create_test_alert(
     };
 
     let response = client
-        .post(&format!("{}/api/v1/alerts", base_url))
+        .post(format!("{}/api/v1/alerts", base_url))
         .header("Authorization", format!("Bearer {}", token))
         .header("X-Tenant-ID", tenant_id)
         .header("Content-Type", "application/json")
@@ -85,7 +85,7 @@ async fn get_alerts(
     let client = reqwest::Client::new();
 
     let response = client
-        .get(&format!("{}/api/v1/alerts", base_url))
+        .get(format!("{}/api/v1/alerts", base_url))
         .header("Authorization", format!("Bearer {}", token))
         .header("X-Tenant-ID", tenant_id)
         .send()
@@ -163,7 +163,7 @@ async fn test_frontend_integration() -> Result<(), Box<dyn std::error::Error>> {
 
     // Test alerts endpoint (consumed by frontend)
     let alerts_response = reqwest::Client::new()
-        .get(&format!("{}/api/v1/alerts", base_url))
+        .get(format!("{}/api/v1/alerts", base_url))
         .header("Authorization", format!("Bearer {}", token))
         .header("X-Tenant-ID", tenant_id)
         .send()

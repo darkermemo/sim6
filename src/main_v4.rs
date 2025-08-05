@@ -225,12 +225,10 @@ fn main() -> Result<()> {
         .context("Failed to scan source files")?;
 
     // Perform validation
-    if !matches.get_flag("cross-layer-only") {
-        if verbose {
-            println!("✅ Performing individual layer validation...");
-        }
-        // Individual layer validation is performed during scanning
+    if !matches.get_flag("cross-layer-only") && verbose {
+        println!("✅ Performing individual layer validation...");
     }
+    // Individual layer validation is performed during scanning
 
     if verbose {
         println!("🔗 Performing cross-layer validation...");
@@ -276,7 +274,22 @@ fn main() -> Result<()> {
                 .context("Failed to generate Markdown report")?;
             println!("📄 Markdown report generated: {:?}", md_path);
         }
-        "both" | _ => {
+        "both" => {
+            let json_path = output_dir.join("schema_validation_report.json");
+            let md_path = output_dir.join("schema_validation_report.md");
+
+            validator
+                .generate_enhanced_json_report(&json_path)
+                .context("Failed to generate JSON report")?;
+            validator
+                .generate_enhanced_markdown_report(&md_path)
+                .context("Failed to generate Markdown report")?;
+
+            println!("📄 Reports generated:");
+            println!("   JSON: {:?}", json_path);
+            println!("   Markdown: {:?}", md_path);
+        }
+        _ => {
             let json_path = output_dir.join("schema_validation_report.json");
             let md_path = output_dir.join("schema_validation_report.md");
 

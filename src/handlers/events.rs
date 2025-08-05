@@ -353,10 +353,7 @@ async fn try_database_search(query: &SearchQuery) -> Result<PagedEvents, Box<dyn
     ).await??;
     
     // Execute count query
-    let total_count = match client.query(&count_query).fetch_one::<u64>().await {
-        Ok(count) => count,
-        Err(_) => 0, // Fallback to 0 if count fails
-    };
+    let total_count = client.query(&count_query).fetch_one::<u64>().await.unwrap_or(0);
     
     // Convert rows to events
     let mut events = Vec::new();
@@ -472,14 +469,13 @@ fn build_where_clause(query: &SearchQuery) -> Result<(String, Vec<String>), Stri
     
     // Structured filters (for backward compatibility and additional filters)
     for (key, value) in &query.filters {
-        let escaped_value = escape_sql_string(value);
         match key.as_str() {
             "source_ip" | "dest_ip" | "event_category" | "event_action" | "event_outcome" | "severity" | "user_name" | "host_name" => {
                 // Skip these as they are handled by direct fields above
                 warn!("Filter '{}' should use direct field instead of filters map", key);
             }
             _ => {
-                warn!("Unknown filter key ignored: {}", key);
+                warn!("Unknown filter key '{}' with value '{}' ignored", key, value);
             }
         }
     }
@@ -597,7 +593,7 @@ pub async fn search_events(
                  query_time_ms: start_time.elapsed().as_millis() as u64,
              };
              
-             return Ok(Json(paged_events));
+             Ok(Json(paged_events))
         }
     }
 }

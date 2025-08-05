@@ -179,9 +179,12 @@ impl Pipeline {
     
     pub async fn start_high_throughput_workers(&self, worker_count: usize) -> Result<()> {
         info!("Starting high-throughput pipeline workers with {} parallel workers", worker_count);
+        info!("DEBUG: About to start ingestion workers");
         
         // Start ingestion workers
+        info!("DEBUG: Found {} sources in configuration", self.config.sources.len());
         for (source_name, source_config) in &self.config.sources {
+            info!("DEBUG: Processing source: {} (enabled: {})", source_name, source_config.enabled);
             if source_config.enabled {
                 let ingestion_manager = self.ingestion_manager.clone();
                 let event_tx = self.event_tx.clone();

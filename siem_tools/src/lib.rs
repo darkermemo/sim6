@@ -1,3 +1,5 @@
+#![deny(warnings)]
+
 //! SIEM Tools Library
 //! High-performance log generation and testing utilities for SIEM systems
 

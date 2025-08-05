@@ -1,3 +1,5 @@
+#![deny(warnings)]
+
 use anyhow::{Context, Result};
 use chrono::{DateTime, Utc};
 use clap::Parser;

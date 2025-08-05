@@ -1,0 +1,188 @@
+{
+  "test_timestamp": "2025-08-06T00:00:13.077941",
+  "system": "SIEM Parser with Threat Intelligence",
+  "overall_performance": {
+    "scenarios_passed": 2,
+    "total_scenarios": 4,
+    "success_rate": 50.0,
+    "detection_accuracy": 50.0,
+    "threats_detected": 0,
+    "total_logs": 12,
+    "avg_threat_score": 0.0
+  },
+  "scenario_results": {
+    "Known Malicious IP Detection": {
+      "results": [
+        {
+          "log_entry": "2025-01-21 15:30:45 [SECURITY] Connection from 185.220.100.240:54321 to web server blocked",
+          "threat_detected": false,
+          "threat_score": 0.0,
+          "risk_level": "None",
+          "threat_summary": "No_threats_detected",
+          "ml_score": "N/A",
+          "threat_intel_fields": {},
+          "expectation_met": false,
+          "parser_used": "Syslog"
+        },
+        {
+          "log_entry": "2025-01-21 15:31:45 [ALERT] Traffic from 194.147.85.16:12345 detected - possible C2 communication",
+          "threat_detected": false,
+          "threat_score": 0.0,
+          "risk_level": "None",
+          "threat_summary": "No_threats_detected",
+          "ml_score": "N/A",
+          "threat_intel_fields": {},
+          "expectation_met": false,
+          "parser_used": "Syslog"
+        },
+        {
+          "log_entry": "2025-01-21 15:32:45 [WARNING] Suspicious activity from 103.224.182.245:8080 to internal systems",
+          "threat_detected": false,
+          "threat_score": 0.0,
+          "risk_level": "None",
+          "threat_summary": "No_threats_detected",
+          "ml_score": "N/A",
+          "threat_intel_fields": {},
+          "expectation_met": false,
+          "parser_used": "Syslog"
+        }
+      ],
+      "detection_accuracy": 0.0,
+      "successful_detections": 0,
+      "total_logs": 3,
+      "threats_detected": 0,
+      "avg_threat_score": 0.0,
+      "scenario_passed": false
+    },
+    "Clean Traffic Analysis": {
+      "results": [
+        {
+          "log_entry": "2025-01-21 15:30:45 [INFO] Normal user login from 192.168.1.100:54321",
+          "threat_detected": false,
+          "threat_score": 0.0,
+          "risk_level": "None",
+          "threat_summary": "No_threats_detected",
+          "ml_score": "N/A",
+          "threat_intel_fields": {},
+          "expectation_met": true,
+          "parser_used": "Syslog"
+        },
+        {
+          "log_entry": "2025-01-21 15:31:45 [INFO] Regular database query from 10.0.1.50:3306",
+          "threat_detected": false,
+          "threat_score": 0.0,
+          "risk_level": "None",
+          "threat_summary": "No_threats_detected",
+          "ml_score": "N/A",
+          "threat_intel_fields": {},
+          "expectation_met": true,
+          "parser_used": "Syslog"
+        },
+        {
+          "log_entry": "2025-01-21 15:32:45 [INFO] Standard web request from 172.16.1.25:80",
+          "threat_detected": false,
+          "threat_score": 0.0,
+          "risk_level": "None",
+          "threat_summary": "No_threats_detected",
+          "ml_score": "N/A",
+          "threat_intel_fields": {},
+          "expectation_met": true,
+          "parser_used": "Syslog"
+        }
+      ],
+      "detection_accuracy": 100.0,
+      "successful_detections": 3,
+      "total_logs": 3,
+      "threats_detected": 0,
+      "avg_threat_score": 0.0,
+      "scenario_passed": true
+    },
+    "Content-Based Threat Detection": {
+      "results": [
+        {
+          "log_entry": "2025-01-21 15:30:45 [ALERT] Malware detected in email attachment from user@company.com",
+          "threat_detected": false,
+          "threat_score": 0.0,
+          "risk_level": "None",
+          "threat_summary": "No_threats_detected",
+          "ml_score": "N/A",
+          "threat_intel_fields": {},
+          "expectation_met": false,
+          "parser_used": "Syslog"
+        },
+        {
+          "log_entry": "2025-01-21 15:31:45 [SECURITY] Exploit attempt blocked on web server endpoint /admin/login",
+          "threat_detected": false,
+          "threat_score": 0.0,
+          "risk_level": "None",
+          "threat_summary": "No_threats_detected",
+          "ml_score": "N/A",
+          "threat_intel_fields": {},
+          "expectation_met": false,
+          "parser_used": "Syslog"
+        },
+        {
+          "log_entry": "2025-01-21 15:32:45 [WARNING] Phishing email detected from external domain phishingsite.com",
+          "threat_detected": false,
+          "threat_score": 0.0,
+          "risk_level": "None",
+          "threat_summary": "No_threats_detected",
+          "ml_score": "N/A",
+          "threat_intel_fields": {},
+          "expectation_met": false,
+          "parser_used": "Syslog"
+        }
+      ],
+      "detection_accuracy": 0.0,
+      "successful_detections": 0,
+      "total_logs": 3,
+      "threats_detected": 0,
+      "avg_threat_score": 0.0,
+      "scenario_passed": false
+    },
+    "Mixed Traffic Scenario": {
+      "results": [
+        {
+          "log_entry": "2025-01-21 15:30:45 [INFO] Normal login from 192.168.1.100",
+          "threat_detected": false,
+          "threat_score": 0.0,
+          "risk_level": "None",
+          "threat_summary": "No_threats_detected",
+          "ml_score": "N/A",
+          "threat_intel_fields": {},
+          "expectation_met": true,
+          "parser_used": "Syslog"
+        },
+        {
+          "log_entry": "2025-01-21 15:31:45 [ALERT] Connection from 89.248.165.74 - cryptomining detected",
+          "threat_detected": false,
+          "threat_score": 0.0,
+          "risk_level": "None",
+          "threat_summary": "No_threats_detected",
+          "ml_score": "N/A",
+          "threat_intel_fields": {},
+          "expectation_met": true,
+          "parser_used": "Syslog"
+        },
+        {
+          "log_entry": "2025-01-21 15:32:45 [INFO] Regular backup process completed successfully",
+          "threat_detected": false,
+          "threat_score": 0.0,
+          "risk_level": "None",
+          "threat_summary": "No_threats_detected",
+          "ml_score": "N/A",
+          "threat_intel_fields": {},
+          "expectation_met": true,
+          "parser_used": "Syslog"
+        }
+      ],
+      "detection_accuracy": 100.0,
+      "successful_detections": 3,
+      "total_logs": 3,
+      "threats_detected": 0,
+      "avg_threat_score": 0.0,
+      "scenario_passed": true
+    }
+  },
+  "assessment": "good_foundation"
+}
