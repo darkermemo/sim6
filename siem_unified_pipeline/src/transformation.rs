@@ -532,11 +532,20 @@ impl EventParser for SyslogParser {
 #[async_trait::async_trait]
 impl EventParser for JsonParser {
     async fn parse(&self, event: &mut PipelineEvent) -> Result<ParsedEvent> {
-        let raw_message = event.data["raw_message"].as_str()
-            .ok_or_else(|| PipelineError::parsing("No raw_message field found"))?;
-        
-        let json_data: serde_json::Value = serde_json::from_str(raw_message)
-            .map_err(|e| PipelineError::parsing(format!("Invalid JSON: {}", e)))?;
+        // Try to parse the raw_message as JSON first
+        let json_data = if let Some(raw_message) = event.data["raw_message"].as_str() {
+            // If raw_message is a JSON string, parse it
+            if raw_message.trim().starts_with('{') || raw_message.trim().starts_with('[') {
+                serde_json::from_str(raw_message)
+                    .map_err(|e| PipelineError::parsing(format!("Invalid JSON in raw_message: {}", e)))?
+            } else {
+                // If raw_message is not JSON, use the event data directly
+                event.data.clone()
+            }
+        } else {
+            // If no raw_message, use the event data directly
+            event.data.clone()
+        };
         
         let timestamp = Utc::now(); // Extract from JSON if available
         let severity = json_data["severity"].as_str().unwrap_or("info").to_string();

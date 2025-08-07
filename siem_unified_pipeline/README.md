@@ -67,15 +67,12 @@ cargo build --release
 cargo run --release -- server
 ```
 
-### Docker Quick Start
+### Native Quick Start
 
 ```bash
-# Using Docker Compose
-docker-compose up -d
-
-# Or build and run manually
-docker build -t siem-pipeline .
-docker run -p 8080:8080 -p 514:514/udp siem-pipeline
+# Build and run natively
+cargo build --release
+./target/release/siem-unified-pipeline server
 ```
 
 ### Basic Configuration
@@ -536,121 +533,64 @@ async fn main() -> Result<()> {
 
 ## 🚀 Deployment
 
-### Docker Deployment
+### Native Deployment
 
-```yaml
-# docker-compose.yml
-version: '3.8'
-services:
-  siem-pipeline:
-    image: siem-unified-pipeline:latest
-    ports:
-      - "8080:8080"
-      - "514:514/udp"
-    environment:
-      - SIEM_DATABASE_URL=postgresql://postgres:password@db:5432/siem
-      - SIEM_CLICKHOUSE_URL=http://clickhouse:8123
-    volumes:
-      - ./config.toml:/app/config.toml
-      - ./logs:/var/log
-    depends_on:
-      - db
-      - clickhouse
-      - redis
+```bash
+# Install and configure services
+sudo systemctl start postgresql
+sudo systemctl start clickhouse-server
+sudo systemctl start redis-server
 
-  db:
-    image: postgres:15
-    environment:
-      POSTGRES_DB: siem
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: password
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
+# Configure environment variables
+export SIEM_DATABASE_URL=postgresql://postgres:password@localhost:5432/siem
+export SIEM_CLICKHOUSE_URL=http://localhost:8123
+export SIEM_REDIS_URL=redis://localhost:6379
 
-  clickhouse:
-    image: clickhouse/clickhouse-server:latest
-    ports:
-      - "8123:8123"
-    volumes:
-      - clickhouse_data:/var/lib/clickhouse
-
-  redis:
-    image: redis:7-alpine
-    ports:
-      - "6379:6379"
-
-volumes:
-  postgres_data:
-  clickhouse_data:
+# Build and run SIEM pipeline
+cargo build --release
+./target/release/siem-unified-pipeline server --config config.toml
 ```
 
-### Kubernetes Deployment
+### Systemd Service Configuration
 
-```yaml
-# k8s-deployment.yaml
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: siem-pipeline
-spec:
-  replicas: 3
-  selector:
-    matchLabels:
-      app: siem-pipeline
-  template:
-    metadata:
-      labels:
-        app: siem-pipeline
-    spec:
-      containers:
-      - name: siem-pipeline
-        image: siem-unified-pipeline:latest
-        ports:
-        - containerPort: 8080
-        - containerPort: 514
-          protocol: UDP
-        env:
-        - name: SIEM_DATABASE_URL
-          valueFrom:
-            secretKeyRef:
-              name: siem-secrets
-              key: database-url
-        resources:
-          requests:
-            memory: "512Mi"
-            cpu: "500m"
-          limits:
-            memory: "2Gi"
-            cpu: "2000m"
-        livenessProbe:
-          httpGet:
-            path: /health
-            port: 8080
-          initialDelaySeconds: 30
-          periodSeconds: 10
-        readinessProbe:
-          httpGet:
-            path: /health
-            port: 8080
-          initialDelaySeconds: 5
-          periodSeconds: 5
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: siem-pipeline-service
-spec:
-  selector:
-    app: siem-pipeline
-  ports:
-  - name: http
-    port: 8080
-    targetPort: 8080
-  - name: syslog
-    port: 514
-    targetPort: 514
-    protocol: UDP
-  type: LoadBalancer
+```ini
+# /etc/systemd/system/siem-pipeline.service
+[Unit]
+Description=SIEM Unified Pipeline
+After=network.target postgresql.service clickhouse-server.service redis-server.service
+Requires=postgresql.service clickhouse-server.service redis-server.service
+
+[Service]
+Type=simple
+User=siem
+Group=siem
+WorkingDirectory=/opt/siem-pipeline
+ExecStart=/opt/siem-pipeline/target/release/siem-unified-pipeline server --config /etc/siem/config.toml
+Restart=always
+RestartSec=10
+Environment=SIEM_DATABASE_URL=postgresql://siem:password@localhost:5432/siem
+Environment=SIEM_CLICKHOUSE_URL=http://localhost:8123
+Environment=SIEM_REDIS_URL=redis://localhost:6379
+
+# Security settings
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/log/siem /var/lib/siem
+
+[Install]
+WantedBy=multi-user.target
+```
+
+```bash
+# Enable and start the service
+sudo systemctl daemon-reload
+sudo systemctl enable siem-pipeline
+sudo systemctl start siem-pipeline
+
+# Check status
+sudo systemctl status siem-pipeline
 ```
 
 ### Production Checklist
@@ -660,11 +600,13 @@ spec:
 - [ ] Configure log rotation
 - [ ] Set up backup procedures
 - [ ] Configure firewall rules
-- [ ] Set up load balancing
-- [ ] Configure auto-scaling
+- [ ] Set up load balancing (HAProxy/Nginx)
+- [ ] Configure systemd service files
 - [ ] Set up disaster recovery
 - [ ] Perform security audit
 - [ ] Configure compliance logging
+- [ ] Set up service dependencies
+- [ ] Configure resource limits
 
 ## 🤝 Contributing
 
@@ -683,8 +625,11 @@ cargo build
 # Run tests
 cargo test
 
-# Run with development configuration
-cargo run -- server --config dev-config.toml
+# Use native deployment
+cargo build --release
+sudo systemctl start siem-pipeline
+# Or run directly for development
+./target/release/siem-unified-pipeline server --config dev-config.toml
 ```
 
 ### Code Style

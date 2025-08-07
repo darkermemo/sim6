@@ -9,7 +9,7 @@ echo "=============================================="
 
 # Configuration
 CLICKHOUSE_URL="http://localhost:8123"
-SIEM_BASE_URL="http://localhost:8080"
+SIEM_BASE_URL="http://localhost:8081"
 TEST_TENANT="smoke-test-tenant"
 TIMESTAMP=$(date +%s)
 

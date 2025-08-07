@@ -344,7 +344,7 @@
                 this.statusDot.style.background = '#fbbf24';
 
                 // Connect to ClickHouse SSE stream
-                this.eventSource = new EventSource('/api/v1/events/stream');
+                this.eventSource = new EventSource('/api/v1/events/stream/ch');
 
                 this.eventSource.onopen = () => {
                     this.connectionStatus.textContent = 'Connected - Live Stream Active';

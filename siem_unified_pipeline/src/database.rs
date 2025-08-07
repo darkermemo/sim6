@@ -5,7 +5,7 @@ use chrono::{DateTime, Utc};
 use uuid::Uuid;
 use std::collections::HashMap;
 use std::time::Duration;
-use tracing::{info, error, debug, warn};
+use tracing::{info, error, debug};
 
 use crate::models::*;
 use crate::models::{PendingMfaSetup, PageInfo};
