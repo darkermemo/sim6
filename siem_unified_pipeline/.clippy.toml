@@ -1,0 +1,7 @@
+# Clippy configuration for production build
+avoid-breaking-exported-api = false
+msrv = "1.70"
+
+# Allow certain warnings from dependencies
+allow-expect-in-tests = true
+allow-unwrap-in-tests = true

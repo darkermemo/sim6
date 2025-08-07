@@ -1,7 +1,7 @@
 use axum::{
     extract::{Path, Query, State},
     http::StatusCode,
-    response::{IntoResponse, Json, Sse, sse::Event},
+    response::{IntoResponse, Json, Sse, sse::Event, Html},
     routing::{get, post, put, delete},
     Router,
 };
@@ -368,12 +368,52 @@ pub fn create_router(state: AppState) -> Router {
     
     Router::new()
         .nest("/api/v1", api_v1_router)
+        // Dev UI routes - full working dashboard with debug visualizations
+        .route("/dev/", get(dev_dashboard))
+        .route("/dev/index.html", get(dev_dashboard))
+        .route("/dev/dashboard.html", get(dev_dashboard))
+        .route("/dev/stream.html", get(dev_stream))
+        .route("/dev/events.html", get(dev_events))
+        .route("/dev/alerts.html", get(dev_alerts))
+        .route("/dev/rules.html", get(dev_rules))
+        .route("/dev/settings.html", get(dev_settings))
         // Keep legacy routes for backward compatibility
         .route("/health", get(health_check))
         .route("/metrics", get(get_metrics))
         .route("/events/ingest", post(ingest_single_event))
         .route("/events/search", get(search_events))
         .with_state(state)
+}
+
+// Dev UI handlers - serve rich HTML files with debug visualizations
+pub async fn dev_dashboard() -> Result<impl IntoResponse> {
+    let html_content = include_str!("../web/dashboard.html");
+    Ok(Html(html_content))
+}
+
+pub async fn dev_stream() -> Result<impl IntoResponse> {
+    let html_content = include_str!("../web/stream.html");
+    Ok(Html(html_content))
+}
+
+pub async fn dev_events() -> Result<impl IntoResponse> {
+    let html_content = include_str!("../web/events.html");
+    Ok(Html(html_content))
+}
+
+pub async fn dev_alerts() -> Result<impl IntoResponse> {
+    let html_content = include_str!("../web/alerts.html");
+    Ok(Html(html_content))
+}
+
+pub async fn dev_rules() -> Result<impl IntoResponse> {
+    let html_content = include_str!("../web/rules.html");
+    Ok(Html(html_content))
+}
+
+pub async fn dev_settings() -> Result<impl IntoResponse> {
+    let html_content = include_str!("../web/settings.html");
+    Ok(Html(html_content))
 }
 
 // Health check handlers

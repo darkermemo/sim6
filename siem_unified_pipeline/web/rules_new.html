@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enhanced Rule Creation - SIEM</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .header {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            padding: 1rem 2rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .nav {
+            display: flex;
+            gap: 2rem;
+            align-items: center;
+        }
+        
+        .nav a {
+            color: white;
+            text-decoration: none;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            transition: background 0.2s;
+        }
+        
+        .nav a:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+        
+        .nav a.active {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        
+        .logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: white;
+        }
+        
+        .container {
+            flex: 1;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+            width: 100%;
+        }
+        
+        .form-card {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            margin-bottom: 2rem;
+        }
+        
+        .form-title {
+            font-size: 1.8rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+            color: #2d3748;
+        }
+        
+        .form-subtitle {
+            color: #718096;
+            margin-bottom: 2rem;
+        }
+        
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        
+        .form-label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: #4a5568;
+        }
+        
+        .form-input, .form-select, .form-textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.2s;
+        }
+        
+        .form-input:focus, .form-select:focus, .form-textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .form-textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+        
+        .conditions-section {
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .conditions-title {
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: #4a5568;
+        }
+        
+        .condition-row {
+            display: grid;
+            grid-template-columns: 1fr 120px 1fr 40px;
+            gap: 1rem;
+            align-items: end;
+            margin-bottom: 1rem;
+            padding: 1rem;
+            background: #f7fafc;
+            border-radius: 6px;
+        }
+        
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none;
+            display: inline-block;
+            text-align: center;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-secondary {
+            background: #e2e8f0;
+            color: #4a5568;
+        }
+        
+        .btn-secondary:hover {
+            background: #cbd5e0;
+        }
+        
+        .btn-danger {
+            background: #e53e3e;
+            color: white;
+            padding: 0.5rem;
+            min-width: 40px;
+        }
+        
+        .btn-danger:hover {
+            background: #c53030;
+        }
+        
+        .btn-small {
+            padding: 0.5rem 1rem;
+            font-size: 0.875rem;
+        }
+        
+        .preview-section {
+            background: #f7fafc;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .preview-title {
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: #4a5568;
+        }
+        
+        .preview-sql {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 1rem;
+            border-radius: 6px;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 0.875rem;
+            white-space: pre-wrap;
+            overflow-x: auto;
+        }
+        
+        .stats-bar {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            padding: 1rem 2rem;
+            color: white;
+            text-align: center;
+            margin-bottom: 2rem;
+            border-radius: 8px;
+        }
+        
+        .field-type-badge {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            margin-left: 0.5rem;
+        }
+        
+        .field-type-column {
+            background: #48bb78;
+            color: white;
+        }
+        
+        .field-type-json {
+            background: #ed8936;
+            color: white;
+        }
+        
+        .actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .success-message {
+            background: #c6f6d5;
+            color: #276749;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            border: 1px solid #9ae6b4;
+        }
+        
+        .error-message {
+            background: #fed7d7;
+            color: #c53030;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            border: 1px solid #feb2b2;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <nav class="nav">
+            <div class="logo">🛡️ SIEM</div>
+            <a href="/dev">Dashboard</a>
+            <a href="/dev/events">Events</a>
+            <a href="/dev/rules" class="active">Rules</a>
+            <a href="/dev/alerts">Alerts</a>
+            <a href="/dev/settings">Settings</a>
+        </nav>
+    </div>
+
+    <div class="stats-bar">
+        <strong>Enhanced Rule Creation</strong> - {{TOTAL_FIELDS}} total fields available (Physical columns + JSON keys)
+    </div>
+
+    <div class="container">
+        <div class="form-card">
+            <div class="form-title">Create Advanced Correlation Rule</div>
+            <div class="form-subtitle">
+                Build complex rules using any combination of physical columns and JSON fields from your events.
+            </div>
+
+            <div id="message-area"></div>
+
+            <form id="ruleForm">
+                <div class="form-group">
+                    <label class="form-label" for="ruleName">Rule Name *</label>
+                    <input type="text" id="ruleName" class="form-input" required 
+                           placeholder="e.g., IIS 401s from WEB-01">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="tenantScope">Tenant Scope *</label>
+                    <select id="tenantScope" class="form-select" required>
+                        <option value="all">All Tenants</option>
+                        <option value="tenant-A">tenant-A</option>
+                        <option value="tenant-B">tenant-B</option>
+                        <option value="tenant-C">tenant-C</option>
+                        <option value="tenant-D">tenant-D</option>
+                        <option value="tenant-E">tenant-E</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="severity">Severity *</label>
+                    <select id="severity" class="form-select" required>
+                        <option value="Low">Low</option>
+                        <option value="Medium">Medium</option>
+                        <option value="High">High</option>
+                        <option value="Critical">Critical</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="description">Description *</label>
+                    <textarea id="description" class="form-textarea" required 
+                              placeholder="Describe what this rule detects and why it's important..."></textarea>
+                </div>
+
+                <div class="conditions-section">
+                    <div class="conditions-title">Rule Conditions</div>
+                    <div id="conditions-container">
+                        <!-- Dynamic conditions will be added here -->
+                    </div>
+                    <button type="button" class="btn btn-secondary btn-small" onclick="addCondition()">
+                        + Add Condition
+                    </button>
+                </div>
+
+                <div class="preview-section">
+                    <div class="preview-title">Generated SQL Query Preview</div>
+                    <pre id="sqlPreview" class="preview-sql">SELECT event_id, tenant_id, source_ip FROM dev.events WHERE ...</pre>
+                </div>
+
+                <div class="actions">
+                    <a href="/dev/rules" class="btn btn-secondary">Cancel</a>
+                    <button type="submit" class="btn btn-primary">Create Rule</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        let conditionCount = 0;
+        
+        // Field options from server
+        const fieldOptions = `{{FIELD_OPTIONS}}`;
+        
+        function addCondition() {
+            conditionCount++;
+            const container = document.getElementById('conditions-container');
+            
+            const conditionRow = document.createElement('div');
+            conditionRow.className = 'condition-row';
+            conditionRow.id = `condition-${conditionCount}`;
+            
+            conditionRow.innerHTML = `
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label class="form-label">Field</label>
+                    <select class="form-select field-select" data-condition="${conditionCount}" onchange="updatePreview()">
+                        <option value="">Select field...</option>
+                        ${fieldOptions}
+                    </select>
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label class="form-label">Operator</label>
+                    <select class="form-select operator-select" onchange="updatePreview()">
+                        <option value="=">=</option>
+                        <option value="!=">!=</option>
+                        <option value="LIKE">LIKE</option>
+                        <option value=">">></option>
+                        <option value="<"><</option>
+                    </select>
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label class="form-label">Value</label>
+                    <input type="text" class="form-input value-input" placeholder="Enter value..." onchange="updatePreview()">
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label class="form-label" style="visibility: hidden;">Remove</label>
+                    <button type="button" class="btn btn-danger" onclick="removeCondition(${conditionCount})" title="Remove condition">
+                        ×
+                    </button>
+                </div>
+            `;
+            
+            container.appendChild(conditionRow);
+            updatePreview();
+        }
+        
+        function removeCondition(id) {
+            const element = document.getElementById(`condition-${id}`);
+            if (element) {
+                element.remove();
+                updatePreview();
+            }
+        }
+        
+        function updatePreview() {
+            const conditions = [];
+            const selects = [];
+            
+            document.querySelectorAll('.condition-row').forEach(row => {
+                const fieldSelect = row.querySelector('.field-select');
+                const operatorSelect = row.querySelector('.operator-select');
+                const valueInput = row.querySelector('.value-input');
+                
+                if (fieldSelect.value && operatorSelect.value && valueInput.value) {
+                    const fieldType = fieldSelect.selectedOptions[0].dataset.type;
+                    const field = fieldSelect.value;
+                    const operator = operatorSelect.value;
+                    const value = valueInput.value;
+                    
+                    if (fieldType === 'json') {
+                        if (operator === '=' || operator === '!=' || operator === 'LIKE') {
+                            conditions.push(`JSONExtractString(raw_event, '${field}') ${operator} '${value}'`);
+                        } else {
+                            conditions.push(`JSONExtractUInt64(raw_event, '${field}') ${operator} ${value}`);
+                        }
+                        selects.push(`JSONExtractString(raw_event, '${field}') AS ${field}`);
+                    } else {
+                        conditions.push(`${field} ${operator} '${value}'`);
+                    }
+                }
+            });
+            
+            let sql = 'SELECT event_id, tenant_id, source_ip';
+            if (selects.length > 0) {
+                sql += ', ' + selects.join(', ');
+            }
+            sql += ' FROM dev.events';
+            
+            if (conditions.length > 0) {
+                sql += ' WHERE ' + conditions.join(' AND ');
+            }
+            
+            document.getElementById('sqlPreview').textContent = sql;
+        }
+        
+        function showMessage(message, type) {
+            const messageArea = document.getElementById('message-area');
+            messageArea.innerHTML = `<div class="${type}-message">${message}</div>`;
+            setTimeout(() => {
+                messageArea.innerHTML = '';
+            }, 5000);
+        }
+        
+        // Form submission
+        document.getElementById('ruleForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = {
+                rule_name: document.getElementById('ruleName').value,
+                tenant_scope: document.getElementById('tenantScope').value,
+                severity: document.getElementById('severity').value,
+                description: document.getElementById('description').value,
+                conditions: []
+            };
+            
+            // Collect conditions
+            document.querySelectorAll('.condition-row').forEach(row => {
+                const fieldSelect = row.querySelector('.field-select');
+                const operatorSelect = row.querySelector('.operator-select');
+                const valueInput = row.querySelector('.value-input');
+                
+                if (fieldSelect.value && operatorSelect.value && valueInput.value) {
+                    formData.conditions.push({
+                        field: fieldSelect.value,
+                        field_type: fieldSelect.selectedOptions[0].dataset.type,
+                        operator: operatorSelect.value,
+                        value: valueInput.value
+                    });
+                }
+            });
+            
+            if (formData.conditions.length === 0) {
+                showMessage('Please add at least one condition.', 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/v1/alert_rules/enhanced', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(formData)
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    showMessage(`Rule created successfully! ID: ${result.rule_id}`, 'success');
+                    document.getElementById('ruleForm').reset();
+                    document.getElementById('conditions-container').innerHTML = '';
+                    conditionCount = 0;
+                    updatePreview();
+                } else {
+                    showMessage(`Error creating rule: ${result.message || 'Unknown error'}`, 'error');
+                }
+            } catch (error) {
+                showMessage(`Network error: ${error.message}`, 'error');
+            }
+        });
+        
+        // Add first condition by default
+        addCondition();
+    </script>
+</body>
+</html>

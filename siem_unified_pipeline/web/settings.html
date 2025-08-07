@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings - SIEM Analytics</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        /* Navigation Styles */
+        .top-nav {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 16px 24px;
+            margin-bottom: 24px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .nav-brand {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #2d3748;
+            text-decoration: none;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 20px;
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        .nav-link {
+            color: #4a5568;
+            text-decoration: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+            font-weight: 500;
+        }
+
+        .nav-link:hover {
+            background: #edf2f7;
+            color: #2d3748;
+            transform: translateY(-1px);
+        }
+
+        .nav-link.active {
+            background: #4299e1;
+            color: white;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            padding: 32px;
+            margin-bottom: 24px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        .header h1 {
+            color: #2d3748;
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .header p {
+            color: #4a5568;
+            font-size: 1.1rem;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            margin: 8px;
+            border: none;
+            border-radius: 8px;
+            background: #4299e1;
+            color: white;
+            text-decoration: none;
+            display: inline-block;
+            transition: all 0.2s ease;
+            font-weight: 500;
+        }
+
+        .btn:hover {
+            background: #3182ce;
+            transform: translateY(-2px);
+        }
+
+        .content {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            padding: 32px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .setting-group {
+            margin-bottom: 24px;
+            padding-bottom: 24px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .setting-group:last-child {
+            border-bottom: none;
+        }
+
+        .setting-group h3 {
+            color: #2d3748;
+            margin-bottom: 12px;
+        }
+
+        .setting-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .setting-item label {
+            color: #4a5568;
+            font-weight: 500;
+        }
+
+        .toggle {
+            width: 50px;
+            height: 24px;
+            background: #cbd5e0;
+            border-radius: 12px;
+            position: relative;
+            cursor: pointer;
+            transition: background 0.2s ease;
+        }
+
+        .toggle.active {
+            background: #48bb78;
+        }
+
+        .toggle::after {
+            content: '';
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background: white;
+            border-radius: 50%;
+            top: 2px;
+            left: 2px;
+            transition: transform 0.2s ease;
+        }
+
+        .toggle.active::after {
+            transform: translateX(26px);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Navigation -->
+        <nav class="top-nav">
+            <a href="/dev" class="nav-brand">🛡️ SIEM Analytics</a>
+            <ul class="nav-links">
+                <li><a href="/dev" class="nav-link">📊 Dashboard</a></li>
+                <li><a href="/dev/events" class="nav-link">🔍 Events</a></li>
+                <li><a href="/dev/rules" class="nav-link">⚡ Rules</a></li>
+                <li><a href="/dev/alerts" class="nav-link">🚨 Alerts</a></li>
+                <li><a href="/dev/settings" class="nav-link active">⚙️ Settings</a></li>
+            </ul>
+        </nav>
+        
+        <!-- Header -->
+        <div class="header">
+            <h1>⚙️ System Settings</h1>
+            <p>Configure SIEM analytics and correlation engine parameters</p>
+            <div>
+                <a href="/dev" class="btn">🏠 Dashboard</a>
+                <a href="/dev/events" class="btn">🔍 Events</a>
+                <a href="/dev/rules" class="btn">⚡ Rules</a>
+            </div>
+        </div>
+
+        <!-- Content -->
+        <div class="content">
+            <div class="setting-group">
+                <h3>🔍 Search & Filtering</h3>
+                <div class="setting-item">
+                    <label>Enable real-time search</label>
+                    <div class="toggle active" onclick="toggleSetting(this)"></div>
+                </div>
+                <div class="setting-item">
+                    <label>Auto-refresh events</label>
+                    <div class="toggle active" onclick="toggleSetting(this)"></div>
+                </div>
+                <div class="setting-item">
+                    <label>Advanced filtering</label>
+                    <div class="toggle active" onclick="toggleSetting(this)"></div>
+                </div>
+            </div>
+
+            <div class="setting-group">
+                <h3>⚡ Correlation Engine</h3>
+                <div class="setting-item">
+                    <label>Enable rule execution</label>
+                    <div class="toggle active" onclick="toggleSetting(this)"></div>
+                </div>
+                <div class="setting-item">
+                    <label>Cross-tenant correlation</label>
+                    <div class="toggle active" onclick="toggleSetting(this)"></div>
+                </div>
+                <div class="setting-item">
+                    <label>Alert notifications</label>
+                    <div class="toggle active" onclick="toggleSetting(this)"></div>
+                </div>
+            </div>
+
+            <div class="setting-group">
+                <h3>🚨 Alert Management</h3>
+                <div class="setting-item">
+                    <label>High-severity alerts</label>
+                    <div class="toggle active" onclick="toggleSetting(this)"></div>
+                </div>
+                <div class="setting-item">
+                    <label>Alert deduplication</label>
+                    <div class="toggle active" onclick="toggleSetting(this)"></div>
+                </div>
+                <div class="setting-item">
+                    <label>Automatic escalation</label>
+                    <div class="toggle" onclick="toggleSetting(this)"></div>
+                </div>
+            </div>
+
+            <div class="setting-group">
+                <h3>📊 Performance</h3>
+                <div class="setting-item">
+                    <label>Enable caching</label>
+                    <div class="toggle active" onclick="toggleSetting(this)"></div>
+                </div>
+                <div class="setting-item">
+                    <label>Batch processing</label>
+                    <div class="toggle active" onclick="toggleSetting(this)"></div>
+                </div>
+                <div class="setting-item">
+                    <label>Query optimization</label>
+                    <div class="toggle active" onclick="toggleSetting(this)"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        'use strict';
+        
+        // Error handling wrapper for production-ready console
+        window.addEventListener('error', function(e) {
+            console.warn('Settings Page Error (handled):', e.message);
+            return true; // Prevent error propagation
+        });
+
+        function toggleSetting(element) {
+            element.classList.toggle('active');
+        }
+    </script>
+</body>
+</html>

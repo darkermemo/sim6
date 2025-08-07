@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Events Stream - SIEM Analytics</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 20px 24px;
+            margin-bottom: 24px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .nav-links a {
+            text-decoration: none;
+            color: #4a5568;
+            font-weight: 500;
+            padding: 8px 16px;
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
+
+        .nav-links a:hover {
+            background: #e2e8f0;
+            color: #2d3748;
+        }
+
+        .nav-links a.active {
+            background: #667eea;
+            color: white;
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .controls select, .controls input {
+            padding: 8px 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        .status {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 16px 24px;
+            margin-bottom: 24px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #48bb78;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .metrics {
+            display: flex;
+            gap: 20px;
+            font-size: 14px;
+            color: #4a5568;
+        }
+
+        .stream-container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .stream-header {
+            background: #f7fafc;
+            padding: 16px 24px;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .stream-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .stream-table th {
+            background: #f7fafc;
+            padding: 12px 16px;
+            text-align: left;
+            font-weight: 600;
+            color: #2d3748;
+            border-bottom: 1px solid #e2e8f0;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .stream-table td {
+            padding: 10px 16px;
+            border-bottom: 1px solid #f1f5f9;
+            font-size: 14px;
+            max-width: 300px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .stream-table tbody tr:hover {
+            background: #f8fafc;
+        }
+
+        .tenant-badge {
+            background: #e2e8f0;
+            color: #4a5568;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .timestamp {
+            font-family: 'Courier New', monospace;
+            color: #6b7280;
+            font-size: 12px;
+        }
+
+        .source-type {
+            color: #1f2937;
+            font-weight: 500;
+        }
+
+        .message {
+            color: #374151;
+        }
+
+        .scroll-container {
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        .paused-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 6px;
+            display: none;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5a6fd8;
+        }
+
+        .btn-secondary {
+            background: #e2e8f0;
+            color: #4a5568;
+        }
+
+        .btn-secondary:hover {
+            background: #cbd5e0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header with Navigation -->
+        <div class="header">
+            <nav class="nav-links">
+                <a href="/dev">📊 Dashboard</a>
+                <a href="/dev/events">🔍 Events</a>
+                <a href="/dev/rules">⚡ Rules</a>
+                <a href="/dev/alerts">🚨 Alerts</a>
+                <a href="/dev/stream" class="active">📡 Live Stream</a>
+                <a href="/dev/settings">⚙️ Settings</a>
+            </nav>
+
+            <div class="controls">
+                <select id="tenant-filter">
+                    <option value="">All Tenants</option>
+                    <!-- Populated dynamically -->
+                </select>
+                <select id="source-filter">
+                    <option value="">All Sources</option>
+                    <!-- Populated dynamically -->
+                </select>
+                <button id="pause-btn" class="btn btn-secondary">⏸️ Pause</button>
+                <button id="clear-btn" class="btn btn-secondary">🗑️ Clear</button>
+            </div>
+        </div>
+
+        <!-- Status Bar -->
+        <div class="status">
+            <div class="status-indicator">
+                <div class="status-dot" id="status-dot"></div>
+                <span id="connection-status">Connecting...</span>
+            </div>
+            <div class="metrics">
+                <span>Events: <strong id="event-count">0</strong></span>
+                <span>Rate: <strong id="event-rate">0.0/s</strong></span>
+                <span>Filtered: <strong id="filtered-count">0</strong></span>
+            </div>
+        </div>
+
+        <!-- Live Stream Table -->
+        <div class="stream-container">
+            <div class="stream-header">
+                <h2>🔴 Live Events Stream</h2>
+                <div>
+                    <span>Buffer: <strong id="buffer-size">1000</strong> events</span>
+                </div>
+            </div>
+
+            <div class="scroll-container" id="scroll-container">
+                <table class="stream-table" id="stream-table">
+                    <thead>
+                        <tr>
+                            <th>Timestamp</th>
+                            <th>Tenant</th>
+                            <th>Source Type</th>
+                            <th>Event ID</th>
+                            <th>Message</th>
+                        </tr>
+                    </thead>
+                    <tbody id="events-tbody">
+                        <!-- Events will be populated here -->
+                    </tbody>
+                </table>
+                <div class="paused-overlay" id="paused-overlay">
+                    ⏸️ Stream Paused
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class LiveEventStream {
+            constructor() {
+                this.eventSource = null;
+                this.isPaused = false;
+                this.eventCount = 0;
+                this.filteredCount = 0;
+                this.startTime = Date.now();
+                this.events = [];
+                this.maxEvents = 1000;
+                this.tenants = new Set();
+                this.sources = new Set();
+                
+                this.initializeElements();
+                this.setupEventListeners();
+                this.connect();
+            }
+
+            initializeElements() {
+                this.statusDot = document.getElementById('status-dot');
+                this.connectionStatus = document.getElementById('connection-status');
+                this.eventCountEl = document.getElementById('event-count');
+                this.eventRateEl = document.getElementById('event-rate');
+                this.filteredCountEl = document.getElementById('filtered-count');
+                this.eventsTableBody = document.getElementById('events-tbody');
+                this.pauseBtn = document.getElementById('pause-btn');
+                this.clearBtn = document.getElementById('clear-btn');
+                this.tenantFilter = document.getElementById('tenant-filter');
+                this.sourceFilter = document.getElementById('source-filter');
+                this.pausedOverlay = document.getElementById('paused-overlay');
+                this.scrollContainer = document.getElementById('scroll-container');
+            }
+
+            setupEventListeners() {
+                this.pauseBtn.addEventListener('click', () => this.togglePause());
+                this.clearBtn.addEventListener('click', () => this.clearEvents());
+                this.tenantFilter.addEventListener('change', () => this.applyFilters());
+                this.sourceFilter.addEventListener('change', () => this.applyFilters());
+            }
+
+            connect() {
+                this.connectionStatus.textContent = 'Connecting...';
+                this.statusDot.style.background = '#fbbf24';
+
+                // Connect to ClickHouse SSE stream
+                this.eventSource = new EventSource('/api/v1/events/stream');
+
+                this.eventSource.onopen = () => {
+                    this.connectionStatus.textContent = 'Connected - Live Stream Active';
+                    this.statusDot.style.background = '#48bb78';
+                    console.log('📡 Connected to ClickHouse event stream');
+                };
+
+                this.eventSource.onmessage = (event) => {
+                    if (!this.isPaused) {
+                        this.handleEvent(event);
+                    }
+                };
+
+                this.eventSource.onerror = (error) => {
+                    this.connectionStatus.textContent = 'Connection Error - Retrying...';
+                    this.statusDot.style.background = '#ef4444';
+                    console.error('❌ EventSource error:', error);
+                };
+
+                // Update metrics every second
+                setInterval(() => this.updateMetrics(), 1000);
+            }
+
+            handleEvent(event) {
+                try {
+                    const eventData = JSON.parse(event.data);
+                    
+                    // Skip error events
+                    if (eventData.error) {
+                        console.warn('Stream error:', eventData.error);
+                        return;
+                    }
+
+                    this.eventCount++;
+                    this.events.unshift(eventData);
+
+                    // Add to filter sets
+                    this.tenants.add(eventData.tenant_id);
+                    this.sources.add(eventData.source_type);
+
+                    // Maintain buffer size
+                    if (this.events.length > this.maxEvents) {
+                        this.events = this.events.slice(0, this.maxEvents);
+                    }
+
+                    this.updateFilterDropdowns();
+                    this.renderEvents();
+                    this.updateMetrics();
+
+                } catch (error) {
+                    console.error('Error parsing event data:', error);
+                }
+            }
+
+            updateFilterDropdowns() {
+                // Update tenant filter
+                const currentTenant = this.tenantFilter.value;
+                this.tenantFilter.innerHTML = '<option value="">All Tenants</option>';
+                Array.from(this.tenants).sort().forEach(tenant => {
+                    const option = document.createElement('option');
+                    option.value = tenant;
+                    option.textContent = tenant;
+                    if (tenant === currentTenant) option.selected = true;
+                    this.tenantFilter.appendChild(option);
+                });
+
+                // Update source filter
+                const currentSource = this.sourceFilter.value;
+                this.sourceFilter.innerHTML = '<option value="">All Sources</option>';
+                Array.from(this.sources).sort().forEach(source => {
+                    const option = document.createElement('option');
+                    option.value = source;
+                    option.textContent = source;
+                    if (source === currentSource) option.selected = true;
+                    this.sourceFilter.appendChild(option);
+                });
+            }
+
+            applyFilters() {
+                this.renderEvents();
+            }
+
+            renderEvents() {
+                const tenantFilter = this.tenantFilter.value;
+                const sourceFilter = this.sourceFilter.value;
+
+                const filteredEvents = this.events.filter(event => {
+                    return (!tenantFilter || event.tenant_id === tenantFilter) &&
+                           (!sourceFilter || event.source_type === sourceFilter);
+                });
+
+                this.filteredCount = filteredEvents.length;
+
+                this.eventsTableBody.innerHTML = filteredEvents.slice(0, 100).map(event => {
+                    const timestamp = new Date(event.event_timestamp * 1000).toISOString();
+                    const shortEventId = event.event_id.substring(0, 8) + '...';
+                    const truncatedMessage = event.raw_event.length > 100 ? 
+                        event.raw_event.substring(0, 100) + '...' : event.raw_event;
+
+                    return `
+                        <tr>
+                            <td class="timestamp">${timestamp}</td>
+                            <td><span class="tenant-badge">${event.tenant_id}</span></td>
+                            <td class="source-type">${event.source_type}</td>
+                            <td title="${event.event_id}">${shortEventId}</td>
+                            <td class="message" title="${event.raw_event}">${truncatedMessage}</td>
+                        </tr>
+                    `;
+                }).join('');
+            }
+
+            updateMetrics() {
+                this.eventCountEl.textContent = this.eventCount.toLocaleString();
+                this.filteredCountEl.textContent = this.filteredCount.toLocaleString();
+
+                // Calculate events per second
+                const elapsedSeconds = (Date.now() - this.startTime) / 1000;
+                const rate = elapsedSeconds > 0 ? (this.eventCount / elapsedSeconds) : 0;
+                this.eventRateEl.textContent = rate.toFixed(1);
+            }
+
+            togglePause() {
+                this.isPaused = !this.isPaused;
+                
+                if (this.isPaused) {
+                    this.pauseBtn.innerHTML = '▶️ Resume';
+                    this.pauseBtn.className = 'btn btn-primary';
+                    this.pausedOverlay.style.display = 'block';
+                    this.connectionStatus.textContent = 'Stream Paused';
+                    this.statusDot.style.background = '#fbbf24';
+                } else {
+                    this.pauseBtn.innerHTML = '⏸️ Pause';
+                    this.pauseBtn.className = 'btn btn-secondary';
+                    this.pausedOverlay.style.display = 'none';
+                    this.connectionStatus.textContent = 'Connected - Live Stream Active';
+                    this.statusDot.style.background = '#48bb78';
+                }
+            }
+
+            clearEvents() {
+                this.events = [];
+                this.eventCount = 0;
+                this.filteredCount = 0;
+                this.startTime = Date.now();
+                this.renderEvents();
+                this.updateMetrics();
+            }
+        }
+
+        // Initialize the live stream when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            new LiveEventStream();
+        });
+    </script>
+</body>
+</html>
