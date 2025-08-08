@@ -39,6 +39,7 @@ pub enum ConnectionStatus {
 }
 
 pub struct IngestionManager {
+    #[allow(dead_code)]
     config: PipelineConfig,
     stats: Arc<RwLock<HashMap<String, IngestionStats>>>,
     http_client: Client,
@@ -608,16 +609,17 @@ impl IngestionManager {
     async fn run_database_source(
         source_name: &str,
         config: &DataSource,
-        event_tx: mpsc::UnboundedSender<PipelineEvent>,
+        _event_tx: mpsc::UnboundedSender<PipelineEvent>, // TODO: Use for sending database events
         stats: Arc<RwLock<HashMap<String, IngestionStats>>>,
         mut shutdown_rx: mpsc::Receiver<()>,
     ) -> Result<()> {
         info!("Starting database source: {}", source_name);
         
-        let connection_string = match &config.source_type {
+        let _connection_string = match &config.source_type {
             SourceType::Database { connection_string, .. } => connection_string.clone(),
             _ => return Err(PipelineError::configuration("Invalid source type for database source")),
         };
+        // TODO: Use connection_string for actual database connection implementation
         // Database source implementation placeholder
         Self::update_connection_status(&stats, source_name, ConnectionStatus::Connected).await;
         
@@ -641,16 +643,17 @@ impl IngestionManager {
     async fn run_s3_source(
         source_name: &str,
         config: &DataSource,
-        event_tx: mpsc::UnboundedSender<PipelineEvent>,
+        _event_tx: mpsc::UnboundedSender<PipelineEvent>, // TODO: Use for sending S3 object events
         stats: Arc<RwLock<HashMap<String, IngestionStats>>>,
         mut shutdown_rx: mpsc::Receiver<()>,
     ) -> Result<()> {
         info!("Starting S3 source: {}", source_name);
         
-        let (bucket, prefix): (String, String) = match &config.source_type {
+        let (bucket, _prefix): (String, String) = match &config.source_type {
             SourceType::S3 { bucket, prefix, .. } => (bucket.clone(), prefix.clone()),
             _ => return Err(PipelineError::configuration("Invalid source type for S3 source")),
         };
+        // TODO: Use bucket and prefix for actual S3 object listing and processing
         
         // S3 source implementation placeholder
         Self::update_connection_status(&stats, source_name, ConnectionStatus::Connected).await;
@@ -744,6 +747,7 @@ impl IngestionManager {
     
     pub async fn reload_config(&self, _new_config: &PipelineConfig) -> Result<()> {
         info!("Reloading ingestion configuration");
+        // TODO: Use _new_config to restart sources with updated configuration
         // Implementation would restart sources with new configuration
         Ok(())
     }

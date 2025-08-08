@@ -80,7 +80,6 @@ graph TD
 - Rust 1.70+
 - Node.js 18+
 - ClickHouse 23+
-- Docker (optional)
 
 ### Setup
 

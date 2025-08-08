@@ -1,5 +1,0 @@
-{
-  "rule_name": "Suspicious Admin Logon",
-  "description": "Detects admin logins from external IPs",
-  "query": "SELECT * FROM dev.events WHERE tenant_id = 't-001' AND username = 'admin01' AND source_ip NOT LIKE '192.168.%' AND source_ip NOT LIKE '10.%' AND event_timestamp > (toUnixTimestamp(now()) - 3600)"
-}

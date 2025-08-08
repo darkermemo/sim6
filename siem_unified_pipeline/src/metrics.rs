@@ -5,11 +5,42 @@ use tracing::{info, error, debug};
 use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc, Duration};
 use std::time::Instant;
-use prometheus::{Counter, Gauge, Histogram, Registry, Encoder, TextEncoder};
+use prometheus::{Counter, Gauge, Histogram, Registry, Encoder, TextEncoder, GaugeVec, HistogramVec};
 use tokio::time::{interval, Duration as TokioDuration};
+use once_cell::sync::Lazy;
 
 use crate::config::PipelineConfig;
 use crate::error::{Result, PipelineError};
+use crate::vector::{VectorClient, parse_prom_number};
+
+// Health check Prometheus metrics
+/// Health status gauge: 1 = healthy, 0 = degraded, -1 = unhealthy
+pub static HEALTH_STATUS: Lazy<GaugeVec> = Lazy::new(|| {
+    prometheus::register_gauge_vec!(
+        "siem_health_status",
+        "Health status of SIEM components (1=healthy, 0=degraded, -1=unhealthy)",
+        &["component"]
+    ).unwrap()
+});
+
+/// Health check duration histogram
+pub static HEALTH_CHECK_SECONDS: Lazy<HistogramVec> = Lazy::new(|| {
+    prometheus::register_histogram_vec!(
+        "siem_health_check_seconds",
+        "Duration of health checks in seconds",
+        &["component"],
+        vec![0.01, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0]
+    ).unwrap()
+});
+
+/// Last successful health check timestamp
+pub static HEALTH_LAST_SUCCESS_TS: Lazy<GaugeVec> = Lazy::new(|| {
+    prometheus::register_gauge_vec!(
+        "siem_health_last_success_timestamp",
+        "Unix timestamp of last successful health check",
+        &["component"]
+    ).unwrap()
+});
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SystemMetrics {
@@ -100,10 +131,15 @@ pub struct MetricsCollector {
     active_connections_gauge: Gauge,
     component_status_gauge: Gauge,
     
+    // Vector metrics
+    vector_up_gauge: Arc<Gauge>,
+    vector_events_in_gauge: Arc<prometheus::IntGauge>,
+    
     // Internal metrics storage
     system_metrics: Arc<RwLock<SystemMetrics>>,
     pipeline_metrics: Arc<RwLock<PipelineMetrics>>,
     component_metrics: Arc<RwLock<HashMap<String, ComponentMetrics>>>,
+    #[allow(dead_code)]
     alert_metrics: Arc<RwLock<AlertMetrics>>,
     performance_metrics: Arc<RwLock<PerformanceMetrics>>,
     
@@ -113,6 +149,9 @@ pub struct MetricsCollector {
     // Performance tracking
     latency_samples: Arc<RwLock<Vec<f64>>>,
     throughput_samples: Arc<RwLock<Vec<f64>>>,
+    
+    // Vector client for monitoring
+    vector_client: Option<VectorClient>,
 }
 
 impl MetricsCollector {
@@ -169,6 +208,17 @@ impl MetricsCollector {
             "Status of pipeline components (0=stopped, 1=starting, 2=healthy, 3=degraded, 4=unhealthy, 5=stopping)"
         ).map_err(|e| PipelineError::metrics(format!("Failed to create gauge: {}", e)))?;
         
+        // Vector metrics
+        let vector_up_gauge = Arc::new(Gauge::new(
+            "vector_up",
+            "1 if Vector is healthy, 0 otherwise"
+        ).map_err(|e| PipelineError::metrics(format!("Failed to create Vector up gauge: {}", e)))?);
+        
+        let vector_events_in_gauge = Arc::new(prometheus::IntGauge::new(
+            "vector_events_in_total",
+            "Total events Vector reports as received"
+        ).map_err(|e| PipelineError::metrics(format!("Failed to create Vector events gauge: {}", e)))?);
+        
         // Register metrics
         registry.register(Box::new(events_ingested_counter.clone()))
             .map_err(|e| PipelineError::metrics(format!("Failed to register metric: {}", e)))?;
@@ -188,8 +238,15 @@ impl MetricsCollector {
             .map_err(|e| PipelineError::metrics(format!("Failed to register metric: {}", e)))?;
         registry.register(Box::new(component_status_gauge.clone()))
             .map_err(|e| PipelineError::metrics(format!("Failed to register metric: {}", e)))?;
+        registry.register(Box::new(vector_up_gauge.as_ref().clone()))
+            .map_err(|e| PipelineError::metrics(format!("Failed to register metric: {}", e)))?;
+        registry.register(Box::new(vector_events_in_gauge.as_ref().clone()))
+            .map_err(|e| PipelineError::metrics(format!("Failed to register metric: {}", e)))?;
         
         let now = Utc::now();
+        
+        // Create Vector client
+        let vector_client = Some(VectorClient::new(config.vector.clone()));
         
         Ok(MetricsCollector {
             config: config.clone(),
@@ -204,6 +261,8 @@ impl MetricsCollector {
             queue_depth_gauge,
             active_connections_gauge,
             component_status_gauge,
+            vector_up_gauge,
+            vector_events_in_gauge,
             system_metrics: Arc::new(RwLock::new(SystemMetrics {
                 timestamp: now,
                 cpu_usage: 0.0,
@@ -251,6 +310,7 @@ impl MetricsCollector {
             historical_metrics: Arc::new(RwLock::new(Vec::new())),
             latency_samples: Arc::new(RwLock::new(Vec::new())),
             throughput_samples: Arc::new(RwLock::new(Vec::new())),
+            vector_client,
         })
     }
     
@@ -280,6 +340,43 @@ impl MetricsCollector {
                 Self::aggregate_pipeline_metrics(&pipeline_metrics, &historical_metrics, start_time).await;
             }
         });
+        
+        // Start Vector monitoring if configured
+        if self.vector_client.is_some() {
+            let vector_up_gauge = self.vector_up_gauge.clone();
+            let vector_events_in_gauge = self.vector_events_in_gauge.clone();
+            let vector_config = self.config.vector.clone();
+            tokio::spawn(async move {
+                let vector_client = VectorClient::new(vector_config);
+                let mut interval = interval(TokioDuration::from_secs(15));
+                loop {
+                    interval.tick().await;
+                    
+                    // Check Vector health
+                    match vector_client.health().await {
+                        Ok(is_healthy) => {
+                            vector_up_gauge.set(if is_healthy { 1.0 } else { 0.0 });
+                        }
+                        Err(e) => {
+                            error!("Failed to check Vector health: {}", e);
+                            vector_up_gauge.set(0.0);
+                        }
+                    }
+                    
+                    // Scrape Vector metrics
+                    match vector_client.scrape_prom().await {
+                        Ok(metrics_text) => {
+                            if let Some(events_count) = parse_prom_number(&metrics_text, "vector_events_processed_total") {
+                                vector_events_in_gauge.set(events_count as i64);
+                            }
+                        }
+                        Err(e) => {
+                            error!("Failed to scrape Vector metrics: {}", e);
+                        }
+                    }
+                }
+            });
+        }
         
         // Start performance analysis
         let performance_metrics = self.performance_metrics.clone();
@@ -537,14 +634,14 @@ impl MetricsCollector {
         
         // Aggregate stats from all sources
         let mut total_events = 0;
-        let mut total_bytes = 0;
-        let mut total_errors = 0;
+        let mut _total_bytes = 0;
+        let mut _total_errors = 0;
         let mut active_connections = 0;
         
         for (source_name, source_stats) in stats {
             total_events += source_stats.events_received;
-            total_bytes += source_stats.bytes_received;
-            total_errors += source_stats.errors;
+            _total_bytes += source_stats.bytes_received;
+            _total_errors += source_stats.errors;
             
             if matches!(source_stats.connection_status, crate::ingestion::ConnectionStatus::Connected) {
                 active_connections += 1;
@@ -616,6 +713,11 @@ impl MetricsCollector {
         
         String::from_utf8(buffer)
             .map_err(|e| PipelineError::metrics(format!("Failed to convert metrics to string: {}", e)))
+    }
+    
+    /// Get the Vector client for health checks and metrics collection
+    pub async fn get_vector_client(&self) -> Option<&VectorClient> {
+        self.vector_client.as_ref()
     }
     
     pub async fn get_health_summary(&self) -> serde_json::Value {

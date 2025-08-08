@@ -1,7 +1,0 @@
-{
-  "SRC_IP": "192.168.1.1",
-  "DST_IP": "10.0.0.1",
-  "HOSTNAME": "SERVER01",
-  "USERNAME": "admin",
-  "Protocol": "TCP"
-}

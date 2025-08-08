@@ -193,7 +193,7 @@ fn validate_tenant_id(tenant_id: &Uuid) -> Result<(), ValidationError> {
     Ok(())
 }
 
-fn validate_ip(ip: &String) -> Result<(), ValidationError> {
+fn validate_ip(ip: &str) -> Result<(), ValidationError> {
     if ip.parse::<std::net::IpAddr>().is_err() {
         return Err(ValidationError::new("invalid IP address format"));
     }

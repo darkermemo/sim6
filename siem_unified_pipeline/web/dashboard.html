@@ -284,6 +284,27 @@
             color: #4a5568;
         }
 
+        /* Health status card styles */
+        #health-status-card.healthy {
+            background: #f0fff4;
+            border-left: 4px solid #38a169;
+        }
+
+        #health-status-card.degraded {
+            background: #fffbf0;
+            border-left: 4px solid #ed8936;
+        }
+
+        #health-status-card.unhealthy {
+            background: #fff5f5;
+            border-left: 4px solid #e53e3e;
+        }
+
+        #health-status-card.unknown {
+            background: #f7fafc;
+            border-left: 4px solid #a0aec0;
+        }
+
         .rules-table {
             width: 100%;
             border-collapse: collapse;
@@ -521,6 +542,14 @@
                     <div class="stat-value" id="last-evaluation">Never</div>
                     <div class="stat-label">Last Evaluation</div>
                 </div>
+                <div class="stat-card" id="health-status-card">
+                    <div class="stat-value" id="health-status">🟡 Unknown</div>
+                    <div class="stat-label">System Health</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="current-eps">0</div>
+                    <div class="stat-label">Events/sec</div>
+                </div>
             </div>
 
             <table class="rules-table" id="rules-table">
@@ -573,11 +602,13 @@
             loadMetrics();
             loadRules();
             loadAlerts();
+            loadHealthStatus();
             
             // Auto-refresh every 30 seconds
             setInterval(() => {
                 loadMetrics();
                 loadAlerts();
+                loadHealthStatus();
             }, 30000);
         });
 
@@ -607,6 +638,53 @@
             document.getElementById('parsed-count').textContent = (metrics.parsed_count || 0).toLocaleString();
             document.getElementById('total-events').textContent = (metrics.total_events || 0).toLocaleString();
             document.getElementById('total-alerts').textContent = (metrics.total_alerts || 0).toLocaleString();
+            
+            // Update EPS display
+            document.getElementById('current-eps').textContent = metrics.ingestion_rate || 0;
+        }
+
+        // Load health status
+        async function loadHealthStatus() {
+            try {
+                const response = await fetch('/health');
+                if (response.ok) {
+                    const healthData = await response.json();
+                    updateHealthDisplay(healthData.status, healthData.timestamp);
+                } else {
+                    updateHealthDisplay('unknown', null);
+                }
+            } catch (error) {
+                console.error('Failed to load health status:', error);
+                updateHealthDisplay('unknown', null);
+            }
+        }
+
+        // Update health status display
+        function updateHealthDisplay(status, timestamp) {
+            const healthCard = document.getElementById('health-status-card');
+            const healthStatus = document.getElementById('health-status');
+            
+            // Remove existing status classes
+            healthCard.classList.remove('healthy', 'degraded', 'unhealthy', 'unknown');
+            
+            // Add appropriate status class and update display
+            switch(status) {
+                case 'healthy':
+                    healthCard.classList.add('healthy');
+                    healthStatus.textContent = '🟢 Healthy';
+                    break;
+                case 'degraded':
+                    healthCard.classList.add('degraded');
+                    healthStatus.textContent = '🟡 Degraded';
+                    break;
+                case 'unhealthy':
+                    healthCard.classList.add('unhealthy');
+                    healthStatus.textContent = '🔴 Unhealthy';
+                    break;
+                default:
+                    healthCard.classList.add('unknown');
+                    healthStatus.textContent = '🟡 Unknown';
+            }
         }
 
         // Load correlation rules

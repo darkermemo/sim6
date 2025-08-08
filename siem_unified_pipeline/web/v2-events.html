@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="Cache-Control" content="no-store" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SIEM v2 — Events (Greenfield)</title>
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; margin: 16px; }
+    h1 { margin-bottom: 12px; }
+    .controls { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
+    button { padding: 6px 10px; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 8px; border-bottom: 1px solid #eee; text-align: left; font-size: 13px; }
+    th { background: #fafafa; position: sticky; top: 0; }
+    .badge { padding: 2px 6px; border-radius: 4px; font-size: 12px; color: #fff; }
+    .sev-low { background: #4caf50; }
+    .sev-medium { background: #ff9800; }
+    .sev-high { background: #f44336; }
+    .sev-critical { background: #b71c1c; }
+    .muted { color: #666; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <h1>Events (Greenfield)</h1>
+  <div class="controls">
+    <label>Time:
+      <select id="time">
+        <option value="1h" selected>Last 1h</option>
+        <option value="5m">Last 5m</option>
+        <option value="15m">Last 15m</option>
+        <option value="30m">Last 30m</option>
+        <option value="3h">Last 3h</option>
+        <option value="1d">Last 1d</option>
+        <option value="3d">Last 3d</option>
+        <option value="7d">Last 7d</option>
+        <option value="all">All time</option>
+      </select>
+    </label>
+    <label>Search (AND/OR): <input id="q" placeholder="e.g. error OR login" style="min-width:260px"/></label>
+    <button id="apply">Apply</button>
+    <button id="prev">Prev</button>
+    <button id="next">Next</button>
+    <span class="muted" id="pageinfo">Page 1</span>
+    <button id="export">Export JSON</button>
+    <span class="muted" id="status">Ready</span>
+  </div>
+
+  <div style="overflow: auto; max-height: 70vh; border: 1px solid #eee;">
+    <table>
+      <thead>
+        <tr>
+          <th>Time</th>
+          <th>Tenant</th>
+          <th>Source</th>
+          <th>Severity</th>
+          <th>Category</th>
+          <th>Action</th>
+          <th>User</th>
+          <th>Message</th>
+          <th>Event ID</th>
+        </tr>
+      </thead>
+      <tbody id="rows">
+        <tr><td colspan="9" class="muted">No data</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <script>
+    const apiBase = '/api/v2/events/search_compact';
+    let offset = 0, limit = 1000, totalRendered = 0, page = 1;
+    const statusEl = document.getElementById('status');
+    const rowsEl = document.getElementById('rows');
+    const exported = [];
+    const qInput = document.getElementById('q');
+    const timeSel = document.getElementById('time');
+    const pageInfo = document.getElementById('pageinfo');
+
+    function sevClass(s) {
+      if (!s) return 'sev-low';
+      s = s.toLowerCase();
+      return s === 'critical' ? 'sev-critical' : s === 'high' ? 'sev-high' : s === 'medium' ? 'sev-medium' : 'sev-low';
+    }
+
+    function qs(p) { const u = new URLSearchParams(); Object.entries(p).forEach(([k,v])=>{ if(v!==''&&v!=null)u.set(k,String(v)); }); return u.toString(); }
+
+    function calcWindow() {
+      const v = timeSel.value;
+      if (v === 'all') return { start_time: '', end_time: '' };
+      const now = new Date();
+      const end_time = now.toISOString();
+      const mult = { m: 60_000, h: 3_600_000, d: 86_400_000 };
+      const unit = v.slice(-1);
+      const n = Number(v.slice(0, -1));
+      const ms = (mult[unit] || 0) * n;
+      const start_time = new Date(now.getTime() - ms).toISOString();
+      return { start_time, end_time };
+    }
+
+    async function fetchPage() {
+      const { start_time, end_time } = calcWindow();
+      const url = `${apiBase}?${qs({ limit, offset, query: (qInput.value || '').trim(), start_time, end_time })}`;
+      statusEl.textContent = `Loading page ${page} ...`;
+      const res = await fetch(url, { cache: 'no-store' });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      const evs = data.events || [];
+      if (offset === 0) { rowsEl.innerHTML = ''; exported.length = 0; totalRendered = 0; }
+      const frag = document.createDocumentFragment();
+      for (const ev of evs) {
+        const tr = document.createElement('tr');
+        const ts = ev.event_timestamp ? new Date(ev.event_timestamp * 1000).toLocaleString() : '';
+        const sev = ev.severity || '';
+        const user = ev.user_name || ev.user_id || '';
+        const msg = (ev.message || '').toString();
+        tr.innerHTML = `
+          <td>${ts}</td>
+          <td>${ev.tenant_id || ''}</td>
+          <td>${ev.source_type || ''}</td>
+          <td><span class="badge ${sevClass(sev)}">${sev || 'low'}</span></td>
+          <td>${ev.event_category || ''}</td>
+          <td>${ev.event_action || ''}</td>
+          <td>${user}</td>
+          <td title="${msg.replaceAll('"','&quot;')}">${msg.slice(0, 80)}</td>
+          <td title="${ev.event_id}">${String(ev.event_id).slice(0, 12)}…</td>
+        `;
+        tr.style.cursor = 'pointer';
+        tr.addEventListener('click', () => showDetails(ev));
+        frag.appendChild(tr);
+        exported.push(ev);
+      }
+      rowsEl.appendChild(frag);
+      totalRendered += evs.length;
+      statusEl.textContent = `Loaded ${evs.length}`;
+      pageInfo.textContent = `Page ${page}`;
+      return evs.length;
+    }
+
+    async function loadPageAndRender(reset=false) {
+      if (reset) { offset = 0; page = 1; }
+      rowsEl.innerHTML = '<tr><td colspan="9" class="muted">Loading…</td></tr>';
+      try {
+        const n = await fetchPage();
+        if (n === 0 && offset > 0) { // no data on this page, step back one
+          offset = Math.max(0, offset - limit);
+          page = Math.max(1, page - 1);
+          await fetchPage();
+        }
+      } catch (e) {
+        statusEl.textContent = 'Error loading';
+        console.error(e);
+      }
+    }
+
+    document.getElementById('apply').addEventListener('click', () => loadPageAndRender(true));
+    document.getElementById('prev').addEventListener('click', async () => { if (offset >= limit) { offset -= limit; page = Math.max(1, page - 1); await loadPageAndRender(); } });
+    document.getElementById('next').addEventListener('click', async () => { offset += limit; page += 1; await loadPageAndRender(); });
+    document.getElementById('start').addEventListener('click', () => loadPageAndRender(true));
+    document.getElementById('export').addEventListener('click', () => {
+      const blob = new Blob([JSON.stringify(exported)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'events_export.json';
+      a.click();
+      URL.revokeObjectURL(a.href);
+    });
+
+    function showDetails(ev) {
+      const wrap = document.createElement('div');
+      wrap.style.position = 'fixed';
+      wrap.style.inset = '0';
+      wrap.style.background = 'rgba(0,0,0,0.5)';
+      wrap.style.display = 'flex';
+      wrap.style.alignItems = 'center';
+      wrap.style.justifyContent = 'center';
+      const pane = document.createElement('div');
+      pane.style.background = '#fff';
+      pane.style.padding = '16px';
+      pane.style.borderRadius = '8px';
+      pane.style.width = '80%';
+      pane.style.maxHeight = '80vh';
+      pane.style.overflow = 'auto';
+      pane.innerHTML = `<pre>${escapeHtml(JSON.stringify(ev, null, 2))}</pre>`;
+      wrap.appendChild(pane);
+      wrap.addEventListener('click', () => document.body.removeChild(wrap));
+      document.body.appendChild(wrap);
+    }
+
+    function escapeHtml(str){return str.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c]));}
+
+    // initial load
+    loadPageAndRender(true);
+  </script>
+</body>
+</html>
+
+

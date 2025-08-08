@@ -7,12 +7,13 @@ use thiserror::Error;
 pub type Result<T> = std::result::Result<T, PipelineError>;
 
 #[derive(Error, Debug)]
+#[allow(clippy::enum_variant_names)]
 pub enum PipelineError {
     #[error("Configuration error: {0}")]
     ConfigError(String),
     
     #[error("Database error: {0}")]
-    DatabaseError(#[from] sqlx::Error),
+    DatabaseError(String),
     
     #[error("ClickHouse error: {0}")]
     ClickHouseError(#[from] clickhouse::error::Error),

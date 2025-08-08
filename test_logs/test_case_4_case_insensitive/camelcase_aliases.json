@@ -1,6 +1,0 @@
-{
-  "SourceIp": "172.16.0.1",
-  "DestinationIp": "8.8.8.8",
-  "ComputerName": "WS-01",
-  "ProcessId": "5678"
-}

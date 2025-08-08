@@ -1,8 +1,0 @@
-{
-  "src_ip": "192.168.1.100",
-  "source_ip": "10.0.0.50",
-  "hostname": "server01",
-  "unknown_field": "debug_value",
-  "url": "https://api.example.com",
-  "uri": "https://old.example.com"
-}

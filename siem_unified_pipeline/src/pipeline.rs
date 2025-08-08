@@ -328,6 +328,7 @@ impl Pipeline {
     }
     
     // Enhanced parallel event processing for high-throughput (500k eps)
+    #[allow(clippy::too_many_arguments)]
     async fn process_events_parallel(
         mut event_rx: mpsc::UnboundedReceiver<PipelineEvent>,
         transformation_manager: Arc<TransformationManager>,
@@ -619,7 +620,7 @@ impl Pipeline {
     }
     
     pub async fn run_transformation_worker(&self, pipeline_name: &str) -> Result<()> {
-        let pipeline_config = self.config.transformations.get(pipeline_name)
+        let _pipeline_config = self.config.transformations.get(pipeline_name)
             .ok_or_else(|| PipelineError::not_found(format!("Transformation pipeline '{}' not found", pipeline_name)))?;
         
         info!("Starting transformation worker for pipeline: {}", pipeline_name);
@@ -669,6 +670,11 @@ impl Pipeline {
         
         info!("Configuration reloaded successfully");
         Ok(())
+    }
+    
+    /// Search for events using the storage manager
+    pub async fn search_events(&self, query: &crate::models::SearchQuery) -> crate::error::Result<crate::models::SearchResult<crate::models::Event>> {
+        self.storage_manager.search_events(query).await
     }
 }
 

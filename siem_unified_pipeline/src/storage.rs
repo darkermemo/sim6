@@ -5,6 +5,8 @@ use tracing::{info, warn, error, debug};
 use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc};
 use clickhouse::{Client as ClickHouseClient, Row};
+// Removed bb8 pool dependency
+// use bb8_clickhouse::ClickHouseConnectionManager;  // Temporarily disabled
 use rdkafka::producer::{FutureProducer, FutureRecord};
 use rdkafka::config::ClientConfig;
 use redis::{Client as RedisClient, Commands};
@@ -48,23 +50,22 @@ pub enum ConnectionStatus {
 #[derive(Debug, Clone, Serialize, Deserialize, Row)]
 #[serde(rename_all = "snake_case")]
 pub struct SiemEvent {
-    pub id: String,
-    pub timestamp: DateTime<Utc>,
-    pub source: String,
-    pub source_type: String,
-    pub severity: String,
-    pub facility: String,
-    pub hostname: String,
-    pub process: String,
-    pub message: String,
-    pub raw_message: String,
-    pub source_ip: String,
-    pub source_port: u16,
-    pub protocol: String,
-    pub tags: Vec<String>,
-    pub fields: String, // JSON string of additional fields
-    pub processing_stage: String,
-    pub created_at: DateTime<Utc>,
+    pub event_id: String,
+    pub event_timestamp: u32, // Unix timestamp
+    pub tenant_id: String,
+    pub event_category: String,
+    pub event_action: String,
+    pub event_outcome: Option<String>,
+    pub source_ip: Option<String>,
+    pub destination_ip: Option<String>,
+    pub user_id: Option<String>,
+    pub user_name: Option<String>,
+    pub severity: Option<String>,
+    pub message: Option<String>,
+    pub raw_event: String,
+    pub metadata: String,
+    pub source_type: Option<String>, // Added to match ClickHouse schema
+    pub created_at: u32, // Unix timestamp
 }
 
 pub struct StorageManager {
@@ -87,18 +88,21 @@ pub trait StorageBackend: Send + Sync {
     fn name(&self) -> &str;
 }
 
+#[allow(dead_code)]
 pub struct ClickHouseBackend {
     client: ClickHouseClient,
     destination_name: String,
     table_name: String,
 }
 
+#[allow(dead_code)]
 pub struct KafkaBackend {
     producer: FutureProducer,
     destination_name: String,
     topic: String,
 }
 
+#[allow(dead_code)]
 pub struct FileBackend {
     file_path: String,
     destination_name: String,
@@ -163,9 +167,15 @@ impl StorageManager {
             DestinationType::File { .. } => {
                 self.initialize_file(dest_name, dest_config).await?
             }
-            #[cfg(feature = "aws")]
             DestinationType::S3 { .. } => {
-                self.initialize_s3(dest_name, dest_config).await?
+                #[cfg(feature = "aws")]
+                {
+                    self.initialize_s3(dest_name, dest_config).await?
+                }
+                #[cfg(not(feature = "aws"))]
+                {
+                    return Err(PipelineError::configuration("S3 support not enabled. Compile with --features aws".to_string()));
+                }
             }
             DestinationType::Http { .. } => {
                 self.initialize_http(dest_name, dest_config).await?
@@ -184,26 +194,26 @@ impl StorageManager {
     }
     
     async fn initialize_clickhouse(&self, dest_name: &str, dest_config: &DataDestination) -> Result<()> {
-        let (connection_string, database) = match &dest_config.destination_type {
-            DestinationType::ClickHouse { connection_string, database, .. } => {
-                (connection_string, database)
+        let (connection_string, database, table_name) = match &dest_config.destination_type {
+            DestinationType::ClickHouse { connection_string, database, table, .. } => {
+                (connection_string, database, table)
             }
             _ => return Err(PipelineError::configuration("Invalid destination type for ClickHouse")),
         };
         
+        // Create direct ClickHouse client
         let client = ClickHouseClient::default()
             .with_url(connection_string)
-            .with_database(database);
+            .with_database(database)
+            .with_user("default")
+            .with_password("")
+            .with_compression(clickhouse::Compression::Lz4);
         
-        // Test connection
-        client.query("SELECT 1").execute().await
-            .map_err(|e| PipelineError::database(format!("ClickHouse connection failed: {}", e)))?;
+        // Test connection with a simple query
+        client.query("SELECT 1").fetch_all::<u8>().await
+            .map_err(|e| PipelineError::database(format!("Failed to connect to ClickHouse: {}", e)))?;
         
         // Create table if it doesn't exist
-        let table_name = match &dest_config.destination_type {
-            DestinationType::ClickHouse { table, .. } => table,
-            _ => return Err(PipelineError::configuration("Invalid destination type for ClickHouse")),
-        };
         self.create_clickhouse_table(&client, table_name).await?;
         
         {
@@ -211,46 +221,51 @@ impl StorageManager {
             clients_guard.insert(dest_name.to_string(), client);
         }
         
+        info!("ClickHouse client initialized for destination: {}", dest_name);
         Ok(())
     }
     
+    /// Create ClickHouse table if it doesn't exist
     async fn create_clickhouse_table(&self, client: &ClickHouseClient, table_name: &str) -> Result<()> {
         // Validate table name to prevent SQL injection
         let validated_table_name = Self::validate_table_name(table_name)
             .map_err(|e| PipelineError::validation(format!("Invalid table name '{}': {}", table_name, e)))?;
         
+        // Drop existing table to ensure clean schema
+        let drop_table_sql = format!("DROP TABLE IF EXISTS {}", validated_table_name);
+        client.query(&drop_table_sql).execute().await
+            .map_err(|e| PipelineError::database(format!("Failed to drop table {}: {}", table_name, e)))?;
+        
         let create_table_sql = format!(
             r#"
-            CREATE TABLE IF NOT EXISTS {} (
-                id String,
-                timestamp DateTime64(3),
-                source String,
-                source_type String,
-                severity String,
-                facility String,
-                hostname String,
-                process String,
-                message String,
-                raw_message String,
-                source_ip String,
-                source_port UInt16,
-                protocol String,
-                tags Array(String),
-                fields String,
-                processing_stage String,
-                created_at DateTime64(3)
+            CREATE TABLE {} (
+                event_id String,
+                event_timestamp UInt32,
+                tenant_id String,
+                event_category String,
+                event_action String,
+                event_outcome Nullable(String),
+                source_ip Nullable(String),
+                destination_ip Nullable(String),
+                user_id Nullable(String),
+                user_name Nullable(String),
+                severity Nullable(String),
+                message Nullable(String),
+                raw_event String,
+                metadata String,
+                source_type Nullable(String),
+                created_at UInt32
             ) ENGINE = MergeTree()
-            PARTITION BY toYYYYMM(timestamp)
-            ORDER BY (timestamp, source, severity)
-            SETTINGS index_granularity = 8192
+            ORDER BY (event_timestamp, event_id)
+            PARTITION BY toYYYYMM(toDateTime(event_timestamp))
             "#,
             validated_table_name
         );
         
         client.query(&create_table_sql).execute().await
-            .map_err(|e| PipelineError::database(format!("Failed to create ClickHouse table: {}", e)))?;
+            .map_err(|e| PipelineError::database(format!("Failed to create table {}: {}", table_name, e)))?;
         
-        info!("ClickHouse table '{}' created/verified", validated_table_name);
+        info!("ClickHouse table '{}' recreated with new schema", table_name);
         Ok(())
     }
     
@@ -300,7 +315,7 @@ impl StorageManager {
             .set("compression.type", "lz4")           // High performance compression
             .set("batch.size", "65536")              // 64KB batches
             .set("linger.ms", "5")                   // Low latency
-            .set("buffer.memory", "134217728")        // 128MB buffer
+            .set("queue.buffering.max.kbytes", "131072")  // 128MB buffer (128*1024 KB)
             .set("delivery.timeout.ms", "300000")     // 5 minute delivery timeout
             .set("request.timeout.ms", "30000")       // 30 second request timeout
             .set("retry.backoff.ms", "100")          // 100ms retry backoff
@@ -388,7 +403,14 @@ impl StorageManager {
                 self.store_to_file(event, destination, dest_config).await
             }
             DestinationType::S3 { .. } => {
-                self.store_to_s3(event, destination, dest_config).await
+                #[cfg(feature = "aws")]
+                {
+                    self.store_to_s3(event, destination, dest_config).await
+                }
+                #[cfg(not(feature = "aws"))]
+                {
+                    Err(PipelineError::configuration("S3 support not enabled. Compile with --features aws".to_string()))
+                }
             }
             DestinationType::Http { .. } => {
                 self.store_to_http(event, destination, dest_config).await
@@ -436,7 +458,8 @@ impl StorageManager {
             .map_err(|e| PipelineError::database(format!("ClickHouse insert commit failed: {}", e)))?;
         
         // Estimate bytes stored (rough calculation)
-        let bytes_stored = siem_event.message.len() + siem_event.raw_message.len() + 200; // Approximate overhead
+        let message_len = siem_event.message.as_ref().map(|m| m.len()).unwrap_or(0);
+        let bytes_stored = message_len + siem_event.raw_event.len() + 200; // Approximate overhead
         
         Ok(bytes_stored as u64)
     }
@@ -674,42 +697,59 @@ impl StorageManager {
     }
 
     fn convert_to_siem_event(&self, event: &PipelineEvent) -> Result<SiemEvent> {
-        let source_ip = event.metadata.get("source_ip").unwrap_or(&"0.0.0.0".to_string()).clone();
-        let source_port: u16 = event.metadata.get("source_port")
-            .and_then(|p| p.parse().ok())
-            .unwrap_or(0);
+        let source_ip = event.metadata.get("source_ip").map(|s| s.clone());
+        let destination_ip = event.data.get("destination_ip")
+            .and_then(|ip| ip.as_str())
+            .map(|s| s.to_string());
         
-        let protocol = event.data.get("protocol")
-            .and_then(|p| p.as_str())
-            .unwrap_or("unknown")
-            .to_string();
+        let user_id = event.data.get("user_id")
+            .and_then(|u| u.as_str())
+            .map(|s| s.to_string());
         
-        let raw_message = event.data.get("raw_message")
+        let user_name = event.data.get("user_name")
+            .and_then(|u| u.as_str())
+            .map(|s| s.to_string());
+        
+        let severity = event.data.get("severity")
+            .and_then(|s| s.as_str())
+            .map(|s| s.to_string());
+        
+        let message = event.data.get("message")
+            .and_then(|m| m.as_str())
+            .map(|s| s.to_string());
+        
+        let source_type = event.data.get("source_type")
+            .and_then(|s| s.as_str())
+            .map(|s| s.to_string())
+            .or_else(|| event.metadata.get("source_type").map(|s| s.clone()));
+        
+        let raw_event = event.data.get("raw_message")
             .and_then(|m| m.as_str())
             .unwrap_or("")
             .to_string();
         
-        let fields_json = serde_json::to_string(&event.data)
-            .map_err(|e| PipelineError::serialization(format!("Failed to serialize fields: {}", e)))?;
+        let metadata_json = serde_json::to_string(&event.data)
+            .map_err(|e| PipelineError::serialization(format!("Failed to serialize metadata: {}", e)))?;
+        
+        let now = Utc::now().timestamp() as u32;
         
         Ok(SiemEvent {
-            id: event.id.to_string(),
-            timestamp: event.timestamp,
-            source: event.source.clone(),
-            source_type: event.metadata.get("source_type").unwrap_or(&"unknown".to_string()).clone(),
-            severity: "info".to_string(), // Would be extracted from parsed data
-            facility: "user".to_string(), // Would be extracted from parsed data
-            hostname: "unknown".to_string(), // Would be extracted from parsed data
-            process: "unknown".to_string(), // Would be extracted from parsed data
-            message: raw_message.clone(),
-            raw_message,
+            event_id: event.id.to_string(),
+            event_timestamp: event.timestamp.timestamp() as u32,
+            tenant_id: event.metadata.get("tenant_id").unwrap_or(&"default".to_string()).clone(),
+            event_category: event.metadata.get("event_category").unwrap_or(&"unknown".to_string()).clone(),
+            event_action: event.metadata.get("event_action").unwrap_or(&"unknown".to_string()).clone(),
+            event_outcome: event.data.get("event_outcome").and_then(|o| o.as_str()).map(|s| s.to_string()),
             source_ip,
-            source_port,
-            protocol,
-            tags: vec![], // Would be populated from routing or enrichment
-            fields: fields_json,
-            processing_stage: format!("{:?}", event.processing_stage),
-            created_at: Utc::now(),
+            destination_ip,
+            user_id,
+            user_name,
+            severity,
+            message,
+            raw_event,
+            metadata: metadata_json,
+            source_type,
+            created_at: now,
         })
     }
     
@@ -806,26 +846,37 @@ impl StorageManager {
     ) -> Result<crate::models::SearchResult<crate::models::Event>> {
         let query_start = std::time::Instant::now();
         info!("Searching events with ClickHouse query: {:?}", search_query);
-        // Get the first available ClickHouse client
+        // Get the first available ClickHouse pool
         let clients_guard = self.clickhouse_clients.read().await;
         let client = clients_guard.values().next()
             .ok_or_else(|| PipelineError::not_found("No ClickHouse client available".to_string()))?;
         
-        // Build the ClickHouse query
-        let mut query = "SELECT * FROM events WHERE 1=1".to_string();
-        let mut count_query = "SELECT COUNT(*) FROM events WHERE 1=1".to_string();
+        // Use the direct client
         
-        // Add time range filter
-        query.push_str(&format!(" AND timestamp >= '{}'", search_query.time_range.start.format("%Y-%m-%d %H:%M:%S")));
-        query.push_str(&format!(" AND timestamp <= '{}'", search_query.time_range.end.format("%Y-%m-%d %H:%M:%S")));
-        count_query.push_str(&format!(" AND timestamp >= '{}'", search_query.time_range.start.format("%Y-%m-%d %H:%M:%S")));
-        count_query.push_str(&format!(" AND timestamp <= '{}'", search_query.time_range.end.format("%Y-%m-%d %H:%M:%S")));
+        // Get table name from environment
+        let table_name = std::env::var("EVENTS_TABLE_NAME").unwrap_or_else(|_| "dev.events".to_string());
+        
+        // Build the ClickHouse query
+        let mut query = format!("SELECT * FROM {} WHERE 1=1", table_name);
+        let mut count_query = format!("SELECT COUNT(*) FROM {} WHERE 1=1", table_name);
+        
+        // Add time range filter (convert DateTime to Unix timestamp)
+        let start_timestamp = search_query.time_range.start.timestamp() as u32;
+        let end_timestamp = search_query.time_range.end.timestamp() as u32;
+        query.push_str(&format!(" AND event_timestamp >= {}", start_timestamp));
+        query.push_str(&format!(" AND event_timestamp <= {}", end_timestamp));
+        count_query.push_str(&format!(" AND event_timestamp >= {}", start_timestamp));
+        count_query.push_str(&format!(" AND event_timestamp <= {}", end_timestamp));
         
         // Add filters
         for (field, value) in &search_query.filters {
             if let Some(val) = value.as_str() {
                 match field.as_str() {
-                    "source" | "source_type" | "severity" | "hostname" => {
+                    "tenant_id" | "event_category" | "event_action" | "severity" => {
+                        query.push_str(&format!(" AND {} = '{}'", field, val));
+                        count_query.push_str(&format!(" AND {} = '{}'", field, val));
+                    }
+                    "source_ip" | "destination_ip" | "user_id" | "user_name" => {
                         query.push_str(&format!(" AND {} = '{}'", field, val));
                         count_query.push_str(&format!(" AND {} = '{}'", field, val));
                     }
@@ -836,8 +887,8 @@ impl StorageManager {
         
         // Add text search
         if !search_query.query.is_empty() {
-            query.push_str(&format!(" AND (message LIKE '%{}%' OR raw_message LIKE '%{}%')", search_query.query, search_query.query));
-            count_query.push_str(&format!(" AND (message LIKE '%{}%' OR raw_message LIKE '%{}%')", search_query.query, search_query.query));
+            query.push_str(&format!(" AND (message LIKE '%{}%' OR raw_event LIKE '%{}%')", search_query.query, search_query.query));
+            count_query.push_str(&format!(" AND (message LIKE '%{}%' OR raw_event LIKE '%{}%')", search_query.query, search_query.query));
         }
         
         // Add sorting
@@ -848,7 +899,7 @@ impl StorageManager {
             };
             query.push_str(&format!(" ORDER BY {} {}", sort_field, order));
         } else {
-            query.push_str(" ORDER BY timestamp DESC");
+            query.push_str(" ORDER BY event_timestamp DESC");
         }
         
         // Add pagination
@@ -868,25 +919,30 @@ impl StorageManager {
         
         // Convert SiemEvent to Event
         let events: Vec<crate::models::Event> = siem_events.into_iter().map(|siem_event| {
+            let timestamp = DateTime::<Utc>::from_timestamp(siem_event.event_timestamp as i64, 0)
+                .unwrap_or_else(|| Utc::now());
+            let created_at = DateTime::<Utc>::from_timestamp(siem_event.created_at as i64, 0)
+                .unwrap_or_else(|| Utc::now());
+            
             crate::models::Event {
-                id: uuid::Uuid::parse_str(&siem_event.id).unwrap_or_else(|_| uuid::Uuid::new_v4()),
-                timestamp: siem_event.timestamp,
-                source: siem_event.source,
-                source_type: siem_event.source_type,
-                severity: siem_event.severity,
-                facility: siem_event.facility,
-                hostname: siem_event.hostname,
-                process: siem_event.process,
-                message: siem_event.message,
-                raw_message: siem_event.raw_message,
-                source_ip: siem_event.source_ip,
-                source_port: siem_event.source_port as i32, // Convert u16 to i32
-                protocol: siem_event.protocol,
-                tags: siem_event.tags,
-                fields: serde_json::from_str(&siem_event.fields).unwrap_or_default(),
-                processing_stage: siem_event.processing_stage,
-                created_at: siem_event.created_at,
-                updated_at: siem_event.created_at, // Use created_at as default for updated_at
+                id: uuid::Uuid::parse_str(&siem_event.event_id).unwrap_or_else(|_| uuid::Uuid::new_v4()),
+                timestamp,
+                source: siem_event.tenant_id.clone(), // Map tenant_id to source for now
+                source_type: siem_event.event_category.clone(),
+                severity: siem_event.severity.unwrap_or_else(|| "info".to_string()),
+                facility: "siem".to_string(), // Default facility
+                hostname: "unknown".to_string(), // Default hostname
+                process: siem_event.event_action.clone(),
+                message: siem_event.message.unwrap_or_else(|| "No message".to_string()),
+                raw_message: siem_event.raw_event.clone(),
+                source_ip: siem_event.source_ip.unwrap_or_else(|| "unknown".to_string()),
+                source_port: 0, // Default port
+                protocol: "unknown".to_string(), // Default protocol
+                tags: vec![], // Default empty tags
+                fields: serde_json::from_str(&siem_event.metadata).unwrap_or_default(),
+                processing_stage: "stored".to_string(),
+                created_at,
+                updated_at: created_at,
             }
         }).collect();
         
@@ -908,7 +964,7 @@ impl StorageManager {
         })
     }
     
-    pub async fn reload_config(&self, new_config: &PipelineConfig) -> Result<()> {
+    pub async fn reload_config(&self, _new_config: &PipelineConfig) -> Result<()> {
         info!("Reloading storage configuration");
         // Implementation would reinitialize connections with new configuration
         Ok(())

@@ -1,9 +1,0 @@
-{
-  "EventID": "4624",
-  "ComputerName": "DC-01.corp.local",
-  "SubjectUserName": "admin",
-  "TargetUserName": "john.doe",
-  "IpAddress": "192.168.1.100",
-  "LogonType": "3",
-  "AuthenticationPackageName": "NTLM"
-}

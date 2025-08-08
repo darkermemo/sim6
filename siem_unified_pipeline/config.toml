@@ -1,18 +1,25 @@
 [server]
-host = "127.0.0.1"
-port = 8083
+host = "0.0.0.0"
+port = 9999
 workers = 4
 max_connections = 1000
 request_timeout = 30
 enable_cors = true
 
-# Database Configuration
+# Feature Flags Configuration
+[features]
+enable_kafka = false
+enable_vector = true
+enable_redis = false
+enable_ch_sse = true
+
+# Database Configuration (ClickHouse)
 [database]
 host = "localhost"
-port = 5432
-database = "siem"
-username = "siem_user"
-password = "siem_password"
+port = 8123
+database = "dev"
+username = "default"
+password = ""
 max_connections = 20
 min_connections = 5
 connection_timeout = 30
@@ -120,6 +127,39 @@ ttl = 3600
 format = "json"
 compression = "gzip"
 
+# ClickHouse destination for analytics and long-term storage
+[destinations.clickhouse_main]
+enabled = true
+batch_size = 1000
+flush_interval = 5000
+retry_attempts = 3
+
+[destinations.clickhouse_main.destination_type]
+type = "click_house"
+connection_string = "http://localhost:8123"
+database = "dev"
+table = "events"
+
+[destinations.clickhouse_main.config]
+format = "json"
+compression = "lz4"
+
+# Kafka destination for real-time streaming
+[destinations.kafka_stream]
+enabled = true
+batch_size = 1000
+flush_interval = 5000
+retry_attempts = 3
+
+[destinations.kafka_stream.destination_type]
+type = "kafka"
+brokers = ["localhost:9092"]
+topic = "siem-events"
+
+[destinations.kafka_stream.config]
+format = "json"
+compression = "gzip"
+
 
 
 [metrics]
@@ -154,3 +194,11 @@ batch_timeout_ms = 100
 enabled = true
 requests_per_second = 1000
 burst_size = 5000
+
+# Vector Configuration
+[vector]
+enabled = true
+base_url = "http://127.0.0.1:8686"
+health_path = "/health"
+metrics_path = "/metrics"
+timeout_ms = 5000

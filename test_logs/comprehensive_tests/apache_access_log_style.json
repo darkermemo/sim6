@@ -1,8 +1,0 @@
-{
-  "remote_addr": "203.0.113.1",
-  "request_uri": "/api/v1/users",
-  "status": "200",
-  "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
-  "referer": "https://example.com",
-  "request_time": "0.123"
-}

@@ -1,9 +1,0 @@
-Index,Type,Description,File,Line,Query,Usage
-1,SELECT,Database existence check,siem_clickhouse_ingestion/src/clickhouse.rs,45,SELECT name FROM system.databases WHERE name = ?,Database existence check
-2,CREATE,Database creation,siem_clickhouse_ingestion/src/clickhouse.rs,67,CREATE DATABASE IF NOT EXISTS ?,Database creation
-3,DROP,Table cleanup,siem_clickhouse_ingestion/src/clickhouse.rs,89,DROP TABLE IF EXISTS ?,Table cleanup
-4,SELECT,Event count verification,test_stateful_rule_engine_direct.sh,23,SELECT count(*) FROM events WHERE event_category = 'Authentication',Event count verification
-5,INSERT,Test event insertion,test_stateful_rule_engine_direct.sh,45,"INSERT INTO events (event_timestamp, event_category, source_ip, user) VALUES",Test event insertion
-6,SELECT,Table discovery for backup,siem_backup_manager/src/clickhouse.rs,156,SELECT name FROM system.tables WHERE database = ? AND name LIKE 'events_%',Table discovery for backup
-7,CREATE,Initial schema setup,database_migrations/V001__initial_core_tables.sql,1,CREATE TABLE IF NOT EXISTS events (...),Initial schema setup
-8,SELECT,SPL to ClickHouse query translation,siem_ui/src/services/queryTranspiler.ts,165,"SELECT count(*) as count, dest_ip FROM events GROUP BY dest_ip",SPL to ClickHouse query translation
