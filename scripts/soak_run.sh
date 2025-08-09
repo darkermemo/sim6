@@ -147,8 +147,13 @@ cat > /tmp/_dsl_http_mozilla.json <<'JSON'
    {"op":"eq","args":["json_meta","http.user_agent","Mozilla"]}
  ]}}}
 JSON
-jq -n --slurpfile d /tmp/_dsl_http_mozilla.json \
-  '{name:"Soak HTTP UA Mozilla", description:"soak", severity:"LOW", enabled:1, schedule_sec:60, throttle_seconds:0, dedup_key:"[""tenant_id"", ""source_ip""]", dsl:$d[0]}' \
+jq -n \
+  --slurpfile d /tmp/_dsl_http_mozilla.json \
+  --arg name "Soak HTTP UA Mozilla" \
+  --arg desc "soak" \
+  --arg severity "LOW" \
+  --arg dedup '["tenant_id","source_ip"]' \
+  '{name:$name, description:$desc, severity:$severity, enabled:1, schedule_sec:60, throttle_seconds:0, dedup_key:$dedup, dsl:$d[0]}' \
   > /tmp/_rule_http_mozilla.json
 curl -sS -X POST "$BASE_URL/api/v2/rules" -H 'content-type: application/json' --data-binary @/tmp/_rule_http_mozilla.json \
   | tee "$ART/rule_create.json" >/dev/null
@@ -172,16 +177,19 @@ resources_loop() {
   while :; do
     ts=$(date -u +%FT%TZ)
     echo "### $ts" >> "$ART/soak_ps.log"
-    ps -o pid,rss,pcpu,etime,cmd -p "$srv_pid" >> "$ART/soak_ps.log" || true
+    # macOS compatible: use 'command' column name instead of 'cmd'
+    ps -o pid,rss,pcpu,etime,command -p "$srv_pid" >> "$ART/soak_ps.log" || true
     echo "### $ts" >> "$ART/soak_fds.log"
     lsof -p "$srv_pid" 2>/dev/null | wc -l >> "$ART/soak_fds.log" || echo 0 >> "$ART/soak_fds.log"
-    # Also capture rule_state recent errors
-    curl -sS "$CLICKHOUSE_URL/" --data-binary \
-'SELECT rule_id, tenant_id, last_error, updated_at
- FROM dev.rule_state
- WHERE updated_at >= toUInt32(now())-900 AND last_error != ''''
- ORDER BY updated_at DESC LIMIT 50 FORMAT Pretty' \
-      >> "$ART/soak_rule_errors.log" || true
+    # Also capture rule_state recent errors using a here-doc to avoid quoting issues
+    curl -sS "$CLICKHOUSE_URL/" --data-binary @- >> "$ART/soak_rule_errors.log" <<SQL
+SELECT rule_id, tenant_id, last_error, updated_at
+FROM ${CLICKHOUSE_DATABASE}.rule_state
+WHERE updated_at >= toUInt32(now())-900 AND last_error != ''
+ORDER BY updated_at DESC
+LIMIT 50
+FORMAT Pretty
+SQL
     sleep "$RESOURCE_EVERY_SEC"
   done
 }
@@ -216,25 +224,25 @@ RULEERR_END=$(awk   '/^siem_v2_rules_run_total/ && /outcome="error"/ { s+=$NF } 
 
 # Idempotency check over last 30m
 DUP_SUM=$(curl -sS "$CLICKHOUSE_URL/" --data-binary \
-"WITH toUInt32(now()) AS nowu SELECT sum(cnt - u) FROM (
+"WITH toUInt32(now()) AS nowu SELECT toInt64(sum(cnt - u)) FROM (
   SELECT rule_id, tenant_id, toStartOfInterval(toDateTime(alert_timestamp), INTERVAL 5 MIN) w,
          count() cnt, uniq(alert_id) u
   FROM $CLICKHOUSE_DATABASE.alerts
   WHERE created_at >= nowu - 1800
   GROUP BY rule_id,tenant_id,w
-)" 2>/dev/null || echo 0)
+) FORMAT TabSeparatedRaw" 2>/dev/null || echo 0)
 DUP_SUM=${DUP_SUM:-0}
 
 # Rule errors window (min(6h, DURATION))
 CHECK_WINDOW="$CHECK_WINDOW_SEC_DEFAULT"
 if [ "$DURATION_SEC" -lt "$CHECK_WINDOW_SEC_DEFAULT" ]; then CHECK_WINDOW="$DURATION_SEC"; fi
 RULE_ERRS_RECENT=$(curl -sS "$CLICKHOUSE_URL/" --data-binary \
-"SELECT count() FROM $CLICKHOUSE_DATABASE.rule_state WHERE updated_at >= toUInt32(now())-$CHECK_WINDOW AND last_error!=''" 2>/dev/null || echo 0)
+"SELECT toInt64(count()) FROM $CLICKHOUSE_DATABASE.rule_state WHERE updated_at >= toUInt32(now())-$CHECK_WINDOW AND last_error!='' FORMAT TabSeparatedRaw" 2>/dev/null || echo 0)
 RULE_ERRS_RECENT=${RULE_ERRS_RECENT:-0}
 
-# Resource drift (RSS from first/last lines)
-RSS_FIRST=$(awk 'NR==2 {print $2; exit}' "$ART/soak_ps.log" 2>/dev/null || echo 0)
-RSS_LAST=$(awk '/^###/ {t=$0; next} NF>0 {rss=$2} END{print rss+0}' "$ART/soak_ps.log" 2>/dev/null || echo 0)
+# Resource drift (RSS from first/last numeric process lines)
+RSS_FIRST=$(awk '$1 ~ /^[0-9]+$/ {print $2; exit}' "$ART/soak_ps.log" 2>/dev/null || echo 0)
+RSS_LAST=$(awk '$1 ~ /^[0-9]+$/ {rss=$2} END{print (rss+0)}' "$ART/soak_ps.log" 2>/dev/null || echo 0)
 RSS_GROW_OK=1
 if [ "${RSS_FIRST:-0}" -gt 0 ] && [ "${RSS_LAST:-0}" -gt 0 ]; then
   # allow up to +10%
