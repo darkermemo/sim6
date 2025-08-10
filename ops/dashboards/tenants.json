@@ -1,0 +1,9 @@
+{
+  "title": "Tenants",
+  "panels": [
+    {"type":"graph","title":"EPS (Gauge)","target":"siem_ingest_eps"},
+    {"type":"graph","title":"Retention Days","target":"siem_retention_days_current"},
+    {"type":"graph","title":"Rate Limited","target":"siem_ingest_rate_limited_total"}
+  ]
+}
+

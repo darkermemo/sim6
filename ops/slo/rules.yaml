@@ -1,0 +1,8 @@
+name: rules-run-slo
+objective:
+  description: Rule run-now p95 under 3s
+  target: p95 < 3
+metric:
+  prom: siem_v2_scheduler_tick_seconds
+window: 10m
+

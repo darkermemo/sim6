@@ -1,0 +1,53 @@
+<!doctype html><html><head>
+<meta charset="utf-8"/><title>Alerts</title>
+<link rel="stylesheet" href="/dev/ui/assets/style.css"/>
+</head><body>
+<!--#include file="_nav.html" -->
+<div class="container grid">
+  <h1>Alerts</h1>
+  <div class="row">
+    <select id="status"><option value="">(any)</option><option>OPEN</option><option>ACK</option><option>RESOLVED</option><option>SUPPRESSED</option></select>
+    <input id="tenant" value="default" placeholder="tenant"/>
+    <button id="btn-load" class="primary">Load</button>
+  </div>
+  <div class="card">
+    <table class="table" id="tbl"></table>
+  </div>
+</div>
+<script src="/dev/ui/assets/api.js"></script>
+<script>
+const $=q=>document.querySelector(q);
+async function load(){
+  const qs = new URLSearchParams();
+  qs.set('limit','100');
+  const t=$('#tenant').value.trim(); if(t) qs.set('tenant', t);
+  const s=$('#status').value; if(s) qs.set('status', s);
+  const r=await UI.alertsList('?'+qs.toString());
+  const arr = r.alerts || [];
+  const tbl = $('#tbl');
+  tbl.innerHTML = `<thead><tr><th>id</th><th>rule</th><th>severity</th><th>status</th><th>title</th><th>ts</th><th></th></tr></thead>`+
+    `<tbody>${arr.map(a=>`<tr>
+      <td>${a.alert_id}</td>
+      <td>${a.rule_id}</td>
+      <td>${a.severity}</td>
+      <td>${a.status}</td>
+      <td>${(a.alert_title||'')}</td>
+      <td>${a.alert_timestamp}</td>
+      <td>
+        <select onchange="patch('${a.alert_id}', this.value)">
+          <option value="">(set status)</option>
+          <option>ACK</option><option>RESOLVED</option><option>SUPPRESSED</option>
+        </select>
+      </td>
+    </tr>`).join('')}</tbody>`;
+}
+window.patch = async (id, status)=>{
+  if(!status) return;
+  try { await UI.alertPatch(id, {status}); UI.toast('Updated'); load(); }
+  catch(e){ UI.toast('Patch failed','err'); }
+}
+$('#btn-load').onclick = ()=>load().catch(()=>UI.toast('Load failed','err'));
+load();
+</script>
+</body></html>
+

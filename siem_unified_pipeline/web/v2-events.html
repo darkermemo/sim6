@@ -22,7 +22,61 @@
   </style>
 </head>
 <body>
-  <h1>Events (Greenfield)</h1>
+  <h1>Events (Greenfield) <span class="muted" style="font-weight:400; font-size:14px">· <a href="/dev/apis">API Console</a></span></h1>
+  <div style="display:flex; gap:12px; flex-wrap:wrap; margin:10px 0;">
+    <div style="background:#f6f8fa; padding:10px 14px; border-radius:8px;">
+      <div class="muted">Total Logs</div>
+      <div id="card-total" style="font-weight:600; font-size:18px;">—</div>
+    </div>
+    <div style="background:#f6f8fa; padding:10px 14px; border-radius:8px;">
+      <div class="muted">Fetched (Filtered)</div>
+      <div id="card-fetched" style="font-weight:600; font-size:18px;">0</div>
+    </div>
+    <div style="background:#f6f8fa; padding:10px 14px; border-radius:8px;">
+      <div class="muted">Real-time EPS</div>
+      <div id="card-eps" style="font-weight:600; font-size:18px;">0.0</div>
+    </div>
+    <div style="background:#f6f8fa; padding:10px 14px; border-radius:8px;">
+      <div class="muted">Log Sources</div>
+      <div id="card-sources" style="font-weight:600; font-size:18px;">—</div>
+    </div>
+    <div style="background:#f6f8fa; padding:10px 14px; border-radius:8px;">
+      <div class="muted">Size (estimated)</div>
+      <div id="card-size" style="font-weight:600; font-size:18px;">—</div>
+    </div>
+    <div style="background:#f6f8fa; padding:10px 14px; border-radius:8px;">
+      <div class="muted">Fetched Size</div>
+      <div id="card-size-fetched" style="font-weight:600; font-size:18px;">—</div>
+    </div>
+    <div style="background:#f6f8fa; padding:10px 14px; border-radius:8px;">
+      <div class="muted">Kafka</div>
+      <div id="card-kafka" style="font-weight:600; font-size:18px;">—</div>
+    </div>
+    <div style="background:#f6f8fa; padding:10px 14px; border-radius:8px;">
+      <div class="muted">Redis</div>
+      <div id="card-redis" style="font-weight:600; font-size:18px;">—</div>
+    </div>
+    <div style="background:#f6f8fa; padding:10px 14px; border-radius:8px;">
+      <div class="muted">Vector</div>
+      <div id="card-vector" style="font-weight:600; font-size:18px;">—</div>
+    </div>
+    <div style="background:#f6f8fa; padding:10px 14px; border-radius:8px;">
+      <div class="muted">Parsing</div>
+      <div id="card-parsing" style="font-weight:600; font-size:18px;">—</div>
+    </div>
+    <div style="background:#f6f8fa; padding:10px 14px; border-radius:8px;">
+      <div class="muted">CH Status</div>
+      <div id="card-ch" style="font-weight:600; font-size:18px;">—</div>
+    </div>
+    <div style="background:#f6f8fa; padding:10px 14px; border-radius:8px;">
+      <div class="muted">CH Storage</div>
+      <div id="card-ch-storage" style="font-weight:600; font-size:18px;">—</div>
+    </div>
+    <div style="background:#f6f8fa; padding:10px 14px; border-radius:8px;">
+      <div class="muted">Search Time</div>
+      <div id="card-search-time" style="font-weight:600; font-size:18px;">—</div>
+    </div>
+  </div>
   <div class="controls">
     <label>Time:
       <select id="time">
@@ -99,15 +153,21 @@
     }
 
     async function fetchPage() {
+      const t0 = performance.now();
       const { start_time, end_time } = calcWindow();
       const url = `${apiBase}?${qs({ limit, offset, query: (qInput.value || '').trim(), start_time, end_time })}`;
       statusEl.textContent = `Loading page ${page} ...`;
       const res = await fetch(url, { cache: 'no-store' });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
+      const t1 = performance.now();
+      const ms = Math.max(0, t1 - t0);
+      const st = document.getElementById('card-search-time');
+      if (st) st.textContent = `${ms.toFixed(0)} ms`;
       const evs = data.events || [];
       if (offset === 0) { rowsEl.innerHTML = ''; exported.length = 0; totalRendered = 0; }
       const frag = document.createDocumentFragment();
+      let batchBytes = 0;
       for (const ev of evs) {
         const tr = document.createElement('tr');
         const ts = ev.event_timestamp ? new Date(ev.event_timestamp * 1000).toLocaleString() : '';
@@ -129,16 +189,35 @@
         tr.addEventListener('click', () => showDetails(ev));
         frag.appendChild(tr);
         exported.push(ev);
+        if (typeof ev.raw_len === 'number') batchBytes += ev.raw_len;
       }
       rowsEl.appendChild(frag);
       totalRendered += evs.length;
+      document.getElementById('card-fetched').textContent = totalRendered.toLocaleString();
+      // Update fetched bytes card (human readable)
+      const cur = document.getElementById('card-size-fetched');
+      const prevText = cur.textContent;
+      const prevBytes = (function parsePrev(t){
+        if (!t || t==='—') return 0;
+        const m = t.match(/([0-9.]+)\s*(TB|GB|MB|KB|B)/i); if(!m) return 0;
+        const n = parseFloat(m[1]); const u = m[2].toUpperCase();
+        const f = u==='TB'?1e12:u==='GB'?1e9:u==='MB'?1e6:u==='KB'?1e3:1;
+        return Math.round(n*f);
+      })(prevText);
+      const sum = prevBytes + batchBytes;
+      const human = sum > 1e12 ? (sum/1e12).toFixed(2)+' TB' : sum > 1e9 ? (sum/1e9).toFixed(2)+' GB' : sum > 1e6 ? (sum/1e6).toFixed(2)+' MB' : sum > 1e3 ? (sum/1e3).toFixed(2)+' KB' : sum.toLocaleString()+' B';
+      cur.textContent = human;
       statusEl.textContent = `Loaded ${evs.length}`;
       pageInfo.textContent = `Page ${page}`;
       return evs.length;
     }
 
     async function loadPageAndRender(reset=false) {
-      if (reset) { offset = 0; page = 1; }
+      if (reset) {
+        offset = 0; page = 1;
+        const fs = document.getElementById('card-size-fetched');
+        if (fs) fs.textContent = '0 B';
+      }
       rowsEl.innerHTML = '<tr><td colspan="9" class="muted">Loading…</td></tr>';
       try {
         const n = await fetchPage();
@@ -156,7 +235,8 @@
     document.getElementById('apply').addEventListener('click', () => loadPageAndRender(true));
     document.getElementById('prev').addEventListener('click', async () => { if (offset >= limit) { offset -= limit; page = Math.max(1, page - 1); await loadPageAndRender(); } });
     document.getElementById('next').addEventListener('click', async () => { offset += limit; page += 1; await loadPageAndRender(); });
-    document.getElementById('start').addEventListener('click', () => loadPageAndRender(true));
+    const startBtn = document.getElementById('start');
+    if (startBtn) startBtn.addEventListener('click', () => loadPageAndRender(true));
     document.getElementById('export').addEventListener('click', () => {
       const blob = new Blob([JSON.stringify(exported)], { type: 'application/json' });
       const a = document.createElement('a');
@@ -189,8 +269,43 @@
 
     function escapeHtml(str){return str.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c]));}
 
+    async function refreshCards() {
+      try {
+        const q = fetch('/api/v2/metrics/quick').then(r=>r.json());
+        const e = fetch('/api/v2/metrics/eps').then(r=>r.json());
+        const ch = fetch('/api/v2/metrics/ch_status').then(r=>r.json());
+        const chs = fetch('/api/v2/metrics/ch_storage').then(r=>r.json());
+        const p = fetch('/api/v2/metrics/parsing').then(r=>r.json());
+        const sys = fetch('/api/v2/system/config').then(r=>r.json());
+        const k = fetch('/api/v2/metrics/kafka').then(r=>r.json());
+        const r = fetch('/api/v2/metrics/redis').then(r=>r.json());
+        const v = fetch('/api/v2/metrics/vector').then(r=>r.json());
+        const [quick, eps, chv, chstore, ps, scfg, kf, rd, vt] = await Promise.all([q, e, ch, chs, p, sys, k, r, v]);
+        document.getElementById('card-total').textContent = Number(quick.total_events||0).toLocaleString();
+        document.getElementById('card-sources').textContent = Number(quick.source_count||0).toLocaleString();
+        const bytes = Number(quick.total_bytes_estimate||0);
+        const human = bytes > 1e12 ? (bytes/1e12).toFixed(2)+' TB' : bytes > 1e9 ? (bytes/1e9).toFixed(2)+' GB' : bytes > 1e6 ? (bytes/1e6).toFixed(2)+' MB' : bytes.toLocaleString()+' B';
+        document.getElementById('card-size').textContent = human;
+        document.getElementById('card-eps').textContent = (eps.global?.current_eps ?? 0).toFixed(2);
+        // CH status & storage
+        document.getElementById('card-ch').textContent = `${chv.version || 'unknown'} · ${chv.uptime_seconds || 0}s`;
+        const b = Number(chstore.bytes_on_disk||0);
+        const bh = b > 1e12 ? (b/1e12).toFixed(2)+' TB' : b > 1e9 ? (b/1e9).toFixed(2)+' GB' : b > 1e6 ? (b/1e6).toFixed(2)+' MB' : b.toLocaleString()+' B';
+        document.getElementById('card-ch-storage').textContent = `${chstore.database}.${chstore.table}: ${chstore.rows?.toLocaleString?.()||chstore.rows} rows · ${bh}`;
+        // Parsing status
+        const pr = ps.parsed_ratio ? (ps.parsed_ratio*100).toFixed(1)+'%' : '0%';
+        document.getElementById('card-parsing').textContent = `${ps.parsed_events || 0}/${ps.total_events || 0} (${pr})`;
+        // System status (prefer live status over env)
+        document.getElementById('card-kafka').textContent = kf.configured ? (kf.ok ? `OK (${kf.latency_ms} ms${kf.lag!=null?`, lag ${kf.lag}`:''})` : `Error${kf.error?`: ${kf.error}`:''}`) : 'Not Set';
+        document.getElementById('card-redis').textContent = rd.configured ? (rd.ok ? `OK ${rd.version||''} (${rd.latency_ms} ms)` : `Error${rd.error?`: ${rd.error}`:''}`) : 'Not Set';
+        document.getElementById('card-vector').textContent = vt.configured ? (vt.ok ? `OK (${vt.latency_ms} ms)` : `Error${vt.error?`: ${vt.error}`:''}`) : 'Not Set';
+      } catch {}
+    }
+
     // initial load
+    refreshCards();
     loadPageAndRender(true);
+    setInterval(refreshCards, 5000);
   </script>
 </body>
 </html>

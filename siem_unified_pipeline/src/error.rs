@@ -1,8 +1,9 @@
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
-use axum::Json;
+use axum::body::Body;
 use serde_json::json;
 use thiserror::Error;
+use std::fmt::Write as _;
 
 pub type Result<T> = std::result::Result<T, PipelineError>;
 
@@ -177,7 +178,7 @@ pub enum PipelineError {
 
 impl IntoResponse for PipelineError {
     fn into_response(self) -> Response {
-        let (status, error_message, error_code) = match &self {
+        let (status, mut error_message, mut error_code) = match &self {
             PipelineError::ConfigError(_) => (
                 StatusCode::BAD_REQUEST,
                 self.to_string(),
@@ -224,7 +225,7 @@ impl IntoResponse for PipelineError {
                 "HTTP_ERROR",
             ),
             PipelineError::ValidationError(_) => (
-                StatusCode::BAD_REQUEST,
+                StatusCode::UNPROCESSABLE_ENTITY,
                 self.to_string(),
                 "VALIDATION_ERROR",
             ),
@@ -258,10 +259,10 @@ impl IntoResponse for PipelineError {
                 "Access denied".to_string(),
                 "AUTHORIZATION_ERROR",
             ),
-            PipelineError::RateLimitError(_) => (
+            PipelineError::RateLimitError(msg) => (
                 StatusCode::TOO_MANY_REQUESTS,
-                "Rate limit exceeded".to_string(),
-                "RATE_LIMIT_ERROR",
+                if msg.is_empty() { "Rate limit exceeded".to_string() } else { msg.clone() },
+                "RATE_LIMIT",
             ),
             PipelineError::NotFoundError(_) => (
                 StatusCode::NOT_FOUND,
@@ -305,15 +306,24 @@ impl IntoResponse for PipelineError {
             ),
         };
 
-        let body = Json(json!({
+        let body_str = serde_json::to_string(&json!({
             "error": {
                 "code": error_code,
                 "message": error_message,
                 "timestamp": chrono::Utc::now().to_rfc3339(),
             }
-        }));
-
-        (status, body).into_response()
+        })).unwrap();
+        let mut resp = Response::new(Body::from(body_str));
+        *resp.status_mut() = status;
+        resp.headers_mut().insert(axum::http::header::CONTENT_TYPE, axum::http::HeaderValue::from_static("application/json"));
+        if error_code == "RATE_LIMIT" {
+            // Best-effort parse retry_after=N from message
+            let retry_after = error_message.split("retry_after=").nth(1).and_then(|s| s.split(|c: char| !c.is_ascii_digit()).next()).unwrap_or("1");
+            if let Ok(hv) = axum::http::HeaderValue::from_str(retry_after) {
+                resp.headers_mut().insert(axum::http::header::RETRY_AFTER, hv);
+            }
+        }
+        resp
     }
 }
 
@@ -413,5 +423,59 @@ impl PipelineError {
     
     pub fn encoding<S: Into<String>>(msg: S) -> Self {
         PipelineError::EncodingError(msg.into())
+    }
+}
+
+/// Map ClickHouse HTTP error responses to user-friendly HTTP errors with guardrails
+pub fn map_clickhouse_http_error(
+    http_status: reqwest::StatusCode,
+    ch_body: &str,
+    compiled_sql_snippet: Option<&str>,
+) -> PipelineError {
+    // Try to extract "Code: <num>" from CH body
+    let mut code_num: Option<i32> = None;
+    if let Some(pos) = ch_body.find("Code:") {
+        let tail = &ch_body[pos + 5..];
+        let digits: String = tail
+            .chars()
+            .skip_while(|c| c.is_whitespace())
+            .take_while(|c| c.is_ascii_digit())
+            .collect();
+        if let Ok(n) = digits.parse::<i32>() { code_num = Some(n); }
+    }
+
+    let mut msg = String::new();
+    let _ = write!(&mut msg, "ClickHouse error{}: {}",
+        code_num.map(|n| format!(" (code {})", n)).unwrap_or_default(),
+        ch_body.trim());
+    if let Some(sql) = compiled_sql_snippet {
+        let snippet = if sql.len() > 120 { &sql[..120] } else { sql };
+        let _ = write!(&mut msg, " | sql: {}", snippet);
+    }
+
+    match code_num {
+        // SQL parse / unknown identifier / syntax errors
+        Some(47) | Some(62) => PipelineError::ValidationError(msg),
+        // Table not found
+        Some(60) => {
+            // If HTTP is 404 or 503, map to Service Unavailable (likely transient)
+            if http_status.as_u16() == 404 || http_status.as_u16() == 503 {
+                PipelineError::ServiceUnavailableError(msg)
+            } else {
+                PipelineError::InternalError(msg)
+            }
+        }
+        // Type mismatch / cannot parse / conversion
+        Some(241) | Some(242) => PipelineError::ValidationError(msg),
+        // Default: if CH gave 4xx -> BadRequest; 5xx -> ServiceUnavailable; else Internal
+        _ => {
+            if http_status.is_client_error() {
+                PipelineError::BadRequestError(msg)
+            } else if http_status.is_server_error() {
+                PipelineError::ServiceUnavailableError(msg)
+            } else {
+                PipelineError::InternalError(msg)
+            }
+        }
     }
 }

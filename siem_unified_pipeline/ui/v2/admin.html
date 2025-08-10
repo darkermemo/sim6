@@ -1,0 +1,22 @@
+<!doctype html><meta charset="utf-8" />
+<title>Admin · Config</title>
+<style> body{font:14px system-ui;margin:16px} textarea{width:100%;height:200px;border:1px solid #e5e7eb;border-radius:12px;padding:10px} .btn{padding:6px 10px;border:1px solid #94a3b8;border-radius:8px;background:#f8fafc} </style>
+<h2>Admin · Incident Aggregation</h2>
+<label>Tenant <input id="tenant" value="default"/></label>
+<p>Config (JSON):</p>
+<textarea id="cfg">{ "incident": { "group_window_sec": 1800, "entity_fields": ["user_name","source_ip","destination_ip","host_name"], "auto_owner": "unassigned" } }</textarea>
+<p>
+  <button class="btn" onclick="runOnce()">Run aggregator once</button>
+  <button class="btn" onclick="save()">Save (noop placeholder)</button>
+  <a class="btn" href="incidents.html">Back</a>
+  
+</p>
+<pre id="out"></pre>
+<script>
+async function runOnce(){ const r=await fetch('/dev/admin/run_incident_aggregator',{method:'POST'}); document.getElementById('out').textContent=await r.text(); }
+async function save(){ const body = JSON.parse(document.getElementById('cfg').value||'{}'); const r=await fetch('/api/v2/admin/config',{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify(body)}); document.getElementById('out').textContent=await r.text(); }
+async function loadCfg(){ const r=await fetch('/api/v2/admin/config'); const j=await r.json(); document.getElementById('cfg').value = JSON.stringify(j,null,2); }
+loadCfg();
+</script>
+
+

@@ -1,0 +1,10 @@
+{
+  "title": "Rules & Scheduler",
+  "panels": [
+    {"type":"graph","title":"Rules Run","target":"siem_v2_rules_run_total"},
+    {"type":"graph","title":"Alerts Written","target":"siem_v2_alerts_written_total"},
+    {"type":"graph","title":"Windows Behind","target":"siem_scheduler_windows_behind"},
+    {"type":"graph","title":"Lease Conflicts","target":"siem_scheduler_lease_conflicts_total"}
+  ]
+}
+

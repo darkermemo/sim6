@@ -1,0 +1,63 @@
+<!doctype html><meta charset="utf-8" />
+<title>Investigator · Graph</title>
+<style>
+ body{font:14px system-ui;margin:16px;color:#111}
+ form{display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap}
+ input,select,button,textarea{padding:6px 8px;border:1px solid #d0d7de;border-radius:8px}
+ #graph{border:1px solid #e5e7eb;border-radius:12px;width:100%;height:460px}
+ .node{cursor:pointer}
+ .list{margin-top:12px}
+</style>
+<h2>Investigator · Graph</h2>
+<form onsubmit="run();return false;">
+  <label>Tenant(s) <input id="tenant" value="default"/></label>
+  <label>Last minutes <input id="minutes" type="number" value="15" min="1" max="1440"/></label>
+  <label>Seeds JSON <input id="seeds" size="42" placeholder='[{"type":"user","value":"alice"}]'/></label>
+  <label>Max nodes <input id="max_nodes" type="number" value="100" min="10" max="200"/></label>
+  <label>Max edges <input id="max_edges" type="number" value="300" min="10" max="800"/></label>
+  <button type="submit">Run</button>
+</form>
+<svg id="graph" viewBox="0 0 800 460"></svg>
+<div class="list"><ul id="top"></ul></div>
+<script>
+async function run(){
+  const tenant = document.getElementById('tenant').value.trim();
+  const minutes = Number(document.getElementById('minutes').value||15);
+  const seedsRaw = document.getElementById('seeds').value.trim();
+  const max_nodes = Number(document.getElementById('max_nodes').value||100);
+  const max_edges = Number(document.getElementById('max_edges').value||300);
+  let seed_entities = []; try { seed_entities = seedsRaw? JSON.parse(seedsRaw): []; } catch {}
+  const body = { tenant_ids:[tenant], time:{ last_minutes: minutes }, seed_entities, max_nodes, max_edges };
+  const r = await fetch('/api/v2/investigate/graph',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
+  const j = await r.json();
+  render(j);
+}
+function render(g){
+  const svg = document.getElementById('graph'); while (svg.firstChild) svg.removeChild(svg.firstChild);
+  const {nodes=[], edges=[]} = g || {};
+  const cx = 400, cy = 230; const R = 180; const n=nodes.length||1;
+  nodes.forEach((node, i)=>{
+    const ang = (i/n)*Math.PI*2; const x = cx + R*Math.cos(ang); const y = cy + R*Math.sin(ang);
+    const circle = document.createElementNS('http://www.w3.org/2000/svg','circle');
+    circle.setAttribute('cx',x); circle.setAttribute('cy',y); circle.setAttribute('r', Math.max(4, Math.min(18, Math.sqrt(node.count))));
+    circle.setAttribute('fill', node.type==='user'?'#dbeafe': node.type==='ip'?'#dcfce7':'#fde68a');
+    circle.setAttribute('class','node');
+    circle.addEventListener('click', ()=> pivot(node));
+    svg.appendChild(circle);
+    const label = document.createElementNS('http://www.w3.org/2000/svg','text');
+    label.setAttribute('x', x+8); label.setAttribute('y', y+4); label.textContent = `${node.type}:${node.label}`;
+    label.setAttribute('font-size','10'); svg.appendChild(label);
+  });
+  const list = document.getElementById('top'); list.innerHTML = nodes.slice(0,10).map(n=>`<li>${n.type}:${n.label} (${n.count})</li>`).join('');
+}
+function pivot(node){
+  const [type, value] = [node.type, node.label];
+  let qs = new URLSearchParams({ tenant_id: 'default' }).toString();
+  if (type==='user') qs += `&user_name=${encodeURIComponent(value)}`;
+  if (type==='ip') qs += `&source_ip=${encodeURIComponent(value)}`;
+  if (type==='host') qs += `&host_name=${encodeURIComponent(value)}`;
+  window.open(`/ui/events.html?${qs}`,'_blank');
+}
+</script>
+
+

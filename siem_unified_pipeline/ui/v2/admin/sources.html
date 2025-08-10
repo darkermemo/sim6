@@ -1,0 +1,38 @@
+<!doctype html><meta charset="utf-8"/>
+<title>Log Sources</title>
+<link rel="stylesheet" href="/ui/v2/base.css">
+<header><a href="/ui/v2/admin/index.html">Admin</a> › Log Sources</header>
+<section id="filters">
+  <input id="tenant" placeholder="tenant" value="default"/>
+  <input id="q" placeholder="vendor/product…"/>
+  <button id="reload">Reload</button>
+  <button id="add">Add Source</button>
+  <span id="msg"></span>
+  </section>
+<table id="tbl"><thead>
+<tr><th>Vendor</th><th>Product</th><th>Type</th><th>Endpoint</th><th>Parser</th><th>EPS</th><th>Err%</th><th>Last</th><th></th></tr>
+</thead><tbody></tbody></table>
+<script>
+const B='/api/v2';
+async function load(){
+  const t=encodeURIComponent(document.querySelector('#tenant').value||'default');
+  const r=await fetch(`${B}/sources?tenant_id=${t}`);
+  const j=await r.json(); const tb=document.querySelector('#tbl tbody'); tb.innerHTML='';
+  (j.items||[]).forEach(s=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td>${s.vendor}</td><td>${s.product}</td><td>${s.source_type}</td>
+      <td><code>${s.input_endpoint}</code></td><td>${s.parser_id||'-'}</td>
+      <td>${s.eps||0}</td><td>${(s.error_rate||0).toFixed(2)}</td>
+      <td>${s.last_seen||'-'}</td>
+      <td>
+        <a href="/ui/v2/admin/source_edit.html?id=${s.source_id}">Edit</a> ·
+        <a href="/ui/v2/admin/source_test.html?id=${s.source_id}">Test</a> ·
+        <a href="/ui/v2/admin/vector_preview.html?id=${s.source_id}">Vector</a>
+      </td>`;
+    tb.appendChild(tr);
+  });
+}
+document.querySelector('#reload').onclick=load; load();
+</script>
+
+

@@ -1,0 +1,193 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>Admin • Log Sources</title>
+  <link rel="stylesheet" href="/dev/ui/assets/style.css"/>
+  <style>
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .ribbon { padding: 6px 10px; border-radius: 999px; display:inline-block; background:#eef; }
+    .badge { border-radius: 999px; background:#eee; padding:2px 8px; margin-right:6px; }
+    table { width:100%; border-collapse: collapse; font-size: 12px; }
+    th, td { border:1px solid #e5e7eb; padding:6px; text-align:left; }
+    .missing { color:#999; font-style: italic; }
+    .pill { border-radius: 999px; padding: 2px 8px; font-weight:600; }
+    .pill.ok { background:#e6ffed; color:#03543f; }
+    .pill.warn { background:#fffbea; color:#723b13; }
+    .sidebar { max-height: 320px; overflow: auto; border:1px solid #e5e7eb; padding:8px; }
+    .row { display:flex; gap:8px; align-items:center; }
+    .error { background:#fee2e2; color:#7f1d1d; padding:8px; border-radius:8px; margin:8px 0; position:sticky; top:0 }
+  </style>
+</head>
+<body>
+<!--#include file="../../_nav.html" -->
+<div class="container">
+  <h1>Log Sources</h1>
+  <div id="err" class="error" style="display:none"></div>
+
+  <div class="grid">
+    <div class="card">
+      <h2>Upload</h2>
+      <div class="row">
+        <label for="tenant">Tenant</label>
+        <input id="tenant" value="default" aria-label="Tenant ID"/>
+        <input id="file" type="file" aria-label="Log file"/>
+        <button id="load-file">Load</button>
+      </div>
+      <textarea id="input" rows="10" placeholder="Paste logs here (one per line)" aria-label="Log input" data-testid="sample-input"></textarea>
+      <div class="row">
+        <button id="detect" data-testid="detect-btn">Detect</button>
+        <span id="det-ribbon" class="ribbon" style="display:none"></span>
+      </div>
+      <div id="signals"></div>
+    </div>
+
+    <div class="card">
+      <h2>JSON Path Helper</h2>
+      <div class="small">Click a key to insert an operator into the Query Bar</div>
+      <div class="sidebar" id="json-keys"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Normalize Preview <span id="cov" class="pill warn" data-testid="coverage-pill">cov: …</span></h2>
+    <div class="row">
+      <button id="preview" data-testid="normalize-btn">Preview first 20</button>
+    </div>
+    <div style="overflow:auto">
+      <table aria-label="Normalized preview table" data-testid="preview-table">
+        <thead>
+          <tr id="head"></tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Query Builder</h2>
+    <textarea id="dsl" rows="6" aria-label="Query DSL" data-testid="query"></textarea>
+    <div class="row">
+      <button id="compile">Compile</button>
+      <button id="execute" data-testid="dryrun-btn">Execute (Dry-run)</button>
+      <span id="rcnt" class="badge">rows: …</span>
+    </div>
+    <pre id="sql" style="white-space:pre-wrap"></pre>
+  </div>
+
+  <div class="card">
+    <h2>Load Guidance</h2>
+    <pre id="cli"></pre>
+  </div>
+
+  <div id="toast" class="toast"></div>
+</div>
+
+<script src="/dev/ui/assets/api.js"></script>
+<script>
+// Helper button to insert a common json_meta token
+const helperBtn = document.createElement('button');
+helperBtn.id = 'insert-ua';
+helperBtn.setAttribute('data-testid','json-helper');
+helperBtn.textContent = 'Insert UA helper';
+document.querySelector('.card h2 + .small')?.parentElement?.appendChild(helperBtn);
+helperBtn.onclick = (e)=>{
+  e.preventDefault();
+  const cur = $('#dsl').value.trim();
+  const token = '{"op":"jsoneq","args":["metadata.http.user_agent","Mozilla"]}';
+  $('#dsl').value = cur ? cur+"\n"+token : token;
+}
+const $ = s => document.querySelector(s);
+const err = (m)=>{ const e=$('#err'); e.textContent=m; e.style.display='block'; };
+const clearErr = ()=>{ const e=$('#err'); e.style.display='none'; e.textContent=''; };
+
+function getLines(){
+  const txt = $('#input').value.trim();
+  return txt ? txt.split('\n').filter(Boolean) : [];
+}
+
+$('#load-file').onclick = ()=>{
+  clearErr();
+  const f = $('#file').files[0]; if(!f){ return; }
+  const r = new FileReader();
+  r.onload = ()=>{ $('#input').value = r.result; };
+  r.readAsText(f);
+};
+
+$('#detect').onclick = async ()=>{
+  clearErr();
+  const lines = getLines(); if(lines.length===0){ err('No input lines'); return; }
+  try {
+    // Sample first line
+    const body = { raw: lines[0] };
+    const det = await UI.req('/api/v2/parse/detect', { body });
+    $('#det-ribbon').style.display='inline-block';
+    $('#det-ribbon').textContent = `${det.vendor}/${det.type} (conf ${Math.round(det.confidence*100)}%)`;
+    $('#signals').innerHTML = (det.signals||[]).map(s=>`<span class="badge">${s}</span>`).join(' ');
+    // CLI guidance
+    const t = $('#tenant').value.trim()||'default';
+    $('#cli').textContent = `# generate + load (example)\nsiem gen ${det.vendor}-${det.type} --seed 42 --count 200 --tenant ${t} --out /tmp/${det.vendor}.raw --out-ndjson /tmp/${det.vendor}.uem.ndjson\nsiem load-ch --file /tmp/${det.vendor}.uem.ndjson --table dev.events`;
+  } catch(e){ err(`Detect failed (${e.status||'err'})`); }
+};
+
+$('#preview').onclick = async ()=>{
+  clearErr();
+  const lines = getLines().slice(0,20); if(lines.length===0){ err('No input lines'); return; }
+  const t = $('#tenant').value.trim()||'default';
+  try {
+    const body = { tenant_id: t, records: lines };
+    const res = await UI.req('/api/v2/parse/normalize', { body });
+    const rows = res.records || [];
+    const cov = res.coverage || 0; const pill=$('#cov'); pill.textContent = `cov: ${Math.round(cov*100)/100}`; pill.className = `pill ${cov>=0.95?'ok':'warn'}`;
+    // Build table
+    const cols = ["event_id","event_timestamp","tenant_id","event_category","event_action","event_outcome","source_ip","destination_ip","user_id","user_name","severity","message","source_type","created_at","retention_days"];
+    $('#head').innerHTML = cols.map(c=>`<th>${c}</th>`).join('');
+    $('#rows').innerHTML = rows.map(r=>{
+      return `<tr>`+cols.map(c=>{
+        const v = r[c];
+        const show = (v===null || v===undefined || v==='') ? `<span class=missing>missing</span>` : String(v);
+        return `<td>${show}</td>`;
+      }).join('')+`</tr>`;
+    }).join('');
+
+    // Discover JSON keys for helper
+    const keys = new Set();
+    (rows||[]).slice(0,3).forEach(r=>{
+      try { const md = JSON.parse(r.metadata||'{}');
+        function walk(o, pfx){ Object.entries(o||{}).forEach(([k,v])=>{
+          const p = pfx?`${pfx}.${k}`:k; if(typeof v==='object' && v){ walk(v,p); } else { keys.add(`metadata.${p}`); }
+        }); }
+        walk(md,'');
+      } catch{}
+    });
+    $('#json-keys').innerHTML = Array.from(keys).sort().slice(0,200).map(k=>`<div><a href="#" data-k="${k}">${k}</a></div>`).join('');
+    $('#json-keys').querySelectorAll('a').forEach(a=>{
+      a.onclick = (e)=>{ e.preventDefault(); const k=e.target.getAttribute('data-k');
+        const op = k.startsWith('metadata.') ? `{"op":"jsoneq","args":["${k}",""]}` : `{"op":"jsoneq","args":["raw_event.${k}",""]}`;
+        const cur=$('#dsl').value.trim(); $('#dsl').value = cur? cur+"\n"+op : op; };
+    });
+  } catch(e){ err(`Normalize failed (${e.status||'err'})`); }
+};
+
+$('#compile').onclick = async ()=>{
+  clearErr();
+  try {
+    const dsl = { version:"1", search: { tenant_ids:[($('#tenant').value.trim()||'default')], time_range:{last_seconds:900}, where: JSON.parse($('#dsl').value||'{}') } };
+    const res = await UI.searchCompile(dsl);
+    $('#sql').textContent = res.sql || JSON.stringify(res,null,2);
+  } catch(e){ err(`Compile failed (${e.status||'err'})`); }
+};
+
+$('#execute').onclick = async ()=>{
+  clearErr();
+  try {
+    const dsl = { version:"1", search: { tenant_ids:[($('#tenant').value.trim()||'default')], time_range:{last_seconds:900}, where: JSON.parse($('#dsl').value||'{}') } };
+    const r = await UI.searchEstimate(dsl);
+    $('#rcnt').textContent = `rows: ${r.estimated_rows}`;
+  } catch(e){ err(`Execute failed (${e.status||'err'})`); }
+};
+</script>
+</body>
+</html>
+
+

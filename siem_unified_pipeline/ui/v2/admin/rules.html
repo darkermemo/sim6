@@ -1,0 +1,60 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>Admin • Rules</title>
+  <link rel="stylesheet" href="/dev/ui/assets/style.css"/>
+</head>
+<body>
+<div class="container">
+  <h1>Rules</h1>
+  <div>
+    <label>Lifecycle Filter
+      <select id="life">
+        <option value="">All</option>
+        <option>draft</option>
+        <option selected>active</option>
+        <option>paused</option>
+        <option>deprecated</option>
+      </select>
+    </label>
+  </div>
+  <div id="list"></div>
+  <div>
+    <textarea id="sigma" rows="8" style="width:100%" placeholder="Paste Sigma YAML..."></textarea>
+    <button id="compile">Compile</button>
+    <button id="create">Create</button>
+  </div>
+  <pre id="out" aria-live="polite"></pre>
+</div>
+<script>
+const $=s=>document.querySelector(s);
+const api=(p,i)=>fetch(p,{headers:{'content-type':'application/json'},...i}).then(r=>r.json());
+async function refresh(){
+  const data = await fetch('/api/v2/alert_rules').then(r=>r.json()).catch(()=>({data:[]}));
+  const lf=$('#life').value;
+  const items=(data.data||[]).filter(r=>!lf || (r.lifecycle||'active')===lf);
+  $('#list').innerHTML = items.map(r=>`<div>${r.id} • ${r.name} • ${r.lifecycle||'active'} <button data-id="${r.id}" data-t="draft">Draft</button><button data-id="${r.id}" data-t="active">Active</button><button data-id="${r.id}" data-t="paused">Pause</button><button data-id="${r.id}" data-t="deprecated">Deprecate</button></div>`).join('');
+  $('#list').querySelectorAll('button').forEach(btn=>{
+    btn.onclick=async()=>{
+      const id=btn.getAttribute('data-id'); const t=btn.getAttribute('data-t');
+      await api(`/api/v2/rules/${id}`, { method:'PATCH', body: JSON.stringify({ lifecycle:t })});
+      refresh();
+    };
+  });
+}
+$('#life').onchange=refresh;
+refresh();
+$('#compile').onclick=async()=>{
+  const res = await api('/api/v2/rules/sigma/compile',{method:'POST', body: JSON.stringify({ sigma: $('#sigma').value })});
+  $('#out').textContent = JSON.stringify(res,null,2);
+};
+$('#create').onclick=async()=>{
+  const res = await api('/api/v2/rules/sigma',{method:'POST', body: JSON.stringify({ sigma: $('#sigma').value })});
+  $('#out').textContent = JSON.stringify(res,null,2);
+};
+</script>
+</body>
+</html>
+
+

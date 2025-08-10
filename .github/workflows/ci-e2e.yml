@@ -1,0 +1,64 @@
+name: v2-e2e-ci-gate
+
+on:
+  push:
+    branches: [ main, trunk, release/** ]
+  pull_request:
+    branches: [ main, trunk, release/** ]
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+
+    services:
+      clickhouse:
+        image: clickhouse/clickhouse-server:latest
+        ports:
+          - 8123:8123
+          - 9000:9000
+        options: >-
+          --health-cmd "bash -lc 'curl -fsS http://localhost:8123/ping || exit 1'"
+          --health-interval 3s
+          --health-timeout 3s
+          --health-retries 40
+
+    env:
+      RUST_BACKTRACE: 1
+      RUST_LOG: info
+      CLICKHOUSE_URL: http://127.0.0.1:8123
+      CLICKHOUSE_DATABASE: dev
+      BASE_URL: http://127.0.0.1:9999
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Build server
+        run: cargo build --bin siem-pipeline
+
+      - name: Run CI Gate
+        run: |
+          bash scripts/ci/ci_gate.sh
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v2-e2e-artifacts
+          path: |
+            siem_unified_pipeline/target/test-artifacts/**
+            /tmp/siem_srv.log
+
+

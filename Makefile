@@ -208,6 +208,27 @@ docs:
 final-report:
 	@bash scripts/make_final_report.sh
 
+.PHONY: gen-all parse-validate load-all rules-seed rules-test report bench
+gen-all:
+	@bash scripts/gen-all.sh
+
+parse-validate:
+	@bash scripts/parse-validate.sh
+
+load-all:
+	@bash scripts/load-all.sh
+
+rules-seed:
+	@bash scripts/rules-seed2.sh
+
+rules-test:
+	@bash scripts/rules-run-now.sh
+
+report:
+	@bash scripts/final_report_append.sh
+
+bench: gen-all parse-validate load-all rules-seed rules-test report
+
 .PHONY: show-report-path
 show-report-path:
 	@echo "Report: $(PWD)/final_reportv1.md"

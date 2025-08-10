@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "_version": 1,
+  "_provenance": "ecs",
+  "mapping": {
+    "tenant_id": "labels.tenant_id",
+    "event_timestamp": "@timestamp",
+    "event_category": "event.category",
+    "event_action": "event.action",
+    "event_outcome": "event.outcome",
+    "severity": "event.severity",
+    "source_ip": "source.ip",
+    "destination_ip": "destination.ip",
+    "user_name": "user.name",
+    "host_name": "host.name",
+    "url": "url.full",
+    "http_method": "http.request.method"
+  }
+}
+
+

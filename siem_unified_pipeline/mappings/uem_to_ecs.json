@@ -1,0 +1,18 @@
+{
+  "tenant_id": "labels.tenant_id",
+  "event_timestamp": "@timestamp",
+  "event_category": "event.category",
+  "event_action": "event.action",
+  "event_outcome": "event.outcome",
+  "user_name": "user.name",
+  "user_id": "user.id",
+  "source_ip": "source.ip",
+  "destination_ip": "destination.ip",
+  "source_port": "source.port",
+  "dest_port": "destination.port",
+  "protocol": "network.transport",
+  "host_name": "host.name",
+  "severity": "event.severity",
+  "message": "message"
+}
+

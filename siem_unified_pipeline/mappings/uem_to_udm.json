@@ -1,0 +1,12 @@
+{
+  "tenant_id": "metadata.tenant_id",
+  "event_timestamp": "metadata.event_timestamp",
+  "event_category": "metadata.event_type",
+  "user_name": "principal.user.userid",
+  "source_ip": "src.ip",
+  "destination_ip": "dst.ip",
+  "protocol": "network.protocol",
+  "severity": "metadata.product_severity",
+  "message": "metadata.description"
+}
+

@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SIEM v2 — API Console</title>
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; margin: 16px; }
+    h1 { margin-bottom: 8px; }
+    .muted { color: #666; font-size: 12px; }
+    .nav { margin: 8px 0 16px; }
+    .nav a { margin-right: 12px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+    th, td { padding: 8px; border-bottom: 1px solid #eee; text-align: left; vertical-align: top; }
+    textarea, input { width: 100%; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    button { padding: 6px 10px; }
+    pre { max-height: 300px; overflow: auto; background: #f8f9fa; padding: 8px; border-radius: 6px; }
+    code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  </style>
+</head>
+<body>
+  <h1>API Console</h1>
+  <div class="nav">
+    <a href="/dev/v2-events">Events</a>
+    <a href="/dev/apis" style="font-weight:600">APIs</a>
+  </div>
+  <div class="muted">Click Execute to test endpoints. Responses appear inline.</div>
+
+  <table>
+    <thead>
+      <tr><th>API</th><th>Method</th><th>Request</th><th>Action</th><th>Response</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>/api/v2/health</td>
+        <td>GET</td>
+        <td class="muted">none</td>
+        <td><button onclick="execGet('/api/v2/health', this)">Execute</button></td>
+        <td><pre></pre></td>
+      </tr>
+      <tr>
+        <td>/api/v2/metrics/quick</td>
+        <td>GET</td>
+        <td class="muted">none</td>
+        <td><button onclick="execGet('/api/v2/metrics/quick', this)">Execute</button></td>
+        <td><pre></pre></td>
+      </tr>
+      <tr>
+        <td>/api/v2/metrics/eps</td>
+        <td>GET</td>
+        <td class="muted">none</td>
+        <td><button onclick="execGet('/api/v2/metrics/eps', this)">Execute</button></td>
+        <td><pre></pre></td>
+      </tr>
+      <tr>
+        <td>/api/v2/events/search_compact</td>
+        <td>GET</td>
+        <td>
+          <label>Query: <input value="error OR login" data-k="query" /></label>
+          <label>Limit: <input value="5" data-k="limit" /></label>
+        </td>
+        <td><button onclick="execGet('/api/v2/events/search_compact', this)">Execute</button></td>
+        <td><pre></pre></td>
+      </tr>
+      <tr>
+        <td>/api/v2/events/search</td>
+        <td>GET</td>
+        <td>
+          <label>tenant_id: <input placeholder="tenant_1" data-k="tenant_id" /></label>
+          <label>limit: <input value="3" data-k="limit" /></label>
+        </td>
+        <td><button onclick="execGet('/api/v2/events/search', this)">Execute</button></td>
+        <td><pre></pre></td>
+      </tr>
+      <tr>
+        <td>/api/v2/alerts</td>
+        <td>GET</td>
+        <td>
+          <label>limit: <input value="3" data-k="limit" /></label>
+        </td>
+        <td><button onclick="execGet('/api/v2/alerts', this)">Execute</button></td>
+        <td><pre></pre></td>
+      </tr>
+      <tr>
+        <td>/api/v2/events/insert</td>
+        <td>POST</td>
+        <td>
+          <textarea rows="6">[
+  {
+    "event_id": "ui_api_test_1",
+    "event_timestamp": 1754661977,
+    "tenant_id": "tenant_dev",
+    "event_category": "ui_test",
+    "event_action": "insert",
+    "event_outcome": "success",
+    "source_ip": "10.0.0.1",
+    "destination_ip": "10.0.0.2",
+    "user_id": "ui",
+    "user_name": "ui",
+    "severity": "low",
+    "message": "Inserted from API console",
+    "raw_event": "{}",
+    "metadata": "{}",
+    "created_at": 1754661977,
+    "source_type": "test"
+  }
+]</textarea>
+        </td>
+        <td><button onclick="execPost('/api/v2/events/insert', this)">Execute</button></td>
+        <td><pre></pre></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <script>
+    function collectParams(container) {
+      const params = {};
+      container.querySelectorAll('input[data-k]').forEach(inp => {
+        if (inp.value.trim() !== '') params[inp.getAttribute('data-k')] = inp.value.trim();
+      });
+      return params;
+    }
+    function qs(p){ const u=new URLSearchParams(); Object.entries(p).forEach(([k,v])=>u.set(k,v)); return u.toString(); }
+    async function execGet(path, btn) {
+      const tr = btn.closest('tr');
+      const pre = tr.querySelector('pre');
+      pre.textContent = 'Loading...';
+      const p = collectParams(tr);
+      const url = Object.keys(p).length ? `${path}?${qs(p)}` : path;
+      try {
+        const res = await fetch(url);
+        const txt = await res.text();
+        pre.textContent = txt;
+      } catch(e){ pre.textContent = String(e); }
+    }
+    async function execPost(path, btn) {
+      const tr = btn.closest('tr');
+      const pre = tr.querySelector('pre');
+      const ta = tr.querySelector('textarea');
+      pre.textContent = 'Posting...';
+      try {
+        const res = await fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: ta.value });
+        const txt = await res.text();
+        pre.textContent = txt;
+      } catch(e){ pre.textContent = String(e); }
+    }
+  </script>
+</body>
+</html>
+
+

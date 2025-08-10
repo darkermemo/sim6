@@ -14,7 +14,8 @@ pub use tenant_simulator::*;
 
 /// Main log generator that coordinates templates and tenant simulation
 pub struct LogGenerator {
-    config: GeneratorConfig,
+    #[allow(dead_code)]
+    pub(crate) config: GeneratorConfig,
     tenant_simulator: Arc<TenantSimulator>,
     template_selector: TemplateSelector,
 }
@@ -42,10 +43,10 @@ impl LogGenerator {
             let tenant = self.tenant_simulator.select_tenant(thread_id, i);
             
             // Select template type
-            let template_type = self.template_selector.select_template(&mut rng, &tenant);
+            let template_type = self.template_selector.select_template(&mut rng, tenant);
             
             // Generate log based on template
-            let log = self.generate_single_log(template_type, &tenant, thread_id, i);
+            let log = self.generate_single_log(template_type, tenant, thread_id, i);
             logs.push(log);
         }
         
@@ -96,7 +97,8 @@ impl TemplateSelector {
             "sophos" => SelectionStrategy::Single(TemplateType::Sophos),
             "f5" => SelectionStrategy::Single(TemplateType::F5),
             "trendmicro" => SelectionStrategy::Single(TemplateType::TrendMicro),
-            "mixed" | _ => SelectionStrategy::Mixed,
+            "mixed" => SelectionStrategy::Mixed,
+            _ => SelectionStrategy::Mixed,
         };
         
         Self { strategy }

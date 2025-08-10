@@ -1,10 +1,12 @@
-use axum::{routing::{get, post}, Router};
+use axum::{routing::get, Router, extract::State};
 use std::sync::Arc;
 use tower_http::{cors::CorsLayer, trace::TraceLayer, services::{ServeDir, ServeFile}};
-use crate::v2::{handlers::{health::health_check, events::{search_events, search_events_compact, insert_events}, sse::stream_stub, metrics::get_eps_stats, ingest::ingest_raw, alerts::list_alerts, assets::favicon, alert_rules::list_alert_rules}, state::AppState};
+use crate::v2::{handlers::{health::health_check, events::{search_events, search_events_compact, insert_events}, sse::{stream_stub, tail_stream}, metrics::{get_eps_stats, get_quick_stats, get_ch_status, get_parsing_stats, get_system_config, get_kafka_status, get_redis_status, get_vector_status, get_ch_storage, get_kafka_partitions, get_redis_memory}, ingest::ingest_raw, alerts::{list_alerts, get_alert, patch_alert}, assets::favicon, alert_rules::{list_alert_rules, sigma_compile, sigma_create, rule_dry_run, rule_run_now, create_rule, get_rule, patch_rule, delete_rule}, search::{search_execute, search_estimate, search_facets}, schema::{get_fields, get_enums}, incidents::{list_incidents, get_incident, patch_incident, incident_alerts}}, state::AppState, compiler};
+use crate::v2::metrics as v2metrics;
 
 pub fn build(state: AppState) -> Router {
     let state = Arc::new(state);
+    v2metrics::init();
     Router::new()
         .route("/favicon.ico", get(favicon))
         .route("/health", get(health_check))
@@ -12,19 +14,100 @@ pub fn build(state: AppState) -> Router {
         .route("/api/v2/events/search", get(search_events))
         .route("/api/v2/events/search_compact", get(search_events_compact))
         .route("/api/v2/events/stream/ch", get(stream_stub))
+        .route("/api/v2/events/stream/tail", get(tail_stream))
         .route("/api/v2/events/insert", axum::routing::post(insert_events))
         .route("/api/v2/metrics/eps", get(get_eps_stats))
-        .route("/api/v2/ingest/raw", axum::routing::post(ingest_raw))
+        .route("/api/v2/metrics/quick", get(get_quick_stats))
+        .route("/api/v2/metrics/ch_status", get(get_ch_status))
+        .route("/api/v2/metrics/parsing", get(get_parsing_stats))
+        .route("/api/v2/metrics/kafka", get(get_kafka_status))
+        .route("/api/v2/metrics/redis", get(get_redis_status))
+        .route("/api/v2/metrics/vector", get(get_vector_status))
+        .route("/api/v2/metrics/ch_storage", get(get_ch_storage))
+        .route("/api/v2/metrics/kafka_partitions", get(get_kafka_partitions))
+        .route("/api/v2/metrics/redis_memory", get(get_redis_memory))
+        // Compiler exploratory stubs
+        .route("/api/v2/search/compile", axum::routing::post(|State(st): State<std::sync::Arc<AppState>>, axum::extract::Json(dsl): axum::extract::Json<compiler::SearchDsl>| async move {
+            let res = compiler::compile_search(&dsl, &st.events_table).map_err(|_| axum::http::StatusCode::BAD_REQUEST).unwrap();
+            axum::Json(res)
+        }))
+        .route("/api/v2/search/execute", axum::routing::post(search_execute))
+        .route("/api/v2/search/estimate", axum::routing::post(search_estimate))
+        .route("/api/v2/search/facets", axum::routing::post(search_facets))
+        .route("/api/v2/schema/fields", get(get_fields))
+        .route("/api/v2/schema/enums", get(get_enums))
+        .route("/api/v2/system/config", get(get_system_config))
+        .route("/metrics", get(|| async { v2metrics::metrics_text().await }))
+         .route("/api/v2/admin/config", get(crate::v2::handlers::admin::get_config))
+         .route("/api/v2/admin/config", axum::routing::put(crate::v2::handlers::admin::put_config))
+         // Tenants & limits
+         .route("/api/v2/admin/tenants", get(crate::v2::handlers::admin_tenants::list_tenants))
+         .route("/api/v2/admin/tenants", axum::routing::post(crate::v2::handlers::admin_tenants::create_tenant))
+         .route("/api/v2/admin/tenants/:id", get(crate::v2::handlers::admin_tenants::get_tenant))
+         .route("/api/v2/admin/tenants/:id", axum::routing::patch(crate::v2::handlers::admin_tenants::patch_tenant))
+         .route("/api/v2/admin/tenants/:id/limits", get(crate::v2::handlers::admin_tenants::get_limits))
+         .route("/api/v2/admin/tenants/:id/limits", axum::routing::put(crate::v2::handlers::admin_tenants::put_limits))
+         .route("/api/v2/admin/metrics/eps", get(crate::v2::handlers::admin_tenants::get_eps))
+         .route("/api/v2/ingest/raw", axum::routing::post(ingest_raw))
+         // Parse & Normalize
+         .route("/api/v2/parse/detect", axum::routing::post(crate::v2::handlers::parse::detect))
+         .route("/api/v2/parse/normalize", axum::routing::post(crate::v2::handlers::parse::normalize))
+         // Log Sources & Parsers
+         .route("/api/v2/sources", get(crate::v2::handlers::sources::list_sources))
+         .route("/api/v2/sources", axum::routing::post(crate::v2::handlers::sources::create_source))
+         .route("/api/v2/sources/:id", get(crate::v2::handlers::sources::get_source))
+         .route("/api/v2/sources/:id", axum::routing::patch(crate::v2::handlers::sources::patch_source))
+         .route("/api/v2/sources/:id/test-ingest", axum::routing::post(crate::v2::handlers::sources::test_ingest))
+         .route("/api/v2/sources/:id/deploy", axum::routing::post(crate::v2::handlers::sources::deploy_source))
+         .route("/api/v2/parsers", axum::routing::post(crate::v2::handlers::parsers::create_parser))
+         .route("/api/v2/parsers/:id", get(crate::v2::handlers::parsers::get_parser))
+         .route("/api/v2/parsers/:id/test", axum::routing::post(crate::v2::handlers::parsers::test_parser))
+         .route("/api/v2/parsers/autodetect", axum::routing::post(crate::v2::handlers::parsers::autodetect_parser))
+         .route("/api/v2/parsers/:id/activate", axum::routing::post(crate::v2::handlers::parsers::activate_parser))
+         // CIM
+         .route("/api/v2/cim/validate", axum::routing::post(crate::v2::handlers::cim::cim_validate))
+         .route("/api/v2/cim/coverage", get(crate::v2::handlers::cim::get_coverage))
         .route("/api/v2/alerts", get(list_alerts))
-        .route("/api/v2/alert_rules", get(list_alert_rules))
+        .route("/api/v2/alerts/:id", get(get_alert))
+        .route("/api/v2/alerts/:id", axum::routing::patch(patch_alert))
+        .route("/api/v2/alert_rules", get(|state: axum::extract::State<std::sync::Arc<AppState>>| async move { list_alert_rules(state).await }))
+        .route("/api/v2/rules/sigma/compile", axum::routing::post(sigma_compile))
+        .route("/api/v2/rules/sigma", axum::routing::post(sigma_create))
+        .route("/api/v2/rules", axum::routing::post(create_rule))
+        .route("/api/v2/rules/:id", get(get_rule))
+        .route("/api/v2/rules/:id", axum::routing::patch(patch_rule))
+        .route("/api/v2/rules/:id", axum::routing::delete(delete_rule))
+        .route("/api/v2/rules/:id/dry-run", axum::routing::post(rule_dry_run))
+        .route("/api/v2/rules/:id/run-now", axum::routing::post(rule_run_now))
+         // Incidents APIs
+         .route("/api/v2/incidents", get(|state: axum::extract::State<std::sync::Arc<AppState>>, q: axum::extract::Query<crate::v2::handlers::incidents::ListQuery>| async move { list_incidents(state, q).await }))
+         .route("/api/v2/incidents/:id", get(get_incident))
+         .route("/api/v2/incidents/:id", axum::routing::patch(patch_incident))
+         .route("/api/v2/incidents/:id/alerts", get(incident_alerts))
+         .route("/api/v2/incidents/:id/timeline", get(crate::v2::handlers::incidents::incident_timeline))
+         .route("/api/v2/incidents/:id/alerts/bulk", axum::routing::post(crate::v2::handlers::incidents::incident_alerts_bulk))
+         // Investigator graph
+         .route("/api/v2/investigate/graph", axum::routing::post(crate::v2::handlers::investigate::graph))
+         .route("/dev/admin/run_incident_aggregator", axum::routing::post(crate::v2::handlers::incidents::run_aggregator_once))
         // Convenience aliases for dev pages
+        .route_service("/dev", ServeFile::new("web/v2-events.html"))
+        .route_service("/dev/v2-events", ServeFile::new("web/v2-events.html"))
+        .route_service("/dev/rules", ServeFile::new("web/rules.html"))
+        .route_service("/dev/apis", ServeFile::new("web/apis.html"))
         .route_service("/dev/stream", ServeFile::new("web/stream.html"))
-        .route_service("/dev/events", ServeFile::new("web/events.html"))
-        .route_service("/dev/v2-events", ServeFile::new("siem_unified_pipeline/web/v2-events.html"))
-        .nest_service(
-            "/dev",
-            ServeDir::new("web").append_index_html_on_directories(true),
-        )
+        // Serve from process CWD (siem_unified_pipeline)
+         .route_service("/dev/admin/log-sources.html", ServeFile::new("ui/v2/admin/log-sources.html"))
+         .route_service("/dev/admin/rules.html", ServeFile::new("ui/v2/admin/rules.html"))
+         .route_service("/dev/investigations/index.html", ServeFile::new("ui/v2/investigations/index.html"))
+         // Investigations API
+         .route("/api/v2/investigations/views", get(crate::v2::handlers::investigations::list_views))
+         .route("/api/v2/investigations/views", axum::routing::post(crate::v2::handlers::investigations::create_view))
+         .route("/api/v2/investigations/views/:id", get(crate::v2::handlers::investigations::get_view))
+         .route("/api/v2/investigations/views/:id", axum::routing::delete(crate::v2::handlers::investigations::delete_view))
+         .route("/api/v2/investigations/views/:id/notes", get(crate::v2::handlers::investigations::list_notes))
+         .route("/api/v2/investigations/notes", axum::routing::post(crate::v2::handlers::investigations::create_note))
+        .nest_service("/dev/ui", ServeDir::new("ui"))
+        .nest_service("/ui", ServeDir::new("ui"))
         .layer(TraceLayer::new_for_http())
         .layer(CorsLayer::permissive())
         .with_state(state)

@@ -21,6 +21,13 @@ path = "src/lib.rs"
 name = "siem-pipeline"
 path = "src/main.rs"
 
+[[bin]]
+name = "test_client"
+path = "src/bin/test_client.rs"
+[[bin]]
+name = "v2_smoke"
+path = "src/bin/v2_smoke.rs"
+
 [dependencies]
 # Async runtime
 tokio = { version = "1.35", features = ["full"] }
@@ -147,6 +154,7 @@ env_logger = "0.10"
 [features]
 default = []
 legacy = []
+core = []
 
 # Legacy features (kept for compatibility; gated behind `legacy`)
 alerts = []

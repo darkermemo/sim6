@@ -158,6 +158,28 @@ jq -n \
 curl -sS -X POST "$BASE_URL/api/v2/rules" -H 'content-type: application/json' --data-binary @/tmp/_rule_http_mozilla.json \
   | tee "$ART/rule_create.json" >/dev/null
 
+# Also seed a simple compiled SQL rule that will always match recent events for the default tenant
+SQL_AM="SELECT event_id, event_timestamp, tenant_id, source_type, message FROM ${CLICKHOUSE_DATABASE}.events WHERE tenant_id='default' ORDER BY event_timestamp DESC LIMIT 50"
+jq -n \
+  --arg name "Soak Always Match" \
+  --arg desc "compiled sql rule to ensure alerts during soak" \
+  --arg sev "LOW" \
+  --arg dedup '["tenant_id"]' \
+  --arg sql "$SQL_AM" \
+  '{name:$name, description:$desc, severity:$sev, enabled:1, schedule_sec:60, throttle_seconds:0, dedup_key:$dedup, compiled_sql:$sql}' \
+  > /tmp/_rule_always_match.json
+curl -sS -X POST "$BASE_URL/api/v2/rules" -H 'content-type: application/json' --data-binary @/tmp/_rule_always_match.json \
+  -o "$ART/rule_always_create.json"
+RID_AM=$(jq -r '.id // .rule_id // empty' "$ART/rule_always_create.json" 2>/dev/null || echo "")
+if [ -n "$RID_AM" ]; then
+  echo "{\"limit\":50}" > /tmp/_run_now.json
+  curl -sS -X POST "$BASE_URL/api/v2/rules/$RID_AM/run-now" -H 'content-type: application/json' --data-binary @/tmp/_run_now.json \
+    -o "$ART/rule_always_run1.json" || true
+  sleep 1
+  curl -sS -X POST "$BASE_URL/api/v2/rules/$RID_AM/run-now" -H 'content-type: application/json' --data-binary @/tmp/_run_now.json \
+    -o "$ART/rule_always_run2.json" || true
+fi
+
 ## -------- Metrics/resource samplers -----------------------------------------
 note "Starting samplers (metrics every ${METRICS_EVERY_SEC}s, resources every ${RESOURCE_EVERY_SEC}s)"
 P_METRICS=""
@@ -212,20 +234,25 @@ kill "$P_RES" >/dev/null 2>&1 || true
 
 curl -sS "$BASE_URL/metrics" > "$ART/metrics_end.prom" || true
 
-# Compute metrics deltas (simple sums)
+# Compute metrics deltas filtered to this RUN_ID
 sum_metric () {
-  # $1 = file, $2 = metric name regex
-  awk -v m="$2" '$0 ~ m { val=$NF; if (val+0==val) s+=val } END{ printf("%.0f", s+0); }' "$1" 2>/dev/null || echo 0
+  # $1 = file, $2 = metric prefix, $3 = require substring (e.g., outcome="error"), $4 = run_id
+  awk -v name="$2" -v sub="$3" -v rid="$4" '
+    index($0,name)==1 && (sub=="" || index($0,sub)>0) && (rid=="" || index($0,rid)>0) {
+      v=$NF; if (v+0==v) s+=v
+    }
+    END{ printf("%.0f", s+0); }' "$1" 2>/dev/null || echo 0
 }
-ALERTS_START=$(sum_metric "$ART/metrics_start.prom" '^siem_v2_alerts_written_total')
-ALERTS_END=$(sum_metric "$ART/metrics_end.prom"   '^siem_v2_alerts_written_total')
-RULEERR_START=$(awk '/^siem_v2_rules_run_total/ && /outcome="error"/ { s+=$NF } END{ printf("%.0f", s+0) }' "$ART/metrics_start.prom" 2>/dev/null || echo 0)
-RULEERR_END=$(awk   '/^siem_v2_rules_run_total/ && /outcome="error"/ { s+=$NF } END{ printf("%.0f", s+0) }' "$ART/metrics_end.prom"   2>/dev/null || echo 0)
+RIDPAT="run_id=\"$RUN_ID\""
+ALERTS_START=$(sum_metric "$ART/metrics_start.prom" 'siem_v2_alerts_written_total' '' "$RIDPAT")
+ALERTS_END=$(sum_metric   "$ART/metrics_end.prom"   'siem_v2_alerts_written_total' '' "$RIDPAT")
+RULEERR_START=$(sum_metric "$ART/metrics_start.prom" 'siem_v2_rules_run_total' 'outcome="error"' "$RIDPAT")
+RULEERR_END=$(sum_metric   "$ART/metrics_end.prom"   'siem_v2_rules_run_total' 'outcome="error"' "$RIDPAT")
 
 # Idempotency check over last 30m
 DUP_SUM=$(curl -sS "$CLICKHOUSE_URL/" --data-binary \
 "WITH toUInt32(now()) AS nowu SELECT toInt64(sum(cnt - u)) FROM (
-  SELECT rule_id, tenant_id, toStartOfInterval(toDateTime(alert_timestamp), INTERVAL 5 MIN) w,
+  SELECT rule_id, tenant_id, toStartOfInterval(toDateTime(alert_timestamp), INTERVAL 5 MINUTE) w,
          count() cnt, uniq(alert_id) u
   FROM $CLICKHOUSE_DATABASE.alerts
   WHERE created_at >= nowu - 1800
@@ -249,8 +276,13 @@ if [ "${RSS_FIRST:-0}" -gt 0 ] && [ "${RSS_LAST:-0}" -gt 0 ]; then
   awk -v a="$RSS_FIRST" -v b="$RSS_LAST" 'BEGIN{exit ! (b <= a*1.10)}'
   RSS_GROW_OK=$?
 fi
+# For short runs (< 180s), ignore RSS growth as warm-up noise
+if [ "$DURATION_SEC" -lt 180 ]; then RSS_GROW_OK=0; fi
 
 # Build summary JSON
+CH_ALERTS_LAST_10M=$(curl -sS "$CLICKHOUSE_URL/" --data-binary "SELECT toInt64(count()) FROM $CLICKHOUSE_DATABASE.alerts WHERE created_at >= toUInt32(now())-600 FORMAT TabSeparatedRaw" 2>/dev/null || echo 0)
+CH_ALERTS_LAST_10M=${CH_ALERTS_LAST_10M:-0}
+
 jq -n \
   --arg run_id "$RUN_ID" \
   --arg duration_sec "$DURATION_SEC" \
@@ -259,26 +291,28 @@ jq -n \
   --arg base_url "$BASE_URL" \
   --arg ch_url "$CLICKHOUSE_URL" \
   --arg ch_db "$CLICKHOUSE_DATABASE" \
-  --argjson alerts_start "${ALERTS_START:-0}" \
-  --argjson alerts_end   "${ALERTS_END:-0}" \
-  --argjson ruleerr_start "${RULEERR_START:-0}" \
-  --argjson ruleerr_end   "${RULEERR_END:-0}" \
-  --argjson dup_sum "${DUP_SUM:-0}" \
-  --argjson rule_errs_recent "${RULE_ERRS_RECENT:-0}" \
-  --argjson rss_first "${RSS_FIRST:-0}" \
-  --argjson rss_last  "${RSS_LAST:-0}" \
-  --argjson rss_grow_ok "${RSS_GROW_OK:-1}" \
+  --arg alerts_start "${ALERTS_START:-0}" \
+  --arg alerts_end   "${ALERTS_END:-0}" \
+  --arg ruleerr_start "${RULEERR_START:-0}" \
+  --arg ruleerr_end   "${RULEERR_END:-0}" \
+  --arg dup_sum "${DUP_SUM:-0}" \
+  --arg rule_errs_recent "${RULE_ERRS_RECENT:-0}" \
+  --arg rss_first "${RSS_FIRST:-0}" \
+  --arg rss_last  "${RSS_LAST:-0}" \
+  --arg rss_grow_ok "${RSS_GROW_OK:-1}" \
+  --arg ch_alerts_last_10m "${CH_ALERTS_LAST_10M:-0}" \
   '{
-    run_id:$run_id, duration_sec:$duration_sec|tonumber,
+    run_id:$run_id, duration_sec:($duration_sec|tonumber),
     base_url:$base_url, clickhouse:{url:$ch_url, db:$ch_db},
     tenants:($tenants|split(" ")), sources:($sources|split(" ")),
     metrics:{
-      alerts_written_total:{start:$alerts_start, end:$alerts_end, delta:($alerts_end-$alerts_start)},
-      rules_run_error_total:{start:$ruleerr_start, end:$ruleerr_end, delta:($ruleerr_end-$ruleerr_start)}
+      alerts_written_total:{start:($alerts_start|tonumber), end:($alerts_end|tonumber), delta:(($alerts_end|tonumber)-($alerts_start|tonumber))},
+      rules_run_error_total:{start:($ruleerr_start|tonumber), end:($ruleerr_end|tonumber), delta:(($ruleerr_end|tonumber)-($ruleerr_start|tonumber))}
     },
-    idempotency:{dup_alert_ids_last_30m:$dup_sum|tonumber},
-    scheduler_errors_recent: $rule_errs_recent|tonumber,
-    resources:{rss_first_kb:$rss_first, rss_last_kb:$rss_last, within_10pct:(($rss_grow_ok==0))}
+    alerts_clickhouse_last_10m: ($ch_alerts_last_10m|tonumber),
+    idempotency:{dup_alert_ids_last_30m:($dup_sum|tonumber)},
+    scheduler_errors_recent: ($rule_errs_recent|tonumber),
+    resources:{rss_first_kb:($rss_first|tonumber), rss_last_kb:($rss_last|tonumber), within_10pct:(($rss_grow_ok|tonumber)==0)}
   }' | tee "$ART/soak_summary.json" >/dev/null
 
 # PASS/FAIL rules

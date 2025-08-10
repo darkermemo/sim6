@@ -268,7 +268,7 @@ fi
 # 6. CLICKHOUSE CLIENT (optional)
 # =============================================================================
 print_step "Checking ClickHouse client"
-if ! command -v clickhouse-client >/dev/null 2>&1; then
+if ! command -v clickhouse >/dev/null 2>&1; then
     print_warning "ClickHouse client not installed"
     print_warning "Install manually if needed for database validation:"
     case $OS in

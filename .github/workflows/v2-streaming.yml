@@ -1,0 +1,117 @@
+name: v2-streaming-suite
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  streaming:
+    runs-on: ubuntu-latest
+
+    services:
+      clickhouse:
+        image: clickhouse/clickhouse-server:23
+        ports: ["8123:8123","9000:9000"]
+        options: >-
+          --health-cmd "clickhouse-client --query='SELECT 1'"
+          --health-interval 3s --health-timeout 5s --health-retries 20
+      redpanda:
+        image: redpandadata/redpanda:v24.1.3
+        ports: ["9092:9092"]
+        options: >-
+          --health-cmd "bash -lc 'rpk status || exit 1'"
+          --health-interval 5s --health-timeout 10s --health-retries 30
+
+    env:
+      RUST_LOG: info
+      CLICKHOUSE_URL: http://localhost:8123
+      CLICKHOUSE_DATABASE: dev
+      BASE_URL: http://127.0.0.1:9999
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install deps
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y jq
+          curl -fsSL https://github.com/redpanda-data/redpanda/releases/download/v24.1.3/rpk-linux-amd64.zip -o rpk.zip
+          unzip -q rpk.zip -d /usr/local/bin
+
+      - name: Wait for ClickHouse
+        run: |
+          for i in {1..60}; do clickhouse-client -q "SELECT 1" && break || sleep 1; done
+
+      - name: Build
+        run: cargo build --locked --bins
+
+      - name: Start server
+        run: |
+          nohup bash -c 'RUST_LOG=$RUST_LOG CLICKHOUSE_URL=$CLICKHOUSE_URL CLICKHOUSE_DATABASE=$CLICKHOUSE_DATABASE \
+            cargo run --bin siem-pipeline > /tmp/siem_srv.log 2>&1' &
+          for i in {1..60}; do curl -fsS $BASE_URL/health >/dev/null && break || sleep 1; done
+          curl -fsS $BASE_URL/health
+
+      - name: Apply V102 migration
+        run: |
+          clickhouse-client -n < database_migrations/V102__alert_rules_stream_columns.sql
+
+      - name: Create streaming rule
+        run: |
+          cat >/tmp/stream_rule.json <<'JSON'
+          {
+            "name":"Stream: HIGH login fail",
+            "description":"near-real-time high severity login failures",
+            "severity":"HIGH","enabled":1,"mode":"stream",
+            "throttle_seconds":60, "entity_keys":"[\"tenant_id\",\"user_name\",\"source_ip\"]",
+            "dsl":{"search":{"tenant_ids":["default"],"time_range":{"last_seconds":900},
+              "where":{"op":"and","args":[
+                {"op":"eq","args":["severity","HIGH"]},
+                {"op":"contains","args":["message","fail"]}
+              ]}}}
+          }
+          JSON
+          curl -fsS -X POST $BASE_URL/api/v2/rules -H 'content-type: application/json' --data-binary @/tmp/stream_rule.json \
+            | tee siem_unified_pipeline/target/test-artifacts/stream_rule_create.json
+
+      - name: Seed 5 events to Kafka
+        run: |
+          for i in $(seq 1 5); do
+            jq -nc --arg i "$i" '{
+              event_id:(now|tostring)+"-"+$i, event_timestamp:(now|floor),
+              tenant_id:"default", event_category:"auth", event_action:"login",
+              event_outcome:"failure", source_ip:("10.0.0."+$i), destination_ip:"10.0.0.10",
+              user_name:"alice", severity:"HIGH", message:"login fail",
+              source_type:"app", metadata:{}
+            }' | rpk topic produce siem.events.v1 >/dev/null
+          done
+
+      - name: Run stream_eval 20s
+        run: |
+          nohup bash -c 'RUST_LOG=info CLICKHOUSE_URL=$CLICKHOUSE_URL CLICKHOUSE_DATABASE=$CLICKHOUSE_DATABASE \
+            KAFKA_BROKERS=localhost:9092 KAFKA_IN=siem.events.v1 KAFKA_OUT=siem.alerts.v1 \
+            STREAMING_ENABLED=1 cargo run --bin stream_eval > /tmp/stream_eval.log 2>&1' &
+          sleep 20
+
+      - name: Verify alerts and metrics
+        run: |
+          curl -fsS $BASE_URL/api/v2/alerts?limit=5 | tee siem_unified_pipeline/target/test-artifacts/stream_alerts.json
+          curl -fsS $BASE_URL/metrics | egrep '^siem_v2_(stream_events_total|alerts_written_total)' \
+            | tee siem_unified_pipeline/target/test-artifacts/stream_metrics.txt
+
+      - name: Append Streaming Proof
+        run: |
+          OUT=siem_unified_pipeline/target/test-artifacts/final_reportv1.md
+          TS=$(date -u +%FT%TZ)
+          {
+            echo ""; echo "### Streaming Proof ($TS)"; echo "";
+            echo "**Alerts sample:**"; echo '```json'; cat siem_unified_pipeline/target/test-artifacts/stream_alerts.json; echo '```'; echo "";
+            echo "**Metrics snapshot:**"; echo '```txt'; cat siem_unified_pipeline/target/test-artifacts/stream_metrics.txt; echo '```';
+          } >>"$OUT"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: streaming_artifacts
+          path: siem_unified_pipeline/target/test-artifacts/**
+
+

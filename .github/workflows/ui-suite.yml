@@ -1,0 +1,48 @@
+name: ui-suite
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  ui:
+    runs-on: ubuntu-latest
+    services:
+      clickhouse:
+        image: clickhouse/clickhouse-server:23
+        ports: ["8123:8123","9000:9000"]
+        options: >-
+          --health-cmd "clickhouse-client --query='SELECT 1'"
+          --health-interval 3s --health-timeout 5s --health-retries 20
+    env:
+      RUST_LOG: info
+      CLICKHOUSE_URL: http://localhost:8123
+      CLICKHOUSE_DATABASE: dev
+      BASE_URL: http://127.0.0.1:9999
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build server
+        run: cargo build --bin siem-pipeline
+      - name: Start server
+        run: |
+          nohup bash -c 'RUST_LOG=$RUST_LOG CLICKHOUSE_URL=$CLICKHOUSE_URL CLICKHOUSE_DATABASE=$CLICKHOUSE_DATABASE \
+            cargo run --bin siem-pipeline > /tmp/siem_srv.log 2>&1' &
+          for i in {1..60}; do curl -fsS $BASE_URL/health >/dev/null && break || sleep 1; done
+          curl -fsS $BASE_URL/health
+      - name: Setup Node & Playwright
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: cd tests/ui && npm ci && npm run install:browsers
+      - name: Run UI tests
+        run: cd tests/ui && npx playwright test --reporter=line
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-reports
+          path: |
+            tests/ui/playwright-report
+            tests/ui/test-results
+
+

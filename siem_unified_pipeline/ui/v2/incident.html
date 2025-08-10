@@ -1,0 +1,63 @@
+<!doctype html><meta charset="utf-8" />
+<title>Incident</title>
+<style>
+ body{font:14px system-ui;margin:16px} .row{display:flex;gap:16px} .col{flex:1}
+ .card{border:1px solid #e5e7eb;border-radius:12px;padding:12px;margin-bottom:12px}
+ .pill{padding:2px 8px;border-radius:999px;border:1px solid #cbd5e1;display:inline-block;margin-right:6px}
+ .btn{padding:6px 10px;border:1px solid #94a3b8;border-radius:8px;background:#f8fafc;cursor:pointer}
+ a{text-decoration:none;color:#0366d6}
+</style>
+<div id="hdr" class="card"></div>
+<div class="row">
+  <div class="col">
+    <div class="card"><h3>Timeline</h3>
+      <label>Window
+        <select id="win"><option value="15m">15m</option><option value="1h">1h</option><option value="24h" selected>24h</option></select>
+      </label>
+      <ul id="timeline"></ul>
+    </div>
+    <div class="card"><h3>Alerts</h3><ul id="alerts"></ul></div>
+  </div>
+  <div class="col">
+    <div class="card"><h3>Entities</h3><div id="entities"></div></div>
+    <div class="card"><h3>Actions</h3>
+      <button class="btn" onclick="update({status:'TRIAGED'})">Triaged</button>
+      <button class="btn" onclick="update({status:'IN_PROGRESS'})">In Progress</button>
+      <button class="btn" onclick="update({status:'RESOLVED'})">Resolve</button>
+      <button class="btn" onclick="update({status:'CLOSED'})">Close</button>
+    </div>
+  </div>
+  </div>
+<script>
+const qs=Object.fromEntries(new URLSearchParams(location.search));
+const BASE='/api/v2';
+async function load(){
+  const i=await fetch(`${BASE}/incidents/${qs.id}?tenant_id=${qs.tenant_id}`); const inc=await i.json();
+  const hdr = document.getElementById('hdr');
+  hdr.innerHTML=`
+    <h2 style="margin:0">${inc.title||inc.incident_id}</h2>
+    <div class="pill">Severity: ${inc.severity}</div>
+    <div class="pill">Status: ${inc.status}</div>
+    <div class="pill">Owner: ${inc.owner}</div>`;
+  // Entities
+  try{
+    const ent=JSON.parse(inc.entities||'{}');
+    document.getElementById('entities').innerHTML=Object.entries(ent).map(([k,v])=>`<div><a href="../events.html?tenant_id=${qs.tenant_id}&${encodeURIComponent(k)}=${encodeURIComponent(v)}" target="_blank">${k}: ${v}</a></div>`).join('');
+  }catch{ document.getElementById('entities').textContent=''; }
+  // Timeline
+  const win=document.getElementById('win').value;
+  const tl=await (await fetch(`${BASE}/incidents/${qs.id}/timeline?tenant_id=${qs.tenant_id}&window=${encodeURIComponent(win)}`)).json();
+  document.getElementById('timeline').innerHTML=(tl.events||[]).map(e=>`<li>${new Date(e.alert_timestamp*1000).toLocaleString()} · ${e.severity} · ${e.alert_title||e.alert_id}</li>`).join('');
+  // Alerts
+  const al=await (await fetch(`${BASE}/incidents/${qs.id}/alerts?tenant_id=${qs.tenant_id}`)).json();
+  document.getElementById('alerts').innerHTML=(al.alerts||[]).map(a=>`<li>${a.alert_id} · ${a.severity} · ${a.status}</li>`).join('');
+}
+async function update(patch){
+  await fetch(`${BASE}/incidents/${qs.id}?tenant_id=${qs.tenant_id}`,{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify(patch)});
+  load();
+}
+document.getElementById('win').addEventListener('change', load);
+load(); setInterval(load, 8000);
+</script>
+
+

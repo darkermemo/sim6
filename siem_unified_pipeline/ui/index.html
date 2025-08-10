@@ -1,0 +1,33 @@
+<!doctype html><html><head>
+<meta charset="utf-8"/>
+<title>SIEM UI</title>
+<link rel="stylesheet" href="/dev/ui/assets/style.css"/>
+</head><body>
+<!--#include file="_nav.html" -->
+<div class="container grid">
+  <h1>Welcome</h1>
+  <div class="kpi">
+    <div class="box"><div class="small">Health</div><div id="k-health">…</div></div>
+    <div class="box"><div class="small">Rules</div><div id="k-rules">…</div></div>
+    <div class="box"><div class="small">Alerts (24h)</div><div id="k-alerts">…</div></div>
+  </div>
+  <div class="card">
+    <h2>Quick links</h2>
+    <div class="row">
+      <a class="badge" href="/dev/ui/events.html">Open Events</a>
+      <a class="badge" href="/dev/ui/rules.html">Open Rules</a>
+      <a class="badge" href="/dev/ui/alerts.html">Open Alerts</a>
+      <a class="badge" href="/dev/ui/admin.html">Admin</a>
+    </div>
+  </div>
+  </div>
+<script src="/dev/ui/assets/api.js"></script>
+<script>
+(async ()=>{
+  try { await UI.health(); document.getElementById('k-health').textContent='OK'; } catch(e){ document.getElementById('k-health').innerHTML='<span class="bad">DOWN</span>'; }
+  try { const r=await UI.rulesList('?limit=1'); document.getElementById('k-rules').textContent=(r.total ?? (r.rules?.length||0)); } catch{ document.getElementById('k-rules').textContent='?'; }
+  try { const a=await UI.alertsList('?limit=1'); document.getElementById('k-alerts').textContent=(a.total||0); } catch{ document.getElementById('k-alerts').textContent='?'; }
+})();
+</script>
+</body></html>
+

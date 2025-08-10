@@ -1,0 +1,157 @@
+<!doctype html><html><head>
+<meta charset="utf-8"/><title>Events v2</title>
+<link rel="stylesheet" href="/dev/ui/assets/style.css"/>
+</head><body>
+<!--#include file="_nav.html" -->
+<div class="container grid">
+  <h1>Events</h1>
+  <div class="row">
+    <div class="card" style="flex:2 1 620px;">
+      <h2>Filter Builder</h2>
+      <div class="row">
+        <div>
+          <label>Tenant(s)</label>
+          <input id="tenants" value="default"/>
+        </div>
+        <div>
+          <label>Time (minutes)</label>
+          <input id="last_minutes" type="number" value="15" min="1" max="10080"/>
+        </div>
+        <div>
+          <label>Severity</label>
+          <select id="severity">
+            <option value="">(any)</option>
+            <option>LOW</option><option>MEDIUM</option><option>HIGH</option><option>CRITICAL</option>
+          </select>
+        </div>
+        <div>
+          <label>Contains (message)</label>
+          <input id="contains_msg" placeholder="search string"/>
+        </div>
+      </div>
+      <div class="row">
+        <button id="btn-compile" class="primary">Compile</button>
+        <button id="btn-estimate">Estimate</button>
+        <button id="btn-execute">Execute</button>
+        <button id="btn-facets">Facets</button>
+        <button id="btn-save-rule">Save as Rule</button>
+        <label><input type="checkbox" id="live"> Live tail (SSE)</label>
+      </div>
+      <label>DSL</label>
+      <textarea id="dsl" rows="9"></textarea>
+      <label>SQL Preview / Warnings</label>
+      <pre id="sql"></pre>
+    </div>
+
+    <div class="card" style="flex:1 1 360px;">
+      <h2>Facets</h2>
+      <div class="row small">
+        Defaults: source_type, severity, event_category, user_name, source_ip, destination_ip
+      </div>
+      <div id="facets"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Results</h2>
+    <div class="row small"><span id="timings"></span></div>
+    <table class="table" id="tbl"></table>
+  </div>
+</div>
+
+<script src="/dev/ui/assets/api.js"></script>
+<script>
+const $ = q => document.querySelector(q);
+function buildDSL() {
+  const tenants = $('#tenants').value.split(',').map(s=>s.trim()).filter(Boolean);
+  const where = { op:'and', args:[] };
+  const sev = $('#severity').value;
+  if (sev) where.args.push({op:'eq', args:['severity', sev]});
+  const msg = $('#contains_msg').value.trim();
+  if (msg) where.args.push({op:'contains', args:['message', msg]});
+  if (where.args.length===0) where.args.push({op:'exists', args:['event_id']});
+  return {
+    search: {
+      tenant_ids: tenants.length? tenants : ['default'],
+      time_range: { last_seconds: parseInt($('#last_minutes').value||'15',10)*60 },
+      where
+    },
+    limit: 100,
+    order_by: [{field:'event_timestamp', dir:'desc'}]
+  };
+}
+
+function renderTable(meta, rows) {
+  const tbl = $('#tbl');
+  if (!meta || !rows) { tbl.innerHTML=''; return; }
+  const headers = meta.map(m=>m.name);
+  tbl.innerHTML = `<thead><tr>${headers.map(h=>`<th>${h}</th>`).join('')}</tr></thead>
+                   <tbody>${rows.map(r=>`<tr>${r.map(c=>`<td>${c===null?'':String(c)}</td>`).join('')}</tr>`).join('')}</tbody>`;
+}
+
+function renderFacets(obj, title){
+  const out = document.createElement('div');
+  out.className = 'card';
+  out.innerHTML = `<div class="small">${title}</div>${(obj.topk||[]).map(x=>`<div>${x.value ?? '(null)'} — <b>${x.count}</b></div>`).join('') || '<div class="small">No data</div>'}`;
+  return out;
+}
+
+let evtSrc=null;
+$('#btn-compile').onclick = async ()=>{
+  const dsl = buildDSL();
+  $('#dsl').value = UI.fmtJSON(dsl);
+  try {
+    const r = await UI.searchCompile(dsl);
+    $('#sql').textContent = (r.sql || r.where_sql || '') + (r.warnings?.length? '\n-- WARN:\n'+r.warnings.join('\n'):'');
+    UI.toast('Compiled');
+  } catch(e){ $('#sql').textContent = UI.fmtJSON(e.data||e); UI.toast('Compile failed','err'); }
+};
+$('#btn-estimate').onclick = async ()=>{
+  const dsl = JSON.parse($('#dsl').value || JSON.stringify(buildDSL()));
+  try { const r = await UI.searchEstimate(dsl); $('#sql').textContent = `estimated_rows=${r.estimated_rows}\n${$('#sql').textContent}`; UI.toast('Estimated'); }
+  catch(e){ $('#sql').textContent = UI.fmtJSON(e.data||e); UI.toast('Estimate failed','err'); }
+};
+$('#btn-execute').onclick = async ()=>{
+  const dsl = JSON.parse($('#dsl').value || JSON.stringify(buildDSL()));
+  try {
+    const r = await UI.searchExecute(dsl);
+    renderTable(r.data?.meta, r.data?.data);
+    $('#timings').textContent = `timings_ms=${r.timings_ms ?? '?'}`;
+    UI.toast('Executed');
+  } catch(e){ renderTable(null,null); $('#sql').textContent = UI.fmtJSON(e.data||e); UI.toast('Execute failed','err'); }
+};
+$('#btn-facets').onclick = async ()=>{
+  const dsl = JSON.parse($('#dsl').value || JSON.stringify(buildDSL()));
+  const f = $('#facets'); f.innerHTML='';
+  const fields = ['source_type','severity','event_category','user_name','source_ip','destination_ip'];
+  for (const field of fields) {
+    try { const r = await UI.searchFacets(dsl, field, 8); f.appendChild(renderFacets(r, field)); }
+    catch(e){ const div=document.createElement('div'); div.className='small bad'; div.textContent=`${field}: ${e.status}`; f.appendChild(div); }
+  }
+};
+$('#btn-save-rule').onclick = async ()=>{
+  const dsl = JSON.parse($('#dsl').value || JSON.stringify(buildDSL()));
+  const name = prompt('Rule name?', 'Events v2 Saved Filter');
+  if (!name) return;
+  try {
+    const body = {name, description:'Saved from Events v2', severity:'HIGH', enabled:1, schedule_sec:60, throttle_seconds:0, dedup_key:'["tenant_id"]', dsl};
+    const r = await UI.ruleCreate(body);
+    UI.toast(`Rule created: ${r.id || r.rule_id}`);
+  } catch(e){ UI.toast('Create rule failed','err'); }
+};
+$('#live').onchange = async (ev)=>{
+  if (evtSrc) { evtSrc.close(); evtSrc=null; }
+  if (!ev.target.checked) return;
+  evtSrc = new EventSource('/api/v2/events/stream/tail');
+  evtSrc.addEventListener('message', (e)=>{
+    try { const obj = JSON.parse(e.data); $('#timings').textContent = `live: +${obj.count||1}`; }
+    catch{}
+  });
+  evtSrc.onerror = ()=>{ UI.toast('SSE disconnected','err'); ev.target.checked=false; evtSrc=null; };
+};
+
+// prime DSL
+$('#btn-compile').click();
+</script>
+</body></html>
+

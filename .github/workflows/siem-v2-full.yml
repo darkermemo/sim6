@@ -1,0 +1,75 @@
+name: siem-v2-full
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch: {}
+
+jobs:
+  full:
+    runs-on: ubuntu-latest
+    services:
+      clickhouse:
+        image: clickhouse/clickhouse-server:25.7.1
+        ports: ["8123:8123"]
+        options: >-
+          --health-cmd="clickhouse-client --query 'SELECT 1'"
+          --health-interval=5s --health-timeout=5s --health-retries=20
+    env:
+      CLICKHOUSE_URL: http://localhost:8123
+      CLICKHOUSE_DATABASE: dev
+      BASE_URL: http://127.0.0.1:9999
+      RUSTFLAGS: -C debuginfo=0
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: Build & test (Rust)
+        run: |
+          cargo test --workspace
+          cargo clippy --workspace --all-targets -- -D warnings
+
+      - name: Start API
+        run: |
+          cd siem_unified_pipeline
+          nohup env RUST_LOG=info CLICKHOUSE_URL=$CLICKHOUSE_URL CLICKHOUSE_DATABASE=$CLICKHOUSE_DATABASE \
+            cargo run --bin siem-pipeline > $GITHUB_WORKSPACE/srv.log 2>&1 &
+          cd ..
+          for i in $(seq 1 100); do curl -fsS $BASE_URL/health && break || sleep 0.2; done
+
+      - name: Generate & load data
+        run: |
+          find scripts -name '*.sh' -exec sed -i 's/\r$//' {} \; -exec chmod +x {} \;
+          ./scripts/gen-all.sh
+          ./scripts/load-all.sh
+
+      - name: Parse sanity
+        run: ./scripts/parse-validate.sh || true
+
+      - name: Seed rules & run-now
+        run: |
+          ./scripts/rules-seed2.sh
+          ./scripts/rules-run-now.sh
+
+      - name: UI tests (Playwright)
+        run: |
+          cd ui
+          npm ci
+          npx playwright install --with-deps
+          npx playwright test
+          cd ..
+
+      - name: Final report
+        run: ./scripts/final_report_append.sh
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: siem-v2-artifacts
+          path: |
+            target/test-artifacts/**
+            srv.log
+
+

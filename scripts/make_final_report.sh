@@ -80,15 +80,13 @@ capture_clickhouse_schema() {
     echo ""
     
     # Test ClickHouse connectivity first
-    if ! command -v clickhouse >/dev/null 2>&1; then
-        if ! command -v "clickhouse client" >/dev/null 2>&1; then
-            echo "**Status:** MISSING - ClickHouse client not found"
-            echo ""
-            return
-        fi
-        local CH_CMD="clickhouse client"
-    else
+    # Prefer clickhouse client binary named 'clickhouse'
+    if command -v clickhouse >/dev/null 2>&1; then
         local CH_CMD="clickhouse"
+    else
+        echo "**Status:** MISSING - ClickHouse client not found"
+        echo ""
+        return
     fi
     
     # Try to connect and get schema info
@@ -311,7 +309,7 @@ EOF
 \`\`\`
 EOF
     
-    if cargo fmt --check 2>&1 | head -20 >> "$TEMP_REPORT"; then
+    if (cd siem_tools && cargo fmt --check 2>&1 | head -20) >> "$TEMP_REPORT"; then
         echo "✅ Code formatting is correct" >> "$TEMP_REPORT"
     else
         echo "⚠️ Code formatting issues found" >> "$TEMP_REPORT"
@@ -325,7 +323,7 @@ EOF
 \`\`\`
 EOF
     
-    if cargo clippy --all-targets --all-features -- -D warnings 2>&1 | head -30 >> "$TEMP_REPORT"; then
+    if (cd siem_tools && cargo clippy --all-targets --no-deps -- -D warnings 2>&1 | head -30) >> "$TEMP_REPORT"; then
         echo "✅ No clippy warnings" >> "$TEMP_REPORT"
     else
         echo "⚠️ Clippy warnings found" >> "$TEMP_REPORT"

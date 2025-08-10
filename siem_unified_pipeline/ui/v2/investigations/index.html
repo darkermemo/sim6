@@ -1,0 +1,85 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>Investigations</title>
+  <link rel="stylesheet" href="/dev/ui/assets/style.css"/>
+  <style>
+    .grid { display: grid; grid-template-columns: 1fr 320px; gap: 16px; }
+    .panel { border: 1px solid #ddd; padding: 8px; border-radius: 6px; }
+    .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+    .chip { background: #eef; padding: 2px 6px; border-radius: 12px; cursor: pointer; }
+    .error { color: #b00020; margin: 8px 0; }
+  </style>
+ </head>
+<body>
+<div class="container grid" role="main">
+  <div class="panel">
+    <h2>Timeline</h2>
+    <div id="filters" class="chips" aria-label="Active filters"></div>
+    <div>
+      <label for="q">Query</label>
+      <input id="q" type="text" placeholder="field:value AND text" aria-label="Query"/>
+      <button id="run">Run</button>
+    </div>
+    <table id="tbl" aria-label="Events table"><thead><tr><th>ts</th><th>tenant</th><th>message</th></tr></thead><tbody></tbody></table>
+  </div>
+  <aside class="panel" aria-label="Notes and Saved Views">
+    <h3>Saved Views</h3>
+    <div id="views"></div>
+    <button id="save">Save Current View</button>
+    <h3>Notes</h3>
+    <div id="err" class="error" style="display:none"></div>
+    <textarea id="note" rows="6" style="width:100%" placeholder="Add a note..."></textarea>
+    <button id="add-note">Add Note</button>
+    <div id="notes"></div>
+  </aside>
+</div>
+<script>
+const $=s=>document.querySelector(s);
+const api=(p,i)=>fetch(p,{headers:{'content-type':'application/json'},...i}).then(r=>{if(!r.ok) throw new Error('HTTP '+r.status); return r.json();});
+const tenant='default';
+let currentDsl={ search:{ tenant_ids:[tenant], time_range:{ last_seconds:900 }, where:null, limit:100 } };
+
+function renderRows(rows){ const tb=$('#tbl tbody'); tb.innerHTML = rows.map(r=>`<tr><td>${r.event_timestamp}</td><td>${r.tenant_id}</td><td>${(r.message||'').toString().slice(0,120)}</td></tr>`).join(''); }
+
+async function run(){
+  const dsl=currentDsl;
+  const res = await fetch('/api/v2/search/execute',{method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify(dsl)}).then(r=>r.json());
+  renderRows(res.data||[]);
+}
+
+async function loadViews(){
+  const v = await api(`/api/v2/investigations/views?tenant_id=${tenant}`);
+  const list=(v.data||[]).map(x=>`<div><button data-id="${x.id}">${x.name}</button></div>`).join('');
+  $('#views').innerHTML=list;
+  $('#views').querySelectorAll('button').forEach(btn=>{
+    btn.onclick=async()=>{
+      const d=await api(`/api/v2/investigations/views/${btn.getAttribute('data-id')}`);
+      const row=(d.data||[])[0];
+      try { currentDsl=JSON.parse(row.dsl); } catch {}
+      run();
+    };
+  });
+}
+
+$('#run').onclick=run;
+$('#save').onclick=async()=>{
+  try{
+    await api('/api/v2/investigations/views',{method:'POST', body: JSON.stringify({ tenant_id:tenant, name:'Quick Save', dsl: currentDsl, created_by:'dev' })});
+    loadViews();
+  }catch(e){ const err=$('#err'); err.textContent='Save failed'; err.style.display='block'; }
+};
+$('#add-note').onclick=async()=>{
+  try{
+    await api('/api/v2/investigations/notes',{method:'POST', body: JSON.stringify({ view_id:'adhoc', author:'dev', body: $('#note').value })});
+    $('#note').value='';
+  }catch(e){ const err=$('#err'); err.textContent='Note failed'; err.style.display='block'; }
+};
+
+run().then(loadViews);
+</script>
+</body>
+</html>
+
+

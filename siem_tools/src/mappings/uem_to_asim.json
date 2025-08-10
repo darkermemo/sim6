@@ -1,0 +1,11 @@
+{
+  "user_name": "ActorUsername",
+  "source_ip": "SrcIpAddr",
+  "destination_ip": "DstIpAddr",
+  "event_category": "EventType",
+  "event_action": "EventSubType",
+  "event_outcome": "EventResult",
+  "severity": "EventSeverity"
+}
+
+

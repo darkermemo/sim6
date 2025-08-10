@@ -95,7 +95,7 @@ impl ClickHouseRepo {
         let limit = q.limit.unwrap_or(10_000).min(100_000);
         let offset = q.offset.unwrap_or(0);
         let sql = format!(
-            "SELECT event_id, event_timestamp, tenant_id, source_type, severity, event_category, event_action, user_name, user_id, message FROM {} WHERE {} ORDER BY event_timestamp DESC LIMIT {} OFFSET {}",
+            "SELECT event_id, event_timestamp, tenant_id, source_type, severity, event_category, event_action, user_name, user_id, message, length(raw_event) AS raw_len FROM {} WHERE {} ORDER BY event_timestamp DESC LIMIT {} OFFSET {}",
             state.events_table, where_clause, limit, offset
         );
         tracing::debug!("search compact SQL: {}", sql);
@@ -153,8 +153,9 @@ impl ClickHouseRepo {
         let where_clause = if conditions.is_empty() { String::from("1") } else { conditions.join(" AND ") };
         let limit = q.limit.unwrap_or(100).min(10_000);
         let offset = q.offset.unwrap_or(0);
+        // Match aggregated alerts schema (v2)
         let sql = format!(
-            "SELECT alert_id, tenant_id, rule_id, rule_name, event_id, alert_timestamp, severity, status, created_at FROM dev.alerts WHERE {} ORDER BY alert_timestamp DESC LIMIT {} OFFSET {}",
+            "SELECT alert_id, tenant_id, rule_id, alert_title, alert_description, event_refs, severity, status, alert_timestamp, created_at, updated_at FROM dev.alerts WHERE {} ORDER BY alert_timestamp DESC LIMIT {} OFFSET {}",
             where_clause, limit, offset
         );
         tracing::debug!("alerts SQL: {}", sql);
@@ -165,7 +166,7 @@ impl ClickHouseRepo {
         Ok(rows)
     }
 
-    pub async fn insert_alerts(state: &AppState, alerts: &[AlertRow]) -> Result<u64> {
+    pub async fn insert_alerts(_state: &AppState, alerts: &[AlertRow]) -> Result<u64> {
         if alerts.is_empty() { return Ok(0); }
 
         let client = reqwest::Client::new();
@@ -197,12 +198,14 @@ pub struct AlertRow {
     pub alert_id: String,
     pub tenant_id: String,
     pub rule_id: String,
-    pub rule_name: String,
-    pub event_id: String,
-    pub alert_timestamp: u32,
+    pub alert_title: String,
+    pub alert_description: String,
+    pub event_refs: String,
     pub severity: String,
     pub status: String,
+    pub alert_timestamp: u32,
     pub created_at: u32,
+    pub updated_at: u32,
 }
 
 

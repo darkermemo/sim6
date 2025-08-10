@@ -1,0 +1,8 @@
+name: search-latency-slo
+objective:
+  description: Search p95 latency under 1.5s
+  target: p95 < 1.5
+metric:
+  prom: siem_v2_search_execute_seconds_bucket
+window: 10m
+

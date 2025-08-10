@@ -2,7 +2,7 @@
 //! Provides realistic log formats for Fortinet, Sophos, F5, and Trend Micro
 
 use crate::generator::tenant_simulator::TenantInfo;
-use chrono::{DateTime, Utc};
+use chrono::Utc;
 use rand::Rng;
 use rand::seq::SliceRandom;
 use serde_json::{json, Value};
@@ -14,7 +14,7 @@ pub fn generate_fortinet_log(tenant: &TenantInfo, thread_id: usize, index: usize
     
     // Generate realistic IP addresses
     let src_ip = generate_tenant_ip(tenant, thread_id, index);
-    let dst_ip = generate_random_ip(&mut rng);
+    let _dst_ip = generate_random_ip(&mut rng);
     
     // Random ports
     let src_port = rng.gen_range(1024..65535);
@@ -44,7 +44,7 @@ pub fn generate_fortinet_log(tenant: &TenantInfo, thread_id: usize, index: usize
         "policyid": rng.gen_range(1..1000),
         "policytype": "policy",
         "srcip": src_ip,
-        "dstip": dst_ip,
+        "dstip": _dst_ip,
         "srcport": src_port,
         "dstport": dst_port,
         "srcintf": "port1",
@@ -69,7 +69,7 @@ pub fn generate_sophos_log(tenant: &TenantInfo, thread_id: usize, index: usize) 
     let timestamp = Utc::now();
     
     let src_ip = generate_tenant_ip(tenant, thread_id, index);
-    let dst_ip = generate_random_ip(&mut rng);
+    let _dst_ip = generate_random_ip(&mut rng);
     
     // HTTP methods and status codes
     let method = *["GET", "POST", "PUT", "DELETE", "HEAD", "OPTIONS"].choose(&mut rng).unwrap_or(&"GET");
@@ -106,7 +106,7 @@ pub fn generate_sophos_log(tenant: &TenantInfo, thread_id: usize, index: usize) 
         "severity": *["critical", "high", "medium", "low"].choose(&mut rng).unwrap_or(&"medium"),
         "action": action,
         "src_ip": src_ip,
-        "dst_ip": dst_ip,
+        "dst_ip": _dst_ip,
         "src_port": rng.gen_range(1024..65535),
         "dst_port": 80,
         "protocol": "HTTP",
@@ -132,7 +132,7 @@ pub fn generate_f5_log(tenant: &TenantInfo, thread_id: usize, index: usize) -> V
     let timestamp = Utc::now();
     
     let src_ip = generate_tenant_ip(tenant, thread_id, index);
-    let dst_ip = generate_random_ip(&mut rng);
+    let _dst_ip = generate_random_ip(&mut rng);
     
     let method = *["GET", "POST", "PUT", "DELETE", "PATCH"].choose(&mut rng).unwrap_or(&"GET");
     let violation_type = *[
@@ -161,7 +161,7 @@ pub fn generate_f5_log(tenant: &TenantInfo, thread_id: usize, index: usize) -> V
         "severity": severity,
         "policy_name": format!("policy_tenant_{}", tenant.id),
         "src_ip": src_ip,
-        "dest_ip": dst_ip,
+        "dest_ip": _dst_ip,
         "src_port": rng.gen_range(1024..65535),
         "dest_port": *[80, 443, 8080, 8443].choose(&mut rng).unwrap_or(&80),
         "protocol": "HTTP",
@@ -187,7 +187,7 @@ pub fn generate_trendmicro_log(tenant: &TenantInfo, thread_id: usize, index: usi
     let timestamp = Utc::now();
     
     let src_ip = generate_tenant_ip(tenant, thread_id, index);
-    let dst_ip = generate_random_ip(&mut rng);
+    let _dst_ip = generate_random_ip(&mut rng);
     
     let event_type = *[
         "Virus/Malware",

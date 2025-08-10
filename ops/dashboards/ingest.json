@@ -1,0 +1,9 @@
+{
+  "title": "Ingest Health",
+  "panels": [
+    {"type":"graph","title":"Rate Limited","target":"siem_ingest_rate_limited_total"},
+    {"type":"graph","title":"Records","target":"siem_ingest_records_total"},
+    {"type":"graph","title":"EPS Gauge","target":"siem_ingest_eps"}
+  ]
+}
+

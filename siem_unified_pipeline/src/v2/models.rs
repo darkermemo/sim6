@@ -19,6 +19,8 @@ pub struct SiemEvent {
     pub metadata: String,
     pub created_at: u32,
     pub source_type: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub retention_days: Option<u16>,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -40,6 +42,7 @@ pub struct CompactEvent {
     pub user_name: Option<String>,
     pub user_id: Option<String>,
     pub message: Option<String>,
+    pub raw_len: u64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -1,0 +1,8 @@
+{
+  "title": "Search Latency",
+  "panels": [
+    {"type":"graph","title":"Execute Latency (histogram)","target":"siem_v2_search_execute_seconds"},
+    {"type":"graph","title":"Compile Latency","target":"siem_search_compile_seconds"}
+  ]
+}
+

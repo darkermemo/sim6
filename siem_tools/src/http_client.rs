@@ -5,7 +5,7 @@ use crate::config::GeneratorConfig;
 use anyhow::{Context, Result};
 use flate2::write::GzEncoder;
 use flate2::Compression;
-use log::{debug, warn, error};
+use log::{debug, warn};
 use reqwest::{Client, Response};
 use serde_json::Value;
 use std::io::Write;
@@ -18,6 +18,7 @@ pub struct HttpClient {
     endpoint: String,
     compression: CompressionType,
     max_retries: usize,
+    #[allow(dead_code)]
     timeout: Duration,
 }
 

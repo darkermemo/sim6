@@ -1,0 +1,12 @@
+{
+  "tenant_id": "TenantId",
+  "event_timestamp": "TimeGenerated",
+  "event_category": "EventType",
+  "user_name": "ActorUsername",
+  "source_ip": "SrcIpAddr",
+  "destination_ip": "DstIpAddr",
+  "protocol": "NetworkProtocol",
+  "severity": "LogSeverity",
+  "message": "EventMessage"
+}
+

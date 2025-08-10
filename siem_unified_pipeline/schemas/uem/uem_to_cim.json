@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "_version": 1,
+  "_provenance": "cim",
+  "mapping": {
+    "tenant_id": "tenant_id",
+    "event_timestamp": "event_timestamp",
+    "event_category": "event_category",
+    "event_action": "event_action",
+    "event_outcome": "event_outcome",
+    "severity": "severity",
+    "source_ip": "src_ip",
+    "destination_ip": "dest_ip",
+    "user_name": "user",
+    "host_name": "host"
+  }
+}
+
+

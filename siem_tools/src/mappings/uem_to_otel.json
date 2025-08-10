@@ -1,0 +1,21 @@
+{
+  "user_name": "attributes.user.name",
+  "source_ip": "attributes.client.address",
+  "destination_ip": "attributes.server.address",
+  "event_category": "attributes.event.category",
+  "event_action": "attributes.event.action",
+  "event_outcome": "attributes.event.outcome",
+  "severity": "severity_text"
+}
+
+{
+  "event_timestamp": "time_unix_nano",
+  "tenant_id": "resource.attributes.tenant_id",
+  "event_category": "attributes.event_category",
+  "event_action": "attributes.event_action",
+  "event_outcome": "attributes.event_outcome",
+  "source_ip": "attributes.source.ip",
+  "destination_ip": "attributes.destination.ip",
+  "user_name": "attributes.user.name"
+}
+

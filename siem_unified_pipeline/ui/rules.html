@@ -1,0 +1,38 @@
+<!doctype html><html><head>
+<meta charset="utf-8"/><title>Rules</title>
+<link rel="stylesheet" href="/dev/ui/assets/style.css"/>
+</head><body>
+<!--#include file="_nav.html" -->
+<div class="container grid">
+  <h1>Rules</h1>
+  <div class="row">
+    <input id="q" placeholder="Filter by name or severity=HIGH"/>
+    <button id="btn-load" class="primary">Load</button>
+    <a class="badge" href="/dev/ui/rule_new.html">+ New rule</a>
+  </div>
+  <div class="card">
+    <table class="table" id="tbl"></table>
+  </div>
+</div>
+<script src="/dev/ui/assets/api.js"></script>
+<script>
+const $=q=>document.querySelector(q);
+async function load(){
+  const r = await UI.rulesList('?limit=100');
+  const rules = r.rules || r.data || r || [];
+  const tbl = $('#tbl');
+  tbl.innerHTML = `<thead><tr><th>id</th><th>name</th><th>severity</th><th>enabled</th><th>source</th><th></th></tr></thead>`+
+    `<tbody>${rules.map(x=>`<tr>
+      <td>${x.id || x.rule_id}</td>
+      <td>${x.name || x.rule_name || '(unnamed)'}</td>
+      <td>${x.severity}</td>
+      <td>${(x.enabled===1||x.enabled===true)? 'yes':'no'}</td>
+      <td>${x.source_format || (x.dsl?'DSL':x.compiled_sql?'SQL':'?')}</td>
+      <td><a href="/dev/ui/rule_detail.html?id=${encodeURIComponent(x.id || x.rule_id)}">open</a></td>
+    </tr>`).join('')}</tbody>`;
+}
+$('#btn-load').onclick = ()=>load().catch(e=>UI.toast('Load failed','err'));
+load();
+</script>
+</body></html>
+

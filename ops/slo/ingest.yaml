@@ -1,0 +1,8 @@
+name: ingest-error-rate
+objective:
+  description: Ingest error rate < 0.5%
+  target: rate < 0.005
+metric:
+  prom: siem_ingest_rate_limited_total
+window: 10m
+

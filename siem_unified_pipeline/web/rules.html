@@ -1,6 +1,171 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SIEM v2 - Rules Console</title>
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 16px; }
+    header { display:flex; gap:12px; align-items:center; margin-bottom:16px; }
+    a { color:#0a66c2; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .grid { display:grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .card { border:1px solid #e5e7eb; border-radius:8px; padding:12px; }
+    .row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+    input, textarea, select { width:100%; padding:8px; border:1px solid #d1d5db; border-radius:6px; font-size:14px; }
+    button { padding:8px 10px; border:1px solid #d1d5db; border-radius:6px; background:#f9fafb; cursor:pointer; }
+    button.primary { background:#0a66c2; color:#fff; border-color:#0a66c2; }
+    table { width:100%; border-collapse: collapse; font-size: 14px; }
+    th, td { text-align:left; border-bottom:1px solid #eee; padding:8px; }
+    .muted { color:#6b7280; font-size: 12px; }
+    .bad { color:#b91c1c; }
+    .good { color:#065f46; }
+    pre { background:#f8fafc; padding:8px; border-radius:6px; overflow:auto; }
+  </style>
+  <link rel="icon" href="/favicon.ico" />
+  <script>
+    async function fetchJSON(url, opts={}) {
+      const res = await fetch(url, opts);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return await res.json();
+    }
+
+    async function loadRules() {
+      const el = document.getElementById('rules-body');
+      el.innerHTML = '<tr><td colspan="6" class="muted">Loading…</td></tr>';
+      try {
+        const data = await fetchJSON('/api/v2/alert_rules');
+        const rows = (data.data || []).map(r => {
+          const id = r.id ?? r.rule_id ?? '';
+          const name = r.name ?? r.rule_name ?? id;
+          const sev = r.severity ?? '';
+          const enabled = (r.enabled ?? 0) === 1 ? 'ON' : 'OFF';
+          const compiled = r.compiled_sql ?? r.kql_query ?? '';
+          return `<tr>
+            <td><code>${id}</code><div class="muted">${name}</div></td>
+            <td>${sev}</td>
+            <td>${enabled}</td>
+            <td><button onclick="dryRun('${id}')">Dry-run</button> <button onclick="runNow('${id}')">Run-now</button></td>
+            <td><button onclick="toggleRule('${id}', ${r.enabled===1?0:1})">${r.enabled===1?'Disable':'Enable'}</button></td>
+            <td><button class="bad" onclick="deleteRule('${id}')">Delete</button></td>
+          </tr>`;
+        }).join('');
+        el.innerHTML = rows || '<tr><td colspan="6" class="muted">No rules</td></tr>';
+      } catch (e) {
+        el.innerHTML = `<tr><td colspan="6" class="bad">Failed: ${e.message}</td></tr>`;
+      }
+    }
+
+    async function createRule(ev) {
+      ev.preventDefault();
+      const name = document.getElementById('cr-name').value.trim();
+      const sev = document.getElementById('cr-sev').value;
+      const sql = document.getElementById('cr-sql').value.trim();
+      if (!name || !sql) return alert('Name and SQL are required');
+      await fetchJSON('/api/v2/rules', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ name, tenant_scope:'all', severity: sev, compiled_sql: sql })
+      });
+      document.getElementById('cr-form').reset();
+      await loadRules();
+    }
+
+    async function dryRun(id) {
+      const out = document.getElementById('out');
+      out.textContent = 'Dry-run…';
+      try {
+        const res = await fetchJSON(`/api/v2/rules/${id}/dry-run`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({limit: 10}) });
+        out.textContent = JSON.stringify(res, null, 2);
+      } catch(e) { out.textContent = 'Error: ' + e.message; }
+    }
+    async function runNow(id) {
+      const out = document.getElementById('out');
+      out.textContent = 'Run-now…';
+      try {
+        const res = await fetchJSON(`/api/v2/rules/${id}/run-now`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({limit: 10}) });
+        out.textContent = JSON.stringify(res, null, 2);
+      } catch(e) { out.textContent = 'Error: ' + e.message; }
+    }
+    async function toggleRule(id, enabled) {
+      await fetchJSON(`/api/v2/rules/${id}`, { method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify({enabled}) });
+      await loadRules();
+    }
+    async function deleteRule(id) {
+      if (!confirm('Delete rule?')) return;
+      await fetchJSON(`/api/v2/rules/${id}`, { method:'DELETE' });
+      await loadRules();
+    }
+
+    async function loadAlerts() {
+      const el = document.getElementById('alerts-body');
+      el.innerHTML = '<tr><td colspan="5" class="muted">Loading…</td></tr>';
+      try {
+        const data = await fetchJSON('/api/v2/alerts?limit=20');
+        const rows = (data.alerts || []).map(a => `<tr>
+          <td><code>${a.alert_id}</code></td>
+          <td>${a.rule_id}</td>
+          <td>${a.severity}</td>
+          <td>${a.status}</td>
+          <td>${new Date(a.alert_timestamp*1000).toISOString()}</td>
+        </tr>`).join('');
+        el.innerHTML = rows || '<tr><td colspan="5" class="muted">No alerts</td></tr>';
+      } catch(e) { el.innerHTML = `<tr><td colspan="5" class="bad">Failed: ${e.message}</td></tr>`; }
+    }
+
+    window.addEventListener('load', () => { loadRules(); loadAlerts(); });
+  </script>
+</head>
+<body>
+  <header>
+    <h2 style="margin:0">Rules Console</h2>
+    <a href="/dev/v2-events">Events</a>
+    <a href="/dev/apis">APIs</a>
+  </header>
+
+  <div class="grid">
+    <div class="card">
+      <h3>Create Rule</h3>
+      <form id="cr-form" onsubmit="createRule(event)">
+        <div class="row"><input id="cr-name" placeholder="Rule name" /></div>
+        <div class="row">
+          <select id="cr-sev">
+            <option value="LOW">LOW</option>
+            <option value="MEDIUM" selected>MEDIUM</option>
+            <option value="HIGH">HIGH</option>
+            <option value="CRITICAL">CRITICAL</option>
+          </select>
+        </div>
+        <div class="row"><textarea id="cr-sql" rows="6" placeholder="Compiled SQL (SELECT …)"></textarea></div>
+        <div class="row"><button class="primary" type="submit">Create</button></div>
+      </form>
+    </div>
+    <div class="card">
+      <h3>Output</h3>
+      <pre id="out" class="muted">Ready.</pre>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:16px">
+    <h3>Rules</h3>
+    <table>
+      <thead><tr><th>ID/Name</th><th>Severity</th><th>Enabled</th><th>Actions</th><th>Toggle</th><th>Delete</th></tr></thead>
+      <tbody id="rules-body"></tbody>
+    </table>
+  </div>
+
+  <div class="card" style="margin-top:16px">
+    <h3>Alerts</h3>
+    <table>
+      <thead><tr><th>Alert ID</th><th>Rule</th><th>Severity</th><th>Status</th><th>Timestamp</th></tr></thead>
+      <tbody id="alerts-body"></tbody>
+    </table>
+  </div>
+</body>
+</html>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Enhanced Correlation Rules - SIEM Analytics</title>

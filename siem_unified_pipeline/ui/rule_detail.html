@@ -1,0 +1,33 @@
+<!doctype html><html><head>
+<meta charset="utf-8"/><title>Rule Detail</title>
+<link rel="stylesheet" href="/dev/ui/assets/style.css"/>
+</head><body>
+<!--#include file="_nav.html" -->
+<div class="container grid">
+  <h1>Rule Detail</h1>
+  <div id="meta" class="card">Loading…</div>
+  <div class="row">
+    <button id="btn-dry" class="primary">Dry-run</button>
+    <button id="btn-run">Run-now</button>
+  </div>
+  <pre id="out"></pre>
+</div>
+<script src="/dev/ui/assets/api.js"></script>
+<script>
+const params=new URLSearchParams(location.search);
+const id=params.get('id');
+const $=q=>document.querySelector(q);
+(async ()=>{
+  try {
+    const r=await UI.ruleGet(id);
+    const name = r.name || r.rule_name;
+    const enabled = (r.enabled===1||r.enabled===true)? 'yes':'no';
+    const source = r.source_format || (r.dsl?'DSL':r.compiled_sql?'SQL':'?');
+    $('#meta').innerHTML = `<b>${name}</b> — ${r.severity} — enabled=${enabled}<br>source=${source}<br><div class="small">id=${id}</div>`;
+  } catch(e){ $('#meta').textContent='Load failed'; }
+})();
+$('#btn-dry').onclick = async ()=>{ try{ const r=await UI.ruleDryRun(id, 50); $('#out').textContent=UI.fmtJSON(r);}catch(e){$('#out').textContent=UI.fmtJSON(e.data||e);} };
+$('#btn-run').onclick = async ()=>{ try{ const r=await UI.ruleRunNow(id, 500); $('#out').textContent=UI.fmtJSON(r);}catch(e){$('#out').textContent=UI.fmtJSON(e.data||e);} };
+</script>
+</body></html>
+

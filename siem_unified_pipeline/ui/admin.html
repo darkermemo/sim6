@@ -1,0 +1,32 @@
+<!doctype html><html><head>
+<meta charset="utf-8"/><title>Admin</title>
+<link rel="stylesheet" href="/dev/ui/assets/style.css"/>
+</head><body>
+<!--#include file="_nav.html" -->
+<div class="container grid">
+  <h1>Admin</h1>
+  <div class="card">
+    <h2>Runtime config (client)</h2>
+    <div class="row">
+      <div><label>BASE_URL override</label><input id="base" placeholder="(empty = same origin)"/></div>
+      <div><label>&nbsp;</label><button id="save" class="primary">Save</button></div>
+      <div><label>&nbsp;</label><button id="ping">Ping /health</button></div>
+      <div><label>&nbsp;</label><button id="metrics">Show /metrics</button></div>
+    </div>
+    <pre id="out"></pre>
+  </div>
+  <div class="card">
+    <h2>Guardrails (read-only)</h2>
+    <div class="small">MAX_ROWS=10k · MAX_RANGE=7d · QUERY_TIMEOUT=8s · Regex guard on</div>
+  </div>
+</div>
+<script src="/dev/ui/assets/api.js"></script>
+<script>
+const $=q=>document.querySelector(q);
+$('#base').value = UI.BASE;
+$('#save').onclick = ()=>{ UI.setBase($('#base').value.trim()); UI.toast('Saved'); };
+$('#ping').onclick = async ()=>{ try{ const r=await UI.health(); $('#out').textContent=UI.fmtJSON(r);}catch(e){$('#out').textContent=UI.fmtJSON(e.data||e);} };
+$('#metrics').onclick = async ()=>{ try{ const t=await UI.metrics(); $('#out').textContent=t.split('\n').filter(l=>l.startsWith('siem_v2_')).join('\n') || '(no siem_v2_*)'; }catch(e){ $('#out').textContent=String(e); } };
+</script>
+</body></html>
+

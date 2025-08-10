@@ -74,6 +74,37 @@ graph TD
 - **Validation** - `schema_validator_v2.rs`
 
 ## 🚀 Quick Start
+## Runbook (End-to-End)
+
+```bash
+# Start API
+pkill -f siem-pipeline || true
+cd siem_unified_pipeline && RUST_LOG=info CLICKHOUSE_URL=http://localhost:8123 CLICKHOUSE_DATABASE=dev \
+  cargo run --bin siem-pipeline > /tmp/siem_srv.log 2>&1 & cd ..
+sleep 1 && curl -sS http://127.0.0.1:9999/health | jq .
+
+# Data, rules, UI tests, report
+scripts/gen-all.sh
+scripts/load-all.sh
+scripts/parse-validate.sh || true
+scripts/rules-seed2.sh
+scripts/rules-run-now.sh
+cd ui && npx playwright test && cd ..
+scripts/final_report_append.sh
+
+# Check the stamp
+sed -n '1,160p' target/test-artifacts/final_reportv1.md
+```
+
+### Environment Variables
+
+```bash
+CLICKHOUSE_URL=http://localhost:8123
+CLICKHOUSE_DATABASE=dev
+# Optional: propagated to metrics labels
+RUN_ID=REGTEST
+```
+
 
 ### Prerequisites
 
@@ -102,7 +133,7 @@ graph TD
 3. **Setup database**:
    ```bash
    # Apply schema
-   clickhouse-client < database_setup.sql
+    clickhouse client < database_setup.sql
    ```
 
 4. **Validate schema**:

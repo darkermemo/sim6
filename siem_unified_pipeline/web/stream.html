@@ -1,3 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Live Tail</title>
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; margin: 16px; }
+    .controls { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:12px; }
+    button { padding:6px 10px; }
+    pre { white-space: pre-wrap; background:#0b1021; color:#cde1ff; padding:10px; border-radius:6px; max-height:70vh; overflow:auto; }
+    .muted { color:#666; font-size:12px; }
+  </style>
+  <script>
+    let es = null;
+    function start() {
+      const params = new URLSearchParams();
+      const query = document.getElementById('q').value.trim();
+      if (query) params.set('query', query);
+      const since = document.getElementById('since').value;
+      if (since) params.set('since_seconds', since);
+      const limit = document.getElementById('limit').value;
+      if (limit) params.set('limit', limit);
+      const interval = document.getElementById('interval').value;
+      if (interval) params.set('interval_ms', interval);
+
+      const url = `/api/v2/events/stream/tail?${params.toString()}`;
+      stop();
+      es = new EventSource(url);
+      const out = document.getElementById('out');
+      out.textContent = '';
+      es.addEventListener('events', (ev) => {
+        let data = [];
+        try { data = JSON.parse(ev.data || '[]'); } catch {}
+        for (const row of data) {
+          const ts = row.event_timestamp ? new Date(row.event_timestamp*1000).toISOString() : '';
+          out.textContent += `[${ts}] ${row.tenant_id||''} ${row.source_type||''} ${row.severity||''} ${row.message||''}\n`;
+        }
+        out.scrollTop = out.scrollHeight;
+      });
+      es.addEventListener('heartbeat', () => {});
+      es.onerror = () => {};
+      document.getElementById('status').textContent = 'Live';
+    }
+    function stop() { if (es) { es.close(); es = null; document.getElementById('status').textContent = 'Paused'; } }
+    function backfill() { // do a one-shot fetch for the last N seconds and prepend
+      const params = new URLSearchParams();
+      const query = document.getElementById('q').value.trim();
+      if (query) params.set('query', query);
+      const since = document.getElementById('since').value || '300';
+      params.set('since_seconds', since);
+      params.set('limit', '1000');
+      fetch(`/api/v2/events/search_compact?${params.toString()}`).then(r=>r.json()).then(d => {
+        const out = document.getElementById('out');
+        const evs = (d && d.events) || [];
+        for (const row of evs) {
+          const ts = row.event_timestamp ? new Date(row.event_timestamp*1000).toISOString() : '';
+          out.textContent = `[${ts}] ${row.tenant_id||''} ${row.source_type||''} ${row.severity||''} ${row.message||''}\n` + out.textContent;
+        }
+      }).catch(()=>{});
+    }
+  </script>
+  </head>
+  <body>
+    <h1>Live Tail <span class="muted">· SSE</span></h1>
+    <div class="controls">
+      <label>Query: <input id="q" placeholder="e.g. error OR login" style="min-width:260px"/></label>
+      <label>Since (s): <input id="since" type="number" value="300" min="0"/></label>
+      <label>Limit: <input id="limit" type="number" value="200" min="1" max="10000"/></label>
+      <label>Interval (ms): <input id="interval" type="number" value="1000" min="100" max="10000"/></label>
+      <button onclick="start()">Start</button>
+      <button onclick="stop()">Pause</button>
+      <button onclick="backfill()">Backfill</button>
+      <span class="muted" id="status">Paused</span>
+    </div>
+    <pre id="out">(no data yet)</pre>
+  </body>
+  </html>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>

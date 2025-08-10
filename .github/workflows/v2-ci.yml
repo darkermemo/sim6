@@ -1,0 +1,105 @@
+name: v2-reliability-gate
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    services:
+      clickhouse:
+        image: clickhouse/clickhouse-server:23
+        ports: ["8123:8123","9000:9000"]
+        options: >-
+          --health-cmd "clickhouse-client --query='SELECT 1'"
+          --health-interval 3s --health-timeout 5s --health-retries 20
+
+    env:
+      RUST_LOG: info,siem=debug
+      CLICKHOUSE_URL: http://localhost:8123
+      CLICKHOUSE_DATABASE: dev
+      BASE_URL: http://127.0.0.1:9999
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install deps (Rust + jq + ripgrep)
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y jq ripgrep
+          rustup set profile minimal
+          rustup update stable
+          rustup default stable
+          rustc -V && cargo -V
+
+      - name: Wait for ClickHouse & prepare schemas
+        run: |
+          for i in {1..60}; do
+            if clickhouse-client -q "SELECT 1" >/dev/null 2>&1; then break; fi; sleep 1
+          done
+          ./scripts/ch_bootstrap.sh
+
+      - name: Build
+        run: cargo build --locked
+
+      - name: Start server
+        run: |
+          nohup bash -c 'RUST_LOG=$RUST_LOG CLICKHOUSE_URL=$CLICKHOUSE_URL CLICKHOUSE_DATABASE=$CLICKHOUSE_DATABASE \
+            cargo run --bin siem-pipeline > /tmp/siem_srv.log 2>&1' &
+          for i in {1..60}; do
+            curl -fsS $BASE_URL/health >/dev/null && break || sleep 1
+          done
+          curl -fsS $BASE_URL/health || (echo "health failed"; tail -n +1 /tmp/siem_srv.log; exit 1)
+
+      - name: Run smoke (search + CRUD)
+        run: |
+          BASE_URL=$BASE_URL cargo run --bin v2_smoke || true
+          ls -1 target/test-artifacts || true
+
+      - name: Run scheduler & sigma proofs (gate)
+        run: |
+          bash scripts/v2_proof_scheduler.sh
+          bash scripts/v2_proof_sigma.sh
+
+      - name: Run canaries
+        run: |
+          bash scripts/canary_queries.sh
+
+      - name: Short soak
+        run: |
+          MINUTES=1 bash scripts/soak_scheduler.sh
+
+      - name: Ingest soak (short)
+        run: |
+          EPS=20 DURATION_MIN=1 bash scripts/soak_ingest.sh
+
+      - name: Canary check
+        run: |
+          bash scripts/canary_queries.sh
+          test -f siem_unified_pipeline/target/test-artifacts/canary_fail_count.txt
+          F=$(cat siem_unified_pipeline/target/test-artifacts/canary_fail_count.txt)
+          [ "${F:-0}" -eq 0 ]
+
+      - name: Enforce gate (alerts > 0 + metrics bump)
+        run: |
+          AFILE=siem_unified_pipeline/target/test-artifacts/v2_e2e_alerts.json
+          jq -e '.alerts|length > 0' "$AFILE"
+          M=$(curl -fsS $BASE_URL/metrics | egrep '^siem_v2_(rules_run_total|alerts_written_total)'); echo "$M"
+          [ -n "$M" ] || (echo "no metrics bump"; exit 1)
+
+      - name: Append final report and show tail
+        run: |
+          bash scripts/final_report_append.sh
+          tail -n 200 siem_unified_pipeline/target/test-artifacts/final_reportv1.md || true
+
+      - name: SLO checks
+        run: |
+          bash scripts/slo_check.sh
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: final_report
+          path: siem_unified_pipeline/target/test-artifacts/final_reportv1.md
+
+
