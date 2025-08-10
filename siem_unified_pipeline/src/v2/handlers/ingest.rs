@@ -5,6 +5,7 @@ use chrono::{DateTime, Utc};
 use uuid::Uuid;
 use axum::http::HeaderMap;
 use axum::body::Bytes;
+use axum::{extract::Query};
 
 use crate::v2::{state::AppState, models::SiemEvent, dal::ClickHouseRepo, metrics};
 use clickhouse::Row;
@@ -90,6 +91,7 @@ pub async fn ingest_raw(
     body: Bytes,
 ) -> Result<Json<serde_json::Value>> {
     let payload = parse_payload(headers, &body)?;
+    metrics::inc_ingest_bytes("api", body.len() as u64);
     let mut out: Vec<SiemEvent> = Vec::with_capacity(payload.logs.len());
     for v in payload.logs.into_iter() {
         if let Some(ev) = transform_to_siem_event(v) {
@@ -106,6 +108,7 @@ pub async fn ingest_raw(
         if !allowed {
             let src = out.get(0).and_then(|e| e.source_type.as_deref()).unwrap_or("unknown");
             metrics::inc_ingest_rate_limited(&first_tenant, src);
+            metrics::inc_eps_throttles(&first_tenant);
             // Return 429 JSON payload via standard error mapping
             return Err(crate::error::PipelineError::rate_limit("RATE_LIMIT: retry_after=1"));
         }
@@ -127,6 +130,46 @@ pub async fn ingest_raw(
     Ok(Json(serde_json::json!({ "received": out.len(), "inserted": inserted })))
 }
 
+/// POST /api/v2/ingest/bulk?tenant=TENANT_ID
+/// Accepts NDJSON body (JSONEachRow) and applies EPS token-bucket per tenant.
+pub async fn ingest_bulk(
+    State(st): State<Arc<AppState>>,
+    Query(q): Query<std::collections::HashMap<String, String>>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Result<Json<serde_json::Value>> {
+    let tenant = q.get("tenant").cloned().unwrap_or_else(|| "default".to_string());
+    // naive NDJSON split
+    let text = String::from_utf8_lossy(&body);
+    let mut out: Vec<SiemEvent> = Vec::new();
+    for line in text.lines() {
+        if line.trim().is_empty() { continue; }
+        if let Ok(v) = serde_json::from_str::<Value>(line) {
+            if let Some(mut ev) = transform_to_siem_event(v) {
+                ev.tenant_id = tenant.clone();
+                out.push(ev);
+            }
+        }
+    }
+    let limits = get_limits_cached(&st, &tenant).await;
+    for ev in out.iter_mut() { ev.retention_days = Some(limits.retention_days); }
+    metrics::set_retention_days(&tenant, limits.retention_days);
+    let allowed = token_bucket_allow(&tenant, out.len() as u32, limits).await;
+    if !allowed {
+        let src = out.get(0).and_then(|e| e.source_type.as_deref()).unwrap_or("unknown");
+        metrics::inc_ingest_rate_limited(&tenant, src);
+        metrics::inc_eps_throttles(&tenant);
+        return Err(crate::error::PipelineError::rate_limit("RATE_LIMIT: retry_after=1"));
+    }
+    metrics::inc_ingest_bytes("api", body.len() as u64);
+    let inserted = ClickHouseRepo::insert_events(&st, &out).await?;
+    if let Some(first) = out.first() {
+        let src = first.source_type.as_deref().unwrap_or("unknown");
+        metrics::inc_ingest_records(&tenant, src, inserted);
+        metrics::set_ingest_eps(&tenant, src, inserted as f64);
+    }
+    Ok(Json(serde_json::json!({ "received": out.len(), "inserted": inserted })))
+}
 fn parse_payload(headers: HeaderMap, body: &Bytes) -> Result<RawIngestPayload> {
     let enc = headers
         .get(axum::http::header::CONTENT_ENCODING)

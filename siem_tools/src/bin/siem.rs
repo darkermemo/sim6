@@ -67,6 +67,9 @@ struct LoadArgs {
     file: PathBuf,
     #[arg(long, default_value_t = 50000usize)]
     batch: usize,
+    /// If set, send NDJSON to API bulk endpoint so EPS limits apply (recommended)
+    #[arg(long = "via-api", default_value_t = true)]
+    via_api: bool,
 }
 
 fn ensure_parent(path: &Path) -> Result<()> {
@@ -323,21 +326,40 @@ fn map_ch_error_to_status(body: &str) -> u16 {
 }
 
 fn cmd_load_ch(args: LoadArgs) -> Result<()> {
-    let ch_url = std::env::var("CLICKHOUSE_URL").unwrap_or_else(|_| "http://localhost:8123".to_string());
-    let client = reqwest::blocking::Client::new();
-    preflight_describe(&client, &args.table, &ch_url)?;
+    if args.via_api {
+        // Send entire file via API bulk endpoint
+        let base_url = std::env::var("BASE_URL").unwrap_or_else(|_| "http://127.0.0.1:9999".to_string());
+        let tenant = std::env::var("TENANT").unwrap_or_else(|_| "default".to_string());
+        let url = format!("{}/api/v2/ingest/bulk?tenant={}", base_url.trim_end_matches('/'), tenant);
+        let body = std::fs::read(&args.file).context("read ndjson file")?;
+        let client = reqwest::blocking::Client::new();
+        let resp = client.post(&url)
+            .header("content-type", "application/x-ndjson")
+            .body(body)
+            .send()
+            .context("bulk api post")?;
+        if !resp.status().is_success() {
+            let txt = resp.text().unwrap_or_default();
+            bail!("bulk api failed: {}", txt);
+        }
+        Ok(())
+    } else {
+        let ch_url = std::env::var("CLICKHOUSE_URL").unwrap_or_else(|_| "http://localhost:8123".to_string());
+        let client = reqwest::blocking::Client::new();
+        preflight_describe(&client, &args.table, &ch_url)?;
 
-    let f = File::open(&args.file)?;
-    let r = BufReader::new(f);
-    let mut batch: Vec<String> = Vec::with_capacity(args.batch);
-    for line in r.lines() {
-        let l = line?; if l.trim().is_empty() { continue; }
-        let _v: serde_json::Value = serde_json::from_str(&l).context("invalid NDJSON line")?;
-        batch.push(l);
-        if batch.len() >= args.batch { insert_batch(&client, &ch_url, &args.table, &batch)?; batch.clear(); }
+        let f = File::open(&args.file)?;
+        let r = BufReader::new(f);
+        let mut batch: Vec<String> = Vec::with_capacity(args.batch);
+        for line in r.lines() {
+            let l = line?; if l.trim().is_empty() { continue; }
+            let _v: serde_json::Value = serde_json::from_str(&l).context("invalid NDJSON line")?;
+            batch.push(l);
+            if batch.len() >= args.batch { insert_batch(&client, &ch_url, &args.table, &batch)?; batch.clear(); }
+        }
+        if !batch.is_empty() { insert_batch(&client, &ch_url, &args.table, &batch)?; }
+        Ok(())
     }
-    if !batch.is_empty() { insert_batch(&client, &ch_url, &args.table, &batch)?; }
-    Ok(())
 }
 
 fn insert_batch(client: &reqwest::blocking::Client, base_url: &str, table: &str, rows: &[String]) -> Result<()> {

@@ -130,6 +130,24 @@ static RETENTION_DAYS_GAUGE: Lazy<GaugeVec> = Lazy::new(|| {
     g
 });
 
+static INGEST_BYTES_TOTAL: Lazy<IntCounterVec> = Lazy::new(|| {
+    let c = IntCounterVec::new(
+        Opts::new("siem_ingest_bytes_total", "Total bytes ingested by path (api|ch)"),
+        &["path"],
+    ).unwrap();
+    REGISTRY.register(Box::new(c.clone())).ok();
+    c
+});
+
+static EPS_THROTTLES_TOTAL: Lazy<IntCounterVec> = Lazy::new(|| {
+    let c = IntCounterVec::new(
+        Opts::new("siem_eps_throttles_total", "Total EPS throttle occurrences per tenant"),
+        &["tenant"],
+    ).unwrap();
+    REGISTRY.register(Box::new(c.clone())).ok();
+    c
+});
+
 pub fn init() {
     Lazy::force(&COMPILE_TOTAL);
     Lazy::force(&SEARCH_SECS);
@@ -145,6 +163,8 @@ pub fn init() {
     Lazy::force(&INGEST_RECORDS_TOTAL);
     Lazy::force(&INGEST_EPS_GAUGE);
     Lazy::force(&RETENTION_DAYS_GAUGE);
+    Lazy::force(&INGEST_BYTES_TOTAL);
+    Lazy::force(&EPS_THROTTLES_TOTAL);
 }
 
 pub fn rule_lbl(rule_id: &str) -> String {
@@ -196,6 +216,14 @@ pub fn inc_alerts(rule_id: &str, tenant: &str, n: u64) {
         .with_label_values(&[&rule_lbl(rule_id), tenant])
         .inc_by(n);
     // Note: ALERTS_WRITTEN_TOTAL remains without error_reason/run_id for cardinality stability; RUN_ID can be joined via rules_run_total
+}
+
+pub fn inc_ingest_bytes(path: &str, bytes: u64) {
+    INGEST_BYTES_TOTAL.with_label_values(&[path]).inc_by(bytes);
+}
+
+pub fn inc_eps_throttles(tenant: &str) {
+    EPS_THROTTLES_TOTAL.with_label_values(&[tenant]).inc();
 }
 
 /// Build common labels for rule metrics. Pulls RUN_ID from env if present.

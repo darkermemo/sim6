@@ -48,7 +48,8 @@ pub fn build(state: AppState) -> Router {
          .route("/api/v2/admin/tenants/:id/limits", get(crate::v2::handlers::admin_tenants::get_limits))
          .route("/api/v2/admin/tenants/:id/limits", axum::routing::put(crate::v2::handlers::admin_tenants::put_limits))
          .route("/api/v2/admin/metrics/eps", get(crate::v2::handlers::admin_tenants::get_eps))
-         .route("/api/v2/ingest/raw", axum::routing::post(ingest_raw))
+          .route("/api/v2/ingest/raw", axum::routing::post(ingest_raw))
+          .route("/api/v2/ingest/bulk", axum::routing::post(crate::v2::handlers::ingest::ingest_bulk))
          // Parse & Normalize
          .route("/api/v2/parse/detect", axum::routing::post(crate::v2::handlers::parse::detect))
          .route("/api/v2/parse/normalize", axum::routing::post(crate::v2::handlers::parse::normalize))
