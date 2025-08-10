@@ -3,6 +3,7 @@ use serde::Deserialize;
 use std::sync::Arc;
 
 use crate::error::Result;
+use chrono::Utc;
 use crate::v2::{state::AppState, dal::ClickHouseRepo};
 
 #[derive(Debug, Deserialize)]
@@ -24,6 +25,24 @@ pub async fn list_alerts(
         "total": rows.len(),
         "alerts": rows,
     })))
+}
+
+#[derive(serde::Deserialize)]
+pub struct NoteReq { pub tenant_id:String, pub body:String }
+
+/// POST /api/v2/alerts/{id}/notes
+pub async fn add_note(
+    State(st): State<Arc<AppState>>,
+    Path(id): Path<String>,
+    Json(n): Json<NoteReq>
+) -> Result<Json<serde_json::Value>> {
+    if n.body.trim().is_empty() { return Err(crate::error::PipelineError::validation("empty note")); }
+    let note_id = uuid::Uuid::new_v4().to_string();
+    let now = Utc::now().timestamp() as u32;
+    st.ch.query("INSERT INTO dev.alert_notes (tenant_id,alert_id,note_id,body,created_at) VALUES (?,?,?,?,?)")
+        .bind(&n.tenant_id).bind(&id).bind(&note_id).bind(&n.body).bind(now)
+        .execute().await.map_err(|e| crate::error::PipelineError::database(format!("add note: {e}")))?;
+    Ok(Json(serde_json::json!({"ok": true, "note_id": note_id })))
 }
 
 #[derive(Deserialize)]

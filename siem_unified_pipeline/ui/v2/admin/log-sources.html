@@ -1,6 +1,145 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>Log Sources</title>
+  <link rel="stylesheet" href="/ui/v2/admin/_shared.css"/>
+  <style>.modal{position:fixed;inset:0;background:rgba(0,0,0,.4);display:none;align-items:center;justify-content:center}.card{background:#fff;padding:16px;border-radius:6px;min-width:420px}.toast{position:fixed;right:12px;bottom:12px;background:#222;color:#fff;padding:8px 12px;border-radius:4px;display:none}</style>
+</head>
+<body>
+  <div class="container" role="main">
+    <h2>Log Sources</h2>
+    <div>
+      <label>Tenant <input id="tenant" value="default"/></label>
+      <label><input type="checkbox" id="inc"/> include config</label>
+      <button id="refresh">Refresh</button>
+      <button id="new">New Source</button>
+    </div>
+    <table id="tbl"><thead><tr><th>id</th><th>name</th><th>kind</th><th>enabled</th><th>updated_at</th><th>actions</th></tr></thead><tbody></tbody></table>
+  </div>
+  <div id="modal" class="modal" aria-hidden="true"><div class="card">
+    <h3 id="m_title">Create Source</h3>
+    <label>Name <input id="m_name"/></label>
+    <label>Kind <input id="m_kind" value="vector"/></label>
+    <label>Config <textarea id="m_config" rows="6">{"endpoint":"http://127.0.0.1:9999/api/v2/ingest/bulk"}</textarea></label>
+    <div id="m_cfg_err" style="color:#b91c1c;display:none">Invalid JSON</div>
+    <label><input type="checkbox" id="m_enabled" checked/> Enabled</label>
+    <div style="margin-top:8px" class="row">
+      <button id="m_save">Save</button>
+      <button id="m_close">Close</button>
+      <button id="m_copy">Copy Vector Config</button>
+      <button id="m_test">Test Ingest</button>
+    </div>
+    <pre id="m_vec" style="margin-top:8px"></pre>
+  </div></div>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script>
+  (function(){
+  const $= window.$ || (s=>document.querySelector(s)); const toast= window.toast || (m=>{const t=$('#toast'); if(!t) return; t.textContent=m;t.style.display='block';setTimeout(()=>t.style.display='none',1500)});
+  async function api(p,o){ const r=await fetch(p,{headers:{'content-type':'application/json'},...o}); if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); }
+  function vectorConfig(endpoint){ return `[sources.in]\n`+
+  `type = "http_server"\n`+
+  `address = "0.0.0.0:9000"\n\n`+
+  `[sinks.out]\n`+
+  `type = "http"\n`+
+  `inputs = ["in"]\n`+
+  `uri = "${endpoint}"\n`+
+  `encoding.codec = "json"\n`; }
+  async function load(){ const t=$('#tenant').value.trim(); const qs=new URLSearchParams({tenant_id:t}); if($('#inc').checked) qs.set('include_config','1'); const j=await api('/api/v2/admin/log-sources?'+qs.toString()); const tb=$('#tbl tbody'); tb.innerHTML=(j.items||[]).map(x=>`<tr><td>${x.source_id}</td><td>${x.name}</td><td>${x.kind}</td><td>${x.enabled? 'yes':'no'}</td><td>${x.updated_at}</td><td><button data-act="edit" data-id="${x.source_id}">Edit</button> <button data-act="del" data-id="${x.source_id}">Delete</button></td></tr>`).join(''); tb.querySelectorAll('button').forEach(b=> b.onclick=onRow); }
+  function parseConfigOrErr(){ try{ const v=JSON.parse($('#m_config').value||'{}'); $('#m_cfg_err').style.display='none'; return v; }catch{ $('#m_cfg_err').style.display='block'; throw new Error('Invalid JSON'); } }
+  $('#m_config').addEventListener('input', ()=>{ try{ JSON.parse($('#m_config').value||'{}'); $('#m_cfg_err').style.display='none'; }catch{ $('#m_cfg_err').style.display='block'; } });
+  async function onRow(e){ const id=e.currentTarget.getAttribute('data-id'); const act=e.currentTarget.getAttribute('data-act'); const t=$('#tenant').value.trim(); if(act==='del'){ await api(`/api/v2/admin/log-sources/${id}?tenant_id=${encodeURIComponent(t)}`,{method:'DELETE'}); toast('Deleted'); await load(); return; } const j=await api(`/api/v2/admin/log-sources/${id}?tenant_id=${encodeURIComponent(t)}&include_config=1`); $('#m_title').textContent='Edit Source'; $('#m_name').value=j.name; $('#m_kind').value=j.kind; $('#m_config').value=j.config; $('#m_enabled').checked=!!j.enabled; try{ const ep = JSON.parse(j.config||'{}').endpoint||''; $('#m_vec').textContent=vectorConfig(ep);}catch(_){} $('#modal').style.display='flex'; $('#m_save').onclick=async()=>{ try{ const cfg=parseConfigOrErr(); await api('/api/v2/admin/log-sources/'+id,{method:'PUT', body: JSON.stringify({ tenant_id:t, name:$('#m_name').value.trim(), kind:$('#m_kind').value.trim(), config: cfg, enabled: $('#m_enabled').checked?1:0 })}); toast('Updated'); $('#modal').style.display='none'; await load(); }catch(err){ toast(String(err)); } } }
+  $('#new').onclick=()=>{ $('#m_title').textContent='Create Source'; $('#m_name').value=''; $('#m_kind').value='vector'; $('#m_config').value='{"endpoint":"http://127.0.0.1:9999/api/v2/ingest/bulk"}'; $('#m_enabled').checked=true; $('#m_vec').textContent=''; $('#m_cfg_err').style.display='none'; $('#modal').style.display='flex'; $('#m_save').onclick=async()=>{ try{ const t=$('#tenant').value.trim(); const cfg=parseConfigOrErr(); const j=await api('/api/v2/admin/log-sources',{method:'POST', body: JSON.stringify({ tenant_id:t, name:$('#m_name').value.trim(), kind:$('#m_kind').value.trim(), config: cfg, enabled: $('#m_enabled').checked?1:0 })}); toast('Created'); try{ $('#m_vec').textContent=vectorConfig(cfg.endpoint||''); }catch(_){} await load(); }catch(err){ toast(String(err)); } } };
+  // Copy Vector config
+  $('#m_copy').onclick = async ()=>{ try{ await navigator.clipboard.writeText($('#m_vec').textContent||''); toast('Copied'); }catch(e){ toast('Copy failed'); } };
+  // Test Ingest against API directly
+  $('#m_test').onclick = async ()=>{ try{ const t=$('#tenant').value.trim()||'default'; const now=Math.floor(Date.now()/1000); const ev = {event_id:'ls-test-'+now,event_timestamp:now,tenant_id:t,event_category:'app',message:'ui test',raw_event:'{}',metadata:'{}',source_type:'ui',created_at:now,retention_days:30}; const line=JSON.stringify(ev); const r = await fetch(`/api/v2/ingest/bulk?tenant=${encodeURIComponent(t)}`, { method:'POST', headers:{'content-type':'application/x-ndjson'}, body: line }); toast(r.ok? 'Ingest OK' : ('Ingest '+r.status)); }catch(e){ toast(e.message); } };
+  $('#m_close').onclick=()=>$('#modal').style.display='none'; $('#inc').onchange=load; $('#refresh').onclick=load; load().catch(err=>toast(String(err)));
+  })();
+  </script>
+</body>
+</html>
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Log Sources</title>
+  <link rel="stylesheet" href="/ui/assets/style.css"/>
+</head>
+<body>
+  <header>
+    <div class="title">SIEM Admin</div>
+    <nav aria-label="Admin">
+      <a href="/ui/v2/admin/index.html">Home</a>
+      <a href="/ui/v2/admin/tenants.html">Tenants</a>
+      <a href="/ui/v2/admin/log-sources.html">Log Sources</a>
+      <a href="/ui/v2/admin/parsers.html">Parsers</a>
+      <a href="/ui/v2/admin/streaming.html">Streaming</a>
+      <a href="/ui/v2/admin/rules.html">Rules</a>
+      <a href="/ui/v2/admin/storage.html">Storage</a>
+      <a href="/ui/v2/admin/api-keys.html">API Keys</a>
+    </nav>
+  </header>
+  <main>
+    <h1>Log Sources</h1>
+    <div>
+      <label>Tenant <input id="tenant" value="default"></label>
+      <label>Name <input id="name"></label>
+      <label>Type <input id="type" placeholder="syslog/json"></label>
+      <button data-testid="btn-create-source" id="create">Create</button>
+      <button data-testid="btn-gen-vector" id="genvec">Generate Vector Config</button>
+    </div>
+    <pre id="cfg" data-testid="json-preview"></pre>
+    <table data-testid="table-log-sources" id="tbl">
+      <thead><tr><th>tenant</th><th>name</th><th>type</th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <button data-testid="btn-ingest-sample" id="ingest">Ingest Sample</button>
+    <div id="toast" data-testid="toast"></div>
+  </main>
+  <script>
+  function toast(m){ const t=document.getElementById('toast'); t.textContent=m; setTimeout(()=>t.textContent='',3000); }
+  async function list(){
+    // Placeholder: if no backend table, show what we have in-memory
+    const tb = document.querySelector('#tbl tbody');
+    tb.innerHTML = '';
+    const tenant = document.getElementById('tenant').value || 'default';
+    const items = JSON.parse(localStorage.getItem('log_sources_'+tenant) || '[]');
+    items.forEach(s=>{ const tr=document.createElement('tr'); tr.innerHTML=`<td>${s.tenant}</td><td>${s.name}</td><td>${s.type}</td>`; tb.appendChild(tr); });
+  }
+  document.getElementById('create').onclick = ()=>{
+    const tenant = document.getElementById('tenant').value||'default';
+    const name = document.getElementById('name').value||'';
+    const type = document.getElementById('type').value||'';
+    const key = 'log_sources_'+tenant;
+    const arr = JSON.parse(localStorage.getItem(key)||'[]');
+    arr.push({tenant,name,type,ts:Date.now()});
+    localStorage.setItem(key, JSON.stringify(arr));
+    list(); toast('Created');
+  };
+  document.getElementById('genvec').onclick = ()=>{
+    const tenant = document.getElementById('tenant').value||'default';
+    const name = document.getElementById('name').value||'source';
+    const cfg = `sources.${tenant}_${name} { type = "file" path = "/var/log/app.log" }`;
+    document.getElementById('cfg').textContent = cfg;
+  };
+  document.getElementById('ingest').onclick = async ()=>{
+    const tenant = document.getElementById('tenant').value||'default';
+    const now = Math.floor(Date.now()/1000);
+    const rows = [1,2].map(i=>JSON.stringify({event_id:`ui-src-${i}-${now}`,event_timestamp:now,tenant_id:tenant,event_category:'app',event_action:'log',event_outcome:'success',message:'sample from ui',raw_event:'{}',metadata:'{}',source_type:'ui',created_at:now,retention_days:30})).join('\n');
+    const r = await fetch(`/api/v2/ingest/bulk?tenant=${tenant}`, {method:'POST', headers:{'content-type':'application/x-ndjson'}, body: rows});
+    toast(r.ok? 'Ingest OK' : `Ingest status ${r.status}`);
+  };
+  list();
+  </script>
+</body>
+</html>
+
 <!doctype html><html lang="en"><head>
 <meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
-<link rel="stylesheet" href="./_shared.css"/>
+<link rel="stylesheet" href="/ui/v2/admin/_shared.css"/>
 <title>Log Sources · Admin</title>
 </head><body>
 <header>
@@ -54,7 +193,7 @@ siem load-ch --file /tmp/sample.ndjson --table dev.events</pre>
   </section>
 </main>
 <div id="toast" class="toast"></div>
-<script src="./_shared.js"></script>
+<script src="/ui/v2/admin/_shared.js"></script>
 <script>
 setCurrentNav('log-sources.html');
 const tEl = document.querySelector('#tenant');
@@ -76,7 +215,10 @@ document.querySelector('#btn-normalize').onclick = async () => {
     const r = await api('/api/v2/parse/normalize', { method:'POST', body: JSON.stringify(body) });
     document.querySelector('#cov').textContent = (r.coverage!=null? r.coverage : '—');
     document.querySelector('#sig').textContent = (r.signals?.join(', ') || '—');
-    document.querySelector('#norm').textContent = JSON.stringify(r.records?.slice(0,10)||[], null, 2);
+    const pretty = (r.records||[]).slice(0,10).map(rec=>{
+      const out={}; Object.entries(rec||{}).forEach(([k,v])=>{ out[k]=window.formatMaybeTs(k,v); }); return out;
+    });
+    document.querySelector('#norm').textContent = JSON.stringify(pretty, null, 2);
   } catch(e){ toast(e.message,'error'); }
 };
 document.querySelector('#btn-compile').onclick = async () => {

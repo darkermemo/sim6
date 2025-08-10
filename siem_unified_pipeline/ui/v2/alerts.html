@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Alerts</title>
+  <link rel="stylesheet" href="/ui/v2/assets/app.css"/>
+  <script src="/ui/v2/assets/app.js"></script>
+</head>
+<body>
+  <main class="content">
+    <h1>Alerts</h1>
+    <div>
+      <label>Tenant <input id="tenant" value="default"/></label>
+      <button data-testid="btn-load-alerts" id="load">Load</button>
+    </div>
+    <table data-testid="table-alerts" id="tbl"><thead><tr><th>alert_id</th><th>tenant_id</th><th>rule_id</th><th>alert_title</th><th>status</th><th>actions</th></tr></thead><tbody></tbody></table>
+    <div id="drawer" style="position:fixed;top:0;right:0;width:420px;height:100%;background:#fff;border-left:1px solid #e5e7eb;display:none;padding:12px;overflow:auto" aria-hidden="true" aria-label="Alert detail">
+      <h3 id="d_title">Alert</h3>
+      <pre id="d_json" style="background:#0b1020;color:#d1e7ff;padding:8px;border-radius:6px;max-height:40vh;overflow:auto"></pre>
+      <h4>Notes</h4>
+      <textarea id="d_note" rows="4" style="width:100%" placeholder="Add a note..."></textarea>
+      <div style="margin-top:6px"><button id="d_add">Add Note</button> <button id="d_close">Close</button></div>
+    </div>
+    <div id="toast" data-testid="toast"></div>
+  </main>
+  <script>
+  function toast(m){ const t=document.getElementById('toast'); t.textContent=m; setTimeout(()=>t.textContent='',3000); }
+  let currentAlertId = null;
+  async function load(){
+    const r = await fetch('/api/v2/alerts?limit=50'); const j = await r.json(); const items = j.alerts || []; const tb=document.querySelector('#tbl tbody'); tb.innerHTML='';
+    items.forEach(a=>{ const tr=document.createElement('tr'); tr.innerHTML=`<td><a href="#" data-id="${a.alert_id}" class="open">${a.alert_id}</a></td><td>${a.tenant_id}</td><td>${a.rule_id}</td><td>${a.alert_title}</td><td>${a.status}</td><td><button data-testid="ack-${a.alert_id}" onclick="ack('${a.alert_id}','ACK')">Ack</button> <button data-testid="close-${a.alert_id}" onclick="ack('${a.alert_id}','CLOSED')">Close</button> <button data-testid="pivot-${a.alert_id}" onclick="pivot('${a.alert_id}')">Pivot</button></td>`; tb.appendChild(tr); });
+    document.querySelectorAll('a.open').forEach(a=> a.onclick = async (e)=>{ e.preventDefault(); await openDetail(e.currentTarget.getAttribute('data-id')); });
+  }
+  async function ack(id, status){
+    const r = await fetch(`/api/v2/alerts/${id}`, { method:'PATCH', headers:{'content-type':'application/json'}, body: JSON.stringify({status})}); toast(r.ok? 'Updated' : `Update failed ${r.status}`); load();
+  }
+  async function pivot(id){
+    // naive: reuse current row fields by re-fetching list
+    const r = await fetch('/api/v2/alerts?limit=50'); const j=await r.json(); const a=(j.alerts||[]).find(x=>x.alert_id===id); if(!a){ toast('Alert not found'); return; }
+    const url = new URL('/dev/search.html', location.origin);
+    url.searchParams.set('tenant', a.tenant_id);
+    url.searchParams.set('rule', a.rule_id);
+    location.href = url.toString();
+  }
+  async function openDetail(id){
+    try{
+      currentAlertId = id;
+      const r = await fetch('/api/v2/alerts/'+encodeURIComponent(id)); const v = await r.json();
+      document.getElementById('d_title').textContent = 'Alert '+id;
+      document.getElementById('d_json').textContent = JSON.stringify(v.data?.[0]||v, null, 2);
+      document.getElementById('drawer').style.display='block';
+    }catch(e){ toast(e.message); }
+  }
+  document.getElementById('d_add').onclick = async ()=>{
+    try{
+      const body = { tenant_id: 'default', body: document.getElementById('d_note').value };
+      const r = await fetch('/api/v2/alerts/'+encodeURIComponent(currentAlertId)+'/notes', { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify(body)});
+      toast(r.ok? 'Note added' : 'Note failed '+r.status);
+      document.getElementById('d_note').value='';
+    }catch(e){ toast(e.message); }
+  };
+  document.getElementById('d_close').onclick = ()=>{ document.getElementById('drawer').style.display='none'; };
+  document.getElementById('load').onclick = ()=> load().catch(e=>toast(e.message));
+  load();
+  </script>
+</body>
+</html>
+
+

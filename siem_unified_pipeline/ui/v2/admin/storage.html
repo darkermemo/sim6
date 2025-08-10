@@ -1,0 +1,63 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>Storage Policies</title>
+  <link rel="stylesheet" href="/ui/v2/admin/_shared.css"/>
+</head>
+<body>
+  <header>
+    <div class="title">SIEM Admin</div>
+    <nav aria-label="Admin">
+      <a href="/ui/v2/admin/index.html">Home</a>
+      <a href="/ui/v2/admin/tenants.html">Tenants</a>
+      <a href="/ui/v2/admin/log-sources.html">Log Sources</a>
+      <a href="/ui/v2/admin/parsers.html">Parsers</a>
+      <a href="/ui/v2/admin/streaming.html">Streaming</a>
+      <a href="/ui/v2/admin/rules.html">Rules</a>
+      <a href="/ui/v2/admin/storage.html">Storage</a>
+      <a href="/ui/v2/admin/api-keys.html">API Keys</a>
+    </nav>
+  </header>
+  <div class="container" role="main">
+    <h2>Storage Policies</h2>
+    <label>Tenant <input id="tenant" value="default" aria-label="Tenant"/></label>
+    <div>
+      <label>Retention days <input id="ret" type="number" min="1" max="3650"/></label>
+      <span id="ret_err" style="color:#b91c1c;display:none">Enter 1..3650</span>
+      <label>Compression <input id="comp" placeholder="lz4"/></label>
+      <span id="verify" style="border:1px solid #e5e7eb;border-radius:10px;padding:2px 8px;margin-left:8px">—</span>
+    </div>
+    <div>
+      <button id="load">Load</button>
+      <button id="save">Save</button>
+    </div>
+    <pre id="out" aria-live="polite"></pre>
+  </div>
+  <script>
+  const $ = window.$ || (s => document.querySelector(s));
+  async function api(path, opts){ const r = await fetch(path, {headers:{'content-type':'application/json'}, ...opts}); if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); }
+  function validate(){ const v=+$('#ret').value; const ok=v>=1 && v<=3650; $('#ret_err').style.display= ok? 'none':'inline'; return ok; }
+  function renderVerify(j){ const el=$('#verify'); const ok = (j.retention_days||0) >= 1; const comp = j.compression||'-'; el.textContent = ok? `TTL OK • compression: ${comp}` : 'TTL ?'; el.style.background = ok? '#ecfdf5':'#fff7ed'; el.style.borderColor = ok? '#10b981':'#f59e0b'; }
+  async function load(){
+    const t=$('#tenant').value.trim(); const j = await api(`/api/v2/admin/storage/${encodeURIComponent(t)}`);
+    $('#ret').value = j.retention_days || 30; $('#comp').value = j.compression || '';
+    $('#out').textContent = JSON.stringify(j);
+    renderVerify(j);
+  }
+  async function save(){
+    if(!validate()) return;
+    const t=$('#tenant').value.trim(); const body = { retention_days: parseInt($('#ret').value,10)||30, compression: $('#comp').value.trim()||null };
+    const j = await api(`/api/v2/admin/storage/${encodeURIComponent(t)}`, { method:'PUT', body: JSON.stringify(body) });
+    $('#out').textContent = JSON.stringify(j);
+    renderVerify(j);
+  }
+  $('#load').onclick = e => { e.preventDefault(); load().catch(err=>$('#out').textContent=String(err)); };
+  $('#save').onclick = e => { e.preventDefault(); save().catch(err=>$('#out').textContent=String(err)); };
+  $('#ret').addEventListener('input', validate);
+  load().catch(()=>{});
+  </script>
+</body>
+ </html>
+
+

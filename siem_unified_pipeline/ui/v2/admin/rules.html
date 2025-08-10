@@ -1,9 +1,69 @@
 <!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Rules</title>
+  <link rel="stylesheet" href="/ui/assets/style.css"/>
+</head>
+<body>
+  <header>
+    <div class="title">SIEM Admin</div>
+    <nav aria-label="Admin">
+      <a href="/ui/v2/admin/index.html">Home</a>
+      <a href="/ui/v2/admin/tenants.html">Tenants</a>
+      <a href="/ui/v2/admin/log-sources.html">Log Sources</a>
+      <a href="/ui/v2/admin/parsers.html">Parsers</a>
+      <a href="/ui/v2/admin/streaming.html">Streaming</a>
+      <a href="/ui/v2/admin/rules.html">Rules</a>
+      <a href="/ui/v2/admin/storage.html">Storage</a>
+      <a href="/ui/v2/admin/api-keys.html">API Keys</a>
+    </nav>
+  </header>
+  <main>
+    <h1>Rules / Sigma</h1>
+    <textarea id="yaml" rows="12" cols="100" data-testid="sigma-editor" placeholder="Sigma YAML here..."></textarea>
+    <div>
+      <button data-testid="btn-compile" id="compile">Compile</button>
+      <button data-testid="btn-create" id="create">Create Rule</button>
+      <input id="rid" placeholder="Rule ID"/>
+      <button data-testid="btn-dryrun" id="dry">Dry-run</button>
+      <button data-testid="btn-runnow" id="run">Run-now</button>
+    </div>
+    <pre id="out" data-testid="json-preview"></pre>
+    <div id="toast" data-testid="toast"></div>
+  </main>
+  <script>
+  const uiToast = window.toast || function(m){ const t=document.getElementById('toast'); if(!t) return; t.textContent=m; setTimeout(()=>t.textContent='',3000); };
+  document.getElementById('compile').onclick = async () => {
+    const y = document.getElementById('yaml').value;
+    const r = await fetch('/api/v2/rules/sigma/compile',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({sigma:y, tenant_ids:['default'], allow_unmapped:true})});
+    const j = await r.json(); document.getElementById('out').textContent = JSON.stringify(j,null,2);
+  };
+  document.getElementById('create').onclick = async () => {
+    const body = { name:'UI rule', description:'Created from UI', severity:'LOW', enabled:1, mode:'batch', stream_window_sec:60, schedule_sec:60, throttle_seconds:0, dedup_key:'["tenant_id","event_id"]', dsl:{search:{tenant_ids:['default'], time_range:{last_seconds:900}}} };
+    const r = await fetch('/api/v2/rules',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
+    const j = await r.json(); document.getElementById('rid').value = j.id || j.rule_id || '';
+    uiToast(r.ok? 'Rule created' : `Create failed ${r.status}`);
+  };
+  document.getElementById('dry').onclick = async () => {
+    const id = document.getElementById('rid').value; if(!id){ toast('No rule id'); return; }
+    const r = await fetch(`/api/v2/rules/${id}/dry-run`,{method:'POST'}); const t=await r.text(); document.getElementById('out').textContent=t; uiToast(r.ok? 'Dry-run OK' : 'Dry-run failed');
+  };
+  document.getElementById('run').onclick = async () => {
+    const id = document.getElementById('rid').value; if(!id){ toast('No rule id'); return; }
+    const r = await fetch(`/api/v2/rules/${id}/run-now`,{method:'POST'}); const t=await r.text(); document.getElementById('out').textContent=t; uiToast(r.ok? 'Run-now OK' : 'Run-now failed');
+  };
+  </script>
+</body>
+</html>
+
+<!doctype html>
 <html>
 <head>
   <meta charset="utf-8"/>
   <title>Admin • Rules</title>
-  <link rel="stylesheet" href="/dev/ui/assets/style.css"/>
+  <link rel="stylesheet" href="/ui/v2/admin/_shared.css"/>
 </head>
 <body>
 <div class="container">
@@ -26,6 +86,47 @@
     <button id="create">Create</button>
   </div>
   <pre id="out" aria-live="polite"></pre>
+
+  <div class="card" style="margin-top:16px">
+    <h2>Rule Builder</h2>
+    <div class="row">
+      <label>Tenant <input id="rb_tenant" value="default" style="width:120px"/></label>
+      <label>Field
+        <select id="rb_field" style="min-width:220px"><option value="">(loading fields…)</option></select>
+      </label>
+      <label>Operator
+        <select id="rb_op">
+          <option value="eq">eq</option>
+          <option value="contains">contains</option>
+          <option value="contains_any">contains_any</option>
+          <option value="ipincidr">ipincidr</option>
+          <option value="json_meta_eq">json_meta_eq</option>
+          <option value="json_raw_eq">json_raw_eq</option>
+        </select>
+      </label>
+      <label>Value
+        <input id="rb_value" list="rb_vals" placeholder="type to suggest…" style="min-width:220px"/>
+        <datalist id="rb_vals"></datalist>
+      </label>
+      <button id="rb_add">Add condition</button>
+    </div>
+    <div class="row">
+      <label>Severity
+        <select id="rb_sev"><option>LOW</option><option>MEDIUM</option><option>HIGH</option><option>CRITICAL</option></select>
+      </label>
+      <label>Mode
+        <select id="rb_mode"><option value="batch">batch</option><option value="stream">stream</option></select>
+      </label>
+      <label>Window (sec) <input id="rb_window" type="number" value="900"/></label>
+      <label>Throttle (sec) <input id="rb_throttle" type="number" value="0"/></label>
+    </div>
+    <div class="small">Conditions:</div>
+    <pre id="rb_preview" class="json">[]</pre>
+    <div class="row">
+      <button id="rb_create">Create Rule</button>
+      <span id="rb_status" class="small"></span>
+    </div>
+  </div>
 </div>
 <script>
 const $=s=>document.querySelector(s);
@@ -53,6 +154,40 @@ $('#create').onclick=async()=>{
   const res = await api('/api/v2/rules/sigma',{method:'POST', body: JSON.stringify({ sigma: $('#sigma').value })});
   $('#out').textContent = JSON.stringify(res,null,2);
 };
+
+// --- Rule Builder logic ---
+const uiToast2 = window.toast || ((m)=>{ alert(m); });
+const conds = [];
+function renderConds(){ $('#rb_preview').textContent = JSON.stringify(conds, null, 2); }
+async function loadFields(){ try{ const f = await fetch('/api/v2/schema/fields').then(r=>r.json()); const sel=$('#rb_field'); const names=(f.fields||f||[]).map(x=> (x.name||x)).sort(); sel.innerHTML = names.map(n=>`<option value="${n}">${n}</option>`).join(''); }catch(e){ /* ignore */ } }
+async function loadSuggestions(){ const field=$('#rb_field').value; const tenant=$('#rb_tenant').value||'default'; const prefix=$('#rb_value').value||''; try{ const body={ tenant_id:tenant, field, prefix, limit:20 }; const res = await fetch('/api/v2/search/facets',{method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify(body)}).then(r=>r.json()); const vals = (res.values||res||[]).map(v=> (typeof v==='string'? v : (v.value||''))); $('#rb_vals').innerHTML = vals.map(v=>`<option value="${v}">`).join(''); }catch(e){ /* ignore */ } }
+$('#rb_value').addEventListener('input', ()=>{ clearTimeout(window.__rb_t); window.__rb_t=setTimeout(loadSuggestions, 250); });
+$('#rb_add').onclick = ()=>{
+  const field=$('#rb_field').value; const op=$('#rb_op').value; let val=$('#rb_value').value;
+  if(!field || !op){ uiToast2('Select field/operator'); return; }
+  let expr;
+  if(op==='contains_any'){
+    const arr = val? val.split(',').map(s=>s.trim()).filter(Boolean) : [];
+    expr = { op, args: [field, arr] };
+  } else if(op==='json_meta_eq'){
+    expr = { op: 'json_meta_eq', args: [field, val] };
+  } else if(op==='json_raw_eq'){
+    expr = { op: 'json_raw_eq', args: [field, val] };
+  } else {
+    expr = { op, args: [field, val] };
+  }
+  conds.push(expr); renderConds(); $('#rb_value').value='';
+};
+$('#rb_create').onclick = async ()=>{
+  const tenant=$('#rb_tenant').value||'default'; const sev=$('#rb_sev').value||'LOW'; const mode=$('#rb_mode').value||'batch';
+  const windowSec = parseInt($('#rb_window').value||'900',10); const throttle = parseInt($('#rb_throttle').value||'0',10);
+  const where = conds.length ? { op:'and', args: conds } : null;
+  const dsl = { search:{ tenant_ids:[tenant], time_range:{ last_seconds: Math.max(windowSec, 300) }, where } };
+  const body = { name: 'UI Builder Rule', description:'Created via Rule Builder', severity: sev, enabled:1, mode, stream_window_sec: windowSec, schedule_sec: windowSec, throttle_seconds: throttle, dedup_key:'["tenant_id","event_id"]', dsl };
+  try{ const r = await fetch('/api/v2/rules',{method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify(body)}); const j=await r.json(); $('#rb_status').textContent = r.ok? `Created ${j.id||j.rule_id}` : `Create failed ${r.status}`; uiToast2(r.ok? 'Rule created' : 'Create failed'); }
+  catch(e){ $('#rb_status').textContent = e.message; }
+};
+loadFields();
 </script>
 </body>
 </html>

@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Streaming</title>
+  <link rel="stylesheet" href="/ui/assets/style.css"/>
+</head>
+<body>
+  <header>
+    <div class="title">SIEM Admin</div>
+    <nav aria-label="Admin">
+      <a href="/ui/v2/admin/index.html">Home</a>
+      <a href="/ui/v2/admin/tenants.html">Tenants</a>
+      <a href="/ui/v2/admin/log-sources.html">Log Sources</a>
+      <a href="/ui/v2/admin/parsers.html">Parsers</a>
+      <a href="/ui/v2/admin/streaming.html">Streaming</a>
+      <a href="/ui/v2/admin/rules.html">Rules</a>
+      <a href="/ui/v2/admin/storage.html">Storage</a>
+      <a href="/ui/v2/admin/api-keys.html">API Keys</a>
+    </nav>
+  </header>
+  <main>
+    <h1>Streaming</h1>
+    <div>
+      <button data-testid="btn-health" id="healthBtn">Check Runner Health</button>
+      <pre id="health"></pre>
+    </div>
+    <section>
+      <h2>Metrics</h2>
+      <div class="stats" id="stats"></div>
+      <pre id="metrics" data-testid="stats-card-metrics"></pre>
+    </section>
+    <section>
+      <h2>Create Stream Rule</h2>
+      <div id="wiz" style="display:grid;grid-template-columns:repeat(2, minmax(0,1fr));gap:8px">
+        <label>Field <input id="w_field" value="message"/></label>
+        <label>Operator
+          <select id="w_op">
+            <option value="contains">contains</option>
+            <option value="contains_any" selected>contains_any</option>
+            <option value="eq">eq</option>
+            <option value="ipincidr">ipincidr</option>
+          </select>
+        </label>
+        <label>Tokens/Value <input id="w_tokens" placeholder="hammer,HAMMER"/></label>
+        <label>Severity
+          <select id="w_sev"><option>LOW</option><option>MEDIUM</option><option>HIGH</option><option>CRITICAL</option></select>
+        </label>
+        <label>Window (sec) <input id="w_win" type="number" value="60"/></label>
+        <label>Threshold (matches in window) <input id="w_thr" type="number" value="1"/></label>
+        <label>Group By (comma) <input id="w_group" placeholder="tenant_id,event_action"/></label>
+        <label>Throttle (sec) <input id="w_throttle" type="number" value="0"/></label>
+        <label>Dedup Keys (comma) <input id="w_dedup" value="tenant_id,event_id"/></label>
+      </div>
+      <div style="margin:8px 0">
+        <button data-testid="btn-create-stream-rule" id="mkRule">Create Stream Rule</button>
+        <span id="mkRuleStatus"></span>
+      </div>
+      <button data-testid="btn-ingest-samples" id="ingest">Ingest Samples</button>
+      <button data-testid="btn-reclaim" id="reclaim">Reclaim PEL</button>
+      <div id="toast" data-testid="toast"></div>
+    </section>
+  </main>
+  <script>
+  function toast(m){ const t=document.getElementById('toast'); t.textContent=m; setTimeout(()=>t.textContent='',3000); }
+  async function loadMetrics(){
+    const res = await fetch('/metrics'); const txt = await res.text();
+    const keys = ['siem_v2_stream_enqueue_total','siem_v2_stream_ack_total','siem_v2_stream_eval_errors_total','siem_v2_stream_backpressure_total','siem_v2_stream_lag_ms','siem_v2_alerts_written_total'];
+    const filtered = txt.split('\n').filter(l=>keys.some(k=>l.startsWith(k))).join('\n');
+    document.getElementById('metrics').textContent = filtered;
+    // crude gauges
+    const lagLine = txt.split('\n').find(l=>l.startsWith('siem_v2_stream_lag_ms'))||'';
+    const lag = (lagLine.match(/\s([0-9\.-]+)$/)||[])[1]||'0';
+    const ack = (txt.split('\n').find(l=>l.startsWith('siem_v2_stream_ack_total'))||'').split(' ').pop()||'0';
+    const enq = (txt.split('\n').find(l=>l.startsWith('siem_v2_stream_enqueue_total'))||'').split(' ').pop()||'0';
+    const bp = (txt.split('\n').find(l=>l.startsWith('siem_v2_stream_backpressure_total'))||'').split(' ').pop()||'0';
+    // render stats cards
+    const s = document.getElementById('stats'); s.innerHTML = '';
+    s.innerHTML = `<div class="stat"><div class="label">Lag (ms)</div><div class="value">${lag}</div></div>
+      <div class="stat"><div class="label">Enqueue</div><div class="value">${enq}</div></div>
+      <div class="stat"><div class="label">Ack</div><div class="value">${ack}</div></div>
+      <div class="stat"><div class="label">Backpressure</div><div class="value">${bp}</div></div>`;
+  }
+  document.getElementById('healthBtn').onclick = async()=>{
+    const r = await fetch('/health'); document.getElementById('health').textContent = await r.text();
+  };
+  document.getElementById('mkRule').onclick = async()=>{
+    const field = document.getElementById('w_field').value||'message';
+    const op = document.getElementById('w_op').value;
+    const sev = document.getElementById('w_sev').value||'LOW';
+    const win = parseInt(document.getElementById('w_win').value||'60',10);
+    const thr = parseInt(document.getElementById('w_thr').value||'1',10);
+    const group = (document.getElementById('w_group').value||'').split(',').map(s=>s.trim()).filter(Boolean);
+    const throttle = parseInt(document.getElementById('w_throttle').value||'0',10);
+    const dedup = (document.getElementById('w_dedup').value||'tenant_id,event_id').split(',').map(s=>s.trim()).filter(Boolean);
+    const toks = (document.getElementById('w_tokens').value||'').split(',').map(s=>s.trim()).filter(Boolean);
+    const where = op==='contains_any'
+      ? { op, args:[field, toks.length? toks : ['hammer','HAMMER']] }
+      : op==='contains'
+        ? { op, args:[field, toks[0]||'hammer'] }
+        : op==='eq'
+          ? { op, args:[field, toks[0]||'hammer'] }
+          : { op:'ipincidr', args:[field, toks[0]||'10.0.0.0/8'] };
+    const body = {
+      name:`Stream: ${op}(${field})`, description:'UI stream rule', severity: sev, enabled:1, mode:'stream',
+      stream_window_sec: win, schedule_sec: 60, throttle_seconds: throttle,
+      dedup_key: JSON.stringify(dedup),
+      threshold: thr,
+      group_by: group,
+      dsl:{ search:{ tenant_ids:['default'], time_range:{ last_seconds: Math.max(300, win) }, where } }
+    };
+    const r = await fetch('/api/v2/rules',{method:'POST',headers:{'content-type':'application/json'}, body: JSON.stringify(body)});
+    const t = await r.json().catch(()=>({}));
+    const rid = t.id || t.rule_id || '';
+    document.getElementById('mkRuleStatus').textContent = rid? `RID: ${rid}` : '';
+    toast(r.ok? 'Stream rule created' : `Create failed ${r.status}`);
+  };
+  document.getElementById('ingest').onclick = async()=>{
+    const now = Math.floor(Date.now()/1000);
+    const lines = [
+      {event_id:'ui-h1',event_timestamp:now,tenant_id:'default',event_category:'app',event_action:'log',event_outcome:'success',message:'hammer from ui',raw_event:'{}',metadata:'{}',source_type:'ui',created_at:now,retention_days:30},
+      {event_id:'ui-h2',event_timestamp:now,tenant_id:'default',event_category:'app',event_action:'log',event_outcome:'success',message:'LOUD HAMMER',raw_event:'{}',metadata:'{}',source_type:'ui',created_at:now,retention_days:30}
+    ].map(o=>JSON.stringify(o)).join('\n');
+    const r = await fetch('/api/v2/ingest/bulk?tenant=default',{method:'POST', headers:{'content-type':'application/x-ndjson'}, body: lines});
+    toast(r.ok? 'Ingested' : `Ingest status ${r.status}`);
+    loadMetrics();
+  };
+  document.getElementById('reclaim').onclick = async()=>{
+    const r = await fetch('/api/v2/admin/streaming/reclaim', { method:'POST'});
+    toast(r.ok? 'Reclaimed' : `Reclaim ${r.status}`);
+    loadMetrics();
+  };
+  loadMetrics().catch(console.error);
+  </script>
+</body>
+</html>
+
+

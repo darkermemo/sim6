@@ -1,5 +1,5 @@
-use axum::{extract::State, Json};
-use serde::Serialize;
+use axum::{extract::{State, Query}, Json};
+use serde::{Serialize, Deserialize};
 use std::sync::Arc;
 use chrono::Utc;
 use crate::v2::state::AppState;
@@ -22,13 +22,20 @@ pub struct EpsResponse {
     pub timestamp: String,
 }
 
-pub async fn get_eps_stats(State(st): State<Arc<AppState>>) -> Json<EpsResponse> {
-    // Compute EPS for last 60 seconds using ClickHouse
-    let window = 60u64;
+#[derive(Deserialize, Default)]
+pub struct EpsQuery { pub window_seconds: Option<u64> }
+
+pub async fn get_eps_stats(State(st): State<Arc<AppState>>, Query(q): Query<EpsQuery>) -> Json<EpsResponse> {
+    // Compute EPS for requested window (default 60s), clamp to 7 days max for safety
+    let mut window = q.window_seconds.unwrap_or(60);
+    if window == 0 { window = 60; }
+    let max_window = 60 * 60 * 24 * 7; // 7 days
+    if window > max_window { window = max_window; }
+    // Use greatest(event_timestamp, created_at) to account for pipelines that only set created_at
     let sql_global = format!(
         "SELECT avg(cnt) AS avg_eps, anyLast(cnt) AS current_eps, max(cnt) AS peak_eps \
-         FROM (SELECT toStartOfSecond(toDateTime(event_timestamp)) AS ts, count() AS cnt \
-               FROM {} WHERE event_timestamp >= (toUInt32(now()) - {}) \
+         FROM (SELECT toStartOfSecond(toDateTime(greatest(event_timestamp, created_at))) AS ts, count() AS cnt \
+               FROM {} WHERE greatest(event_timestamp, created_at) >= (toUInt32(now()) - {}) \
                GROUP BY ts ORDER BY ts)",
         st.events_table, window
     );
@@ -39,8 +46,8 @@ pub async fn get_eps_stats(State(st): State<Arc<AppState>>) -> Json<EpsResponse>
     // Per-tenant EPS map
     let sql_tenant = format!(
         "SELECT tenant_id, avg(cnt) AS avg_eps, anyLast(cnt) AS current_eps, max(cnt) AS peak_eps \
-         FROM (SELECT tenant_id, toStartOfSecond(toDateTime(event_timestamp)) AS ts, count() AS cnt \
-               FROM {} WHERE event_timestamp >= (toUInt32(now()) - {}) \
+         FROM (SELECT tenant_id, toStartOfSecond(toDateTime(greatest(event_timestamp, created_at))) AS ts, count() AS cnt \
+               FROM {} WHERE greatest(event_timestamp, created_at) >= (toUInt32(now()) - {}) \
                GROUP BY tenant_id, ts ORDER BY ts) GROUP BY tenant_id",
         st.events_table, window
     );

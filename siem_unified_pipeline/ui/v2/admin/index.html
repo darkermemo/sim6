@@ -1,6 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>SIEM Admin</title>
+  <link rel="stylesheet" href="/ui/assets/style.css"/>
+</head>
+<body>
+  <nav>
+    <a data-testid="nav-tenants" href="/ui/v2/admin/tenants.html">Tenants</a>
+    <a data-testid="nav-logsources" href="/ui/v2/admin/log-sources.html">Log Sources</a>
+    <a data-testid="nav-parsers" href="/ui/v2/admin/parsers.html">Parsers</a>
+    <a data-testid="nav-rules" href="/ui/v2/admin/rules.html">Rules</a>
+    <a data-testid="nav-streaming" href="/ui/v2/admin/streaming.html">Streaming</a>
+    <a data-testid="nav-search" href="/ui/v2/search.html">Search</a>
+    <a data-testid="nav-alerts" href="/ui/v2/alerts.html">Alerts</a>
+  </nav>
+  <main>
+    <h1>Admin Hub</h1>
+    <div id="cards" class="cards"></div>
+  </main>
+  <script>
+  // Minimal stats cards fetching slices from /metrics
+  async function fetchMetrics() {
+    const res = await fetch('/metrics');
+    const txt = await res.text();
+    const lines = txt.split('\n');
+    const keys = [
+      'siem_v2_ingest_total',
+      'siem_v2_rate_limit_total',
+      'siem_v2_stream_enqueue_total',
+      'siem_v2_stream_ack_total',
+      'siem_v2_stream_lag_ms',
+      'siem_v2_rules_run_total',
+      'siem_v2_alerts_written_total'
+    ];
+    const m = lines.filter(l => keys.some(k => l.startsWith(k))).slice(0, 20).join('\n');
+    const el = document.getElementById('cards');
+    el.innerHTML = `
+      <pre data-testid="stats-card-metrics">${m}</pre>
+    `;
+  }
+  fetchMetrics().catch(console.error);
+  </script>
+</body>
+</html>
+
 <!doctype html><html lang="en"><head>
 <meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
-<link rel="stylesheet" href="./_shared.css"/>
+<link rel="stylesheet" href="/ui/v2/admin/_shared.css"/>
 <title>Admin · SIEM</title>
 </head><body>
 <header>
@@ -31,7 +79,7 @@
   </div>
 </main>
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
-<script src="./_shared.js"></script>
+<script src="/ui/v2/admin/_shared.js"></script>
 <script>
   setCurrentNav('index.html');
   const inp = document.querySelector('#baseUrl'); inp.value = localStorage.getItem('BASE_URL') || BASE_URL;

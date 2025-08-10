@@ -20,16 +20,22 @@ pub async fn create_tenant(State(st): State<Arc<AppState>>, Json(b): Json<Create
 }
 
 #[derive(Deserialize)]
-pub struct TenantsQ { pub status: Option<String> }
+pub struct TenantsQ { pub status: Option<String>, pub q: Option<String>, pub limit: Option<u32> }
 
 pub async fn list_tenants(State(st): State<Arc<AppState>>, Query(q): Query<TenantsQ>) -> PipelineResult<Json<serde_json::Value>> {
+    let mut where_clauses: Vec<&str> = Vec::new();
+    if q.status.is_some() { where_clauses.push("status = ?"); }
+    if q.q.as_deref().map(|s| !s.is_empty()).unwrap_or(false) { where_clauses.push("lower(name) LIKE lower(?)"); }
     let mut sql = String::from("SELECT * FROM dev.tenants");
-    if q.status.is_some() { sql.push_str(" WHERE status = ? "); }
-    sql.push_str(" ORDER BY updated_at DESC LIMIT 500");
+    if !where_clauses.is_empty() { sql.push_str(" WHERE "); sql.push_str(&where_clauses.join(" AND ")); }
+    let lim = q.limit.unwrap_or(50).min(200);
+    sql.push_str(" ORDER BY updated_at DESC LIMIT ?");
     let mut qq = st.ch.query(&sql);
     if let Some(s)=q.status.as_ref() { qq = qq.bind(s); }
+    if let Some(ref text)=q.q { if !text.is_empty(){ qq = qq.bind(format!("%{}%", text)); } }
+    qq = qq.bind(lim as u64);
     let rows: Vec<TenantRow> = qq.fetch_all().await.map_err(|e| PipelineError::database(format!("tenants list: {e}")))?;
-    Ok(Json(serde_json::json!({"items": rows})))
+    Ok(Json(serde_json::json!({"items": rows, "next_cursor": null})))
 }
 
 pub async fn get_tenant(State(st): State<Arc<AppState>>, Path(id): Path<String>) -> PipelineResult<Json<TenantRow>> {
@@ -78,6 +84,18 @@ pub async fn put_limits(State(st): State<Arc<AppState>>, Path(id): Path<String>,
         "INSERT INTO dev.tenant_limits (tenant_id,eps_limit,burst_limit,retention_days,updated_at) VALUES ('{}',{}, {}, {}, {})",
         id.replace("'","''"), b.eps_limit, b.burst_limit, b.retention_days, now);
     st.ch.query(&sql).execute().await.map_err(|e| PipelineError::database(format!("limits put: {e}")))?;
+    Ok(Json(serde_json::json!({"ok": true})))
+}
+
+/// DELETE /api/v2/admin/tenants/:id — forbids deletion when tenant has data
+pub async fn delete_tenant(State(st): State<Arc<AppState>>, Path(id): Path<String>) -> PipelineResult<Json<serde_json::Value>> {
+    // quick guard: if events or alerts exist, forbid
+    let ev: Option<()> = st.ch.query("SELECT 1 FROM dev.events WHERE tenant_id=? LIMIT 1").bind(&id).fetch_optional().await.map_err(|e| PipelineError::database(format!("tenant del ev: {e}")))?;
+    let al: Option<()> = st.ch.query("SELECT 1 FROM dev.alerts WHERE tenant_id=? LIMIT 1").bind(&id).fetch_optional().await.map_err(|e| PipelineError::database(format!("tenant del al: {e}")))?;
+    let evp = ev.is_some();
+    let alp = al.is_some();
+    if evp || alp { return Err(PipelineError::AuthorizationError("tenant has data; cannot delete".into())); }
+    st.ch.query("ALTER TABLE dev.tenants DELETE WHERE tenant_id=?").bind(&id).execute().await.map_err(|e| PipelineError::database(format!("tenant delete: {e}")))?;
     Ok(Json(serde_json::json!({"ok": true})))
 }
 

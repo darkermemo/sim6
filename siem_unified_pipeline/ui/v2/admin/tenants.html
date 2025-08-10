@@ -1,3 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Tenants</title>
+  <link rel="stylesheet" href="/ui/v2/assets/app.css"/>
+</head>
+<body>
+  <main class="content">
+    <h1>Tenants (Admin)</h1>
+    <div>
+      <table data-testid="table-tenants" id="tenantsTbl">
+        <thead><tr><th>tenant_id</th><th>name</th><th>status</th><th>retention_days</th><th>eps_quota</th><th>burst_eps</th><th>actions</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <section>
+      <h2>Edit Limits</h2>
+      <label>Tenant <input id="tid"/></label>
+      <label>EPS <input id="eps" type="number"/></label>
+      <label>Burst <input id="burst" type="number"/></label>
+      <label>Retention <input id="ret" type="number"/></label>
+      <button data-testid="btn-save-limits" id="saveBtn">Save</button>
+      <button data-testid="btn-rate-limit-test" id="rlTest">Rate-limit test</button>
+      <div id="toast" data-testid="toast"></div>
+    </section>
+  </main>
+  <script src="/ui/v2/assets/app.js"></script>
+  <script>
+  async function loadTenants(){
+    const r = await fetch('/api/v2/admin/tenants');
+    const j = await r.json();
+    const tb = document.querySelector('#tenantsTbl tbody');
+    tb.innerHTML = '';
+    (j.items||[]).forEach(t=>{
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${t.tenant_id}</td><td>${t.name}</td><td>${t.status}</td><td>${t.retention_days}</td><td>${t.eps_quota}</td><td>${t.burst_eps}</td><td><button data-testid="edit-${t.tenant_id}" onclick="sel('${t.tenant_id}')">Edit</button></td>`;
+      tb.appendChild(tr);
+    });
+  }
+  (function(){ if(!window.toast){ window.toast = function(msg){ const el=document.getElementById('toast'); if(!el) return; el.textContent=msg; setTimeout(()=>el.textContent='',3000); }; } })();
+  async function sel(id){
+    document.getElementById('tid').value = id;
+    const r = await fetch(`/api/v2/admin/tenants/${id}/limits`);
+    const j = await r.json();
+    document.getElementById('eps').value = j.eps_limit;
+    document.getElementById('burst').value = j.burst_limit;
+    document.getElementById('ret').value = j.retention_days;
+  }
+  document.getElementById('saveBtn').onclick = async () => {
+    const id = document.getElementById('tid').value;
+    const body = { eps_limit: +document.getElementById('eps').value, burst_limit: +document.getElementById('burst').value, retention_days: +document.getElementById('ret').value };
+    const r = await fetch(`/api/v2/admin/tenants/${id}/limits`, { method:'PUT', headers:{'content-type':'application/json'}, body: JSON.stringify(body)});
+    toast(r.ok? 'Saved' : `Save failed ${r.status}`);
+    loadTenants();
+  };
+  document.getElementById('rlTest').onclick = async () => {
+    const id = document.getElementById('tid').value||'default';
+    const now = Math.floor(Date.now()/1000);
+    const line = (eid) => ({event_id:eid,event_timestamp:now,tenant_id:id,event_category:'app',event_action:'log',event_outcome:'success',message:'rl test',raw_event:'{}',metadata:'{}',source_type:'ui',created_at:now,retention_days:30});
+    async function post(ndjson){ return fetch(`/api/v2/ingest/bulk?tenant=${id}`, { method:'POST', headers:{'content-type':'application/x-ndjson'}, body: ndjson }); }
+    const ndjson = [line('ui-rl1'), line('ui-rl2'), line('ui-rl3')].map(o=>JSON.stringify(o)).join('\n');
+    const r1 = await post(ndjson);
+    window.toast(r1.ok? 'Ingest OK' : `Ingest status ${r1.status}`);
+  };
+  loadTenants().catch(e=>window.toast(e.message));
+  </script>
+</body>
+</html>
+
 <!doctype html><meta charset="utf-8" />
 <title>Admin - Tenants</title>
 <style>
@@ -45,7 +116,8 @@
   <div id="toast" class="toast"></div>
 </div>
 <script>
-const BASE = location.origin;
+(function(){
+const API_BASE2 = location.origin;
 const toast = (msg, ok=false)=>{ const el=document.getElementById('toast'); el.textContent=msg; el.style.background= ok? '#064e3b':'#111827'; el.style.display='block'; setTimeout(()=>{el.style.display='none'}, 2000); }
 const ttlPreview = ()=>{
   const d=parseInt(document.getElementById('retention_days').value||'0',10);
@@ -63,23 +135,46 @@ function validateForm(){
 }
 
 async function list(){
-  const res = await fetch(`${BASE}/api/v2/admin/tenants`);
+  const res = await fetch(`${API_BASE2}/api/v2/admin/tenants`);
   const data = await res.json();
   const q=document.getElementById('search').value.toLowerCase();
   const tbody=document.getElementById('rows'); tbody.innerHTML='';
-  data.forEach(t=>{
+  const rows = Array.isArray(data) ? data : (data.items || []);
+  rows.forEach(t=>{
     if(q && !(t.tenant_id.toLowerCase().includes(q) || (t.name||'').toLowerCase().includes(q))) return;
     const tr=document.createElement('tr');
-    tr.innerHTML=`<td>${t.tenant_id}</td><td>${t.name||''}</td><td>${t.eps_limit||''}</td><td>${t.burst_limit||''}</td><td>${t.retention_days||''}</td><td>${t.updated_at||''}</td><td><button data-id="${t.tenant_id}">Edit</button></td>`;
-    tr.querySelector('button').onclick=()=>{
-      document.getElementById('tenant_id').value=t.tenant_id;
-      document.getElementById('name').value=t.name||'';
-      document.getElementById('eps_limit').value=t.eps_limit||50;
-      document.getElementById('burst_limit').value=t.burst_limit||100;
-      document.getElementById('retention_days').value=t.retention_days||30;
-      ttlPreview();
-    };
+    const epsVal = t.eps_limit ?? t.eps_quota ?? 50;
+    const burstVal = t.burst_limit ?? t.burst_eps ?? Math.max(100, epsVal);
+    const retVal = t.retention_days ?? 30;
+    tr.innerHTML=`
+      <td>${t.tenant_id}</td>
+      <td>${t.name||''}</td>
+      <td><input type="number" min="1" value="${epsVal}" data-k="eps_limit" /></td>
+      <td><input type="number" min="1" value="${burstVal}" data-k="burst_limit" /></td>
+      <td><input type="number" min="1" value="${retVal}" data-k="retention_days" /></td>
+      <td>${t.updated_at||''}</td>
+      <td><button type="button">Save</button></td>`;
     tbody.appendChild(tr);
+  });
+  // Bind save handlers per-row
+  tbody.querySelectorAll('button').forEach(btn=>{
+    btn.onclick = async (e)=>{
+      e.stopPropagation();
+      const tr = btn.closest('tr');
+      const id = tr.querySelector('td')?.textContent || '';
+      const get = (k)=> tr.querySelector(`[data-k="${k}"]`).value;
+      const lim = {
+        eps_limit: parseInt(get('eps_limit'),10),
+        burst_limit: parseInt(get('burst_limit'),10),
+        retention_days: parseInt(get('retention_days'),10),
+      };
+      try{
+        const r = await fetch(`${API_BASE2}/api/v2/admin/tenants/${encodeURIComponent(id)}/limits`, { method:'PUT', headers:{'content-type':'application/json'}, body: JSON.stringify(lim)});
+        if(!r.ok) throw new Error(String(r.status));
+        toast('Saved', true);
+        await list();
+      } catch(err){ toast('Error saving'); }
+    };
   });
 }
 
@@ -88,12 +183,12 @@ async function save(){
   const id=document.getElementById('tenant_id').value.trim(); if(!id){ toast('tenant_id required'); return; }
   const payload={ name: document.getElementById('name').value, };
   try {
-    const res= await fetch(`${BASE}/api/v2/admin/tenants`, {method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({tenant_id:id, name: payload.name})});
+    const res= await fetch(`${API_BASE2}/api/v2/admin/tenants`, {method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({tenant_id:id, name: payload.name})});
     if(!res.ok && res.status!==409) throw new Error('create failed');
   } catch(e) { /* ignore if exists */ }
   const lim={ eps_limit:+document.getElementById('eps_limit').value, burst_limit:+document.getElementById('burst_limit').value, retention_days:+document.getElementById('retention_days').value };
   try{
-    const r= await fetch(`${BASE}/api/v2/admin/tenants/${encodeURIComponent(id)}/limits`, {method:'PUT', headers:{'content-type':'application/json'}, body: JSON.stringify(lim)});
+    const r= await fetch(`${API_BASE2}/api/v2/admin/tenants/${encodeURIComponent(id)}/limits`, {method:'PUT', headers:{'content-type':'application/json'}, body: JSON.stringify(lim)});
     if(!r.ok) throw new Error('limits save failed');
     toast('Saved', true); await list();
   }catch(e){ toast('Error saving'); }
@@ -103,6 +198,7 @@ document.getElementById('refresh').onclick=list;
 document.getElementById('create').onclick=save;
 document.getElementById('search').oninput=list;
 list(); ttlPreview();
+})();
 </script>
 <!doctype html>
 <html>
@@ -121,40 +217,53 @@ list(); ttlPreview();
   </table>
 </div>
 <script>
-const $=s=>document.querySelector(s);
-const BASE='/api/v2/admin';
-async function req(path, init){ const r=await fetch(path,{headers:{'content-type':'application/json'},...init}); if(!r.ok){ const msg='HTTP '+r.status; const err=$('#err'); err.textContent=msg; err.style.display='block'; throw new Error(msg);} return r.json(); }
-async function load(){
-  const data = await req(`${BASE}/tenants`);
-  const rows = data.items||[];
-  const tbody = document.querySelector('#tbl tbody');
-  const eps = await fetch('/api/v2/metrics/eps').then(r=>r.json()).catch(()=>({per_tenant:{tenants:{}}}));
-  const tmap = (eps && eps.per_tenant && eps.per_tenant.tenants) ? eps.per_tenant.tenants : {};
-  tbody.innerHTML = rows.map(r=>`<tr>
-    <td>${r.tenant_id}</td>
-    <td>${r.status}</td>
-    <td><input type="number" min="1" value="${r.retention_days}" data-k="retention_days" data-id="${r.tenant_id}"></td>
-    <td><input type="number" min="1" value="${r.eps_quota}" data-k="eps_limit" data-id="${r.tenant_id}"></td>
-    <td><input type="number" min="1" value="${r.burst_eps}" data-k="burst_limit" data-id="${r.tenant_id}"></td>
-    <td><span aria-live="polite">${(tmap[r.tenant_id]?.current_eps ?? 0).toFixed(2)}</span></td>
-    <td><button data-id="${r.tenant_id}">Save</button></td>
-  </tr>`).join('');
-  tbody.querySelectorAll('button').forEach(btn=>{
-    btn.onclick = async ()=>{
-      const id=btn.getAttribute('data-id');
-      const tr=btn.closest('tr');
-      const get=(k)=>tr.querySelector(`[data-k="${k}"]`).value;
-      const limits={ eps_limit:parseInt(get('eps_limit'),10), burst_limit:parseInt(get('burst_limit'),10), retention_days:parseInt(get('retention_days'),10) };
-      try {
-        await req(`${BASE}/tenants/${id}/limits`, { method:'PUT', body: JSON.stringify(limits)});
-        alert('Saved');
-      } catch (e) {
-        const err=$('#err'); err.textContent='Save failed: '+e; err.style.display='block';
-      }
-    };
-  });
-}
-load().catch(()=>{ const e=$('#err'); e.textContent='Failed to load tenants'; e.style.display='block'; });
+(function(){
+  const $=s=>document.querySelector(s);
+  const API_BASE='/api/v2/admin';
+  async function req(path, init){ const r=await fetch(path,{headers:{'content-type':'application/json'},...init}); if(!r.ok){ const msg='HTTP '+r.status; const err=$('#err'); err.textContent=msg; err.style.display='block'; throw new Error(msg);} return r.json(); }
+  async function load(){
+    const data = await req(`${API_BASE}/tenants`);
+    const rows = data.items || [];
+    // Fetch authoritative limits per-tenant to avoid stale defaults (e.g., 5000)
+    const limPairs = await Promise.all(rows.map(async r=>{
+      try { const v = await req(`${API_BASE}/tenants/${encodeURIComponent(r.tenant_id)}/limits`); return [r.tenant_id, v]; } catch { return [r.tenant_id, null]; }
+    }));
+    const limMap = Object.fromEntries(limPairs);
+    const tbody = document.querySelector('#tbl tbody');
+    const eps = await fetch('/api/v2/metrics/eps').then(r=>r.json()).catch(()=>({per_tenant:{tenants:{}}}));
+    const tmap = (eps && eps.per_tenant && eps.per_tenant.tenants) ? eps.per_tenant.tenants : {};
+    tbody.innerHTML = rows.map(r=>{
+      const lm = limMap[r.tenant_id] || {};
+      const epsLimit = (lm.eps_limit ?? r.eps_limit ?? r.eps_quota ?? 0);
+      const burstLimit = (lm.burst_limit ?? r.burst_limit ?? r.burst_eps ?? 0);
+      const retention = (lm.retention_days ?? r.retention_days ?? 30);
+      return `<tr>
+      <td>${r.tenant_id}</td>
+      <td>${r.status}</td>
+      <td><input type="number" min="1" value="${retention}" data-k="retention_days" data-id="${r.tenant_id}"></td>
+      <td><input type="number" min="1" value="${epsLimit}" data-k="eps_limit" data-id="${r.tenant_id}"></td>
+      <td><input type="number" min="1" value="${burstLimit}" data-k="burst_limit" data-id="${r.tenant_id}"></td>
+      <td><span aria-live="polite">${(tmap[r.tenant_id]?.current_eps ?? 0).toFixed(2)}</span></td>
+      <td><button data-id="${r.tenant_id}">Save</button></td>
+    </tr>`;
+    }).join('');
+    tbody.querySelectorAll('button').forEach(btn=>{
+      btn.onclick = async ()=>{
+        const id=btn.getAttribute('data-id');
+        const tr=btn.closest('tr');
+        const get=(k)=>tr.querySelector(`[data-k="${k}"]`).value;
+        const limits={ eps_limit:parseInt(get('eps_limit'),10), burst_limit:parseInt(get('burst_limit'),10), retention_days:parseInt(get('retention_days'),10) };
+        try {
+          await req(`${API_BASE}/tenants/${id}/limits`, { method:'PUT', body: JSON.stringify(limits)});
+          alert('Saved');
+        } catch (e) {
+          const err=$('#err'); err.textContent='Save failed: '+e; err.style.display='block';
+        }
+      };
+    });
+  }
+  load().catch(()=>{ const e=$('#err'); e.textContent='Failed to load tenants'; e.style.display='block'; });
+})();
 </script>
 </body>
 </html>

@@ -223,6 +223,24 @@ static V2_STREAM_ENQUEUE_TOTAL: Lazy<IntCounterVec> = Lazy::new(|| {
     c
 });
 
+static ADMIN_LOG_SOURCES_TOTAL: Lazy<IntCounterVec> = Lazy::new(|| {
+    let c = IntCounterVec::new(
+        Opts::new("siem_v2_admin_log_sources_total", "Admin log sources ops by op and tenant"),
+        &["op","tenant"],
+    ).unwrap();
+    REGISTRY.register(Box::new(c.clone())).ok();
+    c
+});
+
+static QUOTA_VIOLATIONS_TOTAL: Lazy<IntCounterVec> = Lazy::new(|| {
+    let c = IntCounterVec::new(
+        Opts::new("siem_v2_quota_violations_total", "Daily quota violations per tenant (bytes/events)"),
+        &["tenant", "kind"],
+    ).unwrap();
+    REGISTRY.register(Box::new(c.clone())).ok();
+    c
+});
+
 pub fn init() {
     Lazy::force(&COMPILE_TOTAL);
     Lazy::force(&SEARCH_SECS);
@@ -248,6 +266,8 @@ pub fn init() {
     Lazy::force(&V2_INGEST_TOTAL);
     Lazy::force(&V2_RATE_LIMIT_TOTAL);
     Lazy::force(&V2_STREAM_ENQUEUE_TOTAL);
+    Lazy::force(&ADMIN_LOG_SOURCES_TOTAL);
+    Lazy::force(&QUOTA_VIOLATIONS_TOTAL);
 }
 
 pub fn rule_lbl(rule_id: &str) -> String {
@@ -371,6 +391,14 @@ pub fn obs_stream_eval(rule_id: &str, secs: f64) {
 
 pub fn inc_stream_backpressure(tenant: &str) {
     STREAM_BACKPRESSURE_TOTAL.with_label_values(&[tenant]).inc();
+}
+
+pub fn inc_admin_log_sources(op: &str, tenant: &str) {
+    ADMIN_LOG_SOURCES_TOTAL.with_label_values(&[op, tenant]).inc();
+}
+
+pub fn inc_quota_violation(tenant: &str, kind: &str) {
+    QUOTA_VIOLATIONS_TOTAL.with_label_values(&[tenant, kind]).inc();
 }
 
 pub async fn metrics_text() -> (axum::http::StatusCode, String) {

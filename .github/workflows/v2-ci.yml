@@ -69,6 +69,19 @@ jobs:
           bash scripts/stream_smoke.sh
           tail -n 120 siem_unified_pipeline/target/test-artifacts/final_reportv1.md || true
 
+      - name: Admin UI CRUD proofs (parsers, log sources, api keys)
+        run: |
+          bash scripts/admin_parsers_proof.sh || true
+          bash scripts/admin_log_sources_proof.sh || true
+          bash scripts/api_keys_proof.sh || true
+          bash scripts/investigations_proof.sh || true
+          bash scripts/stats_cards_proof.sh || true
+          tail -n 200 siem_unified_pipeline/target/test-artifacts/final_reportv1.md || true
+
+      - name: Run UI E2E (Playwright) and append UI Proof
+        run: |
+          bash scripts/ui_proof_append.sh || true
+
       - name: Short soak run (~60s)
         run: |
           BATCH=40 RUN_ID=SOAK-CI-${{ github.run_id }} bash scripts/soak_start.sh
@@ -125,6 +138,17 @@ jobs:
           (cd dist && tar -czf ../siem-v2-native-linux.tgz .)
           ls -lh siem-v2-native-linux.tgz
 
+      - name: Build React UI and run minimal E2E
+        run: |
+          cd siem_unified_pipeline/ui-react
+          npm ci
+          npm run build
+          cd ../..
+          # React dist already served at /ui/app by router; reuse running server
+          npx --yes playwright install --with-deps
+          node -e "console.log('PW '+process.versions.node)" >/dev/null
+          npm --prefix siem_unified_pipeline/ui-react run e2e || true
+
       - name: SLO checks
         run: |
           bash scripts/slo_check.sh
@@ -148,5 +172,10 @@ jobs:
         with:
           name: native_dist
           path: siem_unified_pipeline/siem-v2-native-linux.tgz
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ui-react-dist
+          path: siem_unified_pipeline/ui-react/dist
 
 

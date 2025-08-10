@@ -1,4 +1,4 @@
-use axum::{extract::{State, Path}, Json};
+use axum::{extract::{State, Path, Query}, Json};
 use axum::body::Bytes;
 use serde_json::json;
 use serde::Deserialize;
@@ -37,17 +37,25 @@ pub fn build_event_refs_json(rows: &[EventRow]) -> String {
 }
 
 
-/// Temporary stub for alert rules to avoid 404s in dev UI
-pub async fn list_alert_rules(State(_st): State<Arc<AppState>>) -> Result<Json<serde_json::Value>, crate::error::PipelineError> {
-    // Try to support both possible schemas by projecting common columns
-    let sql = "SELECT \
+#[derive(serde::Deserialize)]
+pub struct RulesListQ { pub q: Option<String>, pub mode: Option<String>, pub limit: Option<u32> }
+
+/// Admin list of rules with filters
+pub async fn list_alert_rules(State(_st): State<Arc<AppState>>, Query(q): Query<RulesListQ>) -> Result<Json<serde_json::Value>, crate::error::PipelineError> {
+    let mut where_parts: Vec<String> = Vec::new();
+    if let Some(m) = q.mode.as_deref() { if m.eq_ignore_ascii_case("batch") { where_parts.push("ifNull(mode,'batch') = 'batch'".to_string()); } else if m.eq_ignore_ascii_case("stream") { where_parts.push("ifNull(mode,'batch') = 'stream'".to_string()); } }
+    if let Some(text) = q.q.as_deref() { if !text.is_empty() { where_parts.push(format!("lower(ifNull(rule_name,name)) LIKE lower('%{}%')", text.replace("'","''"))); } }
+    let lim = q.limit.unwrap_or(50).min(200);
+    let mut sql = String::from("SELECT \
         ifNull(rule_id, id) as id, \
         ifNull(rule_name, name) as name, \
         ifNull(kql_query, compiled_sql) as compiled_sql, \
-        tenant_scope, severity, enabled, ifNull(description,'') as description, \
+        ifNull(mode,'batch') as mode, tenant_scope, severity, enabled, ifNull(description,'') as description, \
         ifNull(source_format,'') as source_format, ifNull(original_rule,'') as original_rule, \
-        ifNull(mapping_profile,'') as mapping_profile \
-    FROM dev.alert_rules ORDER BY id LIMIT 1000 FORMAT JSON".to_string();
+        ifNull(mapping_profile,'') as mapping_profile, ifNull(schedule_sec,60) as schedule_sec, ifNull(stream_window_sec,60) as stream_window_sec \
+    FROM dev.alert_rules");
+    if !where_parts.is_empty() { sql.push_str(" WHERE "); sql.push_str(&where_parts.join(" AND ")); }
+    sql.push_str(&format!(" ORDER BY updated_at DESC LIMIT {} FORMAT JSON", lim));
     let client = reqwest::Client::new();
     let resp = client.get("http://localhost:8123/").query(&[("query", sql)]).send().await
         .map_err(|e| crate::error::PipelineError::database(format!("list rules http: {e}")))?;
@@ -59,6 +67,22 @@ pub async fn list_alert_rules(State(_st): State<Arc<AppState>>) -> Result<Json<s
     let text = resp.text().await.unwrap_or("{}".to_string());
     let v: serde_json::Value = serde_json::from_str(&text).unwrap_or_else(|_| json!({"data":[]}));
     Ok(Json(v))
+}
+
+#[derive(serde::Deserialize)]
+pub struct SigmaPack { pub items: Vec<String>, pub tenant_scope: Option<String>, pub mapping_profile: Option<String> }
+
+/// POST /api/v2/admin/rules/import-sigma-pack - import multiple Sigma YAMLs
+pub async fn import_sigma_pack(State(st): State<Arc<AppState>>, Json(p): Json<SigmaPack>) -> Result<Json<serde_json::Value>, crate::error::PipelineError> {
+    let mut created: Vec<String> = Vec::new();
+    for sigma in p.items.iter() {
+        let req = SigmaCreateRequest { sigma: sigma.clone(), allow_unmapped: true, mapping_profile: p.mapping_profile.clone(), tenant_scope: p.tenant_scope.clone(), tenant_ids: vec![], time_range: Some(SigmaTimeRange{ last_minutes: 15 }), tags: None };
+        match sigma_create(State(st.clone()), Json(req)).await {
+            Ok(Json(resp)) => created.push(resp.id),
+            Err(_e) => { /* skip failed */ }
+        }
+    }
+    Ok(Json(json!({"created": created.len(), "ids": created})))
 }
 
 #[derive(Deserialize)]

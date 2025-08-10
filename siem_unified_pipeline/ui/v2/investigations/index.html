@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8"/>
   <title>Investigations</title>
-  <link rel="stylesheet" href="/dev/ui/assets/style.css"/>
+<link rel="stylesheet" href="/ui/v2/admin/_shared.css"/>
   <style>
     .grid { display: grid; grid-template-columns: 1fr 320px; gap: 16px; }
     .panel { border: 1px solid #ddd; padding: 8px; border-radius: 6px; }
@@ -19,10 +19,10 @@
     <div id="filters" class="chips" aria-label="Active filters"></div>
     <div>
       <label for="q">Query</label>
-      <input id="q" type="text" placeholder="field:value AND text" aria-label="Query"/>
+      <input id="q" type="text" placeholder="token1 token2 (space-separated)" aria-label="Query"/>
       <button id="run">Run</button>
     </div>
-    <table id="tbl" aria-label="Events table"><thead><tr><th>ts</th><th>tenant</th><th>message</th></tr></thead><tbody></tbody></table>
+    <table id="tbl" aria-label="Events table"><thead><tr><th>ts</th><th>tenant</th><th>message</th><th>actions</th></tr></thead><tbody></tbody></table>
   </div>
   <aside class="panel" aria-label="Notes and Saved Views">
     <h3>Saved Views</h3>
@@ -40,10 +40,29 @@ const $=s=>document.querySelector(s);
 const api=(p,i)=>fetch(p,{headers:{'content-type':'application/json'},...i}).then(r=>{if(!r.ok) throw new Error('HTTP '+r.status); return r.json();});
 const tenant='default';
 let currentDsl={ search:{ tenant_ids:[tenant], time_range:{ last_seconds:900 }, where:null, limit:100 } };
+let currentViewId=null;
 
-function renderRows(rows){ const tb=$('#tbl tbody'); tb.innerHTML = rows.map(r=>`<tr><td>${r.event_timestamp}</td><td>${r.tenant_id}</td><td>${(r.message||'').toString().slice(0,120)}</td></tr>`).join(''); }
+function tokensFromInput(){ return ($('#q').value||'').split(/\s+/).map(s=>s.trim()).filter(Boolean); }
+function renderChips(){ const tks=tokensFromInput(); const c=$('#filters'); c.innerHTML=tks.map(tok=>`<span class="chip" data-tok="${tok}" title="Remove">${tok} ✕</span>`).join(''); c.querySelectorAll('.chip').forEach(el=>{ el.onclick=()=>{ const tok=el.getAttribute('data-tok'); const rest=tks.filter(t=>t!==tok); $('#q').value=rest.join(' '); buildWhereFromInput(); run(); }; }); }
+function buildWhereFromInput(){ const tks=tokensFromInput(); currentDsl.search.where = tks.length? { op:'contains_any', args:['message', tks] } : null; }
+
+function renderRows(rows){ const tb=$('#tbl tbody'); tb.innerHTML = rows.map(r=>`<tr>
+  <td>${r.event_timestamp}</td>
+  <td>${r.tenant_id}</td>
+  <td>${(r.message||'').toString().slice(0,120)}</td>
+  <td><button data-msg="${encodeURIComponent((r.message||'').toString().slice(0,80))}" data-tenant="${r.tenant_id}">Pivot</button></td>
+</tr>`).join('');
+  tb.querySelectorAll('button').forEach(btn=>{ btn.onclick=()=>{
+    const url=new URL('/dev/search.html', location.origin);
+    url.searchParams.set('tenant', btn.getAttribute('data-tenant'));
+    const msg=decodeURIComponent(btn.getAttribute('data-msg')||'');
+    const toks=msg.split(/\s+/).filter(Boolean).slice(0,3); if(toks.length){ url.searchParams.set('tokens', toks.join(',')); }
+    location.href=url.toString();
+  }; });
+}
 
 async function run(){
+  buildWhereFromInput(); renderChips();
   const dsl=currentDsl;
   const res = await fetch('/api/v2/search/execute',{method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify(dsl)}).then(r=>r.json());
   renderRows(res.data||[]);
@@ -55,12 +74,20 @@ async function loadViews(){
   $('#views').innerHTML=list;
   $('#views').querySelectorAll('button').forEach(btn=>{
     btn.onclick=async()=>{
-      const d=await api(`/api/v2/investigations/views/${btn.getAttribute('data-id')}`);
+      currentViewId = btn.getAttribute('data-id');
+      const d=await api(`/api/v2/investigations/views/${currentViewId}`);
       const row=(d.data||[])[0];
       try { currentDsl=JSON.parse(row.dsl); } catch {}
-      run();
+      $('#q').value = (currentDsl.search?.where?.args?.[1]||[]).join(' ');
+      await run();
+      await loadNotes();
     };
   });
+}
+
+async function loadNotes(){
+  const n = currentViewId? await api(`/api/v2/investigations/views/${currentViewId}/notes`) : { data: [] };
+  $('#notes').innerHTML = (n.data||[]).map(x=>`<div style="margin:6px 0"><strong>${x.author||'user'}</strong> • ${new Date((x.created_at||0)*1000).toLocaleString()}<div>${(x.body||'')}</div></div>`).join('');
 }
 
 $('#run').onclick=run;
@@ -72,8 +99,10 @@ $('#save').onclick=async()=>{
 };
 $('#add-note').onclick=async()=>{
   try{
-    await api('/api/v2/investigations/notes',{method:'POST', body: JSON.stringify({ view_id:'adhoc', author:'dev', body: $('#note').value })});
+    if(!currentViewId){ const err=$('#err'); err.textContent='Select a saved view first'; err.style.display='block'; return; }
+    await api('/api/v2/investigations/notes',{method:'POST', body: JSON.stringify({ view_id: currentViewId, author:'dev', body: $('#note').value })});
     $('#note').value='';
+    await loadNotes();
   }catch(e){ const err=$('#err'); err.textContent='Note failed'; err.style.display='block'; }
 };
 

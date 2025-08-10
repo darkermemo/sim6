@@ -118,6 +118,10 @@ post_sql "CREATE TABLE IF NOT EXISTS $CLICKHOUSE_DATABASE.alerts
   CONSTRAINT event_refs_json CHECK isValidJSON(event_refs)
 ) ENGINE = ReplacingMergeTree(updated_at) ORDER BY (tenant_id, alert_id)"
 
+# Admin tables for UI CRUDs (idempotent)
+post_sql "CREATE TABLE IF NOT EXISTS $CLICKHOUSE_DATABASE.parsers_admin (parser_id String, name String, version UInt32, kind LowCardinality(String), body String, samples Array(String), enabled UInt8 DEFAULT 1, created_at UInt32 DEFAULT toUInt32(now()), updated_at UInt32 DEFAULT toUInt32(now())) ENGINE=MergeTree ORDER BY (name, version)"
+post_sql "CREATE TABLE IF NOT EXISTS $CLICKHOUSE_DATABASE.log_sources_admin (tenant_id String, source_id String, name String, kind LowCardinality(String), config String, enabled UInt8 DEFAULT 1, created_at UInt32 DEFAULT toUInt32(now()), updated_at UInt32 DEFAULT toUInt32(now())) ENGINE=MergeTree ORDER BY (tenant_id, source_id)"
+
 # Seed baseline tenant and limits (idempotent-ish)
 post_sql "INSERT INTO $CLICKHOUSE_DATABASE.tenants (tenant_id,name,status,retention_days,eps_quota,burst_eps,created_at,updated_at)
 SELECT 'default','Default','ACTIVE',30,5000,10000,toUInt32(now()),toUInt32(now()) WHERE NOT EXISTS(SELECT 1 FROM $CLICKHOUSE_DATABASE.tenants WHERE tenant_id='default')"

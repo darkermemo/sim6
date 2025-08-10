@@ -187,6 +187,16 @@ return {ok, retry}
             return Err(crate::error::PipelineError::rate_limit(format!("RATE_LIMIT: retry_after={}", res.1)));
         }
     }
+    // Enforce daily quota caps (events/bytes) per tenant via ClickHouse counters
+    let _day = chrono::Utc::now().date_naive().to_string();
+    // events last 1d
+    let ev_1d: Option<u64> = st.ch.query("SELECT toUInt64(count()) FROM dev.events WHERE tenant_id=? AND created_at >= toUInt32(now())-86400")
+        .bind(&tenant).fetch_optional().await.unwrap_or(None);
+    let max_events: u64 = std::env::var("TENANT_EVENTS_PER_DAY_MAX").ok().and_then(|v| v.parse().ok()).unwrap_or(1_000_000);
+    if ev_1d.unwrap_or(0) >= max_events {
+        crate::v2::metrics::inc_quota_violation(&tenant, "events");
+        return Err(crate::error::PipelineError::quota_exceeded("events per day exceeded"));
+    }
     // naive NDJSON split
     let text = String::from_utf8_lossy(&body);
     let mut out: Vec<SiemEvent> = Vec::new();
@@ -210,7 +220,16 @@ return {ok, retry}
         metrics::inc_v2_rate_limit(&tenant);
         return Err(crate::error::PipelineError::rate_limit("RATE_LIMIT: retry_after=1"));
     }
-    metrics::inc_ingest_bytes("api", body.len() as u64);
+    // bytes cap
+    let bytes_1d: Option<u64> = st.ch.query("SELECT toUInt64(sum(length(raw_event))) FROM dev.events WHERE tenant_id=? AND created_at >= toUInt32(now())-86400")
+        .bind(&tenant).fetch_optional().await.unwrap_or(None);
+    let max_bytes: u64 = std::env::var("TENANT_BYTES_PER_DAY_MAX").ok().and_then(|v| v.parse().ok()).unwrap_or(10_000_000_000);
+    let this_bytes = body.len() as u64;
+    if bytes_1d.unwrap_or(0) + this_bytes > max_bytes {
+        crate::v2::metrics::inc_quota_violation(&tenant, "bytes");
+        return Err(crate::error::PipelineError::quota_exceeded("bytes per day exceeded"));
+    }
+    metrics::inc_ingest_bytes("api", this_bytes);
     metrics::inc_v2_ingest(&tenant, "ok");
     let inserted = ClickHouseRepo::insert_events(&st, &out).await?;
     // Enqueue to Redis Stream (compact envelope) with backpressure guard

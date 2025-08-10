@@ -299,6 +299,11 @@ impl IntoResponse for PipelineError {
                 "Connection failed".to_string(),
                 "CONNECTION_ERROR",
             ),
+            PipelineError::QuotaExceededError(_) => (
+                StatusCode::FORBIDDEN,
+                "Quota exceeded".to_string(),
+                "QUOTA_EXCEEDED",
+            ),
             _ => (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "An unexpected error occurred".to_string(),
@@ -411,6 +416,10 @@ impl PipelineError {
     
     pub fn http<S: Into<String>>(msg: S) -> Self {
         PipelineError::InternalError(msg.into())
+    }
+
+    pub fn quota_exceeded<S: Into<String>>(msg: S) -> Self {
+        PipelineError::QuotaExceededError(msg.into())
     }
 
     pub fn kafka<S: Into<String>>(msg: S) -> Self {

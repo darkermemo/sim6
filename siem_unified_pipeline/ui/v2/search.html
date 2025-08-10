@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Search</title>
+  <link rel="stylesheet" href="/ui/v2/assets/app.css"/>
+  <script src="/ui/v2/admin/_shared.js"></script>
+  <script src="/ui/v2/assets/app.js"></script>
+</head>
+<body>
+  <main class="content">
+    <h1>Search</h1>
+    <div data-testid="qb">
+      <label>Tenant <input id="tenant" value="default"/></label>
+      <label>Time range
+        <input id="num" type="number" value="1" min="1" style="width:90px"/>
+        <select id="unit">
+          <option value="hours" selected>hours</option>
+          <option value="days">days</option>
+        </select>
+      </label>
+      <div style="margin-top:6px"></div>
+      <label>Field
+        <select id="fld"><option value="">(loading fields…)</option></select>
+      </label>
+      <label>Operator
+        <select id="op">
+          <option value="contains_any">contains_any</option>
+          <option value="contains">contains</option>
+          <option value="eq">eq</option>
+          <option value="ipincidr">ipincidr</option>
+        </select>
+      </label>
+      <label>Value
+        <input id="val" list="vals" placeholder="type to suggest…"/>
+        <datalist id="vals"></datalist>
+      </label>
+      <div style="margin-top:6px"></div>
+      <label>Contains any (message) <input id="tokens" placeholder="fail,error"/></label>
+      <button id="run" data-testid="btn-run">Run</button>
+      <button id="save" data-testid="btn-save-view">Save View</button>
+      <select id="views"></select>
+      <button id="open" data-testid="btn-open-view">Open View</button>
+    </div>
+    <pre id="sql"></pre>
+    <table data-testid="table-results" id="tbl"><thead id="th"></thead><tbody></tbody></table>
+    <div id="toast" data-testid="toast"></div>
+  </main>
+  <script>
+  function toast(m){ const t=document.getElementById('toast'); t.textContent=m; setTimeout(()=>t.textContent='',3000); }
+  async function api(p,o){ const r=await fetch(p,{headers:{'content-type':'application/json'},...o}); if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); }
+  function applyQS(){ const u=new URL(location.href); const tenant=u.searchParams.get('tenant'); const tokens=u.searchParams.get('tokens'); if(tenant){ document.getElementById('tenant').value=tenant; } if(tokens){ document.getElementById('tokens').value=tokens; } }
+  async function loadFields(){ try{ const r=await fetch('/api/v2/schema/fields'); const j=await r.json(); const names=(j.fields||j||[]).map(x=>x.name||x).sort(); const sel=document.getElementById('fld'); sel.innerHTML = '<option value="">(any)</option>'+names.map(n=>`<option value="${n}">${n}</option>`).join(''); }catch{} }
+  async function loadSuggestions(){ const f=document.getElementById('fld').value; if(!f){ document.getElementById('vals').innerHTML=''; return; } const tenant=document.getElementById('tenant').value||'default'; const prefix=document.getElementById('val').value||''; try{ const body={ tenant_id:tenant, field:f, prefix, limit:20 }; const r=await fetch('/api/v2/search/facets',{method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify(body)}); const j=await r.json(); const vals=(j.values||j||[]).map(v=> typeof v==='string'? v : (v.value||'')); document.getElementById('vals').innerHTML = vals.map(v=>`<option value="${v}">`).join(''); }catch{} }
+  function formatDeep(obj){
+    if (Array.isArray(obj)) return obj.map(formatDeep);
+    if (obj && typeof obj === 'object') {
+      const out={}; Object.entries(obj).forEach(([k,v])=>{ if (v && typeof v==='object') out[k]=formatDeep(v); else out[k]=(window.formatMaybeTs? window.formatMaybeTs(k,v):v); });
+      return out;
+    }
+    return obj;
+  }
+  function buildDsl(){
+    const tenant = document.getElementById('tenant').value||'default';
+    const num = Math.max(1, +document.getElementById('num').value||1);
+    const unit = document.getElementById('unit').value;
+    const secs = unit === 'days' ? num*24*3600 : num*3600;
+    const tokens = (document.getElementById('tokens').value||'').split(',').map(s=>s.trim()).filter(Boolean);
+    const fld = document.getElementById('fld').value;
+    const op = document.getElementById('op').value;
+    const val = document.getElementById('val').value;
+    let where;
+    if (fld && op) {
+      if (op==='contains_any') where = { op, args:[fld, val? val.split(',').map(s=>s.trim()).filter(Boolean) : tokens] };
+      else where = { op, args:[fld, val] };
+    } else if (tokens.length) {
+      where = { op:'contains_any', args:['message', tokens] };
+    }
+    return { search: { tenant_ids:[tenant], time_range:{last_seconds:secs}, where, limit:100 } };
+  }
+  async function run(){
+    const dsl = buildDsl();
+    const r = await fetch('/api/v2/search/execute', { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({dsl}) });
+    const j = await r.json(); document.getElementById('sql').textContent = j.sql;
+    const rows = (j.data && j.data.data) || [];
+    const th = document.getElementById('th'); const tb = document.querySelector('#tbl tbody'); th.innerHTML=''; tb.innerHTML='';
+    if(rows.length){ const cols = Object.keys(rows[0]); th.innerHTML = '<tr>'+cols.map(c=>`<th>${c}</th>`).join('')+'</tr>'; rows.forEach(row=>{ const tr=document.createElement('tr'); tr.innerHTML = cols.map(c=>{ let v=row[c]; if((c==='raw_event' || c==='metadata') && typeof v==='string' && v.trim().startsWith('{')){ try{ const j=JSON.parse(v); v=JSON.stringify(formatDeep(j)); }catch{} } else { v = (window.formatMaybeTs? window.formatMaybeTs(c, v) : v); } return `<td>${v}</td>`; }).join(''); tb.appendChild(tr); }); }
+  }
+  document.getElementById('run').onclick = ()=> run().catch(e=>toast(e.message));
+  async function refreshViews(){ const sel=document.getElementById('views'); try{ const j=await api('/api/v2/search/saved?tenant_id='+encodeURIComponent(document.getElementById('tenant').value||'default')); const items=j.items||[]; sel.innerHTML = items.map(v=>`<option value="${v.saved_id}">${v.name}</option>`).join(''); }catch{ sel.innerHTML=''; } }
+  document.getElementById('save').onclick = async ()=>{ try{ const body={ tenant_id: document.getElementById('tenant').value||'default', name:'view '+new Date().toISOString(), dsl: buildDsl() }; await api('/api/v2/search/saved',{method:'POST', body: JSON.stringify(body)}); await refreshViews(); toast('Saved'); }catch(e){ toast(e.message);} };
+  document.getElementById('open').onclick = async ()=>{ try{ const id=document.getElementById('views').value; if(!id){ toast('No view'); return;} const v=await api('/api/v2/search/saved/'+encodeURIComponent(id)+'?tenant_id='+encodeURIComponent(document.getElementById('tenant').value||'default')); document.getElementById('tenant').value=v.tenant_id; const dsl=v.dsl||{}; document.getElementById('secs').value=dsl.search?.time_range?.last_seconds||3600; const toks=(dsl.search?.where?.args?.[1]||[]).join(','); document.getElementById('tokens').value=toks; run(); }catch(e){ toast(e.message);} };
+  applyQS();
+  loadFields();
+  document.getElementById('fld').addEventListener('change', loadSuggestions);
+  document.getElementById('val').addEventListener('input', ()=>{ clearTimeout(window.__sv); window.__sv=setTimeout(loadSuggestions, 250); });
+  refreshViews();
+  // auto-run when tokens are present via pivot
+  if((document.getElementById('tokens').value||'').trim().length){ run().catch(()=>{}); }
+  </script>
+</body>
+</html>
+
+

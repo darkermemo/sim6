@@ -1,6 +1,6 @@
 <!doctype html><html lang="en"><head>
 <meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
-<link rel="stylesheet" href="./_shared.css"/>
+<link rel="stylesheet" href="/ui/v2/admin/_shared.css"/>
 <title>Sigma · Admin</title>
 </head><body>
 <header>
@@ -23,19 +23,23 @@
   </section>
   <section class="card">
     <h3>Rules</h3>
-    <table><thead><tr><th>Name</th><th>Severity</th><th>Enabled</th><th>Actions</th></tr></thead>
+    <table><thead><tr><th>Name</th><th>Severity</th><th>Status</th><th>Actions</th></tr></thead>
       <tbody id="rules"><tr><td colspan="4" class="small">—</td></tr></tbody></table>
   </section>
 </main>
 <div id="toast" class="toast"></div>
-<script src="./_shared.js"></script>
+<script src="/ui/v2/admin/_shared.js"></script>
 <script>
 setCurrentNav('sigma.html');
 async function listRules(){
   try{
     const r = await api('/api/v2/rules?limit=50'); const arr = r?.rules || r?.data || [];
-    document.querySelector('#rules').innerHTML = arr.map(x=>`<tr><td>${x.name||x.rule_name||'-'}</td><td>${x.severity||'-'}</td><td>${x.enabled?'Yes':'No'}</td>
-    <td><button data-id="${x.id||x.rule_id}" class="run">Run-now</button></td></tr>`).join('') || `<tr><td colspan="4" class="small">No rules</td></tr>`;
+    document.querySelector('#rules').innerHTML = arr.map(x=>{
+      const sev=(x.severity||'-').toUpperCase(); const sevCls= sev==='HIGH'?'#b91c1c': sev==='MEDIUM'?'#b45309': sev==='LOW'?'#065f46':'#374151';
+      const status = x.enabled? '<span style="color:#065f46">Enabled</span>' : '<span style="color:#6b7280">Disabled</span>';
+      return `<tr><td>${x.name||x.rule_name||'-'}</td><td><span style="border:1px solid ${sevCls}; color:${sevCls}; border-radius:10px; padding:2px 6px; font-size:12px">${sev}</span></td><td>${status}</td>
+      <td><button data-id="${x.id||x.rule_id}" class="run">Run-now</button></td></tr>`;
+    }).join('') || `<tr><td colspan="4" class="small">No rules</td></tr>`;
     $all('button.run').forEach(b=>b.onclick = async ()=>{
       try{ const rr = await api(`/api/v2/rules/${b.dataset.id}/run-now`, { method:'POST', body: JSON.stringify({limit:50})}); toast(`Run-now: ${JSON.stringify(rr)}`,'ok'); }
       catch(e){ toast(e.message,'error'); }

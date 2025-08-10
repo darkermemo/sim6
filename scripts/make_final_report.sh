@@ -383,6 +383,34 @@ EOF
         echo "" >> "$TEMP_REPORT"
     fi
     
+    # --- GA polish section: include health, 30m counts, and metrics slice ---
+    log_info "Appending GA metrics/health/30m counts section"
+    if curl -fsS http://127.0.0.1:9999/health >/dev/null 2>&1; then
+        curl -sS http://127.0.0.1:9999/health | jq -c . > "$ARTIFACTS_DIR/ga_health.json" || true
+        clickhouse client -q "SELECT count() FROM dev.alerts WHERE created_at >= toUInt32(now())-1800" > "$ARTIFACTS_DIR/alerts_30m.txt" || echo 0 > "$ARTIFACTS_DIR/alerts_30m.txt"
+        clickhouse client -q "SELECT count() FROM dev.alert_rules" > "$ARTIFACTS_DIR/rules_total.txt" || echo 0 > "$ARTIFACTS_DIR/rules_total.txt"
+        curl -sS http://127.0.0.1:9999/metrics | egrep '^(siem_v2_(stream_matches_total|stream_enqueue_total|alerts_written_total|rules_run_total|ingest_total|rate_limit_total))' | sort > "$ARTIFACTS_DIR/metrics_key.txt" || true
+        {
+            echo "## GA Snapshot"
+            echo
+            echo "**Health:**"
+            echo '```json'
+            cat "$ARTIFACTS_DIR/ga_health.json" 2>/dev/null || echo '{}'
+            echo '```'
+            echo
+            echo "**Counts (CH, 30m):**"
+            echo '```txt'
+            echo "alerts(last 30m): $(cat \"$ARTIFACTS_DIR/alerts_30m.txt\" 2>/dev/null || echo 0)"
+            echo "rules(total):     $(cat \"$ARTIFACTS_DIR/rules_total.txt\" 2>/dev/null || echo 0)"
+            echo '```'
+            echo
+            echo "**Metrics (key):**"
+            echo '```txt'
+            sed -n '1,200p' "$ARTIFACTS_DIR/metrics_key.txt" 2>/dev/null || true
+            echo '```'
+        } >> "$TEMP_REPORT"
+    fi
+
     # Footer
     cat >> "$TEMP_REPORT" << EOF
 ---

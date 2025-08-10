@@ -17,11 +17,17 @@ pub mod handlers {
     pub mod investigate;
     pub mod admin;
     pub mod sources;
+    pub mod admin_log_sources;
+    pub mod admin_parsers;
+    pub mod admin_streaming;
+    pub mod saved_searches;
+    pub mod admin_api_keys;
     pub mod parsers;
     pub mod cim;
     pub mod admin_tenants;
     pub mod parse;
     pub mod investigations;
+    pub mod admin_storage;
 }
 pub mod router;
 pub mod workers {
@@ -32,6 +38,7 @@ pub mod compiler;
 pub mod engine;
 pub mod metrics;
 pub mod capabilities;
+pub mod search_api;
 pub mod streaming {
     pub mod plan;
     pub mod matcher;
