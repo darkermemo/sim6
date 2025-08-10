@@ -100,6 +100,7 @@ pub fn build(state: AppState) -> Router {
          .route_service("/dev/admin/log-sources.html", ServeFile::new("ui/v2/admin/log-sources.html"))
          .route_service("/dev/admin/rules.html", ServeFile::new("ui/v2/admin/rules.html"))
          .route_service("/dev/investigations/index.html", ServeFile::new("ui/v2/investigations/index.html"))
+         .route_service("/ui/v2/admin/tenants.html", ServeFile::new("ui/v2/admin/tenants.html"))
          // Investigations API
          .route("/api/v2/investigations/views", get(crate::v2::handlers::investigations::list_views))
          .route("/api/v2/investigations/views", axum::routing::post(crate::v2::handlers::investigations::create_view))
