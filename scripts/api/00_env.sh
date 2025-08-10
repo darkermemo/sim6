@@ -31,4 +31,10 @@ api(){ # api <path> [json body or empty]
   fi
 }
 
+api_put(){ # api_put <path> <json body>
+  local path="$1"; shift
+  local data="$1"
+  curl -fsS -H 'content-type: application/json' -X PUT "$BASE_URL$path" --data-binary "$data"
+}
+
 

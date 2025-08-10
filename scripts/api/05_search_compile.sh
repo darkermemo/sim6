@@ -9,7 +9,7 @@ DSL=$(jq -n '{
     time_range:{last_seconds:1800},
     where:{op:"and", args:[
       {op:"eq", args:["event_category","http"]},
-      {op:"eq", args:["json_meta","http.user_agent","Mozilla"]},
+      {op:"contains", args:["json_meta","http.user_agent","Mozilla"]},
       {op:"ip_in_cidr", args:["source_ip","10.0.0.0/8"]}
     ]},
     limit:50

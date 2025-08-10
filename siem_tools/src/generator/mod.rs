@@ -14,7 +14,6 @@ pub use tenant_simulator::*;
 
 /// Main log generator that coordinates templates and tenant simulation
 pub struct LogGenerator {
-    #[allow(dead_code)]
     pub(crate) config: GeneratorConfig,
     tenant_simulator: Arc<TenantSimulator>,
     template_selector: TemplateSelector,
@@ -46,7 +45,15 @@ impl LogGenerator {
             let template_type = self.template_selector.select_template(&mut rng, tenant);
             
             // Generate log based on template
-            let log = self.generate_single_log(template_type, tenant, thread_id, i);
+            let mut log = self.generate_single_log(template_type, tenant, thread_id, i);
+            // Optionally annotate with config-driven hints (avoid warning on unused config)
+            if self.config.verbose {
+                log["generator"] = serde_json::json!({
+                    "template": format!("{:?}", template_type),
+                    "thread": thread_id,
+                    "index": i
+                });
+            }
             logs.push(log);
         }
         

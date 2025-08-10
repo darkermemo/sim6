@@ -8,16 +8,16 @@ jq -n '{
   name:"Smoke Contains fail/error",
   description:"smoke rule",
   severity:"LOW",
-  enabled:true,
+  enabled:1,
   schedule_sec:60,
   throttle_seconds:0,
   dedup_key:"[\"tenant_id\"]",
   dsl:{search:{tenant_ids:["default"], time_range:{last_seconds:1800},
-    where:{op:"contains_any", args:["message", ["fail","error"]]}, limit:50}}
+    where:{op:"containsany", args:["message", ["fail","error"]]}, limit:50}}
 }' > "$RULE_JSON"
 
 note "create rule"
-api /api/v2/rules @"$RULE_JSON" | tee "$ART_DIR/rule_create_resp.json" >/dev/null
+api /api/v2/rules "$(cat "$RULE_JSON")" | tee "$ART_DIR/rule_create_resp.json" >/dev/null
 
 RID="$(jq -r '.id // .rule_id // empty' "$ART_DIR/rule_create_resp.json")"
 [[ -n "$RID" ]] || fail "Rule ID not returned"

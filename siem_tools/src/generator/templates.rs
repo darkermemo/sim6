@@ -14,7 +14,7 @@ pub fn generate_fortinet_log(tenant: &TenantInfo, thread_id: usize, index: usize
     
     // Generate realistic IP addresses
     let src_ip = generate_tenant_ip(tenant, thread_id, index);
-    let _dst_ip = generate_random_ip(&mut rng);
+    let dst_ip = generate_random_ip(&mut rng);
     
     // Random ports
     let src_port = rng.gen_range(1024..65535);
@@ -44,7 +44,7 @@ pub fn generate_fortinet_log(tenant: &TenantInfo, thread_id: usize, index: usize
         "policyid": rng.gen_range(1..1000),
         "policytype": "policy",
         "srcip": src_ip,
-        "dstip": _dst_ip,
+        "dstip": dst_ip,
         "srcport": src_port,
         "dstport": dst_port,
         "srcintf": "port1",
