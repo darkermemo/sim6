@@ -85,6 +85,24 @@ static STREAM_EVENTS_TOTAL: Lazy<IntCounterVec> = Lazy::new(|| {
     c
 });
 
+static STREAM_MATCHES_TOTAL: Lazy<IntCounterVec> = Lazy::new(|| {
+    let c = IntCounterVec::new(
+        Opts::new("siem_v2_stream_matches_total", "Stream rule matches by rule/tenant"),
+        &["rule","tenant"],
+    ).unwrap();
+    REGISTRY.register(Box::new(c.clone())).ok();
+    c
+});
+
+static STREAM_LAG_MS: Lazy<IntGaugeVec> = Lazy::new(|| {
+    let g = IntGaugeVec::new(
+        Opts::new("siem_v2_stream_lag_ms", "Observed stream lag in milliseconds by tenant"),
+        &["tenant"],
+    ).unwrap();
+    REGISTRY.register(Box::new(g.clone())).ok();
+    g
+});
+
 static STREAM_EVAL_SECS: Lazy<HistogramVec> = Lazy::new(|| {
     let h = HistogramVec::new(
         HistogramOpts::new("siem_v2_stream_eval_seconds", "Per-rule streaming eval duration seconds"),
@@ -148,6 +166,33 @@ static EPS_THROTTLES_TOTAL: Lazy<IntCounterVec> = Lazy::new(|| {
     c
 });
 
+static V2_INGEST_TOTAL: Lazy<IntCounterVec> = Lazy::new(|| {
+    let c = IntCounterVec::new(
+        Opts::new("siem_v2_ingest_total", "Ingest outcomes per tenant"),
+        &["tenant","outcome"],
+    ).unwrap();
+    REGISTRY.register(Box::new(c.clone())).ok();
+    c
+});
+
+static V2_RATE_LIMIT_TOTAL: Lazy<IntCounterVec> = Lazy::new(|| {
+    let c = IntCounterVec::new(
+        Opts::new("siem_v2_rate_limit_total", "HTTP 429 rate-limit responses per tenant"),
+        &["tenant"],
+    ).unwrap();
+    REGISTRY.register(Box::new(c.clone())).ok();
+    c
+});
+
+static V2_STREAM_ENQUEUE_TOTAL: Lazy<IntCounterVec> = Lazy::new(|| {
+    let c = IntCounterVec::new(
+        Opts::new("siem_v2_stream_enqueue_total", "Events enqueued to Redis stream per tenant"),
+        &["tenant"],
+    ).unwrap();
+    REGISTRY.register(Box::new(c.clone())).ok();
+    c
+});
+
 pub fn init() {
     Lazy::force(&COMPILE_TOTAL);
     Lazy::force(&SEARCH_SECS);
@@ -165,6 +210,11 @@ pub fn init() {
     Lazy::force(&RETENTION_DAYS_GAUGE);
     Lazy::force(&INGEST_BYTES_TOTAL);
     Lazy::force(&EPS_THROTTLES_TOTAL);
+    Lazy::force(&STREAM_MATCHES_TOTAL);
+    Lazy::force(&STREAM_LAG_MS);
+    Lazy::force(&V2_INGEST_TOTAL);
+    Lazy::force(&V2_RATE_LIMIT_TOTAL);
+    Lazy::force(&V2_STREAM_ENQUEUE_TOTAL);
 }
 
 pub fn rule_lbl(rule_id: &str) -> String {
@@ -211,7 +261,7 @@ pub fn set_retention_days(tenant: &str, days: u16) {
 }
 
 pub fn inc_alerts(rule_id: &str, tenant: &str, n: u64) {
-    let run_id = env::var("RUN_ID").unwrap_or_else(|_| "-".to_string());
+    let _run_id = env::var("RUN_ID").unwrap_or_else(|_| "-".to_string());
     ALERTS_WRITTEN_TOTAL
         .with_label_values(&[&rule_lbl(rule_id), tenant])
         .inc_by(n);
@@ -238,22 +288,6 @@ pub fn rule_metric_labels(rule_id: &str, tenant: &str, outcome: &str, error_reas
     ]
 }
 
-#[cfg(test)]
-mod tests {
-    use super::rule_metric_labels;
-    #[test]
-    fn labels_include_run_id_and_error_reason() {
-        std::env::set_var("RUN_ID", "TEST-RUN-123");
-        let labels = rule_metric_labels("r1","default","ok","none");
-        assert!(!labels[0].is_empty());
-        assert_eq!(labels[1], "default");
-        assert_eq!(labels[2], "ok");
-        assert_eq!(labels[3], "none");
-        assert_eq!(labels[4], "TEST-RUN-123");
-        std::env::remove_var("RUN_ID");
-    }
-}
-
 pub fn obs_scheduler(rule_id: &str, secs: f64) {
     SCHEDULER_SECS.with_label_values(&[&rule_lbl(rule_id)]).observe(secs);
 }
@@ -270,6 +304,26 @@ pub fn inc_stream_events(outcome: &str) {
     STREAM_EVENTS_TOTAL.with_label_values(&[outcome]).inc();
 }
 
+pub fn inc_stream_matches(rule_id: &str, tenant: &str) {
+    STREAM_MATCHES_TOTAL.with_label_values(&[&rule_lbl(rule_id), tenant]).inc();
+}
+
+pub fn inc_v2_ingest(tenant: &str, outcome: &str) {
+    V2_INGEST_TOTAL.with_label_values(&[tenant, outcome]).inc();
+}
+
+pub fn inc_v2_rate_limit(tenant: &str) {
+    V2_RATE_LIMIT_TOTAL.with_label_values(&[tenant]).inc();
+}
+
+pub fn inc_v2_stream_enqueue(tenant: &str) {
+    V2_STREAM_ENQUEUE_TOTAL.with_label_values(&[tenant]).inc();
+}
+
+pub fn set_stream_lag_ms(tenant: &str, lag_ms: i64) {
+    STREAM_LAG_MS.with_label_values(&[tenant]).set(lag_ms);
+}
+
 pub fn obs_stream_eval(rule_id: &str, secs: f64) {
     STREAM_EVAL_SECS.with_label_values(&[&rule_lbl(rule_id)]).observe(secs);
 }
@@ -280,6 +334,22 @@ pub async fn metrics_text() -> (axum::http::StatusCode, String) {
     let encoder = TextEncoder::new();
     let _ = encoder.encode(&metric_families, &mut buf);
     (axum::http::StatusCode::OK, String::from_utf8_lossy(&buf).to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::rule_metric_labels;
+    #[test]
+    fn labels_include_run_id_and_error_reason() {
+        std::env::set_var("RUN_ID", "TEST-RUN-123");
+        let labels = rule_metric_labels("r1","default","ok","none");
+        assert!(!labels[0].is_empty());
+        assert_eq!(labels[1], "default");
+        assert_eq!(labels[2], "ok");
+        assert_eq!(labels[3], "none");
+        assert_eq!(labels[4], "TEST-RUN-123");
+        std::env::remove_var("RUN_ID");
+    }
 }
 
 

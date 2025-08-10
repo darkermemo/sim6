@@ -1,4 +1,5 @@
 use siem_unified_pipeline::v2::{router, state::AppState, workers::{kafka_consumer, incident_aggregator}, engine::run_scheduler};
+use redis::aio::ConnectionManager;
 use std::time::Duration;
 
 #[tokio::main]
@@ -7,7 +8,17 @@ async fn main() -> anyhow::Result<()> {
 
     let ch_url = std::env::var("CLICKHOUSE_URL").unwrap_or_else(|_| "http://localhost:8123".to_string());
     let events_table = std::env::var("EVENTS_TABLE").unwrap_or_else(|_| "dev.events".to_string());
-    let st = AppState::new(&ch_url, &events_table);
+    let mut st = AppState::new(&ch_url, &events_table);
+    // Optional Redis init
+    if let Ok(redis_url) = std::env::var("REDIS_URL") {
+        if !redis_url.trim().is_empty() {
+            if let Ok(client) = redis::Client::open(redis_url) {
+                if let Ok(cm) = ConnectionManager::new(client).await {
+                    st.redis = Some(cm);
+                }
+            }
+        }
+    }
     // Boot-time probe: ipCIDRMatch availability (best-effort)
     {
         let client = reqwest::Client::new();

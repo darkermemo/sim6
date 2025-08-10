@@ -15,7 +15,8 @@ use crate::v2::state::AppState;
 /// Expand a tenant scope string into concrete tenant IDs.
 /// - If scope == "all", returns `recent_tenants`.
 /// - Otherwise returns a single-element vec with `scope`.
-/// Pure helper for unit testing; DB querying for recent_tenants is done elsewhere.
+///
+/// Pure helper for unit testing; DB querying for `recent_tenants` is done elsewhere.
 pub fn expand_tenant_scope(scope: &str, recent_tenants: &[String]) -> Vec<String> {
     if scope.eq_ignore_ascii_case("all") {
         recent_tenants.to_vec()

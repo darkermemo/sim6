@@ -12,7 +12,7 @@ pub struct SavedView { pub id:String, pub tenant_id:String, pub name:String, pub
 #[derive(Debug, Deserialize)]
 pub struct CreateViewRequest { pub id:Option<String>, pub tenant_id:String, pub name:String, pub dsl:serde_json::Value, pub created_by:String }
 
-pub async fn list_views(State(st): State<Arc<AppState>>, Query(q): Query<ListViewsQuery>) -> Result<Json<serde_json::Value>, crate::error::PipelineError> {
+pub async fn list_views(State(_st): State<Arc<AppState>>, Query(q): Query<ListViewsQuery>) -> Result<Json<serde_json::Value>, crate::error::PipelineError> {
     let where_clause = if let Some(t) = q.tenant_id { format!("WHERE tenant_id='{}'", t.replace("'","''")) } else { String::new() };
     let sql = format!("SELECT id,tenant_id,name,dsl,created_by,created_at,updated_at FROM dev.saved_views {} ORDER BY updated_at DESC LIMIT 100 FORMAT JSON", where_clause);
     let client = reqwest::Client::new();

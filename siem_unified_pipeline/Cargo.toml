@@ -28,6 +28,10 @@ path = "src/bin/test_client.rs"
 name = "v2_smoke"
 path = "src/bin/v2_smoke.rs"
 
+[[bin]]
+name = "siem-stream-runner"
+path = "src/bin/siem_stream_runner.rs"
+
 [dependencies]
 # Async runtime
 tokio = { version = "1.35", features = ["full"] }

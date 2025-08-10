@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use crate::error::{PipelineError, Result as PipelineResult};
+use crate::error::Result as PipelineResult;
 use crate::v2::state::AppState;
 
 // =============================
@@ -473,13 +473,13 @@ pub async fn normalize(_st: State<Arc<AppState>>, Json(b): Json<NormalizeBody>) 
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    // Only import what is needed to avoid unused-import warnings
     use axum::{Router, routing::post};
     use axum::body::to_bytes;
     use tower::ServiceExt;
     use crate::v2::{state::AppState};
     use serde_json::json;
-    
+
     fn app_for_tests() -> Router {
         let st = AppState::new("http://localhost:8123", "dev.events");
         Router::new()
@@ -524,7 +524,7 @@ mod tests {
         ).await.unwrap();
         assert_eq!(r1.status(), axum::http::StatusCode::OK);
         let v1: serde_json::Value = serde_json::from_slice(&to_bytes(r1.into_body(), 1024*1024).await.unwrap()).unwrap();
-        assert!(v1["records"].as_array().unwrap().len() >= 1);
+        assert!(!v1["records"].as_array().unwrap().is_empty());
         assert!(v1["coverage"].as_f64().is_some());
 
         // Batch samples (Okta + Zeek HTTP)

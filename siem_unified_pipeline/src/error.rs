@@ -178,7 +178,7 @@ pub enum PipelineError {
 
 impl IntoResponse for PipelineError {
     fn into_response(self) -> Response {
-        let (status, mut error_message, mut error_code) = match &self {
+        let (status, error_message, error_code) = match &self {
             PipelineError::ConfigError(_) => (
                 StatusCode::BAD_REQUEST,
                 self.to_string(),

@@ -1,9 +1,11 @@
 use clickhouse::Client;
+use redis::aio::ConnectionManager;
 
 #[derive(Clone)]
 pub struct AppState {
     pub ch: Client,
     pub events_table: String,
+    pub redis: Option<ConnectionManager>,
 }
 
 impl AppState {
@@ -14,7 +16,7 @@ impl AppState {
             if !db.trim().is_empty() { client = client.with_database(&db); }
         }
         let ch = client;
-        Self { ch, events_table: events_table.to_string() }
+        Self { ch, events_table: events_table.to_string(), redis: None }
     }
 }
 

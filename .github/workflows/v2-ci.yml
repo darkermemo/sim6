@@ -14,12 +14,19 @@ jobs:
         options: >-
           --health-cmd "clickhouse-client --query='SELECT 1'"
           --health-interval 3s --health-timeout 5s --health-retries 20
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 3s --health-timeout 5s --health-retries 20
 
     env:
       RUST_LOG: info,siem=debug
       CLICKHOUSE_URL: http://localhost:8123
       CLICKHOUSE_DATABASE: dev
       BASE_URL: http://127.0.0.1:9999
+      REDIS_URL: redis://localhost:6379
 
     steps:
       - uses: actions/checkout@v4
@@ -27,7 +34,7 @@ jobs:
       - name: Install deps (Rust + jq + ripgrep)
         run: |
           sudo apt-get update -y
-          sudo apt-get install -y jq ripgrep
+          sudo apt-get install -y jq ripgrep redis-tools
           rustup set profile minimal
           rustup update stable
           rustup default stable
@@ -56,6 +63,11 @@ jobs:
         run: |
           BASE_URL=$BASE_URL cargo run --bin v2_smoke || true
           ls -1 target/test-artifacts || true
+
+      - name: Run streaming smoke (Redis stream ➜ match ➜ alert)
+        run: |
+          bash scripts/stream_smoke.sh
+          tail -n 120 siem_unified_pipeline/target/test-artifacts/final_reportv1.md || true
 
       - name: Run scheduler & sigma proofs (gate)
         run: |
@@ -101,5 +113,10 @@ jobs:
         with:
           name: final_report
           path: siem_unified_pipeline/target/test-artifacts/final_reportv1.md
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: stream_artifacts
+          path: siem_unified_pipeline/target/test-artifacts
 
 

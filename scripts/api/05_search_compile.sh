@@ -2,15 +2,15 @@
 set -Eeuo pipefail
 source "$(dirname "$0")/00_env.sh"
 
-# DSL that hits canonical + json_meta + CIDR operator
+# DSL that hits canonical + JSON path equality + CIDR operator
 DSL=$(jq -n '{
   search:{
     tenant_ids:["default"],
     time_range:{last_seconds:1800},
     where:{op:"and", args:[
       {op:"eq", args:["event_category","http"]},
-      {op:"contains", args:["json_meta","http.user_agent","Mozilla"]},
-      {op:"ip_in_cidr", args:["source_ip","10.0.0.0/8"]}
+      {op:"json_eq", args:["metadata.http.user_agent","Mozilla"]},
+      {op:"ipincidr", args:["source_ip","10.0.0.0/8"]}
     ]},
     limit:50
   }
