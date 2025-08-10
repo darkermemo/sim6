@@ -69,6 +69,14 @@ jobs:
           bash scripts/stream_smoke.sh
           tail -n 120 siem_unified_pipeline/target/test-artifacts/final_reportv1.md || true
 
+      - name: Short soak run (~60s)
+        run: |
+          BATCH=40 RUN_ID=SOAK-CI-${{ github.run_id }} bash scripts/soak_start.sh
+          sleep 60
+          bash scripts/soak_status.sh || true
+          bash scripts/soak_stop.sh
+          tail -n 160 target/test-artifacts/final_reportv1.md || true
+
       - name: Run scheduler & sigma proofs (gate)
         run: |
           bash scripts/v2_proof_scheduler.sh
@@ -118,5 +126,10 @@ jobs:
         with:
           name: stream_artifacts
           path: siem_unified_pipeline/target/test-artifacts
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: soak_artifacts
+          path: target/test-artifacts/soak
 
 
