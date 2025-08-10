@@ -21,6 +21,14 @@
     <h3>Welcome</h3>
     <p>Use the navigation to configure tenants, manage log sources & parsers, import Sigma, and observe ingestors.</p>
   </div>
+  <div class="card">
+    <h3>System Config</h3>
+    <div class="row">
+      <button id="btn-load">Load</button>
+      <button id="btn-save" class="primary">Save</button>
+    </div>
+    <textarea id="cfg" spellcheck="false" placeholder='{"feature_flags":{"sigma":"on"}}'></textarea>
+  </div>
 </main>
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
 <script src="./_shared.js"></script>
@@ -28,6 +36,12 @@
   setCurrentNav('index.html');
   const inp = document.querySelector('#baseUrl'); inp.value = localStorage.getItem('BASE_URL') || BASE_URL;
   inp.addEventListener('change', ()=>{ localStorage.setItem('BASE_URL', inp.value.trim()); toast('Saved BASE_URL'); });
+  document.querySelector('#btn-load').onclick = async ()=>{
+    try{ const v = await api('/api/v2/admin/config'); document.querySelector('#cfg').value = JSON.stringify(v, null, 2); toast('Loaded','ok'); }catch(e){ toast(e.message,'error'); }
+  };
+  document.querySelector('#btn-save').onclick = async ()=>{
+    try{ const body = JSON.parse(document.querySelector('#cfg').value||'{}'); await api('/api/v2/admin/config', {method:'PUT', body: JSON.stringify(body)}); toast('Saved','ok'); }catch(e){ toast(e.message,'error'); }
+  };
 </script>
 </body></html>
 
