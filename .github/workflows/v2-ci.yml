@@ -113,6 +113,18 @@ jobs:
           bash scripts/final_report_append.sh
           tail -n 200 siem_unified_pipeline/target/test-artifacts/final_reportv1.md || true
 
+      - name: Build native dist (macOS tarball structure)
+        run: |
+          cd siem_unified_pipeline
+          cargo build --locked --release --bins
+          rm -rf dist && mkdir -p dist/bin dist/scripts dist/ui
+          cp -a target/release/siem-pipeline target/release/siem-stream-runner dist/bin/
+          cp -a ../scripts/*.sh dist/scripts/
+          cp -a ui dist/ui
+          date -u +%FT%TZ > dist/VERSION
+          (cd dist && tar -czf ../siem-v2-native-linux.tgz .)
+          ls -lh siem-v2-native-linux.tgz
+
       - name: SLO checks
         run: |
           bash scripts/slo_check.sh
@@ -131,5 +143,10 @@ jobs:
         with:
           name: soak_artifacts
           path: target/test-artifacts/soak
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: native_dist
+          path: siem_unified_pipeline/siem-v2-native-linux.tgz
 
 

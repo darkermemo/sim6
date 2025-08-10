@@ -19,6 +19,7 @@ async fn main() -> anyhow::Result<()> {
     let client = redis::Client::open(redis_url)?;
     let mut cm = ConnectionManager::new(client).await?;
     let http = reqwest::Client::new();
+    let run_id = std::env::var("RUN_ID").unwrap_or_else(|_| "-".to_string());
 
     // Optional: focus on a single rule id for demo (e.g., hammer rule)
     let stream_rule_id = std::env::var("STREAM_RULE_ID").ok();
@@ -40,6 +41,8 @@ async fn main() -> anyhow::Result<()> {
     }
 
     let mut last_lag_check = std::collections::HashMap::<String, std::time::Instant>::new();
+    // Consumer group idle reclaim to avoid stuck PEL entries
+    let reclaim_idle_ms: i64 = std::env::var("PEL_RECLAIM_IDLE_MS").ok().and_then(|v| v.parse().ok()).unwrap_or(60_000);
     loop {
         for t in &tenant_list {
             let key = format!("siem:events:{}", t);
@@ -79,8 +82,14 @@ async fn main() -> anyhow::Result<()> {
                                         }
                                         let msg = fields.get("msg").cloned().unwrap_or_default();
                                         let event_id = fields.get("event_id").cloned().unwrap_or_default();
-                                        // Broad match across all textual fields to accommodate minimal envelopes
-                                        let matched = fields.values().any(|v| v.to_lowercase().contains("hammer"));
+                                        // Broad match across message/meta/raw
+                                        let hay_meta = fields.get("meta").cloned().unwrap_or_default();
+                                        let hay_raw = fields.get("raw").cloned().unwrap_or_default();
+                                        let tokens = ["hammer", "HAMMER"]; // prototype tokens for contains_any
+                                        let matched = [msg.as_str(), hay_meta.as_str(), hay_raw.as_str()].iter().any(|h| {
+                                            let hlow = h.to_lowercase();
+                                            tokens.iter().any(|t| hlow.contains(&t.to_lowercase()))
+                                        });
                                         debug!(tenant = %t, id = %id, event_id = %event_id, msg = %msg, matched = matched, "entry parsed");
                                         if matched {
                                             if let Some(rid) = &stream_rule_id {
@@ -93,7 +102,9 @@ async fn main() -> anyhow::Result<()> {
                                                 if should_insert {
                                                     // Build alert row insert
                                                     let now_ts = chrono::Utc::now().timestamp() as u32;
-                                                    let alert_id = uuid::Uuid::new_v4().to_string();
+                                                    // Deterministic id for idempotence
+                                                    let material = format!("{}|{}|{}|{}", rid, t, event_id, id);
+                                                    let alert_id = blake3::hash(material.as_bytes()).to_hex().to_string();
                                                     let title = "Stream: message has hammer";
                                                     let desc = format!("Matched stream event {} containing 'hammer'", event_id).replace("'", "''");
                                                     let insert_sql = format!(
@@ -112,28 +123,34 @@ async fn main() -> anyhow::Result<()> {
                                                             } else {
                                                                 metrics::inc_alerts(rid, t, 1);
                                                                 metrics::inc_rules_run(rid, t, "ok", "");
+                                                                debug!(tenant = %t, run_id = %run_id, id = %id, event_id = %event_id, "alert written");
                                                                 let _: redis::Value = redis::cmd("XACK").arg(&key).arg(&group).arg(&id).query_async(&mut cm).await.unwrap_or(redis::Value::Okay);
+                                                                metrics::inc_stream_acks(t);
                                                                 debug!(tenant = %t, id = %id, "acked after insert");
                                                             }
                                                         }
                                                         Err(e) => {
                                                             error!(tenant = %t, error = %e, "clickhouse insert error");
+                                                            metrics::inc_stream_eval_error(rid, t);
                                                             continue;
                                                         }
                                                     }
                                                 } else {
                                                     // Already seen — ACK and continue
                                                     let _: redis::Value = redis::cmd("XACK").arg(&key).arg(&group).arg(&id).query_async(&mut cm).await.unwrap_or(redis::Value::Okay);
+                                                    metrics::inc_stream_acks(t);
                                                     debug!(tenant = %t, id = %id, "acked duplicate");
                                                 }
                                             } else {
                                                 // No specific rule configured; just ACK after logging a match
                                                 debug!(tenant = %t, id = %id, "match without rule id; ack");
                                                 let _: redis::Value = redis::cmd("XACK").arg(&key).arg(&group).arg(&id).query_async(&mut cm).await.unwrap_or(redis::Value::Okay);
+                                                metrics::inc_stream_acks(t);
                                             }
                                         } else {
                                             // No match — ACK to move on
                                             let _ : redis::Value = redis::cmd("XACK").arg(&key).arg(&group).arg(&id).query_async(&mut cm).await.unwrap_or(redis::Value::Okay);
+                                            metrics::inc_stream_acks(t);
                                         }
                                     }
                                 }
@@ -168,6 +185,14 @@ async fn main() -> anyhow::Result<()> {
                     metrics::set_stream_lag_ms(t, lag_ms);
                 }
                 last_lag_check.insert(t.clone(), nowi);
+            }
+            // Reclaim idle pending entries periodically (XAUTOCLAIM)
+            let claim_res: redis::Value = redis::cmd("XAUTOCLAIM")
+                .arg(&key).arg(&group).arg("runner-1")
+                .arg(reclaim_idle_ms).arg("0-0").arg("COUNT").arg(50)
+                .query_async(&mut cm).await.unwrap_or(redis::Value::Nil);
+            if !matches!(claim_res, redis::Value::Nil) {
+                debug!(tenant = %t, "xautoclaim performed");
             }
         }
         tokio::time::sleep(Duration::from_millis(200)).await;

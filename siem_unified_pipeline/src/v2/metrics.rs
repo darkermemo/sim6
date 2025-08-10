@@ -103,6 +103,36 @@ static STREAM_LAG_MS: Lazy<IntGaugeVec> = Lazy::new(|| {
     g
 });
 
+// Acks emitted by runner after successful write
+static STREAM_ACK_TOTAL: Lazy<IntCounterVec> = Lazy::new(|| {
+    let c = IntCounterVec::new(
+        Opts::new("siem_v2_stream_ack_total", "Stream acks by tenant"),
+        &["tenant"],
+    ).unwrap();
+    REGISTRY.register(Box::new(c.clone())).ok();
+    c
+});
+
+// Evaluation errors while processing stream entries
+static STREAM_EVAL_ERRORS_TOTAL: Lazy<IntCounterVec> = Lazy::new(|| {
+    let c = IntCounterVec::new(
+        Opts::new("siem_v2_stream_eval_errors_total", "Stream evaluation errors by rule/tenant"),
+        &["rule","tenant"],
+    ).unwrap();
+    REGISTRY.register(Box::new(c.clone())).ok();
+    c
+});
+
+// Backpressure events when enqueue is paused due to large stream size
+static STREAM_BACKPRESSURE_TOTAL: Lazy<IntCounterVec> = Lazy::new(|| {
+    let c = IntCounterVec::new(
+        Opts::new("siem_v2_stream_backpressure_total", "Backpressure signals by tenant"),
+        &["tenant"],
+    ).unwrap();
+    REGISTRY.register(Box::new(c.clone())).ok();
+    c
+});
+
 static STREAM_EVAL_SECS: Lazy<HistogramVec> = Lazy::new(|| {
     let h = HistogramVec::new(
         HistogramOpts::new("siem_v2_stream_eval_seconds", "Per-rule streaming eval duration seconds"),
@@ -212,6 +242,9 @@ pub fn init() {
     Lazy::force(&EPS_THROTTLES_TOTAL);
     Lazy::force(&STREAM_MATCHES_TOTAL);
     Lazy::force(&STREAM_LAG_MS);
+    Lazy::force(&STREAM_ACK_TOTAL);
+    Lazy::force(&STREAM_EVAL_ERRORS_TOTAL);
+    Lazy::force(&STREAM_BACKPRESSURE_TOTAL);
     Lazy::force(&V2_INGEST_TOTAL);
     Lazy::force(&V2_RATE_LIMIT_TOTAL);
     Lazy::force(&V2_STREAM_ENQUEUE_TOTAL);
@@ -308,6 +341,14 @@ pub fn inc_stream_matches(rule_id: &str, tenant: &str) {
     STREAM_MATCHES_TOTAL.with_label_values(&[&rule_lbl(rule_id), tenant]).inc();
 }
 
+pub fn inc_stream_acks(tenant: &str) {
+    STREAM_ACK_TOTAL.with_label_values(&[tenant]).inc();
+}
+
+pub fn inc_stream_eval_error(rule_id: &str, tenant: &str) {
+    STREAM_EVAL_ERRORS_TOTAL.with_label_values(&[&rule_lbl(rule_id), tenant]).inc();
+}
+
 pub fn inc_v2_ingest(tenant: &str, outcome: &str) {
     V2_INGEST_TOTAL.with_label_values(&[tenant, outcome]).inc();
 }
@@ -326,6 +367,10 @@ pub fn set_stream_lag_ms(tenant: &str, lag_ms: i64) {
 
 pub fn obs_stream_eval(rule_id: &str, secs: f64) {
     STREAM_EVAL_SECS.with_label_values(&[&rule_lbl(rule_id)]).observe(secs);
+}
+
+pub fn inc_stream_backpressure(tenant: &str) {
+    STREAM_BACKPRESSURE_TOTAL.with_label_values(&[tenant]).inc();
 }
 
 pub async fn metrics_text() -> (axum::http::StatusCode, String) {

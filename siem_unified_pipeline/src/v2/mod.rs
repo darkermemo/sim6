@@ -34,6 +34,7 @@ pub mod metrics;
 pub mod capabilities;
 pub mod streaming {
     pub mod plan;
+    pub mod matcher;
 }
 pub mod schema {
     pub mod catalog;

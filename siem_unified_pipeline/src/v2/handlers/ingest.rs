@@ -213,32 +213,44 @@ return {ok, retry}
     metrics::inc_ingest_bytes("api", body.len() as u64);
     metrics::inc_v2_ingest(&tenant, "ok");
     let inserted = ClickHouseRepo::insert_events(&st, &out).await?;
-    // Enqueue to Redis Stream (compact envelope)
+    // Enqueue to Redis Stream (compact envelope) with backpressure guard
     if let Some(cm) = st.redis.as_ref() {
         let mut conn = cm.clone();
         let stream = format!("siem:events:{}", tenant);
-        for ev in &out {
-            let mut cmd = redis::cmd("XADD");
-            cmd.arg(&stream).arg("MAXLEN").arg("~").arg(100000).arg("*")
-                .arg("event_id").arg(&ev.event_id)
-                .arg("ts").arg(ev.event_timestamp as i64)
-                .arg("cat").arg(&ev.event_category)
-                .arg("act").arg(ev.event_action.as_deref().unwrap_or(""))
-                .arg("out").arg(ev.event_outcome.as_deref().unwrap_or(""))
-                .arg("src").arg(ev.source_ip.as_deref().unwrap_or(""))
-                .arg("dst").arg(ev.destination_ip.as_deref().unwrap_or(""))
-                .arg("st").arg(ev.source_type.as_deref().unwrap_or(""))
-                .arg("msg").arg(
-                    ev.message
-                        .as_deref()
-                        .filter(|s| !s.is_empty())
-                        .unwrap_or_else(|| {
-                            // Fallback to a snippet of raw_event so the runner can match
-                            if ev.raw_event.len() <= 200 { ev.raw_event.as_str() } else { &ev.raw_event[..200] }
-                        })
-                );
-            let _: redis::Value = cmd.query_async(&mut conn).await.unwrap_or(redis::Value::Okay);
-            metrics::inc_v2_stream_enqueue(&tenant);
+        // Soft limit for stream length before pausing enqueue
+        let maxlen_soft: i64 = std::env::var("STREAM_MAXLEN_SOFT").ok().and_then(|v| v.parse().ok()).unwrap_or(100_000);
+        // Probe current length
+        let current_len: i64 = redis::cmd("XLEN").arg(&stream).query_async(&mut conn).await.unwrap_or(0);
+        if current_len > maxlen_soft {
+            // Signal backpressure and skip enqueue (we still inserted to CH above)
+            crate::v2::metrics::inc_stream_backpressure(&tenant);
+        } else {
+            for ev in &out {
+                let meta_snippet = if ev.metadata.len() <= 200 { ev.metadata.as_str() } else { &ev.metadata[..200] };
+                let raw_snippet = if ev.raw_event.len() <= 200 { ev.raw_event.as_str() } else { &ev.raw_event[..200] };
+                let msg_val = ev
+                    .message
+                    .as_deref()
+                    .filter(|s| !s.is_empty())
+                    .unwrap_or(raw_snippet);
+                let mut cmd = redis::cmd("XADD");
+                cmd.arg(&stream)
+                    .arg("MAXLEN").arg("~").arg(maxlen_soft)
+                    .arg("*")
+                    .arg("event_id").arg(&ev.event_id)
+                    .arg("ts").arg(ev.event_timestamp as i64)
+                    .arg("cat").arg(&ev.event_category)
+                    .arg("act").arg(ev.event_action.as_deref().unwrap_or(""))
+                    .arg("out").arg(ev.event_outcome.as_deref().unwrap_or(""))
+                    .arg("src").arg(ev.source_ip.as_deref().unwrap_or(""))
+                    .arg("dst").arg(ev.destination_ip.as_deref().unwrap_or(""))
+                    .arg("st").arg(ev.source_type.as_deref().unwrap_or(""))
+                    .arg("msg").arg(msg_val)
+                    .arg("meta").arg(meta_snippet)
+                    .arg("raw").arg(raw_snippet);
+                let _: redis::Value = cmd.query_async(&mut conn).await.unwrap_or(redis::Value::Okay);
+                metrics::inc_v2_stream_enqueue(&tenant);
+            }
         }
     }
     if let Some(first) = out.first() {
