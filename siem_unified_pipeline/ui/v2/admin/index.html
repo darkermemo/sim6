@@ -1,21 +1,34 @@
-<!doctype html><meta charset="utf-8" />
-<title>Admin Hub</title>
-<style>
- body{font:14px system-ui;margin:16px}
- header a{margin-right:12px}
- .card{border:1px solid #e5e7eb;border-radius:12px;padding:12px;margin-bottom:12px}
-</style>
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
+<link rel="stylesheet" href="./_shared.css"/>
+<title>Admin · SIEM</title>
+</head><body>
 <header>
-  <a href="/ui/v2/admin/index.html">Admin</a>
-  <a href="/ui/v2/admin/tenants.html">Tenants</a>
-  <a href="/ui/v2/admin/sources.html">Sources</a>
-  <a href="/ui/v2/admin/parsers.html">Parsers</a>
-  <a href="/ui/v2/admin/cim.html">CIM</a>
-  <a href="/ui/v2/admin/ingestion.html">Ingestion</a>
+  <div class="title">SIEM Admin</div>
+  <nav aria-label="Admin">
+    <a href="./tenants.html">Tenants</a>
+    <a href="./log-sources.html">Log Sources</a>
+    <a href="./parsers.html">Parsers</a>
+    <a href="./cim.html">CIM Explorer</a>
+    <a href="./sigma.html">Sigma</a>
+    <a href="./ingestors.html">Ingestors</a>
+  </nav>
+  <div style="margin-left:auto" class="small">BASE_URL:
+    <input id="baseUrl" style="width:280px" placeholder="e.g. http://127.0.0.1:9999"/></div>
 </header>
-<div class="card">
-  <h3>Welcome</h3>
-  <p>Manage tenants, quotas, retention, sources and parsers.</p>
-</div>
+<main>
+  <div class="card">
+    <h3>Welcome</h3>
+    <p>Use the navigation to configure tenants, manage log sources & parsers, import Sigma, and observe ingestors.</p>
+  </div>
+</main>
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+<script src="./_shared.js"></script>
+<script>
+  setCurrentNav('index.html');
+  const inp = document.querySelector('#baseUrl'); inp.value = localStorage.getItem('BASE_URL') || BASE_URL;
+  inp.addEventListener('change', ()=>{ localStorage.setItem('BASE_URL', inp.value.trim()); toast('Saved BASE_URL'); });
+</script>
+</body></html>
 
 

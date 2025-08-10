@@ -1,0 +1,44 @@
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
+<link rel="stylesheet" href="./_shared.css"/>
+<title>Ingestors · Admin</title>
+</head><body>
+<header>
+  <div class="title">Ingestors</div>
+  <nav aria-label="Admin">
+    <a href="./index.html">Home</a><a href="./tenants.html">Tenants</a>
+    <a href="./log-sources.html">Log Sources</a><a href="./parsers.html">Parsers</a>
+    <a href="./cim.html">CIM Explorer</a><a href="./sigma.html">Sigma</a><a href="./ingestors.html">Ingestors</a>
+  </nav>
+</header>
+<main class="grid cols-2">
+  <section class="card">
+    <h3>Status</h3>
+    <div id="status" class="small">—</div>
+    <div class="row">
+      <button id="refresh">Refresh</button>
+    </div>
+  </section>
+  <section class="card">
+    <h3>Throttle counters</h3>
+    <pre id="metrics" class="small">—</pre>
+  </section>
+</main>
+<div id="toast" class="toast"></div>
+<script src="./_shared.js"></script>
+<script>
+setCurrentNav('ingestors.html');
+async function refresh() {
+  try {
+    const h = await api('/api/v2/health'); document.querySelector('#status').textContent = JSON.stringify(h);
+  } catch(e){ document.querySelector('#status').textContent = `Error: ${e.message}`; }
+  try {
+    const m = await fetch(`${BASE_URL}/metrics`).then(r=>r.text());
+    const lines = m.split('\n').filter(l => /^siem_(eps_throttles_total|ingest_bytes_total)/.test(l)).join('\n');
+    document.querySelector('#metrics').textContent = lines || '(no counters yet)';
+  } catch(e){ document.querySelector('#metrics').textContent = `Error: ${e.message}`; }
+}
+document.querySelector('#refresh').onclick = refresh; refresh();
+</script>
+</body></html>
+

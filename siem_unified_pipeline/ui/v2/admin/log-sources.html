@@ -1,3 +1,100 @@
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
+<link rel="stylesheet" href="./_shared.css"/>
+<title>Log Sources · Admin</title>
+</head><body>
+<header>
+  <div class="title">Log Sources</div>
+  <nav aria-label="Admin">
+    <a href="./index.html">Home</a><a href="./tenants.html">Tenants</a>
+    <a href="./log-sources.html">Log Sources</a><a href="./parsers.html">Parsers</a>
+    <a href="./cim.html">CIM Explorer</a><a href="./sigma.html">Sigma</a><a href="./ingestors.html">Ingestors</a>
+  </nav>
+  <div style="margin-left:auto" class="small">Tenant:
+    <input id="tenant" value="default" style="width:120px"/>
+  </div>
+</header>
+<main>
+  <section class="card grid cols-2">
+    <div>
+      <h3>Paste sample (raw or JSON)</h3>
+      <textarea id="sample" placeholder="Paste one or more lines…"></textarea>
+      <div class="row">
+        <button id="btn-detect">Detect</button>
+        <button class="primary" id="btn-normalize" data-testid="normalize">Normalize</button>
+      </div>
+      <div class="small">Detected: <span id="det-vendor" class="badge">—</span> <span id="det-type" class="badge">—</span> <span id="det-conf" class="badge">—</span></div>
+    </div>
+    <div>
+      <h3>Dry-run as rule</h3>
+      <label>Filter (DSL JSON)</label>
+      <textarea id="dsl" spellcheck="false">{ "search": { "tenant_ids": ["default"], "time_range": { "last_seconds": 1800 }, "where": { "op":"contains", "args": ["message","fail"] } } }</textarea>
+      <div class="row">
+        <button id="btn-compile">Compile</button>
+        <button class="primary" id="btn-exec">Execute</button>
+      </div>
+      <pre id="sql" class="small" style="max-height:140px"></pre>
+      <div class="small">Rows: <span id="rows">—</span></div>
+    </div>
+  </section>
+
+  <section class="card">
+    <h3>Normalize preview</h3>
+    <div class="small">Coverage: <span id="cov" class="badge">—</span> Signals: <span id="sig" class="badge">—</span></div>
+    <table>
+      <thead><tr><th>event_timestamp</th><th>tenant_id</th><th>event_category</th><th>event_action</th><th>user_name</th><th>source_ip</th><th>message</th></tr></thead>
+    </table>
+    <div id="norm" class="small">—</div>
+  </section>
+
+  <section class="card">
+    <h3>Load guidance</h3>
+    <pre id="loadcmd" class="small"># After you save sample to /tmp/sample.ndjson
+siem load-ch --file /tmp/sample.ndjson --table dev.events</pre>
+  </section>
+</main>
+<div id="toast" class="toast"></div>
+<script src="./_shared.js"></script>
+<script>
+setCurrentNav('log-sources.html');
+const tEl = document.querySelector('#tenant');
+document.querySelector('#btn-detect').onclick = async () => {
+  const first = document.querySelector('#sample').value.split('\n').filter(Boolean)[0]||'';
+  if (!first) return toast('Paste a sample first','error');
+  try {
+    const body = (/^\s*[{[]/.test(first)) ? { record: JSON.parse(first) } : { raw: first };
+    const r = await api('/api/v2/parse/detect', { method:'POST', body: JSON.stringify(body) });
+    document.querySelector('#det-vendor').textContent = r.vendor||'—'; document.querySelector('#det-type').textContent = r.type||'—'; document.querySelector('#det-conf').textContent = String(r.confidence??'—');
+  } catch(e){ toast(e.message,'error'); }
+};
+document.querySelector('#btn-normalize').onclick = async () => {
+  const lines = document.querySelector('#sample').value.split('\n').filter(Boolean);
+  if (!lines.length) return toast('Paste a sample first','error');
+  const recs = []; for (const L of lines.slice(0,20)) { if (/^\s*[{[]/.test(L)) recs.push(JSON.parse(L)); else recs.push(L); }
+  const body = { tenant_id: tEl.value.trim()||'default', samples: recs };
+  try {
+    const r = await api('/api/v2/parse/normalize', { method:'POST', body: JSON.stringify(body) });
+    document.querySelector('#cov').textContent = (r.coverage!=null? r.coverage : '—');
+    document.querySelector('#sig').textContent = (r.signals?.join(', ') || '—');
+    document.querySelector('#norm').textContent = JSON.stringify(r.records?.slice(0,10)||[], null, 2);
+  } catch(e){ toast(e.message,'error'); }
+};
+document.querySelector('#btn-compile').onclick = async () => {
+  try {
+    const d = JSON.parse(document.querySelector('#dsl').value);
+    const r = await api('/api/v2/search/compile', { method:'POST', body: JSON.stringify(d) });
+    document.querySelector('#sql').textContent = r.where_sql || JSON.stringify(r);
+  } catch(e){ toast(e.message,'error'); }
+};
+document.querySelector('#btn-exec').onclick = async () => {
+  try {
+    const d = JSON.parse(document.querySelector('#dsl').value);
+    const r = await api('/api/v2/search/execute', { method:'POST', body: JSON.stringify({ dsl: d }) });
+    document.querySelector('#rows').textContent = (r?.data?.data?.length ?? 0);
+  } catch(e){ toast(e.message,'error'); }
+};
+</script>
+</body></html>
 <!doctype html>
 <html>
 <head>

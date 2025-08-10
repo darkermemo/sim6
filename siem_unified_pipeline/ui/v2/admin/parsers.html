@@ -1,0 +1,53 @@
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
+<link rel="stylesheet" href="./_shared.css"/>
+<title>Parsers · Admin</title>
+</head><body>
+<header>
+  <div class="title">Parsers</div>
+  <nav aria-label="Admin">
+    <a href="./index.html">Home</a><a href="./tenants.html">Tenants</a>
+    <a href="./log-sources.html">Log Sources</a><a href="./parsers.html">Parsers</a>
+    <a href="./cim.html">CIM Explorer</a><a href="./sigma.html">Sigma</a><a href="./ingestors.html">Ingestors</a>
+  </nav>
+  <div style="margin-left:auto" class="small">Tenant: <input id="tenant" value="default" style="width:120px"/></div>
+</header>
+<main>
+  <section class="card">
+    <h3>Catalog</h3>
+    <table>
+      <thead><tr><th>Vendor</th><th>Type</th><th>Version</th><th>Coverage</th><th>Enabled</th><th>Action</th></tr></thead>
+      <tbody id="body"><tr><td colspan="6" class="small">Loading…</td></tr></tbody>
+    </table>
+  </section>
+</main>
+<div id="toast" class="toast"></div>
+<script src="./_shared.js"></script>
+<script>
+setCurrentNav('parsers.html');
+async function load() {
+  try {
+    const t = document.querySelector('#tenant').value.trim()||'default';
+    const data = await api(`/api/v2/admin/parsers?tenant_id=${encodeURIComponent(t)}`);
+    const rows = (data.parsers||[]).map(p => `
+      <tr><td>${p.vendor}</td><td>${p.type}</td><td class="small">${p.version||'-'}</td>
+      <td><span class="badge">${p.coverage?.toFixed?.(2) ?? '-'}</span></td>
+      <td>${p.enabled? 'Yes' : 'No'}</td>
+      <td><button data-v="${p.vendor}" data-ty="${p.type}" data-en="${!p.enabled}">${p.enabled?'Disable':'Enable'}</button></td></tr>`);
+    document.querySelector('#body').innerHTML = rows.join('') || `<tr><td colspan="6" class="small">No parsers</td></tr>`;
+    $all('#body button').forEach(b=> b.onclick = async (e)=>{
+      const vendor = b.dataset.v, type=b.dataset.ty, en = (b.dataset.en === 'true'), tenant=document.querySelector('#tenant').value.trim()||'default';
+      try {
+        await api('/api/v2/admin/parsers/toggle', { method:'POST', body: JSON.stringify({tenant_id:tenant, vendor, type, enabled:en}) });
+        toast('Updated','ok'); load();
+      } catch(err){ toast(err.message,'error'); }
+    });
+  } catch(e){
+    document.querySelector('#body').innerHTML = `<tr><td colspan="6" class="small">Error: ${e.message}. If endpoint is missing, implement /api/v2/admin/parsers & /parsers/toggle.</td></tr>`;
+  }
+}
+document.querySelector('#tenant').addEventListener('change', load);
+load();
+</script>
+</body></html>
+

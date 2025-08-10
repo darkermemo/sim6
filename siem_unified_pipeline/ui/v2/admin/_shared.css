@@ -1,0 +1,31 @@
+/* Minimal, accessible styles */
+:root { --bg:#0b1320; --card:#121a2b; --muted:#8aa0b6; --text:#e9f2ff; --accent:#35a0ff; --ok:#2ecc71; --warn:#f1c40f; --err:#ff6b6b; }
+* { box-sizing: border-box; }
+html, body { margin:0; padding:0; background:var(--bg); color:var(--text); font:14px/1.45 ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell; }
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+header { display:flex; gap:12px; align-items:center; padding:12px 16px; background:var(--card); border-bottom:1px solid #1f2a44; position:sticky; top:0; z-index:10; }
+header .title { font-weight:600; letter-spacing:.3px; }
+nav a { margin-right:10px; padding:6px 10px; border-radius:8px; }
+nav a[aria-current="page"] { background:#0f2039; }
+main { max-width:1100px; margin:18px auto; padding:0 16px; }
+.card { background:var(--card); border:1px solid #1f2a44; border-radius:14px; padding:14px; margin:14px 0; }
+.row { display:flex; gap:10px; align-items:center; }
+.grid { display:grid; gap:12px; }
+.grid.cols-2 { grid-template-columns: 1fr 1fr; }
+label { display:block; font-size:12px; color:var(--muted); margin-bottom:4px; }
+input, select, textarea { width:100%; padding:10px; border-radius:10px; border:1px solid #263251; background:#0b1426; color:var(--text); }
+textarea { min-height:120px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+button { padding:10px 14px; border-radius:10px; border:1px solid #2b3a5e; background:#14203a; color:var(--text); cursor:pointer; }
+button.primary { background:var(--accent); border-color:#298bdc; color:#001429; font-weight:600; }
+button:disabled { opacity:.6; cursor:not-allowed; }
+.badge { display:inline-block; padding:2px 8px; border-radius:999px; font-size:12px; border:1px solid #2b3a5e; color:var(--muted); }
+.badge.ok { border-color:#1f8b4c; color:#b5ffd0; }
+.badge.err { border-color:#8b1f1f; color:#ffc1c1; }
+pre, code { background:#0b1426; border:1px solid #233256; border-radius:10px; padding:10px; overflow:auto; }
+table { width:100%; border-collapse: collapse; }
+th, td { padding:8px 10px; border-bottom:1px solid #1f2a44; text-align:left; }
+.toast { position:fixed; right:16px; bottom:16px; display:none; background:#0f2039; border:1px solid #2b3a5e; color:var(--text); padding:10px 12px; border-radius:12px; min-width:260px; }
+.toast.show { display:block; }
+.small { font-size:12px; color:var(--muted); }
+

@@ -1,0 +1,67 @@
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
+<link rel="stylesheet" href="./_shared.css"/>
+<title>CIM Explorer · Admin</title>
+</head><body>
+<header>
+  <div class="title">CIM Explorer</div>
+  <nav aria-label="Admin">
+    <a href="./index.html">Home</a><a href="./tenants.html">Tenants</a>
+    <a href="./log-sources.html">Log Sources</a><a href="./parsers.html">Parsers</a>
+    <a href="./cim.html">CIM Explorer</a><a href="./sigma.html">Sigma</a><a href="./ingestors.html">Ingestors</a>
+  </nav>
+</header>
+<main class="grid cols-2">
+  <section class="card">
+    <h3>Fetch recent events</h3>
+    <label>Tenant</label><input id="tenant" value="default"/>
+    <label>Category</label><input id="cat" value="http"/>
+    <div class="row"><button id="btn-fetch" class="primary">Fetch</button></div>
+    <div id="keys" class="small">—</div>
+  </section>
+  <section class="card">
+    <h3>Canonical fields</h3>
+    <ul id="canon" class="small">
+      <li>event_timestamp, tenant_id, event_category, event_action, event_outcome, user_name, source_ip, destination_ip, severity, message</li>
+    </ul>
+    <h4 class="small">Click a JSON key to copy a json_meta() snippet</h4>
+    <pre id="snippet" class="small">—</pre>
+  </section>
+</main>
+<div id="toast" class="toast"></div>
+<script src="./_shared.js"></script>
+<script>
+setCurrentNav('cim.html');
+function extractKeys(rows) {
+  const keys = new Set();
+  for (const r of rows) {
+    try { const meta = JSON.parse(r.metadata||'{}'); recur(meta, ''); } catch {}
+    if (r.raw_event && /^\s*[{[]/.test(r.raw_event)) {
+      try { const raw = JSON.parse(r.raw_event); recur(raw, 'raw.'); } catch {}
+    }
+  }
+  function recur(obj, prefix){
+    if (obj && typeof obj==='object' && !Array.isArray(obj)) {
+      for (const k of Object.keys(obj)) { const p = prefix ? `${prefix}${k}` : k; keys.add(p); recur(obj[k], `${p}.`); }
+    }
+  }
+  return [...keys].sort().slice(0,200);
+}
+document.querySelector('#btn-fetch').onclick = async () => {
+  try {
+    const tenant = document.querySelector('#tenant').value.trim()||'default', cat=document.querySelector('#cat').value.trim();
+    const dsl = { search:{ tenant_ids:[tenant], time_range:{ last_seconds:1800 }, where: cat? {op:'eq', args:['event_category',cat]} : {op:'and', args:[]} , limit:200 }};
+    const r = await api('/api/v2/search/execute', { method:'POST', body: JSON.stringify({ dsl }) });
+    const rows = r?.data?.data||[];
+    const keys = extractKeys(rows);
+    document.querySelector('#keys').innerHTML = keys.map(k=>`<code class="jsonkey" data-k="${k}">${k}</code>`).join(' ');
+    $all('.jsonkey').forEach(el => el.onclick = ()=>{
+      const k = el.dataset.k.replace(/^raw\./,''); const isRaw = el.dataset.k.startsWith('raw.');
+      const call = isRaw ? `{"op":"eq","args":["json_raw","${k}","<value>"]}` : `{"op":"eq","args":["json_meta","${k}","<value>"]}`;
+      document.querySelector('#snippet').textContent = call; navigator.clipboard?.writeText(call); toast('Snippet copied','ok');
+    });
+  } catch(e){ toast(e.message,'error'); }
+};
+</script>
+</body></html>
+
