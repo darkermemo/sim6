@@ -60,11 +60,8 @@ pub fn build(state: AppState) -> Router {
          .route("/api/v2/sources/:id", axum::routing::patch(crate::v2::handlers::sources::patch_source))
          .route("/api/v2/sources/:id/test-ingest", axum::routing::post(crate::v2::handlers::sources::test_ingest))
          .route("/api/v2/sources/:id/deploy", axum::routing::post(crate::v2::handlers::sources::deploy_source))
-         .route("/api/v2/parsers", axum::routing::post(crate::v2::handlers::parsers::create_parser))
-         .route("/api/v2/parsers/:id", get(crate::v2::handlers::parsers::get_parser))
-         .route("/api/v2/parsers/:id/test", axum::routing::post(crate::v2::handlers::parsers::test_parser))
-         .route("/api/v2/parsers/autodetect", axum::routing::post(crate::v2::handlers::parsers::autodetect_parser))
-         .route("/api/v2/parsers/:id/activate", axum::routing::post(crate::v2::handlers::parsers::activate_parser))
+         .route("/api/v2/admin/parsers", get(crate::v2::handlers::parsers::list_parsers))
+         .route("/api/v2/admin/parsers/toggle", axum::routing::post(crate::v2::handlers::parsers::toggle_parser))
          // CIM
          .route("/api/v2/cim/validate", axum::routing::post(crate::v2::handlers::cim::cim_validate))
          .route("/api/v2/cim/coverage", get(crate::v2::handlers::cim::get_coverage))
