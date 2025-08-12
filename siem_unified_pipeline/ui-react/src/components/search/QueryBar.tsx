@@ -38,8 +38,8 @@ export function QueryBar({ value, onChange, onRun }: Props) {
       <input type="number" min={1} max={1000} value={value.limit} onChange={e => set({ limit: Math.max(1, Math.min(1000, Number(e.target.value)||200)) })} />
       <button onClick={onRun}>Run</button>
       <div style={{ gridColumn: "1 / span 2" }}>
-        <label>Last seconds</label>
-        <input type="number" min={1} max={86400} value={value.time_range.last_seconds || 600}
+        <label htmlFor="qb-last-seconds">Last seconds</label>
+        <input id="qb-last-seconds" type="number" min={1} max={86400} value={value.time_range.last_seconds || 600}
           onChange={e => set({ time_range: { last_seconds: Math.max(1, Math.min(86400, Number(e.target.value)||600)) } })} />
       </div>
     </div>
