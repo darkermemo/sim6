@@ -4,3 +4,4 @@ src/pages/RulePacks.tsx
 src/pages/Rules.tsx
 src/pages/__tests__/Search.test.tsx
 src/components/search/ResultsGrid.tsx
+src-legacy/
