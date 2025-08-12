@@ -11,6 +11,14 @@ import type {
   SavedSearchGet,
 } from '@/types/api'
 
+// Type definitions for fetch API
+interface RequestInit {
+  method?: string;
+  headers?: Record<string, string>;
+  body?: string | Blob | FormData | null;
+  signal?: AbortSignal;
+}
+
 const BASE = import.meta.env.VITE_API_BASE ?? ''
 
 async function http<T>(path: string, init?: RequestInit): Promise<T> {

@@ -19,8 +19,15 @@ pub fn translate_to_dsl(body: &Value) -> Result<SearchDsl, String> {
     } else {
         tr = Some(TimeRange::Last { last_seconds: 900 });
     }
-    // Optional KQL/Lucene-lite query string
-    let where_ = if let Some(q) = body.get("q").and_then(|v| v.as_str()) { parse_kql(q) } else { None };
+    // Optional free-text query string
+    let where_ = if let Some(q) = body.get("q").and_then(|v| v.as_str()) { 
+        parse_free_text(q) 
+    } else if let Some(query) = body.get("query").and_then(|v| v.as_str()) {
+        // Support legacy 'query' field for KQL
+        parse_kql(query)
+    } else { 
+        None 
+    };
     let section = SearchSection {
         time_range: tr,
         where_: where_,
@@ -35,6 +42,63 @@ pub fn parse_kql(input: &str) -> Option<Expr> {
     let mut tokens = tokenize(input);
     let expr = parse_or(&mut tokens);
     expr
+}
+
+/// Parse free-text search query into multiSearch expression
+pub fn parse_free_text(input: &str) -> Option<Expr> {
+    if input.trim().is_empty() {
+        return None;
+    }
+    
+    let mut tokens = Vec::new();
+    let mut phrases = Vec::new();
+    
+    // Extract quoted phrases first
+    let mut remaining = input.to_string();
+    let mut i = 0;
+    while let Some(start) = remaining[i..].find('"') {
+        let start_idx = i + start;
+        if let Some(end) = remaining[start_idx + 1..].find('"') {
+            let phrase = remaining[start_idx + 1..start_idx + 1 + end].to_string();
+            if !phrase.is_empty() {
+                phrases.push(phrase);
+                // Replace phrase with placeholder to avoid re-tokenizing
+                remaining.replace_range(start_idx..=start_idx + 1 + end, " ");
+            }
+            i = start_idx + 1;
+        } else {
+            break;
+        }
+    }
+    
+    // Split remaining text on whitespace for individual tokens
+    for word in remaining.split_whitespace() {
+        if !word.is_empty() {
+            tokens.push(word.to_string());
+        }
+    }
+    
+    // Build expression
+    let mut conditions = Vec::new();
+    
+    // Add multiSearch for all tokens using ContainsAny
+    if !tokens.is_empty() {
+        conditions.push(Expr::ContainsAny(("message".to_string(), tokens)));
+    }
+    
+    // Add exact phrase matches
+    for phrase in phrases {
+        conditions.push(Expr::Contains(("message".to_string(), phrase)));
+    }
+    
+    // Combine with AND
+    if conditions.is_empty() {
+        None
+    } else if conditions.len() == 1 {
+        Some(conditions.into_iter().next().unwrap())
+    } else {
+        Some(Expr::And(conditions))
+    }
 }
 
 #[derive(Clone, Debug, PartialEq)]

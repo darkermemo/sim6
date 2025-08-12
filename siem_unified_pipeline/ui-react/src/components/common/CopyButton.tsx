@@ -18,8 +18,8 @@ export function CopyButton({ text, className, variant = 'ghost', size = 'icon' }
       await navigator.clipboard.writeText(text);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
-      console.error('Failed to copy:', err);
+    } catch (error) {
+      // Handle error silently
     }
   };
 

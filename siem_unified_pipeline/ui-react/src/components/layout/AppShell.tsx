@@ -13,7 +13,8 @@ import {
   Moon,
   Sun,
   User,
-  ChevronLeft
+  ChevronLeft,
+  Package
 } from 'lucide-react';
 import { useHealth, getHealthColor } from '@/lib/health';
 import { Badge } from '@/components/ui/badge';
@@ -21,6 +22,7 @@ import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useUrlState } from '@/hooks/useUrlState';
 import { cn } from '@/lib/utils';
+import { ToastContainer } from '@/components/ui/toast';
 
 interface NavItem {
   label: string;
@@ -33,7 +35,8 @@ interface NavItem {
 const navItems: NavItem[] = [
   { label: 'Search', path: '/search', icon: <Search className="w-4 h-4" /> },
   { label: 'Alerts', path: '/alerts', icon: <AlertTriangle className="w-4 h-4" /> },
-  { label: 'Rules', path: '/rules', icon: <BookOpen className="w-4 h-4" />, disabled: true },
+  { label: 'Rules', path: '/rules', icon: <BookOpen className="w-4 h-4" /> },
+  { label: 'Rule Packs', path: '/rule-packs', icon: <Package className="w-4 h-4" /> },
   { 
     label: 'Admin', 
     path: '/admin', 
@@ -271,6 +274,7 @@ export function AppShell() {
           </React.Suspense>
         </main>
       </div>
+      <ToastContainer />
     </div>
     </TooltipProvider>
   );

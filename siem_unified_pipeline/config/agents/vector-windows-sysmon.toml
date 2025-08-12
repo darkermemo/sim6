@@ -1,0 +1,28 @@
+[sources.sysmon]
+type = "windows_event_log"
+channels = ["Microsoft-Windows-Sysmon/Operational"]
+
+[transforms.to_ndjson]
+type = "remap"
+inputs = ["sysmon"]
+source = '''
+.tenant_id = {{TENANT_ID}}
+.source_id = "{{SOURCE_ID}}"
+.message = string!(.message)
+.source_type = "windows_sysmon"
+'''
+
+[sinks.http]
+type = "http"
+inputs = ["to_ndjson"]
+uri = "{{BASE_URL}}/api/v2/ingest/ndjson"
+encoding.codec = "ndjson"
+method = "POST"
+headers."Content-Type" = "application/x-ndjson"
+# optional until auth lands
+headers."X-API-Key" = "{{API_KEY}}"
+buffer.type = "disk"
+buffer.max_size = 134217728 # 128 MiB
+request.in_flight_limit = 16
+batch.max_events = 500
+batch.timeout_secs = 2

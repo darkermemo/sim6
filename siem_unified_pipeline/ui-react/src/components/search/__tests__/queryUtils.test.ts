@@ -14,7 +14,11 @@ export function parseQueryTokens(query: string): string[] {
 }
 
 export function isFieldValuePair(token: string): boolean {
-  return token.includes(':') && !token.startsWith('"');
+  // Support both field:value and field!=value
+  return (token.includes(':') || token.includes('!=')) && 
+         !token.startsWith('"') &&
+         !token.startsWith(':') && !token.endsWith(':') &&
+         !token.startsWith('!=') && !token.endsWith('!=');
 }
 
 describe('Query Tokenization', () => {

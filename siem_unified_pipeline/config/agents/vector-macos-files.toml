@@ -1,0 +1,27 @@
+[sources.files]
+type = "file"
+include = ["/var/log/system.log", "/var/log/install.log"]
+
+[transforms.shape]
+type = "remap"
+inputs = ["files"]
+source = '''
+.tenant_id = {{TENANT_ID}}
+.source_id = "{{SOURCE_ID}}"
+.message = string!(.message)
+.source_type = "macos_files"
+'''
+
+[sinks.http]
+type = "http"
+inputs = ["shape"]
+uri = "{{BASE_URL}}/api/v2/ingest/ndjson"
+encoding.codec = "ndjson"
+method = "POST"
+headers."Content-Type" = "application/x-ndjson"
+headers."X-API-Key" = "{{API_KEY}}"
+buffer.type = "disk"
+buffer.max_size = 134217728 # 128 MiB
+request.in_flight_limit = 16
+batch.max_events = 500
+batch.timeout_secs = 2

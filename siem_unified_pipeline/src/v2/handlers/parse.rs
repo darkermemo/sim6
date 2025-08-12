@@ -5,6 +5,7 @@ use std::sync::Arc;
 
 use crate::error::Result as PipelineResult;
 use crate::v2::state::AppState;
+use crate::v2::normalize;
 
 // =============================
 // Request/response types
@@ -270,24 +271,46 @@ fn ensure_metadata_string(meta: serde_json::Value) -> String {
 /// Ensures `retention_days=30` is set explicitly.
 fn normalize_impl(tenant_id: &str, det: &DetectResp, sample: &str, now_ts: u32) -> serde_json::Value {
     let created_at = now_ts;
+    
+    // Use the new normalize module
+    let parser_id = if det.vendor.is_empty() { None } else { Some(det.vendor.as_str()) };
+    let norm = normalize::normalize(sample, parser_id);
+    
+    // Extract potential IOCs for enrichment
+    let iocs = normalize::extract_iocs(&norm);
+    let ti_hits: Vec<String> = iocs.iter().map(|(ioc, _)| ioc.clone()).collect();
+    
     let mut uem = serde_json::json!({
         "event_id": format!("{}-{}-{}", det.vendor, det.r#type, now_ts),
         "event_timestamp": now_ts,
         "tenant_id": tenant_id,
-        "event_category": match infer_domain(&det.vendor, &det.r#type) {"auth"=>"auth","network"=>"network","http"=>"http",_=>"auth"},
-        "event_action": serde_json::Value::Null,
+        "event_category": if norm.event_category.is_empty() { 
+            match infer_domain(&det.vendor, &det.r#type) {"auth"=>"auth","network"=>"network","http"=>"http",_=>"auth"} 
+        } else { 
+            &norm.event_category 
+        },
+        "event_type": if norm.event_type.is_empty() { serde_json::Value::Null } else { serde_json::json!(norm.event_type) },
+        "event_action": if norm.action.is_empty() { serde_json::Value::Null } else { serde_json::json!(norm.action) },
         "event_outcome": serde_json::Value::Null,
-        "source_ip": serde_json::Value::Null,
-        "destination_ip": serde_json::Value::Null,
+        "source_ip": if norm.source_ip.is_empty() { serde_json::Value::Null } else { serde_json::json!(norm.source_ip) },
+        "destination_ip": if norm.destination_ip.is_empty() { serde_json::Value::Null } else { serde_json::json!(norm.destination_ip) },
         "user_id": serde_json::Value::Null,
-        "user_name": serde_json::Value::Null,
-        "severity": serde_json::Value::Null,
+        "user_name": if norm.user.is_empty() { serde_json::Value::Null } else { serde_json::json!(norm.user) },
+        "user": if norm.user.is_empty() { serde_json::Value::Null } else { serde_json::json!(norm.user) },
+        "severity": if norm.severity == 0 { serde_json::Value::Null } else { serde_json::json!(norm.severity) },
         "message": serde_json::Value::Null,
         "raw_event": sample,
         "metadata": "{}",
         "source_type": format!("{}.{}", det.vendor, det.r#type),
         "created_at": created_at,
         "retention_days": 30u16,
+        "vendor": norm.vendor,
+        "product": norm.product,
+        "host": if norm.host.is_empty() { serde_json::Value::Null } else { serde_json::json!(norm.host) },
+        "action": if norm.action.is_empty() { serde_json::Value::Null } else { serde_json::json!(norm.action) },
+        "parsed_fields": serde_json::json!(norm.parsed_fields),
+        "ti_hits": ti_hits,
+        "ti_match": if ti_hits.is_empty() { 0 } else { 1 },
     });
 
     // Populate per known vendor/type

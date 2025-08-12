@@ -1,5 +1,5 @@
 use once_cell::sync::Lazy;
-use prometheus::{Encoder, IntCounterVec, HistogramVec, Opts, HistogramOpts, TextEncoder, Registry, GaugeVec, IntGaugeVec};
+use prometheus::{Encoder, IntCounter, IntCounterVec, HistogramVec, Opts, HistogramOpts, TextEncoder, Registry, GaugeVec, IntGaugeVec, IntGauge};
 use std::env;
 
 static REGISTRY: Lazy<Registry> = Lazy::new(Registry::new);
@@ -38,6 +38,84 @@ static RULES_RUN_TOTAL: Lazy<IntCounterVec> = Lazy::new(|| {
     ).unwrap();
     REGISTRY.register(Box::new(c.clone())).ok();
     c
+});
+
+// Gauge for rule lag in seconds: now() - watermark_ts
+static RULES_LAG_SECONDS: Lazy<IntGaugeVec> = Lazy::new(|| {
+    let g = IntGaugeVec::new(
+        Opts::new("siem_v2_rules_lag_seconds", "Rule lag: now - watermark_ts (seconds) by rule/tenant"),
+        &["rule","tenant"],
+    ).unwrap();
+    REGISTRY.register(Box::new(g.clone())).ok();
+    g
+});
+
+// Lock metrics
+static LOCK_TOTAL: Lazy<IntCounterVec> = Lazy::new(|| {
+    let c = IntCounterVec::new(
+        Opts::new("siem_v2_lock_total", "Lock attempts by route and outcome"),
+        &["route", "outcome"],
+    ).unwrap();
+    REGISTRY.register(Box::new(c.clone())).ok();
+    c
+});
+
+// Rate limit metrics
+static RATE_LIMIT_TOTAL: Lazy<IntCounterVec> = Lazy::new(|| {
+    let c = IntCounterVec::new(
+        Opts::new("siem_v2_rate_limit_total", "Rate limit decisions by tenant, source, and outcome"),
+        &["tenant", "source", "outcome"],
+    ).unwrap();
+    REGISTRY.register(Box::new(c.clone())).ok();
+    c
+});
+
+// Redis RTT gauge
+static REDIS_RTT_MS: Lazy<IntGauge> = Lazy::new(|| {
+    let g = IntGauge::new("siem_v2_redis_rtt_ms", "Redis round-trip time in milliseconds").unwrap();
+    REGISTRY.register(Box::new(g.clone())).ok();
+    g
+});
+
+// Redis availability gauge
+static REDIS_UP: Lazy<IntGauge> = Lazy::new(|| {
+    let g = IntGauge::new("siem_v2_redis_up", "Redis availability (0=down, 1=up)").unwrap();
+    REGISTRY.register(Box::new(g.clone())).ok();
+    g
+});
+
+// ClickHouse circuit breaker metrics
+static CLICKHOUSE_CIRCUIT_STATE: Lazy<IntGaugeVec> = Lazy::new(|| {
+    let g = IntGaugeVec::new(
+        Opts::new("siem_v2_clickhouse_circuit_state", "Circuit breaker state (0=inactive, 1=active)"),
+        &["state"],
+    ).unwrap();
+    REGISTRY.register(Box::new(g.clone())).ok();
+    g
+});
+
+static CLICKHOUSE_ERRORS_TOTAL: Lazy<IntCounterVec> = Lazy::new(|| {
+    let c = IntCounterVec::new(
+        Opts::new("siem_v2_clickhouse_errors_total", "ClickHouse operation errors by operation"),
+        &["op"],
+    ).unwrap();
+    REGISTRY.register(Box::new(c.clone())).ok();
+    c
+});
+
+static CLICKHOUSE_RTT_MS: Lazy<IntGauge> = Lazy::new(|| {
+    let g = IntGauge::new("siem_v2_clickhouse_rtt_ms", "Last successful ClickHouse query RTT in milliseconds").unwrap();
+    REGISTRY.register(Box::new(g.clone())).ok();
+    g
+});
+
+static RULES_WINDOW_SECONDS: Lazy<IntGaugeVec> = Lazy::new(|| {
+    let g = IntGaugeVec::new(
+        Opts::new("siem_v2_rules_window_seconds", "Rule window size: upper - watermark (seconds) by rule/tenant"),
+        &["rule","tenant"],
+    ).unwrap();
+    REGISTRY.register(Box::new(g.clone())).ok();
+    g
 });
 
 static ALERTS_WRITTEN_TOTAL: Lazy<IntCounterVec> = Lazy::new(|| {
@@ -232,10 +310,46 @@ static ADMIN_LOG_SOURCES_TOTAL: Lazy<IntCounterVec> = Lazy::new(|| {
     c
 });
 
+static ADMIN_WRITES_TOTAL: Lazy<IntCounterVec> = Lazy::new(|| {
+    let c = IntCounterVec::new(
+        Opts::new("siem_v2_admin_writes_total", "Admin writes by entity and op"),
+        &["entity","op"],
+    ).unwrap();
+    REGISTRY.register(Box::new(c.clone())).ok();
+    c
+});
+
 static QUOTA_VIOLATIONS_TOTAL: Lazy<IntCounterVec> = Lazy::new(|| {
     let c = IntCounterVec::new(
         Opts::new("siem_v2_quota_violations_total", "Daily quota violations per tenant (bytes/events)"),
         &["tenant", "kind"],
+    ).unwrap();
+    REGISTRY.register(Box::new(c.clone())).ok();
+    c
+});
+
+static V2_INGEST_VALIDATION_TOTAL: Lazy<IntCounterVec> = Lazy::new(|| {
+    let c = IntCounterVec::new(
+        Opts::new("siem_v2_ingest_validation_total", "Validation outcomes per reason"),
+        &["reason"],
+    ).unwrap();
+    REGISTRY.register(Box::new(c.clone())).ok();
+    c
+});
+
+static V2_QUARANTINE_BACKLOG: Lazy<IntGaugeVec> = Lazy::new(|| {
+    let g = IntGaugeVec::new(
+        Opts::new("siem_v2_quarantine_backlog", "Rows in quarantine backlog (optional sampled)"),
+        &["database"],
+    ).unwrap();
+    REGISTRY.register(Box::new(g.clone())).ok();
+    g
+});
+
+static V2_IDEMPOTENCY_TOTAL: Lazy<IntCounterVec> = Lazy::new(|| {
+    let c = IntCounterVec::new(
+        Opts::new("siem_v2_idempotency_total", "Idempotency outcomes by route"),
+        &["route","outcome"],
     ).unwrap();
     REGISTRY.register(Box::new(c.clone())).ok();
     c
@@ -247,6 +361,7 @@ pub fn init() {
     Lazy::force(&SEARCH_COMPILE_SECS);
     Lazy::force(&RULES_RUN_TOTAL);
     Lazy::force(&ALERTS_WRITTEN_TOTAL);
+    Lazy::force(&RULES_LAG_SECONDS);
     Lazy::force(&SCHEDULER_SECS);
     Lazy::force(&SCHEDULER_WINDOWS_BEHIND);
     Lazy::force(&SCHEDULER_LEASE_CONFLICTS);
@@ -268,6 +383,10 @@ pub fn init() {
     Lazy::force(&V2_STREAM_ENQUEUE_TOTAL);
     Lazy::force(&ADMIN_LOG_SOURCES_TOTAL);
     Lazy::force(&QUOTA_VIOLATIONS_TOTAL);
+    Lazy::force(&ADMIN_WRITES_TOTAL);
+    Lazy::force(&V2_INGEST_VALIDATION_TOTAL);
+    Lazy::force(&V2_QUARANTINE_BACKLOG);
+    Lazy::force(&V2_IDEMPOTENCY_TOTAL);
 }
 
 pub fn rule_lbl(rule_id: &str) -> String {
@@ -295,6 +414,18 @@ pub fn inc_rules_run(rule_id: &str, tenant: &str, outcome: &str, error_reason: &
     RULES_RUN_TOTAL
         .with_label_values(&[&rule_lbl(rule_id), tenant, outcome, if error_reason.is_empty() { "-" } else { error_reason }, &run_id_label()])
         .inc();
+}
+
+pub fn set_rules_lag(rule_id: &str, tenant: &str, lag_secs: i64) {
+    RULES_LAG_SECONDS
+        .with_label_values(&[&rule_lbl(rule_id), tenant])
+        .set(lag_secs);
+}
+
+pub fn set_rules_window(rule_id: &str, tenant: &str, window_secs: i64) {
+    RULES_WINDOW_SECONDS
+        .with_label_values(&[&rule_lbl(rule_id), tenant])
+        .set(window_secs);
 }
 
 pub fn inc_ingest_rate_limited(tenant: &str, source_type: &str) {
@@ -399,6 +530,161 @@ pub fn inc_admin_log_sources(op: &str, tenant: &str) {
 
 pub fn inc_quota_violation(tenant: &str, kind: &str) {
     QUOTA_VIOLATIONS_TOTAL.with_label_values(&[tenant, kind]).inc();
+}
+
+pub fn inc_admin_write(entity: &str, op: &str) {
+    ADMIN_WRITES_TOTAL.with_label_values(&[entity, op]).inc();
+}
+
+pub fn inc_v2_ingest_quarantined(tenant: &str, reason: &str, n: u64) {
+    V2_INGEST_VALIDATION_TOTAL.with_label_values(&[reason]).inc_by(n);
+    V2_INGEST_TOTAL.with_label_values(&[tenant, "quarantined"]).inc_by(n);
+}
+
+pub fn inc_idempotency(route: &str, outcome: &str) {
+    V2_IDEMPOTENCY_TOTAL.with_label_values(&[route, outcome]).inc();
+}
+
+// Lock metrics
+pub fn inc_lock_total(route: &str, outcome: &str) {
+    LOCK_TOTAL.with_label_values(&[route, outcome]).inc();
+}
+
+// Rate limit metrics
+pub fn inc_v2_rate_limit_total(tenant: &str, source: &str, outcome: &str) {
+    RATE_LIMIT_TOTAL.with_label_values(&[tenant, source, outcome]).inc();
+}
+
+// Redis metrics
+pub fn set_redis_rtt_ms(rtt_ms: i64) {
+    REDIS_RTT_MS.set(rtt_ms);
+}
+
+pub fn set_redis_up(is_up: bool) {
+    REDIS_UP.set(if is_up { 1 } else { 0 });
+}
+
+// ClickHouse circuit breaker metrics
+pub fn set_clickhouse_circuit_state(state: &str, value: i64) {
+    CLICKHOUSE_CIRCUIT_STATE.with_label_values(&[state]).set(value);
+}
+
+pub fn inc_clickhouse_errors(op: &str) {
+    CLICKHOUSE_ERRORS_TOTAL.with_label_values(&[op]).inc();
+}
+
+pub fn set_clickhouse_rtt_ms(rtt_ms: i64) {
+    CLICKHOUSE_RTT_MS.set(rtt_ms);
+}
+
+// Agent metrics
+static AGENTS_ENROLLED_TOTAL: Lazy<IntCounter> = Lazy::new(|| {
+    let c = IntCounter::new(
+        "siem_v2_agents_enrolled_total", 
+        "Total number of agents enrolled"
+    ).unwrap();
+    REGISTRY.register(Box::new(c.clone())).ok();
+    c
+});
+
+static AGENTS_HEARTBEAT_TOTAL: Lazy<IntCounter> = Lazy::new(|| {
+    let c = IntCounter::new(
+        "siem_v2_agents_heartbeat_total", 
+        "Total number of agent heartbeats received"
+    ).unwrap();
+    REGISTRY.register(Box::new(c.clone())).ok();
+    c
+});
+
+static AGENTS_ONLINE: Lazy<IntGaugeVec> = Lazy::new(|| {
+    let g = IntGaugeVec::new(
+        Opts::new("siem_v2_agents_online", "Agent online status (1=online, 0=offline)"),
+        &["agent_id"]
+    ).unwrap();
+    REGISTRY.register(Box::new(g.clone())).ok();
+    g
+});
+
+static INGEST_SPOOLED_TOTAL: Lazy<IntCounterVec> = Lazy::new(|| {
+    let c = IntCounterVec::new(
+        Opts::new("siem_v2_ingest_spooled_total", "Total events spooled by agents"),
+        &["agent_id"]
+    ).unwrap();
+    REGISTRY.register(Box::new(c.clone())).ok();
+    c
+});
+
+pub fn inc_v2_agents_enrolled_total() {
+    AGENTS_ENROLLED_TOTAL.inc();
+}
+
+pub fn inc_v2_agents_heartbeat_total() {
+    AGENTS_HEARTBEAT_TOTAL.inc();
+}
+
+pub fn set_v2_agents_online(agent_id: &str, value: i64) {
+    AGENTS_ONLINE.with_label_values(&[agent_id]).set(value);
+}
+
+pub fn inc_v2_ingest_spooled_total(agent_id: &str, count: u64) {
+    INGEST_SPOOLED_TOTAL.with_label_values(&[agent_id]).inc_by(count);
+}
+
+// Kafka metrics
+static INGEST_KAFKA_TOTAL: Lazy<IntCounterVec> = Lazy::new(|| {
+    let c = IntCounterVec::new(
+        Opts::new("siem_v2_ingest_kafka_total", "Kafka ingest events by outcome"),
+        &["outcome"]
+    ).unwrap();
+    REGISTRY.register(Box::new(c.clone())).ok();
+    c
+});
+
+static KAFKA_LAG: Lazy<IntGaugeVec> = Lazy::new(|| {
+    let g = IntGaugeVec::new(
+        Opts::new("siem_v2_kafka_lag", "Kafka consumer lag by partition"),
+        &["partition"]
+    ).unwrap();
+    REGISTRY.register(Box::new(g.clone())).ok();
+    g
+});
+
+static KAFKA_COMMITS_TOTAL: Lazy<IntCounter> = Lazy::new(|| {
+    let c = IntCounter::new(
+        "siem_v2_kafka_commits_total",
+        "Total Kafka offset commits"
+    ).unwrap();
+    REGISTRY.register(Box::new(c.clone())).ok();
+    c
+});
+
+static KAFKA_REBALANCES_TOTAL: Lazy<IntCounter> = Lazy::new(|| {
+    let c = IntCounter::new(
+        "siem_v2_kafka_rebalances_total",
+        "Total Kafka consumer rebalances"
+    ).unwrap();
+    REGISTRY.register(Box::new(c.clone())).ok();
+    c
+});
+
+pub fn inc_v2_ingest_kafka_total(outcome: &str) {
+    INGEST_KAFKA_TOTAL.with_label_values(&[outcome]).inc();
+}
+
+pub fn inc_v2_ingest_kafka_total_by(outcome: &str, count: u64) {
+    INGEST_KAFKA_TOTAL.with_label_values(&[outcome]).inc_by(count);
+}
+
+pub fn set_v2_kafka_lag(partition: i32, lag: i64) {
+    KAFKA_LAG.with_label_values(&[&partition.to_string()]).set(lag);
+}
+
+pub fn inc_v2_kafka_commits_total() {
+    KAFKA_COMMITS_TOTAL.inc();
+}
+
+pub fn inc_v2_kafka_rebalances_total() {
+    KAFKA_REBALANCES_TOTAL.inc();
 }
 
 pub async fn metrics_text() -> (axum::http::StatusCode, String) {

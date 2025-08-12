@@ -153,4 +153,83 @@ pub async fn run_aggregator_once(State(st): State<Arc<AppState>>) -> PipelineRes
   Ok("OK".to_string())
 }
 
+#[derive(Deserialize)]
+pub struct CreateIncident {
+  pub tenant_id: String,
+  pub title: String,
+  pub description: String,
+  pub severity: String,
+  pub owner: String,
+  pub entity_keys: Option<String>,
+  pub entities: Option<String>,
+  pub rule_ids: Option<Vec<String>>
+}
+
+pub async fn create_incident(
+  State(st): State<Arc<AppState>>,
+  Json(body): Json<CreateIncident>
+) -> PipelineResult<Json<serde_json::Value>> {
+  let incident_id = uuid::Uuid::new_v4().to_string();
+  let now = chrono::Utc::now().timestamp() as u32;
+  
+  let entity_keys = body.entity_keys.unwrap_or_default();
+  let entities = body.entities.unwrap_or_default();
+  let rule_ids = body.rule_ids.unwrap_or_default();
+  
+  let sql = format!(
+    "INSERT INTO dev.incidents (incident_id, tenant_id, title, description, severity, owner, entity_keys, entities, rule_ids, alert_count, first_alert_ts, last_alert_ts, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 0, ?, ?)"
+  );
+  
+  st.ch.query(&sql)
+    .bind(&incident_id)
+    .bind(&body.tenant_id)
+    .bind(&body.title)
+    .bind(&body.description)
+    .bind(&body.severity)
+    .bind(&body.owner)
+    .bind(&entity_keys)
+    .bind(&entities)
+    .bind(&rule_ids)
+    .bind(now)
+    .bind(now)
+    .execute()
+    .await
+    .map_err(|e| PipelineError::database(format!("create incident: {e}")))?;
+  
+  Ok(Json(serde_json::json!({
+    "incident_id": incident_id,
+    "status": "created"
+  })))
+}
+
+pub async fn delete_incident(
+  State(st): State<Arc<AppState>>,
+  Path(id): Path<String>,
+  Query(p): Query<std::collections::HashMap<String,String>>
+) -> PipelineResult<Json<serde_json::Value>> {
+  let tenant = p.get("tenant_id").ok_or_else(|| PipelineError::validation("tenant_id required"))?;
+  
+  // First delete related incident_alerts
+  let delete_alerts_sql = "ALTER TABLE dev.incident_alerts DELETE WHERE tenant_id = ? AND incident_id = ?";
+  st.ch.query(delete_alerts_sql)
+    .bind(tenant)
+    .bind(&id)
+    .execute()
+    .await
+    .map_err(|e| PipelineError::database(format!("delete incident alerts: {e}")))?;
+  
+  // Then delete the incident
+  let delete_incident_sql = "ALTER TABLE dev.incidents DELETE WHERE tenant_id = ? AND incident_id = ?";
+  st.ch.query(delete_incident_sql)
+    .bind(tenant)
+    .bind(&id)
+    .execute()
+    .await
+    .map_err(|e| PipelineError::database(format!("delete incident: {e}")))?;
+  
+  Ok(Json(serde_json::json!({
+    "status": "deleted"
+  })))
+}
+
 

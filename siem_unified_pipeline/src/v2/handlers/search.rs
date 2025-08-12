@@ -11,12 +11,24 @@ pub struct ExecuteRequest { pub dsl: SearchDsl }
 pub struct ExecuteResponse { pub sql: String, pub data: Value, pub timings_ms: u128 }
 
 /// POST /api/v2/search/execute - compile DSL and execute against ClickHouse (JSON)
+/// Accepts either { dsl: SearchDsl } or the simplified body used by search_api::handlers (tenant_id/time/q...)
 pub async fn search_execute(
     State(st): State<Arc<AppState>>,
-    Json(req): Json<ExecuteRequest>,
+    Json(body): Json<Value>,
 ) -> Result<Json<ExecuteResponse>, crate::error::PipelineError> {
     let t0_all = std::time::Instant::now();
-    let compiled = compile_search(&req.dsl, &st.events_table)
+    // Try legacy typed shape first
+    let dsl: SearchDsl = if body.get("dsl").is_some() {
+        let req: ExecuteRequest = serde_json::from_value(body)
+            .map_err(|e| crate::error::PipelineError::validation(format!("invalid dsl body: {e}")))?;
+        req.dsl
+    } else {
+        // Fallback to simplified translator
+        let dsl2 = crate::v2::search_api::compiler::translate_to_dsl(&body)
+            .map_err(|e| crate::error::PipelineError::validation(format!("invalid body: {e}")))?;
+        dsl2
+    };
+    let compiled = compile_search(&dsl, &st.events_table)
         .map_err(crate::error::PipelineError::validation)?;
     // Use HTTP JSON to ClickHouse for generic rows
     let sql = format!("{} FORMAT JSON", compiled.sql);

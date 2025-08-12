@@ -81,4 +81,43 @@ pub async fn create_note(Json(b): Json<CreateNoteRequest>) -> Result<Json<serde_
     Ok(Json(serde_json::json!({"id": id, "status":"created"})))
 }
 
+#[derive(Debug, Deserialize)]
+pub struct UpdateViewRequest { 
+    pub tenant_id: String,
+    pub name: String, 
+    pub dsl: serde_json::Value 
+}
+
+pub async fn update_view(
+    Path(id): Path<String>,
+    Json(body): Json<UpdateViewRequest>
+) -> Result<Json<serde_json::Value>, crate::error::PipelineError> {
+    let tenant = body.tenant_id.replace("'","''");
+    let name = body.name.replace("'","''");
+    let dsl = serde_json::to_string(&body.dsl).unwrap_or("{}".to_string()).replace("'","''");
+    let now = chrono::Utc::now().timestamp() as u32;
+    
+    let sql = format!(
+        "ALTER TABLE dev.saved_views UPDATE name='{}', dsl='{}', updated_at={} WHERE id='{}' AND tenant_id='{}'",
+        name, dsl, now, id.replace("'","''"), tenant
+    );
+    
+    let client = reqwest::Client::new();
+    let r = client.post("http://localhost:8123/")
+        .query(&[("query", sql)])
+        .header("Content-Length","0")
+        .send()
+        .await
+        .map_err(|e| crate::error::PipelineError::database(format!("update view: {e}")))?;
+    
+    if !r.status().is_success() { 
+        return Err(crate::error::PipelineError::database(format!("update view status {}", r.status()))); 
+    }
+    
+    Ok(Json(serde_json::json!({
+        "id": id,
+        "status": "updated"
+    })))
+}
+
 

@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use clickhouse::Row;
+use std::collections::HashMap;
 
 #[derive(Debug, Clone, Serialize, Deserialize, Row)]
 pub struct SiemEvent {
@@ -21,6 +22,31 @@ pub struct SiemEvent {
     pub source_type: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub retention_days: Option<u16>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub source_seq: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub source_id: Option<String>,
+    // New normalized fields
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub event_type: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub action: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub user: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub host: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub severity_int: Option<i16>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub vendor: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub product: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub parsed_fields: Option<HashMap<String, String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ti_hits: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ti_match: Option<u8>,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]

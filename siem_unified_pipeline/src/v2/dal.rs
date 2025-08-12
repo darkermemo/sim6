@@ -1,7 +1,10 @@
 use crate::v2::{api::EventSearchQuery, models::{SiemEvent, CompactEvent}, state::AppState};
+use crate::v2::util::circuit_breaker::{CIRCUIT_BREAKER, wrap_ch_error};
+use crate::v2::util::retry::retry_idempotent;
 use crate::error::{PipelineError, Result};
 use serde::{Serialize, Deserialize};
 use clickhouse::Row;
+use std::time::Instant;
 
 pub struct ClickHouseRepo;
 
@@ -48,13 +51,23 @@ impl ClickHouseRepo {
         );
 
         tracing::debug!("search SQL: {}", sql);
-        let rows: Vec<SiemEvent> = state
-            .ch
-            .query(&sql)
-            .fetch_all()
-            .await
-            .map_err(|e| PipelineError::database(format!("search failed: {e}")))?;
-        Ok(rows)
+        
+        // Execute with circuit breaker
+        CIRCUIT_BREAKER.call("search_events", async {
+            let start = Instant::now();
+            let rows: Vec<SiemEvent> = state
+                .ch
+                .query(&sql)
+                .fetch_all()
+                .await
+                .map_err(|e| wrap_ch_error(e, "clickhouse"))?;
+            
+            // Record successful RTT
+            let rtt_ms = start.elapsed().as_millis() as i64;
+            crate::v2::metrics::set_clickhouse_rtt_ms(rtt_ms);
+            
+            Ok(rows)
+        }).await
     }
 
     pub async fn search_events_compact(state: &AppState, q: &EventSearchQuery) -> Result<Vec<CompactEvent>> {
@@ -99,9 +112,18 @@ impl ClickHouseRepo {
             state.events_table, where_clause, limit, offset
         );
         tracing::debug!("search compact SQL: {}", sql);
-        let rows: Vec<CompactEvent> = state.ch.query(&sql).fetch_all().await
-            .map_err(|e| PipelineError::database(format!("search compact failed: {e}")))?;
-        Ok(rows)
+        // Execute with circuit breaker
+        CIRCUIT_BREAKER.call("search_events_compact", async {
+            let start = Instant::now();
+            let rows: Vec<CompactEvent> = state.ch.query(&sql).fetch_all().await
+                .map_err(|e| wrap_ch_error(e, "clickhouse"))?;
+            
+            // Record successful RTT
+            let rtt_ms = start.elapsed().as_millis() as i64;
+            crate::v2::metrics::set_clickhouse_rtt_ms(rtt_ms);
+            
+            Ok(rows)
+        }).await
     }
 
     pub async fn insert_events(state: &AppState, events: &[SiemEvent]) -> Result<u64> {
@@ -109,39 +131,58 @@ impl ClickHouseRepo {
             return Ok(0);
         }
 
-        // Use HTTP client to send data directly to ClickHouse
-        let mut inserted = 0;
-        let client = reqwest::Client::new();
-        
-        for event in events {
-            let json = serde_json::to_string(event)
-                .map_err(|e| PipelineError::database(format!("serialization failed: {e}")))?;
-            
-            let sql = format!("INSERT INTO {} FORMAT JSONEachRow", state.events_table);
-            let url = "http://localhost:8123/";
-            
-            let response = client.post(url)
-                .query(&[("query", sql)])
-                .body(json)
-                .send()
-                .await
-                .map_err(|e| PipelineError::database(format!("HTTP request failed: {e}")))?;
-            
-            if !response.status().is_success() {
-                let error_text = response.text().await.unwrap_or_default();
-                return Err(PipelineError::database(format!("ClickHouse insert failed: {}", error_text)));
-            }
-            
-            inserted += 1;
-        }
-        
-        Ok(inserted)
+        // Retry idempotent writes with circuit breaker
+        retry_idempotent(3, || async {
+            CIRCUIT_BREAKER.call("insert_events", async {
+                let start = Instant::now();
+                
+                // Use HTTP client to send data directly to ClickHouse
+                let mut inserted = 0;
+                let client = reqwest::Client::new();
+                
+                for event in events {
+                    let json = serde_json::to_string(event)
+                        .map_err(|e| PipelineError::database(format!("serialization failed: {e}")))?;
+                    
+                    let sql = format!("INSERT INTO {} FORMAT JSONEachRow", state.events_table);
+                    let url = "http://localhost:8123/";
+                    
+                    let response = client.post(url)
+                        .query(&[("query", sql)])
+                        .body(json)
+                        .send()
+                        .await
+                        .map_err(|e| PipelineError::database(format!("HTTP request failed: {e}")))?;
+                    
+                    if !response.status().is_success() {
+                        let error_text = response.text().await.unwrap_or_default();
+                        return Err(PipelineError::database(format!("ClickHouse insert failed: {}", error_text)));
+                    }
+                    
+                    inserted += 1;
+                }
+                
+                // Record successful RTT
+                let rtt_ms = start.elapsed().as_millis() as i64;
+                crate::v2::metrics::set_clickhouse_rtt_ms(rtt_ms);
+                
+                Ok(inserted)
+            }).await
+        }).await
     }
 
     pub async fn ping(state: &AppState) -> Result<()> {
-        state.ch.query("SELECT 1").execute().await
-            .map_err(|e| PipelineError::database(format!("ping failed: {e}")))?;
-        Ok(())
+        CIRCUIT_BREAKER.call("ping", async {
+            let start = Instant::now();
+            state.ch.query("SELECT 1").execute().await
+                .map_err(|e| wrap_ch_error(e, "clickhouse"))?;
+                
+            // Record successful RTT
+            let rtt_ms = start.elapsed().as_millis() as i64;
+            crate::v2::metrics::set_clickhouse_rtt_ms(rtt_ms);
+            
+            Ok(())
+        }).await
     }
 
     pub async fn fetch_alerts(state: &AppState, q: &crate::v2::handlers::alerts::AlertsQuery) -> Result<Vec<AlertRow>> {

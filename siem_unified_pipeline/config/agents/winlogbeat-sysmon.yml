@@ -1,0 +1,24 @@
+winlogbeat.event_logs:
+  - name: Microsoft-Windows-Sysmon/Operational
+
+processors:
+  - add_fields:
+      target: ''
+      fields:
+        tenant_id: {{TENANT_ID}}
+        source_id: "{{SOURCE_ID}}"
+        source_type: "windows_sysmon"
+
+output.http:
+  hosts: ["{{BASE_URL}}"]
+  path: "/api/v2/ingest/ndjson"
+  protocol: "http"
+  headers:
+    Content-Type: application/x-ndjson
+    X-API-Key: "{{API_KEY}}"
+  compression_level: 0
+  
+queue.mem:
+  events: 4096
+  flush.min_events: 100
+  flush.timeout: 2s

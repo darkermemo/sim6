@@ -1,172 +1,180 @@
-use axum::{routing::get, Router, extract::State};
-use crate::v2::handlers::alert_rules::import_sigma_pack;
+use axum::{
+    extract::{DefaultBodyLimit, Path, Query, State},
+    routing::{get, post, delete, patch, put},
+    Json, Router,
+};
 use std::sync::Arc;
-use tower_http::{cors::CorsLayer, trace::TraceLayer, services::{ServeDir, ServeFile}};
-use crate::v2::{handlers::{health::health_check, events::{search_events, search_events_compact, insert_events}, sse::{stream_stub, tail_stream}, metrics::{get_eps_stats, get_quick_stats, get_ch_status, get_parsing_stats, get_system_config, get_kafka_status, get_redis_status, get_vector_status, get_ch_storage, get_kafka_partitions, get_redis_memory}, ingest::ingest_raw, alerts::{list_alerts, get_alert, patch_alert}, assets::favicon, alert_rules::{list_alert_rules, sigma_compile, sigma_create, rule_dry_run, rule_run_now, create_rule, get_rule, patch_rule, delete_rule}, search::{search_execute, search_estimate, search_facets}, schema::{get_fields, get_enums}, incidents::{list_incidents, get_incident, patch_incident, incident_alerts}}, state::AppState, compiler};
-use crate::v2::metrics as v2metrics;
-use crate::v2::search_api;
 
-pub fn build(state: AppState) -> Router {
-    let state = Arc::new(state);
-    v2metrics::init();
+use crate::v2::state::AppState;
+use crate::v2::handlers::{
+    alerts, alert_rules, rule_packs, search, agents, incidents, investigations,
+    saved_searches, admin_log_sources, admin_parsers, admin_api_keys, admin_tenants,
+    sources, parsers, health, metrics, events, schema, cim, investigate, sse,
+    admin_streaming, admin_storage, collectors, ingest, parse, assets,
+    admin::{health as admin_health, sources as admin_sources, parsers as admin_parsers_main}
+};
+
+pub fn create_router(state: Arc<AppState>) -> Router {
     Router::new()
-        .route("/favicon.ico", get(favicon))
-        .route("/health", get(health_check))
-        .route("/api/v2/health", get(health_check))
-        .route("/api/v2/events/search", get(search_events))
-        .route("/api/v2/events/search_compact", get(search_events_compact))
-        .route("/api/v2/events/stream/ch", get(stream_stub))
-        .route("/api/v2/events/stream/tail", get(tail_stream))
-        .route("/api/v2/events/insert", axum::routing::post(insert_events))
-        .route("/api/v2/metrics/eps", get(get_eps_stats))
-        .route("/api/v2/metrics/quick", get(get_quick_stats))
-        .route("/api/v2/metrics/ch_status", get(get_ch_status))
-        .route("/api/v2/metrics/parsing", get(get_parsing_stats))
-        .route("/api/v2/metrics/kafka", get(get_kafka_status))
-        .route("/api/v2/metrics/redis", get(get_redis_status))
-        .route("/api/v2/metrics/vector", get(get_vector_status))
-        .route("/api/v2/metrics/ch_storage", get(get_ch_storage))
-        .route("/api/v2/metrics/kafka_partitions", get(get_kafka_partitions))
-        .route("/api/v2/metrics/redis_memory", get(get_redis_memory))
-        // Compiler exploratory stubs
-        // New Search API (simple-body compile/execute/aggs)
-        .route("/api/v2/search/compile", axum::routing::post(crate::v2::search_api::handlers::compile))
-        .route("/api/v2/search/execute", axum::routing::post(crate::v2::search_api::handlers::execute))
-        .route("/api/v2/search/aggs", axum::routing::post(crate::v2::search_api::handlers::aggs))
-        .route("/api/v2/search/estimate", axum::routing::post(search_estimate))
-        .route("/api/v2/search/facets", axum::routing::post(search_facets))
-         // Saved searches CRUD
-         .route("/api/v2/search/saved", get(|state: axum::extract::State<std::sync::Arc<AppState>>, q: axum::extract::Query<crate::v2::handlers::saved_searches::ListQ>| async move { crate::v2::handlers::saved_searches::list_saved(state, q).await }))
-         .route("/api/v2/search/saved", axum::routing::post(crate::v2::handlers::saved_searches::create_saved))
-         .route("/api/v2/search/saved/:id", get(crate::v2::handlers::saved_searches::get_saved))
-         .route("/api/v2/search/saved/:id", axum::routing::put(crate::v2::handlers::saved_searches::update_saved))
-         .route("/api/v2/search/saved/:id", axum::routing::delete(crate::v2::handlers::saved_searches::delete_saved))
-        .route("/api/v2/schema/fields", get(get_fields))
-        .route("/api/v2/schema/enums", get(get_enums))
-        .route("/api/v2/system/config", get(get_system_config))
-        .route("/metrics", get(|| async { v2metrics::metrics_text().await }))
-         .route("/api/v2/admin/config", get(crate::v2::handlers::admin::get_config))
-         .route("/api/v2/admin/config", axum::routing::put(crate::v2::handlers::admin::put_config))
-         // Tenants & limits
-         .route("/api/v2/admin/tenants", get(crate::v2::handlers::admin_tenants::list_tenants))
-         .route("/api/v2/admin/tenants", axum::routing::post(crate::v2::handlers::admin_tenants::create_tenant))
-         .route("/api/v2/admin/tenants/:id", get(crate::v2::handlers::admin_tenants::get_tenant))
-         .route("/api/v2/admin/tenants/:id", axum::routing::patch(crate::v2::handlers::admin_tenants::patch_tenant))
-         .route("/api/v2/admin/tenants/:id", axum::routing::delete(crate::v2::handlers::admin_tenants::delete_tenant))
-         .route("/api/v2/admin/tenants/:id/limits", get(crate::v2::handlers::admin_tenants::get_limits))
-         .route("/api/v2/admin/tenants/:id/limits", axum::routing::put(crate::v2::handlers::admin_tenants::put_limits))
-         .route("/api/v2/admin/metrics/eps", get(crate::v2::handlers::admin_tenants::get_eps))
-          .route("/api/v2/ingest/raw", axum::routing::post(ingest_raw))
-         .route("/api/v2/ingest/bulk", axum::routing::post(crate::v2::handlers::ingest::ingest_bulk))
-         .route("/api/v2/ingest/ndjson", axum::routing::post(crate::v2::handlers::ingest::ingest_bulk))
-         // Parse & Normalize
-         .route("/api/v2/parse/detect", axum::routing::post(crate::v2::handlers::parse::detect))
-         .route("/api/v2/parse/normalize", axum::routing::post(crate::v2::handlers::parse::normalize))
-         // Log Sources & Parsers (legacy sources stubs and parser toggle)
-         .route("/api/v2/sources", get(crate::v2::handlers::sources::list_sources))
-         .route("/api/v2/sources", axum::routing::post(crate::v2::handlers::sources::create_source))
-         .route("/api/v2/sources/:id", get(crate::v2::handlers::sources::get_source))
-         .route("/api/v2/sources/:id", axum::routing::patch(crate::v2::handlers::sources::patch_source))
-         .route("/api/v2/sources/:id/test-ingest", axum::routing::post(crate::v2::handlers::sources::test_ingest))
-         .route("/api/v2/sources/:id/deploy", axum::routing::post(crate::v2::handlers::sources::deploy_source))
-         .route("/api/v2/admin/parsers/toggle", axum::routing::post(crate::v2::handlers::parsers::toggle_parser))
-         // CIM
-         .route("/api/v2/cim/validate", axum::routing::post(crate::v2::handlers::cim::cim_validate))
-         .route("/api/v2/cim/coverage", get(crate::v2::handlers::cim::get_coverage))
-        .route("/api/v2/alerts", get(list_alerts))
-        .route("/api/v2/alerts/:id", get(get_alert))
-        .route("/api/v2/alerts/:id", axum::routing::patch(patch_alert))
-        .route("/api/v2/alerts/:id/notes", axum::routing::post(crate::v2::handlers::alerts::add_note))
-        .route("/api/v2/alert_rules", get(|state: axum::extract::State<std::sync::Arc<AppState>>, q: axum::extract::Query<crate::v2::handlers::alert_rules::RulesListQ>| async move { list_alert_rules(state, q).await }))
-        .route("/api/v2/rules/sigma/compile", axum::routing::post(sigma_compile))
-        .route("/api/v2/rules/sigma", axum::routing::post(sigma_create))
-        .route("/api/v2/rules", axum::routing::post(create_rule))
-        .route("/api/v2/admin/rules/import-sigma-pack", axum::routing::post(import_sigma_pack))
-        .route("/api/v2/rules/:id", get(get_rule))
-        .route("/api/v2/rules/:id", axum::routing::patch(patch_rule))
-        .route("/api/v2/rules/:id", axum::routing::delete(delete_rule))
-        .route("/api/v2/rules/:id/dry-run", axum::routing::post(rule_dry_run))
-        .route("/api/v2/rules/:id/run-now", axum::routing::post(rule_run_now))
-         // Streaming admin
-         .route("/api/v2/admin/streaming/status", axum::routing::get(crate::v2::handlers::admin_streaming::streaming_status))
-         .route("/api/v2/admin/streaming/reclaim", axum::routing::post(crate::v2::handlers::admin_streaming::streaming_reclaim))
-         // Incidents APIs
-         .route("/api/v2/incidents", get(|state: axum::extract::State<std::sync::Arc<AppState>>, q: axum::extract::Query<crate::v2::handlers::incidents::ListQuery>| async move { list_incidents(state, q).await }))
-         .route("/api/v2/incidents/:id", get(get_incident))
-         .route("/api/v2/incidents/:id", axum::routing::patch(patch_incident))
-         .route("/api/v2/incidents/:id/alerts", get(incident_alerts))
-         .route("/api/v2/incidents/:id/timeline", get(crate::v2::handlers::incidents::incident_timeline))
-         .route("/api/v2/incidents/:id/alerts/bulk", axum::routing::post(crate::v2::handlers::incidents::incident_alerts_bulk))
-         // Investigator graph
-         .route("/api/v2/investigate/graph", axum::routing::post(crate::v2::handlers::investigate::graph))
-         .route("/dev/admin/run_incident_aggregator", axum::routing::post(crate::v2::handlers::incidents::run_aggregator_once))
-        // Convenience aliases for dev pages
-        .route_service("/dev", ServeFile::new("web/v2-events.html"))
-        .route_service("/dev/v2-events", ServeFile::new("web/v2-events.html"))
-        .route_service("/dev/rules", ServeFile::new("web/rules.html"))
-        .route_service("/dev/apis", ServeFile::new("web/apis.html"))
-        .route_service("/dev/stream", ServeFile::new("web/stream.html"))
-        // Serve from process CWD (siem_unified_pipeline)
-         .route_service("/dev/admin/index.html", ServeFile::new("ui/v2/admin/index.html"))
-         .route_service("/dev/admin/log-sources.html", ServeFile::new("ui/v2/admin/log-sources.html"))
-         .route_service("/dev/admin/tenants.html", ServeFile::new("ui/v2/admin/tenants.html"))
-         .route_service("/dev/admin/parsers.html", ServeFile::new("ui/v2/admin/parsers.html"))
-         .route_service("/dev/admin/rules.html", ServeFile::new("ui/v2/admin/rules.html"))
-         .route_service("/dev/admin/streaming.html", ServeFile::new("ui/v2/admin/streaming.html"))
-         .route_service("/dev/search.html", ServeFile::new("ui/v2/search.html"))
-         .route_service("/dev/alerts.html", ServeFile::new("ui/v2/alerts.html"))
-         .route_service("/dev/investigations/index.html", ServeFile::new("ui/v2/investigations/index.html"))
-         .route_service("/ui/v2/admin/index.html", ServeFile::new("ui/v2/admin/index.html"))
-         .route_service("/ui/v2/admin/tenants.html", ServeFile::new("ui/v2/admin/tenants.html"))
-         .route_service("/ui/v2/admin/log-sources.html", ServeFile::new("ui/v2/admin/log-sources.html"))
-         .route_service("/ui/v2/admin/parsers.html", ServeFile::new("ui/v2/admin/parsers.html"))
-          .route_service("/ui/v2/admin/api-keys.html", ServeFile::new("ui/v2/admin/api-keys.html"))
-         .route_service("/ui/v2/admin/cim.html", ServeFile::new("ui/v2/admin/cim.html"))
-         .route_service("/ui/v2/admin/sigma.html", ServeFile::new("ui/v2/admin/sigma.html"))
-         .route_service("/ui/v2/admin/ingestors.html", ServeFile::new("ui/v2/admin/ingestors.html"))
-         .route_service("/ui/v2/admin/streaming.html", ServeFile::new("ui/v2/admin/streaming.html"))
-          .route_service("/ui/v2/admin/storage.html", ServeFile::new("ui/v2/admin/storage.html"))
-         .route_service("/ui/v2/search.html", ServeFile::new("ui/v2/search.html"))
-         .route_service("/ui/v2/alerts.html", ServeFile::new("ui/v2/alerts.html"))
-         // Investigations API
-         .route("/api/v2/investigations/views", get(crate::v2::handlers::investigations::list_views))
-         .route("/api/v2/investigations/views", axum::routing::post(crate::v2::handlers::investigations::create_view))
-         .route("/api/v2/investigations/views/:id", get(crate::v2::handlers::investigations::get_view))
-         .route("/api/v2/investigations/views/:id", axum::routing::delete(crate::v2::handlers::investigations::delete_view))
-         .route("/api/v2/investigations/views/:id/notes", get(crate::v2::handlers::investigations::list_notes))
-         .route("/api/v2/investigations/notes", axum::routing::post(crate::v2::handlers::investigations::create_note))
-          .nest_service("/dev/ui", ServeDir::new("ui"))
-          // Experimental React app (served from ui-react/dist) - SPA fallback for any /ui/app/* path
-          .nest_service(
-            "/ui/app",
-            axum::routing::get_service(
-              ServeDir::new("ui-react/dist").fallback(ServeFile::new("ui-react/dist/index.html"))
-            )
-          )
-          .nest_service("/ui", ServeDir::new("ui"))
-         // Admin Log Sources CRUD
-         .route("/api/v2/admin/log-sources", axum::routing::get(crate::v2::handlers::admin_log_sources::list_sources))
-         .route("/api/v2/admin/log-sources", axum::routing::post(crate::v2::handlers::admin_log_sources::create_source))
-         .route("/api/v2/admin/log-sources/:source_id", axum::routing::get(crate::v2::handlers::admin_log_sources::get_source))
-         .route("/api/v2/admin/log-sources/:source_id", axum::routing::put(crate::v2::handlers::admin_log_sources::update_source))
-         .route("/api/v2/admin/log-sources/:source_id", axum::routing::delete(crate::v2::handlers::admin_log_sources::delete_source))
-         // Admin Parsers
-         .route("/api/v2/admin/parsers", axum::routing::get(crate::v2::handlers::admin_parsers::list_parsers))
-         .route("/api/v2/admin/parsers", axum::routing::post(crate::v2::handlers::admin_parsers::create_parser))
-         .route("/api/v2/admin/parsers/:parser_id", axum::routing::get(crate::v2::handlers::admin_parsers::get_parser))
-         .route("/api/v2/admin/parsers/:parser_id", axum::routing::put(crate::v2::handlers::admin_parsers::update_parser))
-         .route("/api/v2/admin/parsers/:parser_id", axum::routing::delete(crate::v2::handlers::admin_parsers::delete_parser))
-          // Admin Storage Policies (retention/compression)
-          .route("/api/v2/admin/storage/:tenant", axum::routing::get(crate::v2::handlers::admin_storage::get_storage))
-          .route("/api/v2/admin/storage/:tenant", axum::routing::put(crate::v2::handlers::admin_storage::put_storage))
-          // Admin API Keys
-          .route("/api/v2/admin/api-keys", axum::routing::get(crate::v2::handlers::admin_api_keys::list_keys))
-          .route("/api/v2/admin/api-keys", axum::routing::post(crate::v2::handlers::admin_api_keys::create_key))
-          .route("/api/v2/admin/api-keys/:key_id", axum::routing::get(crate::v2::handlers::admin_api_keys::get_key))
-          .route("/api/v2/admin/api-keys/:key_id", axum::routing::put(crate::v2::handlers::admin_api_keys::update_key))
-          .route("/api/v2/admin/api-keys/:key_id", axum::routing::delete(crate::v2::handlers::admin_api_keys::delete_key))
-        .layer(TraceLayer::new_for_http())
-        .layer(CorsLayer::permissive())
+        // Health and metrics endpoints
+        .route("/health", get(health::health_check))
+        .route("/metrics", get(metrics::get_quick_stats))
+        .route("/api/v2/health", get(health::health_check))
+        .route("/api/v2/metrics", get(metrics::get_quick_stats))
+        
+        // Alerts endpoints
+        .route("/api/v2/alerts", get(alerts::list_alerts))
+        .route("/api/v2/alerts/:id", get(alerts::get_alert))
+        .route("/api/v2/alerts/:id/notes", post(alerts::add_note))
+        .route("/api/v2/alerts/:id/status", patch(alerts::patch_alert))
+        
+        // Rules endpoints
+        .route("/api/v2/rules", get(alert_rules::list_alert_rules))
+        .route("/api/v2/rules", post(alert_rules::create_rule))
+        .route("/api/v2/rules/:id", get(alert_rules::get_rule))
+        .route("/api/v2/rules/:id", patch(alert_rules::patch_rule))
+        .route("/api/v2/rules/:id", delete(alert_rules::delete_rule))
+        .route("/api/v2/rules/:id/compile", post(alert_rules::sigma_compile))
+        .route("/api/v2/rules/:id/dry-run", post(alert_rules::rule_dry_run))
+        .route("/api/v2/rules/:id/run-now", post(alert_rules::rule_run_now))
+        
+        // Rule packs endpoints
+        .route("/api/v2/rule-packs", get(rule_packs::list_packs))
+        .route("/api/v2/rule-packs/upload", post(rule_packs::upload_pack)
+            .layer(DefaultBodyLimit::max(50 * 1024 * 1024))) // 50 MiB limit
+        .route("/api/v2/rule-packs/:pack_id", get(rule_packs::get_pack))
+        .route("/api/v2/rule-packs/:pack_id/plan", post(rule_packs::plan_deployment))
+        .route("/api/v2/rule-packs/:pack_id/apply", post(rule_packs::apply_deployment))
+        .route("/api/v2/rule-packs/deployments/:deploy_id/rollback", post(rule_packs::rollback_deployment))
+        .route("/api/v2/rule-packs/deployments/:deploy_id/canary/advance", post(rule_packs::canary_control))
+        .route("/api/v2/rule-packs/deployments/:deploy_id/canary/pause", post(rule_packs::canary_control))
+        .route("/api/v2/rule-packs/deployments/:deploy_id/canary/cancel", post(rule_packs::canary_control))
+        .route("/api/v2/rule-packs/deployments/:deploy_id/artifacts", get(rule_packs::get_deployment_artifacts))
+        
+        // Search endpoints
+        .route("/api/v2/search", post(search::search_execute))
+        .route("/api/v2/search/compile", post(search::search_estimate))
+        .route("/api/v2/search/facets", post(search::search_facets))
+        
+        // Saved searches endpoints
+        .route("/api/v2/saved-searches", get(saved_searches::list_saved))
+        .route("/api/v2/saved-searches", post(saved_searches::create_saved))
+        .route("/api/v2/saved-searches/:id", get(saved_searches::get_saved))
+        .route("/api/v2/saved-searches/:id", patch(saved_searches::update_saved))
+        .route("/api/v2/saved-searches/:id", delete(saved_searches::delete_saved))
+        
+        // Log sources endpoints
+        .route("/api/v2/log-sources", get(sources::list_sources))
+        .route("/api/v2/log-sources", post(sources::create_source))
+        .route("/api/v2/log-sources/:id", get(sources::get_source))
+        .route("/api/v2/log-sources/:id", patch(sources::patch_source))
+        .route("/api/v2/log-sources/:id", delete(sources::deploy_source))
+        
+        // Incidents endpoints
+        .route("/api/v2/incidents", get(incidents::list_incidents))
+        .route("/api/v2/incidents", post(incidents::create_incident))
+        .route("/api/v2/incidents/:id", get(incidents::get_incident))
+        .route("/api/v2/incidents/:id", patch(incidents::patch_incident))
+        .route("/api/v2/incidents/:id", delete(incidents::delete_incident))
+        
+        // Investigations endpoints
+        .route("/api/v2/investigations", get(investigations::list_views))
+        .route("/api/v2/investigations", post(investigations::create_view))
+        .route("/api/v2/investigations/:id", get(investigations::get_view))
+        .route("/api/v2/investigations/:id", patch(investigations::update_view))
+        .route("/api/v2/investigations/:id", delete(investigations::delete_view))
+        
+        // Admin API keys endpoints
+        .route("/api/v2/admin/api-keys", get(admin_api_keys::list_keys))
+        .route("/api/v2/admin/api-keys", post(admin_api_keys::create_key))
+        .route("/api/v2/admin/api-keys/:id", get(admin_api_keys::get_key))
+        .route("/api/v2/admin/api-keys/:id", patch(admin_api_keys::update_key))
+        .route("/api/v2/admin/api-keys/:id", delete(admin_api_keys::delete_key))
+        .route("/api/v2/admin/api-keys/:id/rotate", post(admin_api_keys::rotate_key))
+        
+        // Admin log sources endpoints
+        .route("/api/v2/admin/log-sources", get(admin_log_sources::list_sources))
+        .route("/api/v2/admin/log-sources", post(admin_log_sources::create_source))
+        .route("/api/v2/admin/log-sources/:id", get(admin_log_sources::get_source))
+        .route("/api/v2/admin/log-sources/:id", patch(admin_log_sources::update_source))
+        .route("/api/v2/admin/log-sources/:id", delete(admin_log_sources::delete_source))
+        
+        // Admin parsers endpoints
+        .route("/api/v2/admin/parsers", get(admin_parsers::list_parsers))
+        .route("/api/v2/admin/parsers", post(admin_parsers::create_parser))
+        .route("/api/v2/admin/parsers/:id", get(admin_parsers::get_parser))
+        .route("/api/v2/admin/parsers/:id", patch(admin_parsers::update_parser))
+        .route("/api/v2/admin/parsers/:id", delete(admin_parsers::delete_parser))
+        
+        // Admin tenants endpoints
+        .route("/admin/tenants", get(admin_tenants::list_tenants).post(admin_tenants::create_tenant))
+        .route("/admin/tenants/:id", get(admin_tenants::get_tenant).patch(admin_tenants::patch_tenant))
+        .route("/admin/tenants/:id/limits", get(admin_tenants::get_limits).put(admin_tenants::put_limits))
+        .route("/admin/tenants/:id/api-keys", get(admin_tenants::list_api_keys).post(admin_tenants::create_api_key))
+        .route("/admin/tenants/:id/api-keys/:key_id", delete(admin_tenants::revoke_api_key))
+        
+        // Admin roles endpoints
+        .route("/admin/roles", get(admin_health::get_config))
+        .route("/admin/roles/:role", put(admin_health::put_config))
+        
+        // Admin deep health endpoints
+        .route("/admin/deep-health", get(admin_health::get_config).post(admin_health::put_config))
+        
+        // Admin sources endpoints
+        .route("/admin/sources", get(admin_sources::list_sources).post(admin_sources::create_source))
+        .route("/admin/sources/:source_id", patch(admin_sources::update_source).delete(admin_sources::delete_source))
+        .route("/admin/sources/:source_id/test-connection", post(admin_sources::test_connection))
+        .route("/admin/sources/:source_id/test-connection/:token/tail", get(sse::tail_stream))
+        .route("/admin/sources/:source_id/test-sample", post(admin_sources::test_sample))
+        
+        // Admin parsers endpoints
+        .route("/admin/parsers", get(admin_parsers_main::list_parsers).post(admin_parsers_main::create_parser))
+        .route("/admin/parsers/:parser_id/validate", get(admin_parsers_main::validate_parser))
+        .route("/admin/parsers/:parser_id/sample", post(admin_parsers_main::test_sample))
+        .route("/admin/parsers/:parser_id", delete(admin_parsers_main::delete_parser))
+        
+        // Agents endpoints
+        .route("/agents", get(agents::list_agents))
+        .route("/agents/enroll-keys", post(agents::create_enroll_key))
+        .route("/agents/enroll", post(agents::enroll_agent))
+        .route("/agents/:agent_id/heartbeat", post(agents::heartbeat))
+        .route("/agents/:agent_id/config", get(agents::get_agent_config))
+        .route("/agents/:agent_id/config/apply", post(agents::apply_config))
+        .route("/agents/:agent_id/test-pipeline", post(agents::test_pipeline))
+        
+        // Additional endpoints
+        .route("/api/v2/events", post(events::search_events))
+        .route("/api/v2/events/compact", post(events::search_events_compact))
+        .route("/api/v2/events/insert", post(events::insert_events))
+        
+        .route("/api/v2/schema/fields", get(schema::get_fields))
+        .route("/api/v2/schema/enums", get(schema::get_enums))
+        
+        .route("/api/v2/cim/validate", post(cim::cim_validate))
+        .route("/api/v2/cim/coverage", get(cim::get_coverage))
+        
+        .route("/api/v2/investigate/graph", post(investigate::graph))
+        
+        .route("/api/v2/streaming/status", get(admin_streaming::streaming_status))
+        .route("/api/v2/streaming/reclaim", post(admin_streaming::streaming_reclaim))
+        .route("/api/v2/streaming/kafka/status", get(admin_streaming::kafka_status))
+        .route("/api/v2/streaming/kafka/reclaim", post(admin_streaming::kafka_reclaim))
+        
+        .route("/api/v2/storage/:tenant", get(admin_storage::get_storage))
+        .route("/api/v2/storage/:tenant", put(admin_storage::put_storage))
+        
+        .route("/api/v2/collectors/health", get(collectors::health))
+        .route("/api/v2/collectors/metrics", get(collectors::metrics))
+        .route("/api/v2/collectors/configure", post(collectors::configure))
+        
+        .route("/api/v2/ingest/raw", post(ingest::ingest_raw))
+        .route("/api/v2/ingest/bulk", post(ingest::ingest_bulk))
+        
+        .route("/api/v2/parse/detect", post(parse::detect))
+        .route("/api/v2/parse/normalize", post(parse::normalize))
+        
+        .route("/favicon.ico", get(assets::favicon))
+        
         .with_state(state)
 }
 

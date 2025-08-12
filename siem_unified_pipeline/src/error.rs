@@ -284,15 +284,15 @@ impl IntoResponse for PipelineError {
                 "Internal server error".to_string(),
                 "INTERNAL_ERROR",
             ),
-            PipelineError::ServiceUnavailableError(_) => (
+            PipelineError::ServiceUnavailableError(msg) => (
                 StatusCode::SERVICE_UNAVAILABLE,
-                "Service temporarily unavailable".to_string(),
-                "SERVICE_UNAVAILABLE_ERROR",
+                msg.clone(),
+                "UPSTREAM_DOWN",
             ),
             PipelineError::TimeoutError(_) => (
-                StatusCode::REQUEST_TIMEOUT,
+                StatusCode::GATEWAY_TIMEOUT,
                 "Request timeout".to_string(),
-                "TIMEOUT_ERROR",
+                "UPSTREAM_TIMEOUT",
             ),
             PipelineError::ConnectionError(_) => (
                 StatusCode::BAD_GATEWAY,
@@ -311,12 +311,30 @@ impl IntoResponse for PipelineError {
             ),
         };
 
-        let body_str = serde_json::to_string(&json!({
-            "error": {
-                "code": error_code,
-                "message": error_message,
-                "timestamp": chrono::Utc::now().to_rfc3339(),
+        // Build error body with upstream info when applicable
+        let mut error_obj = json!({
+            "code": error_code,
+            "message": error_message,
+            "timestamp": chrono::Utc::now().to_rfc3339(),
+        });
+        
+        // Add upstream field for circuit breaker errors
+        if error_code == "UPSTREAM_DOWN" && error_message.contains("ClickHouse") {
+            error_obj["upstream"] = json!("clickhouse");
+        } else if error_code == "UPSTREAM_TIMEOUT" {
+            error_obj["upstream"] = json!("clickhouse");
+        } else if matches!(self, PipelineError::DatabaseError(_)) && error_message.contains("ClickHouse") {
+            // Map ClickHouse errors to UPSTREAM_ERROR
+            error_obj["code"] = json!("UPSTREAM_ERROR");
+            error_obj["upstream"] = json!("clickhouse");
+            // Trim long error messages
+            if error_message.len() > 200 {
+                error_obj["message"] = json!(format!("{}...", &error_message[..200]));
             }
+        }
+        
+        let body_str = serde_json::to_string(&json!({
+            "error": error_obj
         })).unwrap();
         let mut resp = Response::new(Body::from(body_str));
         *resp.status_mut() = status;

@@ -1,7 +1,16 @@
 import { QueryClient } from '@tanstack/react-query';
 
+// Type definitions for fetch API
+interface RequestInit {
+  method?: string;
+  headers?: Record<string, string>;
+  body?: string | Blob | FormData | null;
+  signal?: AbortSignal;
+}
+
 // Base API configuration
 export const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api/v2';
+const MAX_REQUEST_SIZE = 5 * 1024 * 1024; // 5 MiB
 
 // Type-safe fetch wrapper
 export async function apiFetch<T = unknown>(
@@ -9,6 +18,23 @@ export async function apiFetch<T = unknown>(
   options?: RequestInit
 ): Promise<T> {
   const url = `${API_BASE_URL}${endpoint}`;
+  
+  // Check request body size
+  if (options?.body) {
+    const bodySize = typeof options.body === 'string' 
+      ? new Blob([options.body]).size 
+      : options.body instanceof Blob 
+        ? options.body.size 
+        : options.body instanceof FormData 
+          ? Array.from(options.body.entries()).reduce((acc, [_, value]) => {
+              return acc + (value instanceof File ? value.size : new Blob([String(value)]).size);
+            }, 0)
+          : 0;
+    
+    if (bodySize > MAX_REQUEST_SIZE) {
+      throw new Error(`Request body exceeds 5 MiB limit (${(bodySize / 1024 / 1024).toFixed(2)} MiB)`);
+    }
+  }
   
   const response = await fetch(url, {
     ...options,

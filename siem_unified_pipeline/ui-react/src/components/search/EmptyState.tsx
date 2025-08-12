@@ -1,14 +1,40 @@
+import React from 'react';
 import { Search, Database, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface EmptyStateProps {
-  type: 'no-tenant' | 'no-results' | 'error';
+  type?: 'no-tenant' | 'no-results' | 'error' | 'custom';
   error?: string;
   onRetry?: () => void;
   onLoadDemo?: () => void;
+  onReset?: () => void;
+  // Custom props for flexible empty states
+  icon?: React.ReactNode;
+  title?: string;
+  description?: string;
+  action?: React.ReactNode;
 }
 
-export function EmptyState({ type, error, onRetry, onLoadDemo }: EmptyStateProps) {
+export function EmptyState({ type, error, onRetry, onLoadDemo, onReset, icon, title, description, action }: EmptyStateProps) {
+  // Custom empty state
+  if (type === 'custom' || (!type && icon)) {
+    return (
+      <div className="flex flex-col items-center justify-center h-96 text-center">
+        {icon && <div className="mb-4">{icon}</div>}
+        {title && (
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+            {title}
+          </h3>
+        )}
+        {description && (
+          <p className="text-gray-600 dark:text-gray-400 max-w-md mb-6">
+            {description}
+          </p>
+        )}
+        {action && <div>{action}</div>}
+      </div>
+    );
+  }
   if (type === 'no-tenant') {
     return (
       <div className="flex flex-col items-center justify-center h-96 text-center">
@@ -53,7 +79,7 @@ export function EmptyState({ type, error, onRetry, onLoadDemo }: EmptyStateProps
       </p>
       <div className="space-y-2 mb-6">
         <code className="block text-sm bg-gray-100 dark:bg-gray-800 px-3 py-1 rounded">
-          message:"failed" AND user:alice
+          message:&quot;failed&quot; AND user:alice
         </code>
         <code className="block text-sm bg-gray-100 dark:bg-gray-800 px-3 py-1 rounded">
           severity:high AND source:firewall
@@ -62,11 +88,18 @@ export function EmptyState({ type, error, onRetry, onLoadDemo }: EmptyStateProps
           event_type:login AND result:failure
         </code>
       </div>
-      {onLoadDemo && (
-        <Button onClick={onLoadDemo} variant="outline">
-          Load Demo Data
-        </Button>
-      )}
+      <div className="flex gap-2">
+        {onReset && (
+          <Button onClick={onReset} variant="outline">
+            Reset Filters
+          </Button>
+        )}
+        {onLoadDemo && (
+          <Button onClick={onLoadDemo} variant="outline">
+            Load Demo Data
+          </Button>
+        )}
+      </div>
     </div>
   );
 }

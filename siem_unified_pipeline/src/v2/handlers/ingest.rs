@@ -7,9 +7,13 @@ use axum::http::HeaderMap;
 use axum::body::Bytes;
 use axum::{extract::Query};
 
+use base64::Engine;
+
 use crate::v2::{state::AppState, models::SiemEvent, dal::ClickHouseRepo, metrics};
+use crate::v2::util::rate_limit::{check_eps, EpsDecision};
+use crate::v2::normalize;
 use clickhouse::Row;
-use crate::error::Result;
+use crate::error::{Result, PipelineError};
 use once_cell::sync::Lazy;
 use tokio::sync::Mutex;
 use std::collections::HashMap;
@@ -18,6 +22,8 @@ use std::collections::HashMap;
 #[derive(Clone, Copy, Debug)]
 struct Limits { eps_limit: u32, burst_limit: u32, retention_days: u16 }
 
+
+
 static LIMITS_CACHE: Lazy<Mutex<HashMap<String, (Limits, u64)>>> = Lazy::new(|| Mutex::new(HashMap::new()));
 static TOKEN_BUCKET: Lazy<Mutex<HashMap<String, (f64, u64)>>> = Lazy::new(|| Mutex::new(HashMap::new()));
 
@@ -25,7 +31,7 @@ async fn fetch_limits(st: &AppState, tenant: &str) -> Limits {
     #[derive(serde::Deserialize, Row)]
     struct L { eps_limit:u32, burst_limit:u32, retention_days:u16 }
     let row: Option<L> = st.ch
-        .query("SELECT eps_limit,burst_limit,retention_days FROM dev.tenant_limits WHERE tenant_id=? ORDER BY updated_at DESC LIMIT 1")
+        .query("SELECT eps_limit,burst_limit,retention_days FROM dev.tenant_limits_admin WHERE tenant_id=? ORDER BY updated_at DESC LIMIT 1")
         .bind(tenant)
         .fetch_optional()
         .await
@@ -95,7 +101,7 @@ pub async fn ingest_raw(
     metrics::inc_ingest_bytes("api", body.len() as u64);
     let mut out: Vec<SiemEvent> = Vec::with_capacity(payload.logs.len());
     for v in payload.logs.into_iter() {
-        if let Some(ev) = transform_to_siem_event(v) {
+        if let Some(ev) = transform_to_siem_event(v, None, &st).await {
             // Retention will be set after resolving tenant limits
             out.push(ev);
         }
@@ -105,14 +111,23 @@ pub async fn ingest_raw(
         let limits = get_limits_cached(&st, &first_tenant).await;
         for ev in out.iter_mut() { ev.retention_days = Some(limits.retention_days); }
         metrics::set_retention_days(&first_tenant, limits.retention_days);
-        let allowed = token_bucket_allow(&first_tenant, out.len() as u32, limits).await;
-        if !allowed {
-            let src = out.first().and_then(|e| e.source_type.as_deref()).unwrap_or("unknown");
+        // Use Redis-based rate limiter
+        let tenant_id = first_tenant.parse::<u64>().unwrap_or(0);
+        let source = out.first().and_then(|e| e.source_type.clone());
+        let decision = check_eps(&st, tenant_id, source.clone()).await?;
+        
+        if !decision.allowed {
+            let src = source.as_deref().unwrap_or("unknown");
             metrics::inc_ingest_rate_limited(&first_tenant, src);
             metrics::inc_eps_throttles(&first_tenant);
-            // Return 429 JSON payload via standard error mapping
-            return Err(crate::error::PipelineError::rate_limit("RATE_LIMIT: retry_after=1"));
+            metrics::inc_v2_rate_limit_total(&first_tenant, src, "throttle");
+            
+            // Return 429 with retry_after
+            let retry_after = decision.retry_after.unwrap_or(1);
+            return Err(PipelineError::rate_limit(format!("EPS exceeded, retry_after: {}", retry_after)));
         }
+        
+        metrics::inc_v2_rate_limit_total(&first_tenant, source.as_deref().unwrap_or("*"), "allow");
     }
     // Temporary: if batch too large, simulate backpressure by rate-limiting
     if out.len() > 10_000 {
@@ -139,7 +154,19 @@ pub async fn ingest_bulk(
     headers: HeaderMap,
     body: Bytes,
 ) -> Result<Json<serde_json::Value>> {
-    let tenant = q.get("tenant").cloned().unwrap_or_else(|| "default".to_string());
+    // Resolve tenant via API key (X-Api-Key) if present; otherwise fall back to query param
+    let mut tenant = q.get("tenant").cloned().unwrap_or_else(|| "default".to_string());
+    if let Some(api_key) = headers.get("X-Api-Key").and_then(|v| v.to_str().ok()) {
+        if let Some((t, scopes)) = resolve_api_key(&st, api_key).await? {
+            // Enforce ingest scope
+            if !scopes.iter().any(|s| s == "ingest") {
+                return Err(crate::error::PipelineError::AuthorizationError("FORBIDDEN".into()));
+            }
+            tenant = t;
+        } else {
+            return Err(crate::error::PipelineError::AuthorizationError("FORBIDDEN".into()));
+        }
+    }
     // Optional Redis-based token bucket with Lua
     if let Some(cm) = st.redis.as_ref() {
         let mut conn = cm.clone();
@@ -197,29 +224,104 @@ return {ok, retry}
         crate::v2::metrics::inc_quota_violation(&tenant, "events");
         return Err(crate::error::PipelineError::quota_exceeded("events per day exceeded"));
     }
-    // naive NDJSON split
+    // Idempotency: cap body at 5 MiB and compute hash over raw bytes
+    let idem_key = headers.get("Idempotency-Key").and_then(|v| v.to_str().ok());
+    const CAP: usize = 5 * 1024 * 1024;
+    if body.len() > CAP {
+        crate::v2::metrics::inc_idempotency("ingest:ndjson", "conflict");
+        return Err(crate::error::PipelineError::validation("payload too large (5MiB cap)"));
+    }
+    // Acquire lock first to serialize same-key calls within the process
+    let _guard = if let Some(k) = idem_key { Some(crate::v2::util::idempotency::acquire_lock("ingest:ndjson", k).await) } else { None };
+    // Check idempotency on exact raw bytes before any parsing/work
+    let idem = crate::v2::util::idempotency::check(&st, "ingest:ndjson", idem_key, &body).await.map_err(|e| crate::error::PipelineError::internal(format!("idempotency check: {e}")))?;
+    if idem.replayed { return Ok(Json(serde_json::json!({"replayed":true,"accepted":0,"quarantined":0}))); }
+    if idem.conflict { return Err(crate::error::PipelineError::ConflictError("idempotency_conflict".into())); }
+
+    // naive NDJSON split with quarantine of invalid rows
     let text = String::from_utf8_lossy(&body);
     let mut out: Vec<SiemEvent> = Vec::new();
+    let mut quarantined: u64 = 0;
+    let mut reasons: HashMap<String, u64> = HashMap::new();
     for line in text.lines() {
         if line.trim().is_empty() { continue; }
-        if let Ok(v) = serde_json::from_str::<Value>(line) {
-            if let Some(mut ev) = transform_to_siem_event(v) {
-                ev.tenant_id = tenant.clone();
-                out.push(ev);
+        match serde_json::from_str::<Value>(line) {
+            Ok(mut v) => {
+                // Normalize ts -> event_timestamp if present
+                if v.get("event_timestamp").is_none() {
+                    if let Some(ts) = v.get("ts").cloned() { v.as_object_mut().unwrap().insert("event_timestamp".into(), ts); }
+                }
+                // Basic validation
+                let mut reason: Option<&'static str> = None;
+                // tenant_id
+                let t_ok = v.get("tenant_id").map(|t| t.is_string() || t.is_number()).unwrap_or(false);
+                if !t_ok { reason = Some("missing_tenant_id"); }
+                // event_timestamp
+                if reason.is_none() {
+                    let ts_ok = v.get("event_timestamp").map(|t| t.is_number() || t.as_str().map(|s| chrono::DateTime::parse_from_rfc3339(s).is_ok()).unwrap_or(false)).unwrap_or(false);
+                    if !ts_ok { reason = Some("missing_timestamp"); }
+                }
+                // message
+                if reason.is_none() {
+                    let m_ok = v.get("message").map(|m| m.is_string()).unwrap_or(false);
+                    if !m_ok { reason = Some("missing_message"); }
+                }
+                if let Some(r) = reason {
+                    quarantined += 1;
+                    *reasons.entry(r.to_string()).or_insert(0) += 1;
+                    let payload = line.to_string();
+                    // fire-and-forget quarantine insert
+                    let _ = st.ch
+                        .query("INSERT INTO dev.events_quarantine (tenant_id, source, reason, payload) VALUES (?,?,?,?)")
+                        .bind(tenant.parse::<u64>().unwrap_or(0))
+                        .bind("http")
+                        .bind(r)
+                        .bind(&payload)
+                        .execute().await;
+                } else if let Some(mut ev) = transform_to_siem_event(v, None, &st).await {
+                    ev.tenant_id = tenant.clone();
+                    out.push(ev);
+                }
+            }
+            Err(_) => {
+                quarantined += 1;
+                *reasons.entry("invalid_json".into()).or_insert(0) += 1;
+                let _ = st.ch
+                    .query("INSERT INTO dev.events_quarantine (tenant_id, source, reason, payload) VALUES (?,?,?,?)")
+                    .bind(tenant.parse::<u64>().unwrap_or(0))
+                    .bind("http")
+                    .bind("invalid_json")
+                    .bind(line)
+                    .execute().await;
             }
         }
     }
+    // If nothing valid parsed and at least one line attempted, treat as total parse failure
+    if out.is_empty() && quarantined > 0 {
+        return Err(crate::error::PipelineError::validation("no valid rows in NDJSON; all lines quarantined"));
+    }
+
     let limits = get_limits_cached(&st, &tenant).await;
     for ev in out.iter_mut() { ev.retention_days = Some(limits.retention_days); }
     metrics::set_retention_days(&tenant, limits.retention_days);
-    let allowed = token_bucket_allow(&tenant, out.len() as u32, limits).await;
-    if !allowed {
-        let src = out.first().and_then(|e| e.source_type.as_deref()).unwrap_or("unknown");
+    // Use Redis-based rate limiter
+    let tenant_id = tenant.parse::<u64>().unwrap_or(0);
+    let source = out.first().and_then(|e| e.source_type.clone());
+    let decision = check_eps(&st, tenant_id, source.clone()).await?;
+    
+    if !decision.allowed {
+        let src = source.as_deref().unwrap_or("unknown");
         metrics::inc_ingest_rate_limited(&tenant, src);
         metrics::inc_eps_throttles(&tenant);
         metrics::inc_v2_rate_limit(&tenant);
-        return Err(crate::error::PipelineError::rate_limit("RATE_LIMIT: retry_after=1"));
+        metrics::inc_v2_rate_limit_total(&tenant, src, "throttle");
+        
+        // Return 429 with retry_after
+        let retry_after = decision.retry_after.unwrap_or(1);
+        return Err(PipelineError::rate_limit(format!("EPS exceeded, retry_after: {}", retry_after)));
     }
+    
+    metrics::inc_v2_rate_limit_total(&tenant, source.as_deref().unwrap_or("*"), "allow");
     // bytes cap
     let bytes_1d: Option<u64> = st.ch.query("SELECT toUInt64(sum(length(raw_event))) FROM dev.events WHERE tenant_id=? AND created_at >= toUInt32(now())-86400")
         .bind(&tenant).fetch_optional().await.unwrap_or(None);
@@ -230,8 +332,12 @@ return {ok, retry}
         return Err(crate::error::PipelineError::quota_exceeded("bytes per day exceeded"));
     }
     metrics::inc_ingest_bytes("api", this_bytes);
-    metrics::inc_v2_ingest(&tenant, "ok");
+    metrics::inc_v2_ingest(&tenant, "accepted");
     let inserted = ClickHouseRepo::insert_events(&st, &out).await?;
+    if quarantined > 0 {
+        // increment quarantined counter per reason
+        for (r, c) in reasons.iter() { crate::v2::metrics::inc_v2_ingest_quarantined(&tenant, r, *c as u64); }
+    }
     // Enqueue to Redis Stream (compact envelope) with backpressure guard
     if let Some(cm) = st.redis.as_ref() {
         let mut conn = cm.clone();
@@ -277,7 +383,31 @@ return {ok, retry}
         metrics::inc_ingest_records(&tenant, src, inserted);
         metrics::set_ingest_eps(&tenant, src, inserted as f64);
     }
-    Ok(Json(serde_json::json!({ "received": out.len(), "inserted": inserted })))
+    // Record idempotency success if key present
+    if let Some(k) = idem_key {
+        let bh = crate::v2::util::idempotency::body_hash_u64(&body);
+        let _ = crate::v2::util::idempotency::record_success(&st, "ingest:ndjson", k, bh, 200, "").await;
+    }
+    Ok(Json(serde_json::json!({ "accepted": inserted, "quarantined": quarantined, "reasons": reasons })))
+}
+
+// Look up API key hash in dev.api_keys_admin and return (tenant_id, scopes) if enabled
+async fn resolve_api_key(st: &AppState, secret: &str) -> Result<Option<(String, Vec<String>)>> {
+    let hash = {
+        let h = blake3::hash(secret.as_bytes());
+        base64::engine::general_purpose::STANDARD.encode(h.as_bytes())
+    };
+    let _ = st.ch.query("CREATE TABLE IF NOT EXISTS dev.api_keys_admin (id String, tenant_id String, name String, key_hash String, scopes Array(String), enabled UInt8, created_at UInt32, updated_at UInt32) ENGINE = ReplacingMergeTree(updated_at) ORDER BY (id)").execute().await;
+    #[derive(serde::Deserialize, clickhouse::Row)]
+    struct KeyRow { tenant_id:String, scopes:Vec<String>, enabled:u8 }
+    let row: Option<KeyRow> = st.ch
+        .query("SELECT tenant_id, scopes, enabled FROM dev.api_keys_admin WHERE key_hash=? LIMIT 1")
+        .bind(&hash)
+        .fetch_optional()
+        .await
+        .map_err(|e| crate::error::PipelineError::database(format!("api key lookup: {e}")))?;
+    if let Some(r) = row { if r.enabled == 1 { return Ok(Some((r.tenant_id, r.scopes))); } }
+    Ok(None)
 }
 fn parse_payload(headers: HeaderMap, body: &Bytes) -> Result<RawIngestPayload> {
     let enc = headers
@@ -301,7 +431,7 @@ fn parse_payload(headers: HeaderMap, body: &Bytes) -> Result<RawIngestPayload> {
     Ok(payload)
 }
 
-fn transform_to_siem_event(v: Value) -> Option<SiemEvent> {
+pub async fn transform_to_siem_event(v: Value, parser_id: Option<&str>, state: &AppState) -> Option<SiemEvent> {
     // Preserve common fields if present; fall back to heuristics
     let tenant_id = v.get("tenant_id")
         .and_then(|x| x.as_str().map(|s| s.to_string()).or_else(|| x.as_i64().map(|n| n.to_string())))
@@ -337,21 +467,58 @@ fn transform_to_siem_event(v: Value) -> Option<SiemEvent> {
 
     // Source type: prefer explicit source_type then log_type
     let source_type = v.get("source_type").or_else(|| v.get("log_type")).and_then(|x| x.as_str()).map(|s| s.to_string());
+    
+    // Source tracking for ledger
+    let source_seq = v.get("source_seq").and_then(|x| x.as_u64());
+    let source_id = v.get("source_id").and_then(|x| x.as_str()).map(|s| s.to_string());
 
     let raw_event = v.to_string();
     let metadata = String::from("{}");
+
+    // Apply normalization
+    let norm = normalize::normalize(&raw_event, parser_id);
+    
+    // Extract IOCs for enrichment
+    let iocs = normalize::extract_iocs(&norm);
+    
+    // Check against intel_iocs
+    let mut ti_hits = Vec::new();
+    let mut ti_match = 0u8;
+    
+    if !iocs.is_empty() {
+        // Build query to check IOCs
+        let ioc_values: Vec<String> = iocs.iter()
+            .map(|(ioc, kind)| format!("('{}', '{}')", ioc.replace("'", "''"), kind))
+            .collect();
+        
+        let query = format!(
+            "SELECT ioc FROM dev.intel_iocs WHERE (ioc, kind) IN ({}) FORMAT JSON",
+            ioc_values.join(",")
+        );
+        
+        // Query intel_iocs (non-blocking, best effort)
+        #[derive(Row, serde::Deserialize)]
+        struct IocRow { ioc: String }
+        
+        if let Ok(rows) = state.ch.query(&query).fetch_all::<IocRow>().await {
+            ti_hits = rows.into_iter().map(|r| r.ioc).collect();
+            if !ti_hits.is_empty() {
+                ti_match = 1;
+            }
+        }
+    }
 
     Some(SiemEvent {
         event_id,
         event_timestamp,
         tenant_id,
-        event_category,
+        event_category: if !norm.event_category.is_empty() { norm.event_category } else { event_category },
         event_action,
         event_outcome,
-        source_ip,
-        destination_ip,
+        source_ip: if !norm.source_ip.is_empty() && norm.source_ip != "0.0.0.0" { Some(norm.source_ip) } else { source_ip },
+        destination_ip: if !norm.destination_ip.is_empty() && norm.destination_ip != "0.0.0.0" { Some(norm.destination_ip) } else { destination_ip },
         user_id,
-        user_name,
+        user_name: if !norm.user.is_empty() { Some(norm.user.clone()) } else { user_name },
         severity,
         message,
         raw_event,
@@ -359,6 +526,19 @@ fn transform_to_siem_event(v: Value) -> Option<SiemEvent> {
         created_at: Utc::now().timestamp() as u32,
         source_type,
         retention_days: None,
+        source_seq,
+        source_id,
+        // New normalized fields
+        event_type: if !norm.event_type.is_empty() { Some(norm.event_type) } else { None },
+        action: if !norm.action.is_empty() { Some(norm.action) } else { None },
+        user: if !norm.user.is_empty() { Some(norm.user) } else { None },
+        host: if !norm.host.is_empty() { Some(norm.host) } else { None },
+        severity_int: if norm.severity != 0 { Some(norm.severity) } else { None },
+        vendor: if !norm.vendor.is_empty() { Some(norm.vendor) } else { None },
+        product: if !norm.product.is_empty() { Some(norm.product) } else { None },
+        parsed_fields: if !norm.parsed_fields.is_empty() { Some(norm.parsed_fields) } else { None },
+        ti_hits: if !ti_hits.is_empty() { Some(ti_hits) } else { None },
+        ti_match: Some(ti_match),
     })
 }
 

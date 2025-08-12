@@ -1,0 +1,102 @@
+# Windows SIEM Agent Configuration
+# Collects Sysmon and Windows Event Log
+
+[sources.windows_sysmon]
+type = "windows_event_log"
+channels = ["Microsoft-Windows-Sysmon/Operational"]
+
+[sources.windows_security]
+type = "windows_event_log"  
+channels = ["Security"]
+
+[sources.windows_system]
+type = "windows_event_log"
+channels = ["System"]
+
+[sources.windows_application]
+type = "windows_event_log"
+channels = ["Application"]
+
+# Transform and enrich
+[transforms.enrich_events]
+type = "remap"
+inputs = ["windows_sysmon", "windows_security", "windows_system", "windows_application"]
+source = '''
+.tenant_id = {{TENANT_ID}}
+.source_id = "{{SOURCE_ID}}"
+.source_type = "windows_agent"
+.agent_version = "1.0.0"
+.hostname = get_hostname!()
+
+# Extract important fields from Windows events
+if exists(.EventID) {
+  .event_id = .EventID
+}
+if exists(.Computer) {
+  .computer_name = .Computer
+}
+if exists(.UserName) {
+  .user = .UserName
+}
+
+# Normalize severity
+.severity = if exists(.Level) {
+  if .Level == 1 { "critical" }
+  else if .Level == 2 { "error" }
+  else if .Level == 3 { "warning" }
+  else if .Level == 4 { "info" }
+  else { "info" }
+} else { "info" }
+
+# Keep raw message
+.message = encode_json(.)
+'''
+
+# Batch for efficiency
+[transforms.batch]
+type = "batch"
+inputs = ["enrich_events"]
+timeout_secs = 5.0
+max_events = 500
+
+# Send to SIEM with resilience
+[sinks.siem_http]
+type = "http"
+inputs = ["batch"]
+uri = "{{BASE_URL}}/api/v2/ingest/ndjson"
+encoding.codec = "ndjson"
+compression = "zstd"
+method = "POST"
+headers."Content-Type" = "application/x-ndjson"
+headers."X-API-Key" = "{{API_KEY}}"
+
+# Disk buffer for offline resilience
+buffer.type = "disk"
+buffer.max_size = 2147483648  # 2GB default
+buffer.when_full = "block"
+buffer.path = "C:\\ProgramData\\SIEM\\spool"
+
+# Request settings with backoff
+request.timeout_secs = 30
+request.rate_limit_num = 10
+request.in_flight_limit = 5
+request.retry_attempts = -1  # Infinite retries
+request.retry_initial_backoff_secs = 1
+request.retry_max_duration_secs = 300
+
+# Respect 429 rate limits
+request.adaptive_concurrency.enabled = true
+request.adaptive_concurrency.initial_concurrency = 5
+
+# Local metrics
+[sinks.windows_event_log]
+type = "aws_cloudwatch_metrics"
+inputs = ["internal_metrics"]
+namespace = "SIEM/Agent"
+region = "us-east-1"  # Placeholder
+
+# Health check
+[api]
+enabled = true
+address = "127.0.0.1:8515"
+playground = false

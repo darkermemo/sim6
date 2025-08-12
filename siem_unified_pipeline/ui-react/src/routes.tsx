@@ -2,6 +2,8 @@ import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { AppShell } from '@/components/layout/AppShell';
 import { SearchPage } from '@/pages/Search';
 import { AlertsPage } from '@/pages/Alerts';
+import { RulesPage } from '@/pages/Rules';
+import { RulePacksPage } from '@/pages/RulePacks';
 
 export const router = createBrowserRouter([
   {
@@ -19,6 +21,14 @@ export const router = createBrowserRouter([
       {
         path: 'alerts',
         element: <AlertsPage />,
+      },
+      {
+        path: 'rules',
+        element: <RulesPage />,
+      },
+      {
+        path: 'rule-packs',
+        element: <RulePacksPage />,
       },
       {
         path: 'health',

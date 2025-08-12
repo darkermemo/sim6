@@ -1,0 +1,116 @@
+# Edge Collector Configuration
+# Receives syslog, filters, enriches, and forwards to SIEM
+
+[sources.syslog_tcp]
+type = "socket"
+mode = "tcp"
+address = "0.0.0.0:514"
+
+[sources.syslog_udp]
+type = "syslog"
+mode = "udp"
+address = "0.0.0.0:514"
+
+[sources.syslog_tls]
+type = "socket"
+mode = "tcp"
+address = "0.0.0.0:6514"
+tls.enabled = true
+tls.crt_file = "/etc/siem-collector/server.crt"
+tls.key_file = "/etc/siem-collector/server.key"
+
+[sources.http_receiver]
+type = "http"
+address = "0.0.0.0:8514"
+encoding = "ndjson"
+headers = ["X-API-Key"]
+
+# Parse syslog format
+[transforms.parse_syslog]
+type = "remap"
+inputs = ["syslog_tcp", "syslog_udp", "syslog_tls"]
+source = '''
+.message = parse_syslog!(.message)
+.tenant_id = to_int!(get_env!("TENANT_ID"))
+.source_id = get_env!("SOURCE_ID")
+.source_type = "syslog_collector"
+.site_tag = get_env!("SITE_TAG")
+'''
+
+# Filter out noise
+[transforms.filter_noise]
+type = "filter"
+inputs = ["parse_syslog", "http_receiver"]
+condition = '''
+# Drop heartbeat/keepalive messages
+!contains(string!(.message), "heartbeat") &&
+!contains(string!(.message), "keepalive") &&
+# Drop debug level unless configured
+(!contains(string!(.message.severity), "debug") || get_env!("INCLUDE_DEBUG") == "true")
+'''
+
+# Enrich with local context
+[transforms.enrich]
+type = "remap"
+inputs = ["filter_noise"]
+source = '''
+# Add collector metadata
+.collector_host = get_hostname!()
+.collector_ip = get_env!("COLLECTOR_IP")
+.collector_version = "1.0.0"
+
+# Normalize timestamp
+.event_timestamp = to_unix_timestamp(now())
+
+# Add site-specific tags
+if exists(.site_tag) {
+  .tags = [.site_tag]
+}
+'''
+
+# Batch for efficiency
+[transforms.batch]
+type = "batch"
+inputs = ["enrich"]
+timeout_secs = 5.0
+max_events = 1000
+
+# Main output to SIEM
+[sinks.siem_http]
+type = "http"
+inputs = ["batch"]
+uri = "{{SIEM_BASE_URL}}/api/v2/ingest/ndjson"
+encoding.codec = "ndjson"
+compression = "zstd"
+method = "POST"
+headers."Content-Type" = "application/x-ndjson"
+headers."X-API-Key" = "{{API_KEY}}"
+
+# Disk buffer for resilience
+buffer.type = "disk"
+buffer.max_size = 2147483648  # 2GB
+buffer.when_full = "block"
+
+# Request settings
+request.timeout_secs = 30
+request.rate_limit_num = 10
+request.in_flight_limit = 5
+request.retry_attempts = 10
+request.retry_initial_backoff_secs = 1
+request.retry_max_duration_secs = 300
+
+# Handle 429 rate limits
+request.adaptive_concurrency.enabled = true
+
+# Health check endpoint
+[api]
+enabled = true
+address = "0.0.0.0:8515"
+playground = false
+
+# Metrics for monitoring
+[sinks.metrics_prometheus]
+type = "prometheus_exporter"
+inputs = ["internal_metrics"]
+address = "0.0.0.0:9090"
+default_namespace = "siem_collector"

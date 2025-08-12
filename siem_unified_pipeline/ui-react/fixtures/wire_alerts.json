@@ -1,1 +1,59 @@
-{"alerts":[{"alert_description":"Matched stream event s17548239480 containing 'hammer'","alert_id":"4ac6a309bda0f86373a0a4b6db45c68c4b60305400d2b72f120fcf4a52dd66fa","alert_timestamp":1754823949,"alert_title":"Stream: message has hammer","created_at":1754823949,"event_refs":"[]","rule_id":"d6feccb0-e35e-4d46-97d7-494db7183ebd","severity":"LOW","status":"OPEN","tenant_id":"default","updated_at":1754823949},{"alert_description":"Matched stream event s17548239481 containing 'hammer'","alert_id":"d480232ac3559945e963ae33f0ff41f808d7d268ecbcf1547c48d40307d686ed","alert_timestamp":1754823949,"alert_title":"Stream: message has hammer","created_at":1754823949,"event_refs":"[]","rule_id":"d6feccb0-e35e-4d46-97d7-494db7183ebd","severity":"LOW","status":"OPEN","tenant_id":"default","updated_at":1754823949},{"alert_description":"Matched stream event s17548238600 containing 'hammer'","alert_id":"cdf6df0faf5df0aeb4eab004565871216c41057643019bd2b8403d6cdaee6607","alert_timestamp":1754823860,"alert_title":"Stream: message has hammer","created_at":1754823860,"event_refs":"[]","rule_id":"577e6cbb-f783-42b8-a46c-43b5fb429d63","severity":"LOW","status":"OPEN","tenant_id":"default","updated_at":1754823860}],"total":3}
+{
+  "meta": {
+    "took_ms": 42,
+    "row_count": 3,
+    "next_cursor": "eyJvZmZzZXQiOjEwMH0="
+  },
+  "data": [
+    {
+      "tenant_id": 101,
+      "alert_id": "01HQM8X5B7HNQMZVKWBX7G4JMN",
+      "rule_id": "rule_failed_logins",
+      "created_at": "2024-02-15T10:30:00.000Z",
+      "event_timestamp": "2024-02-15T10:29:45.000Z",
+      "severity": "HIGH",
+      "status": "OPEN",
+      "title": "Multiple Failed Login Attempts",
+      "summary": "5 failed login attempts detected for user 'alice' from IP 10.0.0.42",
+      "alert_key": "failed_login_alice_10.0.0.42",
+      "dedupe_hash": 123456789,
+      "source": "auth_logs",
+      "user": "alice",
+      "src_ip": "10.0.0.42",
+      "host": "web-server-01"
+    },
+    {
+      "tenant_id": 101,
+      "alert_id": "01HQM8Y7D9KPQRSTVWXYZABCDE",
+      "rule_id": "rule_data_exfil",
+      "created_at": "2024-02-15T09:15:00.000Z",
+      "event_timestamp": "2024-02-15T09:14:30.000Z",
+      "severity": "CRITICAL",
+      "status": "ACK",
+      "title": "Potential Data Exfiltration Detected",
+      "summary": "Large outbound data transfer (2.5GB) to unknown external IP",
+      "alert_key": "data_exfil_192.168.1.100_185.199.108.133",
+      "source": "network_logs",
+      "user": "bob",
+      "src_ip": "192.168.1.100",
+      "dst_ip": "185.199.108.133",
+      "host": "db-server-02",
+      "tags": ["investigated", "true_positive"]
+    },
+    {
+      "tenant_id": 101,
+      "alert_id": "01HQM8Z9F2MNPQRSTWXYZABCDF",
+      "rule_id": "rule_privilege_escalation",
+      "created_at": "2024-02-15T08:00:00.000Z",
+      "severity": "MEDIUM",
+      "status": "CLOSED",
+      "title": "Privilege Escalation Attempt",
+      "summary": "User 'charlie' attempted to execute sudo commands without authorization",
+      "alert_key": "priv_esc_charlie_10.0.0.15",
+      "source": "system_logs",
+      "user": "charlie",
+      "src_ip": "10.0.0.15",
+      "host": "app-server-03"
+    }
+  ]
+}

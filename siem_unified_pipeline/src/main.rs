@@ -1,4 +1,4 @@
-use siem_unified_pipeline::v2::{router, state::AppState, workers::{kafka_consumer, incident_aggregator}, engine::run_scheduler};
+use siem_unified_pipeline::v2::{router, state::AppState, workers::incident_aggregator, engine::run_scheduler};
 use redis::aio::ConnectionManager;
 use std::time::Duration;
 
@@ -15,6 +15,35 @@ async fn main() -> anyhow::Result<()> {
             if let Ok(client) = redis::Client::open(redis_url) {
                 if let Ok(cm) = ConnectionManager::new(client).await {
                     st.redis = Some(cm);
+                }
+            }
+        }
+    }
+    
+    // Optional Kafka consumer
+    if let Ok(brokers) = std::env::var("KAFKA_BROKERS") {
+        if !brokers.trim().is_empty() {
+            use siem_unified_pipeline::v2::workers::kafka_consumer::KafkaConsumerWorker;
+            use std::sync::Arc;
+            use tokio::sync::RwLock;
+            
+            let kafka_state = st.clone();
+            match KafkaConsumerWorker::new(Arc::new(kafka_state)) {
+                Ok(consumer) => {
+                    let consumer_arc = Arc::new(RwLock::new(consumer));
+                    st.kafka_consumer = Some(consumer_arc.clone());
+                    
+                    // Spawn consumer task
+                    tokio::spawn(async move {
+                        tracing::info!("Starting Kafka consumer worker");
+                        let mut consumer = consumer_arc.write().await;
+                        if let Err(e) = consumer.run().await {
+                            tracing::error!("Kafka consumer error: {}", e);
+                        }
+                    });
+                }
+                Err(e) => {
+                    tracing::error!("Failed to create Kafka consumer: {}", e);
                 }
             }
         }
@@ -37,17 +66,7 @@ async fn main() -> anyhow::Result<()> {
     }
     let app = router::build(st.clone());
 
-    // Start Kafka consumer in background (optional; configure via env)
-    if let (Ok(brokers), Ok(topic), Ok(group)) = (
-        std::env::var("KAFKA_BROKERS"),
-        std::env::var("KAFKA_TOPIC"),
-        std::env::var("KAFKA_GROUP_ID")
-    ) {
-        let st_kafka = st.clone();
-        tokio::spawn(async move {
-            let _ = kafka_consumer::start_kafka_consumer(st_kafka, &brokers, &topic, &group).await;
-        });
-    }
+    // Kafka consumer already started above if KAFKA_BROKERS is set
 
     // Start incident aggregator worker (every 30s)
     {

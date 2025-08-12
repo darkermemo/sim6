@@ -15,7 +15,6 @@ pub mod handlers {
     pub mod schema;
     pub mod incidents;
     pub mod investigate;
-    pub mod admin;
     pub mod sources;
     pub mod admin_log_sources;
     pub mod admin_parsers;
@@ -28,6 +27,11 @@ pub mod handlers {
     pub mod parse;
     pub mod investigations;
     pub mod admin_storage;
+    pub mod admin_users;
+    pub mod agents;
+    pub mod collectors;
+    pub mod rule_packs;
+    pub mod admin;
 }
 pub mod router;
 pub mod workers {
@@ -45,5 +49,14 @@ pub mod streaming {
 }
 pub mod schema {
     pub mod catalog;
+}
+pub mod normalize;
+pub mod util { 
+    pub mod idempotency; 
+    pub mod keylock; 
+    pub mod lock;
+    pub mod rate_limit;
+    pub mod circuit_breaker;
+    pub mod retry;
 }
 
