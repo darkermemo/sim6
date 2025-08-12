@@ -4,6 +4,7 @@ import { devices } from '@playwright/test';
 const config = {
   testDir: 'tests',
   reporter: 'list',
+  // Note: legacy UI quarantined; keep tests away from src-legacy/**
   projects: [
     {
       name: 'chromium',
