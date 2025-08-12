@@ -1,6 +1,6 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { AppShell } from '@/components/layout/AppShell';
-import { SearchPage } from '@/pages/Search';
+import Search from '@/pages/Search';
 import { AlertsPage } from '@/pages/Alerts';
 import { RulesPage } from '@/pages/Rules';
 import { RulePacksPage } from '@/pages/RulePacks';
@@ -16,7 +16,7 @@ export const router = createBrowserRouter([
       },
       {
         path: 'search',
-        element: <SearchPage />,
+        element: <Search />,
       },
       {
         path: 'alerts',

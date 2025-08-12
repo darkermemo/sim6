@@ -16,14 +16,19 @@ echo "[ux] build ui-react"
 (cd "$ROOT/siem_unified_pipeline/ui-react" && npm ci && npm run build)
 
 echo "[ux] preview ui-react"
-(cd "$ROOT/siem_unified_pipeline/ui-react" && nohup npm run preview >"$ART/ui_preview_ci.log" 2>&1 & echo $! > "$ART/ui_preview_ci.pid")
+PORT=5173
+if lsof -i :$PORT >/dev/null 2>&1; then
+  echo "[ux] port $PORT in use; killing process"
+  lsof -ti :$PORT | xargs -n1 kill -9 || true
+fi
+(cd "$ROOT/siem_unified_pipeline/ui-react" && nohup npm run preview -- --strictPort --port $PORT >"$ART/ui_preview_ci.log" 2>&1 & echo $! > "$ART/ui_preview_ci.pid")
 for i in {1..30}; do
-  curl -fsS "http://127.0.0.1:5173/ui/app" >/dev/null 2>&1 && break
+  curl -fsS "http://127.0.0.1:$PORT/ui/app" >/dev/null 2>&1 && break
   sleep 1
 done
 
 echo "[ux] playwright (ui-react)"
-(cd "$ROOT/siem_unified_pipeline/ui-react" && E2E_BASE_URL="http://127.0.0.1:5173/ui/app" npx playwright test --reporter=list | tee "$ART/ui_e2e_ci_output.txt")
+(cd "$ROOT/siem_unified_pipeline/ui-react" && E2E_BASE_URL="http://127.0.0.1:$PORT/ui/app" npx playwright test --reporter=list | tee "$ART/ui_e2e_ci_output.txt")
 
 echo "[ux] archive report"
 cp -r "$ROOT/siem_unified_pipeline/ui-react/playwright-report" "$ART/ui_playwright_report" 2>/dev/null || true

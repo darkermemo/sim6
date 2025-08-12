@@ -18,9 +18,14 @@ echo "[e2e] build & preview ui-react"
 cd "$ROOT/siem_unified_pipeline/ui-react"
 npm ci >/dev/null 2>&1 || npm i
 npm run build
-nohup npm run preview >"$ART/ui_preview.log" 2>&1 & echo $! > "$ART/ui_preview.pid"
+PORT=5173
+if lsof -i :$PORT >/dev/null 2>&1; then
+  echo "[e2e] port $PORT in use; killing process"
+  lsof -ti :$PORT | xargs -n1 kill -9 || true
+fi
+nohup npm run preview -- --strictPort --port $PORT >"$ART/ui_preview.log" 2>&1 & echo $! > "$ART/ui_preview.pid"
 for i in {1..30}; do
-  curl -fsS "http://127.0.0.1:5173/ui/app" >/dev/null 2>&1 && break
+  curl -fsS "http://127.0.0.1:$PORT/ui/app" >/dev/null 2>&1 && break
   sleep 1
 done
 
@@ -29,7 +34,7 @@ npm i -D @playwright/test >/dev/null 2>&1 || true
 npx playwright install --with-deps >/dev/null 2>&1 || true
 
 echo "[e2e] run tests"
-E2E_BASE_URL="http://127.0.0.1:5173/ui/app" npm run e2e | tee "$ART/ui_e2e_output.txt"
+E2E_BASE_URL="http://127.0.0.1:$PORT/ui/app" npm run e2e | tee "$ART/ui_e2e_output.txt"
 
 echo "[e2e] copy report"
 cp -r "$ROOT/siem_unified_pipeline/ui-react/playwright-report" "$ART/ui_playwright_report" 2>/dev/null || true
