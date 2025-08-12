@@ -176,9 +176,7 @@ pub async fn create_incident(
   let entities = body.entities.unwrap_or_default();
   let rule_ids = body.rule_ids.unwrap_or_default();
   
-  let sql = format!(
-    "INSERT INTO dev.incidents (incident_id, tenant_id, title, description, severity, owner, entity_keys, entities, rule_ids, alert_count, first_alert_ts, last_alert_ts, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 0, ?, ?)"
-  );
+    let sql = "INSERT INTO dev.incidents (incident_id, tenant_id, title, description, severity, owner, entity_keys, entities, rule_ids, alert_count, first_alert_ts, last_alert_ts, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 0, ?, ?)".to_string();
   
   st.ch.query(&sql)
     .bind(&incident_id)

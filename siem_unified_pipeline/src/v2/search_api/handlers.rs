@@ -124,7 +124,7 @@ pub async fn aggs(State(st): State<Arc<AppState>>, Json(body): Json<Value>) -> R
 
 pub async fn tail(State(st): State<Arc<AppState>>, Json(body): Json<Value>) -> Sse<impl futures_util::Stream<Item = Result<Event, axum::Error>>> {
     // Always produce a single concrete stream type using stream::iter
-    let events: Vec<Result<Event, axum::Error>> = (|| async {
+    let events: Vec<Result<Event, axum::Error>> = async {
         let dsl = match translate_to_dsl(&body) { Ok(d) => d, Err(_) => {
             return vec![Ok(Event::default().data("error: invalid query"))];
         }};
@@ -140,7 +140,7 @@ pub async fn tail(State(st): State<Arc<AppState>>, Json(body): Json<Value>) -> S
                 let mut count: usize = 0;
                 for line in text.lines().filter(|l| !l.trim().is_empty()) {
                     count += 1;
-                    out.push(Ok(Event::default().data(line.to_string())));
+                    out.push(Ok(Event::default().data(line)));
                     if count % 500 == 0 { out.push(Ok(Event::default().data("throttle:500"))); }
                 }
                 if out.is_empty() { out.push(Ok(Event::default().data("found 0 events"))); }
@@ -148,7 +148,7 @@ pub async fn tail(State(st): State<Arc<AppState>>, Json(body): Json<Value>) -> S
             }
             _ => vec![Ok(Event::default().data("error: query failed"))],
         }
-    })().await;
+    }.await;
     Sse::new(stream::iter(events))
 }
 

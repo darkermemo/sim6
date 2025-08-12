@@ -1,0 +1,5 @@
+{
+  "ok": true,
+  "sql": "SELECT \n  user,\n  src_ip,\n  COUNT(*) as count\nFROM dev.events\nWHERE \n  tenant_id = 101\n  AND event_type = 'login' \n  AND result = 'failure'\n  AND event_timestamp > now() - INTERVAL 5 MINUTE\nGROUP BY user, src_ip\nHAVING count > 5",
+  "warnings": ["Consider adding time range constraints for better performance"]
+}

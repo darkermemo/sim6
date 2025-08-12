@@ -1,0 +1,16 @@
+{
+  "rule_id": "rule_failed_logins",
+  "tenant_id": 101,
+  "name": "Multiple Failed Login Attempts",
+  "description": "Detects multiple failed login attempts from the same user or IP",
+  "severity": "HIGH",
+  "enabled": true,
+  "kind": "NATIVE",
+  "dsl": "event_type:login AND result:failure | stats count() by user, src_ip where count > 5",
+  "watermark_sec": 120,
+  "throttle_seconds": 300,
+  "alert_key": "coalesce(user, src_ip)",
+  "created_at": "2024-02-01T10:00:00.000Z",
+  "updated_at": "2024-02-15T08:30:00.000Z",
+  "tags": ["authentication", "brute-force", "critical"]
+}

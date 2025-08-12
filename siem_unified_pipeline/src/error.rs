@@ -319,9 +319,9 @@ impl IntoResponse for PipelineError {
         });
         
         // Add upstream field for circuit breaker errors
-        if error_code == "UPSTREAM_DOWN" && error_message.contains("ClickHouse") {
-            error_obj["upstream"] = json!("clickhouse");
-        } else if error_code == "UPSTREAM_TIMEOUT" {
+        if (error_code == "UPSTREAM_DOWN" && error_message.contains("ClickHouse"))
+            || error_code == "UPSTREAM_TIMEOUT"
+        {
             error_obj["upstream"] = json!("clickhouse");
         } else if matches!(self, PipelineError::DatabaseError(_)) && error_message.contains("ClickHouse") {
             // Map ClickHouse errors to UPSTREAM_ERROR

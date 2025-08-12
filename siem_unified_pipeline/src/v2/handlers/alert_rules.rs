@@ -361,7 +361,7 @@ pub async fn rule_run_now(
     }
     let name = row.get("name").and_then(|s| s.as_str()).unwrap_or(&id);
     let severity = row.get("severity").and_then(|s| s.as_str()).unwrap_or("MEDIUM");
-    let throttle_seconds: u64 = row.get("throttle_seconds").and_then(|n| n.as_u64()).unwrap_or(0);
+    let _throttle_seconds: u64 = row.get("throttle_seconds").and_then(|n| n.as_u64()).unwrap_or(0);
     let _dedup_key = row.get("dedup_key").and_then(|s| s.as_str()).unwrap_or("[]");
     let limit = req.limit.unwrap_or(50).min(1000);
     // Determine tenant scope (portable): if row.tenant_scope != 'all' use it; else default
@@ -670,13 +670,13 @@ pub async fn create_rule(
     let enabled = req.enabled.unwrap_or(1);
     let description = req.description.unwrap_or_default().replace('\'', "''");
     let schedule_sec = req.schedule_sec.unwrap_or(60);
-    let throttle_seconds = req.throttle_seconds.unwrap_or(0);
-    let dedup_key = req.dedup_key.unwrap_or_else(|| "[]".to_string()).replace('\'', "''");
+    let _throttle_seconds = req.throttle_seconds.unwrap_or(0);
+    let _dedup_key = req.dedup_key.unwrap_or_else(|| "[]".to_string()).replace('\'', "''");
     let compiled_sql = if let Some(sql) = req.compiled_sql { sql } else if let Some(dsl) = req.dsl { crate::v2::compiler::compile_search(&dsl, "dev.events").map_err(crate::error::PipelineError::validation)?.sql } else { String::new() };
     if compiled_sql.is_empty() { return Err(crate::error::PipelineError::validation("compiled_sql or dsl required")); }
     let compiled_sql = compiled_sql.replace('\'', "''");
     // Format tags
-    let tags_sql = if let Some(tags) = req.tags { if tags.is_empty() { "[]".to_string() } else { format!("[{}]", tags.into_iter().map(|t| format!("'{}'", t.replace('\'', "''"))).collect::<Vec<_>>().join(",")) } } else { "[]".to_string() };
+    let _tags_sql = if let Some(tags) = req.tags { if tags.is_empty() { "[]".to_string() } else { format!("[{}]", tags.into_iter().map(|t| format!("'{}'", t.replace('\'', "''"))).collect::<Vec<_>>().join(",")) } } else { "[]".to_string() };
     // Insert with explicit columns compatible with provided schema (persist compiled_sql, source_format, mapping_profile)
     let sql = format!(
         "INSERT INTO dev.alert_rules (id, tenant_scope, name, description, severity, enabled, compiled_sql, schedule_sec, created_at, updated_at) \

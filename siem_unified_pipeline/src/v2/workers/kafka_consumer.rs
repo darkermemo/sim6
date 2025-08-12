@@ -2,7 +2,7 @@ use std::sync::Arc;
 use std::time::Duration;
 use tokio::time::{sleep, timeout};
 use serde_json::Value;
-use chrono::Utc;
+// use chrono::Utc;
 use rdkafka::{
     config::RDKafkaLogLevel,
     consumer::{CommitMode, Consumer, StreamConsumer},
@@ -11,7 +11,7 @@ use rdkafka::{
 };
 use rdkafka::consumer::ConsumerContext;
 use rdkafka::client::ClientContext;
-use rdkafka::error::KafkaResult;
+// use rdkafka::error::KafkaResult;
 
 use crate::v2::{state::AppState, models::SiemEvent, metrics};
 use crate::error::{Result, PipelineError};
@@ -39,6 +39,7 @@ pub struct KafkaConsumerWorker {
     consumer: LoggingConsumer,
     topic: String,
     max_batch: usize,
+    #[allow(dead_code)]
     max_inflight: usize,
 }
 
@@ -244,7 +245,7 @@ impl KafkaConsumerWorker {
                 metrics::inc_v2_ingest_kafka_total_by("ok", count as u64);
                 
                 // Commit offsets
-                self.consumer.commit(&tpl, CommitMode::Sync)
+                self.consumer.commit(tpl, CommitMode::Sync)
                     .map_err(|e| PipelineError::internal(format!("Failed to commit offsets: {}", e)))?;
                 metrics::inc_v2_kafka_commits_total();
                 

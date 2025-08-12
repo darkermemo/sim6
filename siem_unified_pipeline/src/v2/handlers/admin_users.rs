@@ -96,7 +96,7 @@ pub async fn update_user(State(st): State<Arc<AppState>>, Path(id): Path<String>
     if let Some(v)=b.email { sets.push(format!("email='{}'", v.replace("'","''"))); }
     if let Some(v)=b.display_name { sets.push(format!("display_name='{}'", v.replace("'","''"))); }
     if let Some(v)=b.role { sets.push(format!("role='{}'", v.replace("'","''"))); }
-    if let Some(v)=b.tenant_ids { sets.push(format!("tenant_ids={}", format!("[{}]", v.into_iter().map(|t| format!("'{}'", t.replace("'","''"))).collect::<Vec<_>>().join(",")))); }
+    if let Some(v)=b.tenant_ids { sets.push(format!("tenant_ids=[{}]", v.into_iter().map(|t| format!("'{}'", t.replace("'","''"))).collect::<Vec<_>>().join(","))); }
     if let Some(v)=b.enabled { sets.push(format!("enabled={}", v)); }
     if sets.is_empty() { return Ok(Json(serde_json::json!({"id": id, "status":"updated"}))); }
     sets.push("updated_at=toUInt32(now())".to_string());

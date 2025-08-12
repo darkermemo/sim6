@@ -1,0 +1,65 @@
+{
+  "request": {
+    "method": "GET",
+    "url": "/api/v2/alert_rules?tenant_id=101&q=enabled:true,kind:NATIVE&limit=100",
+    "headers": {
+      "x-tenant-id": "101"
+    }
+  },
+  "response_first_page": {
+    "status": 200,
+    "body": {
+      "meta": {
+        "took_ms": 45,
+        "row_count": 100,
+        "next_cursor": "eyJvZmZzZXQiOjEwMCwic29ydCI6InVwZGF0ZWRfYXQifQ=="
+      },
+      "data": [
+        {
+          "rule_id": "rule_brute_force_ssh",
+          "tenant_id": 101,
+          "name": "SSH Brute Force Detection",
+          "description": "Detects multiple SSH login failures",
+          "severity": "HIGH",
+          "enabled": true,
+          "kind": "NATIVE",
+          "dsl": "event_type:ssh AND result:failure | stats count() by src_ip where count > 10",
+          "watermark_sec": 120,
+          "throttle_seconds": 300,
+          "alert_key": "src_ip",
+          "created_at": "2024-02-01T10:00:00.000Z",
+          "updated_at": "2024-02-16T14:30:00.000Z",
+          "tags": ["ssh", "brute-force", "network"]
+        }
+      ]
+    }
+  },
+  "response_with_cursor": {
+    "request": {
+      "method": "GET",
+      "url": "/api/v2/alert_rules?tenant_id=101&q=enabled:true,kind:NATIVE&limit=100&cursor=eyJvZmZzZXQiOjEwMCwic29ydCI6InVwZGF0ZWRfYXQifQ==",
+      "headers": {
+        "x-tenant-id": "101"
+      }
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "meta": {
+          "took_ms": 38,
+          "row_count": 23,
+          "next_cursor": null
+        },
+        "data": [
+          {
+            "rule_id": "rule_port_scan",
+            "tenant_id": 101,
+            "name": "Port Scan Detection",
+            "enabled": true,
+            "kind": "NATIVE"
+          }
+        ]
+      }
+    }
+  }
+}

@@ -7,7 +7,8 @@ use axum::{
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
-use crate::v2::{AppError, AppState};
+use crate::v2::state::AppState;
+use crate::error::{Result as PipelineResult, PipelineError};
 
 #[derive(Debug, Deserialize)]
 pub struct UpdateRoleRequest {
@@ -28,9 +29,9 @@ pub struct ListRolesResponse {
 
 pub async fn list_roles(
     State(state): State<Arc<AppState>>,
-) -> Result<Response, AppError> {
+) -> PipelineResult<Json<serde_json::Value>> {
     let sql = "SELECT role, description, perms FROM dev.roles ORDER BY role";
-    let mut result = state.clickhouse.query(sql, &[]).await?;
+    let mut result = state.ch.query(sql, &[]).await?;
     
     let mut roles = Vec::new();
     while let Some(row) = result.next().await? {
@@ -42,14 +43,14 @@ pub async fn list_roles(
     }
     
     let response = ListRolesResponse { roles };
-    Ok(Json(response).into_response())
+    Ok(Json(serde_json::to_value(response)?))
 }
 
 pub async fn update_role(
     State(state): State<Arc<AppState>>,
     Path(role): Path<String>,
     Json(req): Json<UpdateRoleRequest>,
-) -> Result<Response, AppError> {
+) -> PipelineResult<Json<serde_json::Value>> {
     // Validate permissions
     let valid_perms = [
         "*", "search:read", "search:write", "alerts:read", "alerts:write", 
@@ -59,30 +60,30 @@ pub async fn update_role(
     
     for perm in &req.perms {
         if !valid_perms.contains(&perm.as_str()) {
-            return Err(AppError::BadRequest(format!("Invalid permission: {}", perm)));
+            return Err(PipelineError::validation(format!("Invalid permission: {}", perm)));
         }
     }
     
     // Check if role exists
     let existing_sql = "SELECT role FROM dev.roles WHERE role = ?";
-    let mut existing_result = state.clickhouse.query(existing_sql, &[role.clone()]).await?;
+    let mut existing_result = state.ch.query(existing_sql, &[role.clone()]).await?;
     
     if existing_result.next().await?.is_some() {
         // Update existing role
         let update_sql = "ALTER TABLE dev.roles UPDATE perms = ? WHERE role = ?";
-        state.clickhouse.execute(update_sql, &[
+        state.ch.execute(update_sql, &[
             serde_json::to_string(&req.perms)?,
             role.clone(),
         ]).await?;
     } else {
         // Insert new role
         let insert_sql = "INSERT INTO dev.roles (role, description, perms) VALUES (?, ?, ?)";
-        state.clickhouse.execute(insert_sql, &[
+        state.ch.execute(insert_sql, &[
             role.clone(),
             format!("Custom role: {}", role),
             serde_json::to_string(&req.perms)?,
         ]).await?;
     }
     
-    Ok(StatusCode::OK.into_response())
+    Ok(Json(serde_json::json!({"status": "ok"})))
 }

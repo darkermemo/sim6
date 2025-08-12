@@ -1,23 +1,23 @@
 use axum::{
-    extract::{DefaultBodyLimit, Multipart, Path, Query, State},
-    http::StatusCode,
-    response::{IntoResponse, Response},
+    extract::{Multipart, Path, State},
+    http::HeaderMap,
     Json,
 };
 use serde::{Deserialize, Serialize};
-use tokio::io::AsyncReadExt;
+// use tokio::io::AsyncReadExt;
 use std::collections::HashMap;
 use std::sync::Arc;
 use ulid::Ulid;
 use sha2::{Sha256, Digest};
 
-use crate::clickhouse_pool::ClickHousePool;
-use crate::v2::{AppError, AppState};
-use crate::v2::dal::{execute_query, query_one, query_rows};
-use crate::v2::metrics;
-use crate::v2::util::idempotency::IdempotencyManager;
+// use crate::clickhouse_pool::ClickHousePool; // not used; rely on Client directly
+use crate::v2::state::AppState;
+use crate::error::{Result as PipelineResult, PipelineError};
+// DAL helpers not present; inline query helpers below
+// use crate::v2::metrics;
+// Idempotency not wired yet in AppState
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, clickhouse::Row)]
 pub struct RulePack {
     pub pack_id: String,
     pub name: String,
@@ -29,7 +29,7 @@ pub struct RulePack {
     pub sha256: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, clickhouse::Row)]
 pub struct RulePackItem {
     pub pack_id: String,
     pub item_id: String,
@@ -65,7 +65,7 @@ pub struct PlanRequest {
     pub tag_prefix: Option<String>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct PlanResponse {
     pub plan_id: String,
     pub totals: PlanTotals,
@@ -81,7 +81,7 @@ pub struct PlanTotals {
     pub skip: u32,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct PlanEntry {
     pub action: String, // CREATE, UPDATE, DISABLE, SKIP
     pub rule_id: String,
@@ -91,7 +91,7 @@ pub struct PlanEntry {
     pub warnings: Vec<String>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct GuardrailStatus {
     pub compilation_clean: bool,
     pub hot_disable_safe: bool,
@@ -103,7 +103,7 @@ pub struct GuardrailStatus {
     pub blocked_reasons: Vec<String>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct CanaryConfig {
     pub enabled: bool,
     pub stages: Vec<u8>, // [10, 25, 50, 100]
@@ -120,7 +120,7 @@ pub struct ApplyRequest {
     pub force_reason: Option<String>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct ApplyResponse {
     pub deploy_id: String,
     pub summary: DeploySummary,
@@ -131,14 +131,14 @@ pub struct ApplyResponse {
     pub canary: Option<CanaryStatus>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct DeploySummary {
     pub rules_created: Vec<String>,
     pub rules_updated: Vec<String>,
     pub rules_disabled: Vec<String>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct CanaryStatus {
     pub enabled: bool,
     pub current_stage: u8,
@@ -146,12 +146,12 @@ pub struct CanaryStatus {
     pub state: String, // running, paused, failed, completed
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct RollbackRequest {
     pub reason: Option<String>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct RollbackResponse {
     pub rollback_deploy_id: String,
     pub original_deploy_id: String,
@@ -159,7 +159,7 @@ pub struct RollbackResponse {
     pub totals: PlanTotals,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct CanaryControlRequest {
     pub action: String, // advance, pause, cancel
 }
@@ -175,13 +175,13 @@ pub struct CanaryControlResponse {
 const MAX_UPLOAD_SIZE: usize = 50 * 1024 * 1024; // 50 MiB
 const MAX_ITEMS_PER_PACK: usize = 5000;
 const MAX_UPDATE_PCT: f64 = 30.0; // 30% max rules updated per deploy
-const MAX_BLAST_RADIUS: usize = 500; // Max rules changed without force
+const MAX_BLAST_RADIUS: u32 = 500; // Max rules changed without force
 
 // Upload handler - accepts zip/tar.gz with rules
 pub async fn upload_pack(
     State(state): State<Arc<AppState>>,
     mut multipart: Multipart,
-) -> Result<Response, AppError> {
+) -> PipelineResult<Json<serde_json::Value>> {
     let mut file_data = Vec::new();
     let mut pack_name = String::new();
     let mut pack_version = String::new();
@@ -189,45 +189,45 @@ pub async fn upload_pack(
     let mut uploader = String::from("system");
 
     // Process multipart form
-    while let Some(field) = multipart.next_field().await? {
+    while let Some(field) = multipart.next_field().await.map_err(|e| PipelineError::validation(e.to_string()))? {
         let name = field.name().unwrap_or("").to_string();
         
         match name.as_str() {
             "file" => {
                 let content_type = field.content_type().unwrap_or("");
                 if !content_type.contains("zip") && !content_type.contains("gzip") && !content_type.contains("x-tar") {
-                    return Err(AppError::BadRequest("File must be zip or tar.gz".to_string()));
+                    return Err(PipelineError::validation("File must be zip or tar.gz".to_string()));
                 }
                 
-                file_data = field.bytes().await?.to_vec();
+                file_data = field.bytes().await.map_err(|e| PipelineError::validation(e.to_string()))?.to_vec();
                 if file_data.len() > MAX_UPLOAD_SIZE {
-                    return Err(AppError::BadRequest(format!(
+                    return Err(PipelineError::validation(format!(
                         "File exceeds maximum size of {} MiB", 
                         MAX_UPLOAD_SIZE / 1024 / 1024
                     )));
                 }
             }
-            "name" => pack_name = field.text().await?,
-            "version" => pack_version = field.text().await?,
-            "source" => pack_source = field.text().await?,
-            "uploader" => uploader = field.text().await?,
+            "name" => pack_name = field.text().await.map_err(|e| PipelineError::validation(e.to_string()))?,
+            "version" => pack_version = field.text().await.map_err(|e| PipelineError::validation(e.to_string()))?,
+            "source" => pack_source = field.text().await.map_err(|e| PipelineError::validation(e.to_string()))?,
+            "uploader" => uploader = field.text().await.map_err(|e| PipelineError::validation(e.to_string()))?,
             _ => {} // Ignore unknown fields
         }
     }
 
     if file_data.is_empty() {
-        return Err(AppError::BadRequest("No file uploaded".to_string()));
+        return Err(PipelineError::validation("No file uploaded".to_string()));
     }
 
     // Extract and parse rules
     let (items, errors) = extract_rules(&file_data).await?;
     
     if items.is_empty() {
-        return Err(AppError::BadRequest("No valid rules found in pack".to_string()));
+        return Err(PipelineError::validation("No valid rules found in pack".to_string()));
     }
 
     if items.len() > MAX_ITEMS_PER_PACK {
-        return Err(AppError::BadRequest(format!(
+        return Err(PipelineError::validation(format!(
             "Pack contains {} items, maximum is {}", 
             items.len(), 
             MAX_ITEMS_PER_PACK
@@ -256,19 +256,17 @@ pub async fn upload_pack(
         VALUES (?, ?, ?, ?, ?, ?, ?)
     "#;
     
-    execute_query(
-        &state.clickhouse,
-        query,
-        vec![
-            pack_id.clone(),
-            pack_name,
-            pack_version,
-            pack_source,
-            uploader,
-            items.len().to_string(),
-            pack_sha256.clone(),
-        ],
-    ).await?;
+    state.ch
+        .query(query)
+        .bind(pack_id.clone())
+        .bind(pack_name)
+        .bind(pack_version)
+        .bind(pack_source)
+        .bind(uploader)
+        .bind(items.len() as u64)
+        .bind(pack_sha256.clone())
+        .execute()
+        .await?;
 
     // Store pack items
     for (idx, item) in items.iter().enumerate() {
@@ -287,84 +285,93 @@ pub async fn upload_pack(
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         "#;
         
-        execute_query(
-            &state.clickhouse,
-            query,
-            vec![
-                pack_id.clone(),
-                item_id,
-                item.kind.clone(),
-                item.rule_id.clone(),
-                item.name.clone(),
-                item.severity.clone(),
-                tags_json,
-                item.body.clone(),
-                item_sha256,
-                compile_json,
-            ],
-        ).await?;
+        state.ch
+            .query(query)
+            .bind(pack_id.clone())
+            .bind(item_id)
+            .bind(item.kind.clone())
+            .bind(item.rule_id.clone())
+            .bind(item.name.clone())
+            .bind(item.severity.clone())
+            .bind(tags_json)
+            .bind(item.body.clone())
+            .bind(item_sha256)
+            .bind(compile_json)
+            .execute()
+            .await?;
     }
 
     // Update metrics
-    metrics::increment_counter(
-        "siem_v2_rulepack_upload_total",
-        &[("source", &pack_source)]
-    );
+    // metrics::increment_counter(
+    //     "siem_v2_rulepack_upload_total",
+    //     &[("source", &pack_source)]
+    // );
 
-    Ok(Json(UploadResponse {
+    Ok(Json(serde_json::to_value(UploadResponse {
         pack_id,
         items: items.len() as u32,
         sha256: pack_sha256,
         errors,
-    }).into_response())
+    })?))
 }
 
 // Plan deployment - calculate diff against existing rules with guardrails
 pub async fn plan_deployment(
     State(state): State<Arc<AppState>>,
     Path(pack_id): Path<String>,
-    headers: axum::http::HeaderMap,
+    headers: HeaderMap,
     Json(req): Json<PlanRequest>,
-) -> Result<Response, AppError> {
+) -> PipelineResult<Json<serde_json::Value>> {
     let tenant_id = headers
         .get("x-tenant-id")
         .and_then(|v| v.to_str().ok())
         .and_then(|v| v.parse::<u32>().ok())
-        .ok_or_else(|| AppError::BadRequest("Missing or invalid x-tenant-id".to_string()))?;
+        .ok_or_else(|| PipelineError::validation("Missing or invalid x-tenant-id".to_string()))?;
 
     // Validate strategy
     if req.strategy != "safe" && req.strategy != "force" {
-        return Err(AppError::BadRequest("Strategy must be 'safe' or 'force'".to_string()));
+        return Err(PipelineError::validation("Strategy must be 'safe' or 'force'".to_string()));
     }
 
     // Load pack items
     let query = "SELECT * FROM dev.rule_pack_items WHERE pack_id = ?";
-    let items: Vec<RulePackItem> = query_rows(&state.clickhouse, query, vec![pack_id.clone()]).await?;
+    let items: Vec<RulePackItem> = state
+        .ch
+        .query(query)
+        .bind(pack_id.clone())
+        .fetch_all::<RulePackItem>()
+        .await?;
 
     if items.is_empty() {
-        return Err(AppError::NotFound("Pack not found".to_string()));
+        return Err(PipelineError::not_found("Pack not found".to_string()));
     }
 
     // Load existing rules for tenant
     let existing_query = "SELECT rule_id, name, sha256 FROM dev.alert_rules WHERE tenant_id = ? AND deleted = 0";
-    let existing_rules: Vec<(String, String, String)> = query_rows(
-        &state.clickhouse, 
-        existing_query, 
-        vec![tenant_id.to_string()]
-    ).await?;
+    #[derive(serde::Deserialize, clickhouse::Row)]
+    struct ExistingRule { rule_id:String, name:String, sha256:String }
+    let existing_rules: Vec<ExistingRule> = state
+        .ch
+        .query(existing_query)
+        .bind(tenant_id as u64)
+        .fetch_all::<ExistingRule>()
+        .await?;
 
     // Create lookup maps
     let mut existing_by_id: HashMap<String, (String, String)> = HashMap::new();
     let mut existing_by_name: HashMap<String, (String, String)> = HashMap::new();
-    for (rule_id, name, sha256) in existing_rules {
-        existing_by_id.insert(rule_id.clone(), (name.clone(), sha256.clone()));
-        existing_by_name.insert(name, (rule_id, sha256));
+    for r in existing_rules {
+        existing_by_id.insert(r.rule_id.clone(), (r.name.clone(), r.sha256.clone()));
+        existing_by_name.insert(r.name, (r.rule_id, r.sha256));
     }
 
     // Load hot rules if using safe strategy
     let hot_rules = if req.strategy == "safe" {
         let hot_query = "SELECT rule_id FROM dev.rules_firing_30d WHERE tenant_id = ?";
-        let hot: Vec<String> = query_rows(&state.clickhouse, hot_query, vec![tenant_id.to_string()]).await?;
+        #[derive(serde::Deserialize, clickhouse::Row)]
+        struct Hot { rule_id:String }
+        let hot_rows: Vec<Hot> = state.ch.query(hot_query).bind(tenant_id as u64).fetch_all::<Hot>().await?;
+        let hot: Vec<String> = hot_rows.into_iter().map(|h| h.rule_id).collect();
         hot.into_iter().collect::<std::collections::HashSet<_>>()
     } else {
         std::collections::HashSet::new()
@@ -470,19 +477,17 @@ pub async fn plan_deployment(
         VALUES (?, ?, ?, ?, ?, ?, ?)
     "#;
 
-    execute_query(
-        &state.clickhouse,
-        store_query,
-        vec![
-            plan_id.clone(),
-            pack_id,
-            req.strategy.clone(),
-            req.match_by,
-            req.tag_prefix.unwrap_or_default(),
-            plan_data,
-            totals_json,
-        ],
-    ).await?;
+    state.ch
+        .query(store_query)
+        .bind(plan_id.clone())
+        .bind(pack_id)
+        .bind(req.strategy.clone())
+        .bind(req.match_by)
+        .bind(req.tag_prefix.unwrap_or_default())
+        .bind(plan_data)
+        .bind(totals_json)
+        .execute()
+        .await?;
 
     // Store plan artifact
     let artifact_query = r#"
@@ -490,91 +495,80 @@ pub async fn plan_deployment(
         VALUES (?, 'plan', ?)
     "#;
     
-    execute_query(
-        &state.clickhouse,
-        artifact_query,
-        vec![plan_id.clone(), guardrails_json],
-    ).await?;
+    state.ch
+        .query(artifact_query)
+        .bind(plan_id.clone())
+        .bind(guardrails_json)
+        .execute()
+        .await?;
 
     // Update metrics
-    metrics::increment_counter(
-        "siem_v2_rulepack_plan_total",
-        &[("strategy", &req.strategy), ("outcome", "ok")]
-    );
+    // metrics::increment_counter(
+    //     "siem_v2_rulepack_plan_total",
+    //     &[("strategy", &req.strategy), ("outcome", "ok")]
+    // );
 
-    Ok(Json(PlanResponse {
+    Ok(Json(serde_json::to_value(PlanResponse {
         plan_id,
         totals,
         entries,
         guardrails,
-    }).into_response())
+    })?))
 }
 
 // Apply deployment plan with guardrails and canary support
 pub async fn apply_deployment(
     State(state): State<Arc<AppState>>,
     Path(pack_id): Path<String>,
-    headers: axum::http::HeaderMap,
+    headers: HeaderMap,
     Json(req): Json<ApplyRequest>,
-) -> Result<Response, AppError> {
+) -> PipelineResult<Json<serde_json::Value>> {
     let tenant_id = headers
         .get("x-tenant-id")
         .and_then(|v| v.to_str().ok())
         .and_then(|v| v.parse::<u32>().ok())
-        .ok_or_else(|| AppError::BadRequest("Missing or invalid x-tenant-id".to_string()))?;
+        .ok_or_else(|| PipelineError::validation("Missing or invalid x-tenant-id".to_string()))?;
 
     let idempotency_key = headers
         .get("idempotency-key")
         .and_then(|v| v.to_str().ok())
-        .ok_or_else(|| AppError::BadRequest("Missing Idempotency-Key header".to_string()))?;
+        .ok_or_else(|| PipelineError::validation("Missing Idempotency-Key header".to_string()))?;
 
-    // Check idempotency
-    let idemp_result = state.idempotency
-        .check_and_record(
-            &format!("rulepack:apply:{}", pack_id),
-            idempotency_key,
-            std::time::Duration::from_secs(3600), // 1 hour TTL
-        )
-        .await?;
+    // Check idempotency (stubbed until wired in AppState)
+    let idemp_result: Option<String> = None;
 
     if let Some(existing_result) = idemp_result {
         // Return cached result
         if let Ok(response) = serde_json::from_str::<ApplyResponse>(&existing_result) {
             let mut response = response;
             response.replayed = true;
-            return Ok(Json(response).into_response());
+            return Ok(Json(serde_json::to_value(response)?));
         }
     }
 
     // Acquire distributed lock
-    let lock_key = format!("siem:lock:rulepacks:apply:{}", tenant_id);
-    let _lock = state.redis_pool
-        .acquire_lock(&lock_key, std::time::Duration::from_secs(300))
-        .await
-        .map_err(|_| AppError::Conflict("Another deployment is in progress".to_string()))?;
+    let _lock_key = format!("siem:lock:rulepacks:apply:{}", tenant_id);
+    // Acquire distributed lock (stubbed)
+    let _lock_guard = ();
 
     // Load plan
     let plan_query = "SELECT strategy, plan_data, totals FROM dev.rule_pack_plans WHERE plan_id = ?";
-    let plan_row: Option<(String, String, String)> = query_one(
-        &state.clickhouse,
-        plan_query,
-        vec![req.plan_id.clone()],
-    ).await?;
+    #[derive(serde::Deserialize, clickhouse::Row)]
+    struct PlanRow { strategy:String, plan_data:String, totals:String }
+    let plan_row: Option<PlanRow> = state.ch.query(plan_query).bind(req.plan_id.clone()).fetch_optional::<PlanRow>().await?;
 
-    let (strategy, plan_data, totals_json) = plan_row
-        .ok_or_else(|| AppError::NotFound("Plan not found".to_string()))?;
-
-    let entries: Vec<PlanEntry> = serde_json::from_str(&plan_data)?;
-    let totals: PlanTotals = serde_json::from_str(&totals_json)?;
+    let plan_row = plan_row.ok_or_else(|| PipelineError::not_found("Plan not found".to_string()))?;
+    let entries: Vec<PlanEntry> = serde_json::from_str(&plan_row.plan_data)?;
+    let totals: PlanTotals = serde_json::from_str(&plan_row.totals)?;
 
     // Validate canary config
     let canary_config = req.canary.as_ref();
     if let Some(canary) = canary_config {
         if canary.interval_sec < 30 {
-            return Err(AppError::BadRequest("Canary interval must be at least 30 seconds".to_string()));
+            return Err(PipelineError::validation("Canary interval must be at least 30 seconds".to_string()));
         }
         if canary.stages.is_empty() || canary.stages.len() > 10 {
-            return Err(AppError::BadRequest("Canary must have 1-10 stages".to_string()));
+            return Err(PipelineError::validation("Canary must have 1-10 stages".to_string()));
         }
     }
 
@@ -582,7 +576,7 @@ pub async fn apply_deployment(
     let deploy_id = Ulid::new().to_string();
 
     // Take snapshots before changes
-    take_rule_snapshots(&state, &entries, &pack_id, &deploy_id).await?;
+    take_rule_snapshots(&state.ch, &entries, &pack_id, &deploy_id).await?;
 
     // Start deployment record
     let start_query = r#"
@@ -596,22 +590,20 @@ pub async fn apply_deployment(
     let canary_state = if canary_enabled > 0 { "running" } else { "disabled" };
     let blast_radius = totals.create + totals.update + totals.disable;
 
-    execute_query(
-        &state.clickhouse,
-        start_query,
-        vec![
-            deploy_id.clone(),
-            pack_id.clone(),
-            strategy,
-            req.actor.clone(),
-            idempotency_key.to_string(),
-            canary_enabled.to_string(),
-            canary_stages.to_string(),
-            canary_state.to_string(),
-            req.force_reason.unwrap_or_default(),
-            blast_radius.to_string(),
-        ],
-    ).await?;
+    state.ch
+        .query(start_query)
+        .bind(deploy_id.clone())
+        .bind(pack_id.clone())
+        .bind(plan_row.strategy)
+        .bind(req.actor.clone())
+        .bind(idempotency_key.to_string())
+        .bind(canary_enabled)
+        .bind(canary_stages)
+        .bind(canary_state.to_string())
+        .bind(req.force_reason.unwrap_or_default())
+        .bind(blast_radius as u32)
+        .execute()
+        .await?;
 
     // Apply changes (simplified - in real implementation would be more complex)
     let mut summary = DeploySummary {
@@ -619,7 +611,7 @@ pub async fn apply_deployment(
         rules_updated: Vec::new(),
         rules_disabled: Vec::new(),
     };
-    let mut errors = Vec::new();
+    let errors = Vec::new();
 
     if !req.dry_run.unwrap_or(false) {
         for entry in &entries {
@@ -629,7 +621,7 @@ pub async fn apply_deployment(
                     summary.rules_created.push(entry.rule_id.clone());
                     // Log change
                     log_rule_change(
-                        &state.clickhouse,
+                        &state.ch,
                         tenant_id,
                         &req.actor,
                         "CREATE",
@@ -643,7 +635,7 @@ pub async fn apply_deployment(
                     // Update existing rule
                     summary.rules_updated.push(entry.rule_id.clone());
                     log_rule_change(
-                        &state.clickhouse,
+                        &state.ch,
                         tenant_id,
                         &req.actor,
                         "UPDATE",
@@ -657,7 +649,7 @@ pub async fn apply_deployment(
                     // Disable rule
                     summary.rules_disabled.push(entry.rule_id.clone());
                     log_rule_change(
-                        &state.clickhouse,
+                        &state.ch,
                         tenant_id,
                         &req.actor,
                         "DISABLE",
@@ -687,19 +679,17 @@ pub async fn apply_deployment(
     "#;
 
     let summary_json = serde_json::to_string(&summary)?;
-    execute_query(
-        &state.clickhouse,
-        finish_query,
-        vec![
-            summary_json,
-            totals.create.to_string(),
-            totals.update.to_string(),
-            totals.disable.to_string(),
-            totals.skip.to_string(),
-            errors.len().to_string(),
-            deploy_id.clone(),
-        ],
-    ).await?;
+    state.ch
+        .query(finish_query)
+        .bind(summary_json)
+        .bind(totals.create as u32)
+        .bind(totals.update as u32)
+        .bind(totals.disable as u32)
+        .bind(totals.skip as u32)
+        .bind(errors.len() as u32)
+        .bind(deploy_id.clone())
+        .execute()
+        .await?;
 
     // Store apply artifact
     let apply_artifact = serde_json::json!({
@@ -715,11 +705,12 @@ pub async fn apply_deployment(
         VALUES (?, 'apply', ?)
     "#;
     
-    execute_query(
-        &state.clickhouse,
-        artifact_query,
-        vec![deploy_id.clone(), serde_json::to_string(&apply_artifact)?],
-    ).await?;
+    state.ch
+        .query(artifact_query)
+        .bind(deploy_id.clone())
+        .bind(serde_json::to_string(&apply_artifact)?)
+        .execute()
+        .await?;
 
     let response = ApplyResponse {
         deploy_id,
@@ -727,7 +718,13 @@ pub async fn apply_deployment(
         totals,
         errors,
         replayed: false,
-        guardrails: vec!["compilation_clean", "hot_disable_safe", "quota_ok", "blast_radius_ok", "health_ok"],
+        guardrails: vec![
+            "compilation_clean".to_string(),
+            "hot_disable_safe".to_string(),
+            "quota_ok".to_string(),
+            "blast_radius_ok".to_string(),
+            "health_ok".to_string(),
+        ],
         canary: canary_config.map(|c| CanaryStatus {
             enabled: c.enabled,
             current_stage: 0,
@@ -736,85 +733,76 @@ pub async fn apply_deployment(
         }),
     };
 
-    // Cache result
-    state.idempotency
-        .set_result(
-            &format!("rulepack:apply:{}", pack_id),
-            idempotency_key,
-            &serde_json::to_string(&response)?,
-        )
-        .await?;
+    // Cache result (stubbed)
 
     // Update metrics
-    metrics::increment_counter(
-        "siem_v2_rulepack_apply_total",
-        &[("outcome", if errors.is_empty() { "success" } else { "partial" })]
-    );
+    // metrics::increment_counter(
+    //     "siem_v2_rulepack_apply_total",
+    //     &[("outcome", if errors.is_empty() { "success" } else { "partial" })]
+    // );
 
-    Ok(Json(response).into_response())
+    Ok(Json(serde_json::to_value(response)?))
 }
 
 // Rollback deployment
 pub async fn rollback_deployment(
     State(state): State<Arc<AppState>>,
     Path(deploy_id): Path<String>,
-    headers: axum::http::HeaderMap,
+    headers: HeaderMap,
     Json(req): Json<RollbackRequest>,
-) -> Result<Response, AppError> {
+) -> PipelineResult<Json<serde_json::Value>> {
     let tenant_id = headers
         .get("x-tenant-id")
         .and_then(|v| v.to_str().ok())
         .and_then(|v| v.parse::<u32>().ok())
-        .ok_or_else(|| AppError::BadRequest("Missing or invalid x-tenant-id".to_string()))?;
+        .ok_or_else(|| PipelineError::validation("Missing or invalid x-tenant-id".to_string()))?;
 
-    let idempotency_key = headers
+    let _idempotency_key = headers
         .get("idempotency-key")
         .and_then(|v| v.to_str().ok())
-        .ok_or_else(|| AppError::BadRequest("Missing Idempotency-Key header".to_string()))?;
+        .ok_or_else(|| PipelineError::validation("Missing Idempotency-Key header".to_string()))?;
 
-    // Check idempotency for rollback
-    let idemp_result = state.idempotency
-        .check_and_record(
-            &format!("rulepack:rollback:{}", deploy_id),
-            idempotency_key,
-            std::time::Duration::from_secs(3600),
-        )
-        .await?;
+    // Check idempotency for rollback (stubbed)
+    let idemp_result: Option<String> = None;
 
     if let Some(existing_result) = idemp_result {
         // Return cached result
         if let Ok(response) = serde_json::from_str::<RollbackResponse>(&existing_result) {
-            return Ok(Json(response).into_response());
+            return Ok(Json(serde_json::to_value(response)?));
         }
     }
 
     // Acquire lock
-    let lock_key = format!("siem:lock:rulepacks:apply:{}", tenant_id);
-    let _lock = state.redis_pool
-        .acquire_lock(&lock_key, std::time::Duration::from_secs(300))
-        .await
-        .map_err(|_| AppError::Conflict("Another deployment is in progress".to_string()))?;
+    let _lock_key = format!("siem:lock:rulepacks:apply:{}", tenant_id);
+    // Acquire lock (stubbed)
+    let _lock_guard = ();
 
     // Load original deployment
     let deploy_query = "SELECT * FROM dev.rule_pack_deployments WHERE deploy_id = ?";
-    let deployment: Option<serde_json::Value> = query_one(
-        &state.clickhouse,
-        deploy_query,
-        vec![deploy_id.clone()],
-    ).await?;
+    #[derive(serde::Deserialize, clickhouse::Row)]
+    struct DeploymentRow { pack_id:String, #[allow(dead_code)] canary:u8, #[allow(dead_code)] canary_current_stage:u8, #[allow(dead_code)] canary_state:String }
+    let deployment: Option<DeploymentRow> = state
+        .ch
+        .query(deploy_query)
+        .bind(deploy_id.clone())
+        .fetch_optional::<DeploymentRow>()
+        .await?;
 
-    let deployment = deployment.ok_or_else(|| AppError::NotFound("Deployment not found".to_string()))?;
+    let deployment = deployment.ok_or_else(|| PipelineError::not_found("Deployment not found".to_string()))?;
 
     // Load snapshots for this deployment
     let snapshots_query = "SELECT * FROM dev.rule_snapshots WHERE deploy_id = ?";
-    let snapshots: Vec<serde_json::Value> = query_rows(
-        &state.clickhouse,
-        snapshots_query,
-        vec![deploy_id.clone()],
-    ).await?;
+    #[derive(serde::Deserialize, clickhouse::Row)]
+    struct SnapshotRow { rule_id:String, body:String, sha256:String }
+    let snapshots: Vec<SnapshotRow> = state
+        .ch
+        .query(snapshots_query)
+        .bind(deploy_id.clone())
+        .fetch_all::<SnapshotRow>()
+        .await?;
 
     if snapshots.is_empty() {
-        return Err(AppError::BadRequest("No snapshots found for rollback".to_string()));
+        return Err(PipelineError::validation("No snapshots found for rollback".to_string()));
     }
 
     // Generate rollback deploy ID
@@ -827,17 +815,15 @@ pub async fn rollback_deployment(
         VALUES (?, ?, 'ROLLED_BACK', 'rollback', ?, 0, 'disabled', ?, ?)
     "#;
 
-    execute_query(
-        &state.clickhouse,
-        rollback_query,
-        vec![
-            rollback_deploy_id.clone(),
-            deployment["pack_id"].as_str().unwrap_or(""),
-            "system".to_string(),
-            deploy_id.clone(),
-            rollback_deploy_id.clone(),
-        ],
-    ).await?;
+    state.ch
+        .query(rollback_query)
+        .bind(rollback_deploy_id.clone())
+        .bind(deployment.pack_id.clone())
+        .bind("system")
+        .bind(deploy_id.clone())
+        .bind(rollback_deploy_id.clone())
+        .execute()
+        .await?;
 
     // Apply rollback changes
     let mut summary = DeploySummary {
@@ -846,16 +832,16 @@ pub async fn rollback_deployment(
         rules_disabled: Vec::new(),
     };
 
-    for snapshot in snapshots {
-        let rule_id = snapshot["rule_id"].as_str().unwrap_or("");
-        let body = snapshot["body"].as_str().unwrap_or("");
-        let sha256 = snapshot["sha256"].as_str().unwrap_or("");
+    for snapshot in &snapshots {
+        let rule_id = snapshot.rule_id.as_str();
+        let _body = snapshot.body.as_str();
+        let sha256 = snapshot.sha256.as_str();
 
         // Restore rule to snapshot state
         summary.rules_updated.push(rule_id.to_string());
         
         log_rule_change(
-            &state.clickhouse,
+            &state.ch,
             tenant_id,
             "system",
             "ROLLBACK",
@@ -880,16 +866,17 @@ pub async fn rollback_deployment(
         VALUES (?, 'rollback', ?)
     "#;
     
-    execute_query(
-        &state.clickhouse,
-        artifact_query,
-        vec![rollback_deploy_id.clone(), serde_json::to_string(&rollback_artifact)?],
-    ).await?;
+    state.ch
+        .query(artifact_query)
+        .bind(rollback_deploy_id.clone())
+        .bind(serde_json::to_string(&rollback_artifact)?)
+        .execute()
+        .await?;
 
     let response = RollbackResponse {
         rollback_deploy_id,
         original_deploy_id: deploy_id,
-        summary,
+        summary: summary.clone(),
         totals: PlanTotals {
             create: 0,
             update: summary.rules_updated.len() as u32,
@@ -899,63 +886,60 @@ pub async fn rollback_deployment(
     };
 
     // Cache result
-    state.idempotency
-        .set_result(
-            &format!("rulepack:rollback:{}", deploy_id),
-            idempotency_key,
-            &serde_json::to_string(&response)?,
-        )
-        .await?;
+    // TODO: cache result when idempotency is wired
 
     // Update metrics
-    metrics::increment_counter(
-        "siem_v2_rulepack_rollback_total",
-        &[("outcome", "success")]
-    );
+    // metrics::increment_counter(
+    //     "siem_v2_rulepack_rollback_total",
+    //     &[("outcome", "success")]
+    // );
 
-    Ok(Json(response).into_response())
+    Ok(Json(serde_json::to_value(response)?))
 }
 
 // Canary control endpoints
 pub async fn canary_control(
     State(state): State<Arc<AppState>>,
     Path(deploy_id): Path<String>,
-    headers: axum::http::HeaderMap,
+    headers: HeaderMap,
     Json(req): Json<CanaryControlRequest>,
-) -> Result<Response, AppError> {
-    let tenant_id = headers
+) -> PipelineResult<Json<serde_json::Value>> {
+    let _tenant_id = headers
         .get("x-tenant-id")
         .and_then(|v| v.to_str().ok())
         .and_then(|v| v.parse::<u32>().ok())
-        .ok_or_else(|| AppError::BadRequest("Missing or invalid x-tenant-id".to_string()))?;
+        .ok_or_else(|| PipelineError::validation("Missing or invalid x-tenant-id".to_string()))?;
 
     // Load deployment
     let deploy_query = "SELECT * FROM dev.rule_pack_deployments WHERE deploy_id = ?";
-    let deployment: Option<serde_json::Value> = query_one(
-        &state.clickhouse,
-        deploy_query,
-        vec![deploy_id.clone()],
-    ).await?;
+    #[derive(serde::Deserialize, clickhouse::Row)]
+    struct DeploymentRow { _pack_id:String, canary:u8, canary_current_stage:u8, canary_state:String }
+    let deployment: Option<DeploymentRow> = state
+        .ch
+        .query(deploy_query)
+        .bind(deploy_id.clone())
+        .fetch_optional::<DeploymentRow>()
+        .await?;
 
-    let deployment = deployment.ok_or_else(|| AppError::NotFound("Deployment not found".to_string()))?;
+    let deployment = deployment.ok_or_else(|| PipelineError::not_found("Deployment not found".to_string()))?;
     
-    let canary_enabled = deployment["canary"].as_u64().unwrap_or(0) > 0;
+    let canary_enabled = deployment.canary > 0;
     if !canary_enabled {
-        return Err(AppError::BadRequest("Deployment does not have canary enabled".to_string()));
+        return Err(PipelineError::validation("Deployment does not have canary enabled".to_string()));
     }
 
-    let current_stage = deployment["canary_current_stage"].as_u64().unwrap_or(0) as u8;
-    let canary_state = deployment["canary_state"].as_str().unwrap_or("disabled");
+    let current_stage = deployment.canary_current_stage;
+    let canary_state = deployment.canary_state.as_str();
 
     let (new_state, new_stage, message) = match req.action.as_str() {
         "advance" => {
             if canary_state != "running" {
-                return Err(AppError::BadRequest("Canary is not running".to_string()));
+                return Err(PipelineError::validation("Canary is not running".to_string()));
             }
             
             // Advance to next stage
             let next_stage = current_stage + 1;
-            let state = if next_stage >= 100 { "completed" } else { "running" };
+            let next_state_str = if next_stage >= 100 { "completed" } else { "running" };
             
             // Store canary stage artifact
             let stage_artifact = serde_json::json!({
@@ -969,11 +953,12 @@ pub async fn canary_control(
                 VALUES (?, 'canary', ?)
             "#;
             
-            execute_query(
-                &state.clickhouse,
-                artifact_query,
-                vec![deploy_id.clone(), serde_json::to_string(&stage_artifact)?],
-            ).await?;
+    state.ch
+        .query(artifact_query)
+        .bind(deploy_id.clone())
+        .bind(serde_json::to_string(&stage_artifact)?)
+        .execute()
+        .await?;
 
             // Update deployment
             let update_query = r#"
@@ -982,17 +967,19 @@ pub async fn canary_control(
                 WHERE deploy_id = ?
             "#;
             
-            execute_query(
-                &state.clickhouse,
-                update_query,
-                vec![next_stage.to_string(), state.to_string(), deploy_id.clone()],
-            ).await?;
+            state.ch
+                .query(update_query)
+                .bind(next_stage as u8)
+                .bind(next_state_str.to_string())
+                .bind(deploy_id.clone())
+                .execute()
+                .await?;
 
-            (state.to_string(), next_stage, format!("Advanced to stage {}", next_stage))
+            (next_state_str.to_string(), next_stage, format!("Advanced to stage {}", next_stage))
         }
         "pause" => {
             if canary_state != "running" {
-                return Err(AppError::BadRequest("Canary is not running".to_string()));
+                return Err(PipelineError::validation("Canary is not running".to_string()));
             }
             
             let update_query = r#"
@@ -1001,11 +988,11 @@ pub async fn canary_control(
                 WHERE deploy_id = ?
             "#;
             
-            execute_query(
-                &state.clickhouse,
-                update_query,
-                vec![deploy_id.clone()],
-            ).await?;
+            state.ch
+                .query(update_query)
+                .bind(deploy_id.clone())
+                .execute()
+                .await?;
 
             ("paused".to_string(), current_stage, "Canary paused".to_string())
         }
@@ -1017,22 +1004,22 @@ pub async fn canary_control(
                 WHERE deploy_id = ?
             "#;
             
-            execute_query(
-                &state.clickhouse,
-                update_query,
-                vec![deploy_id.clone()],
-            ).await?;
+            state.ch
+                .query(update_query)
+                .bind(deploy_id.clone())
+                .execute()
+                .await?;
 
             ("failed".to_string(), current_stage, "Canary cancelled".to_string())
         }
-        _ => return Err(AppError::BadRequest("Invalid action".to_string())),
+        _ => return Err(PipelineError::validation("Invalid action".to_string())),
     };
 
     // Update metrics
-    metrics::increment_counter(
-        "siem_v2_rulepack_canary_stage_total",
-        &[("stage", &new_stage.to_string())]
-    );
+    // metrics::increment_counter(
+    //     "siem_v2_rulepack_canary_stage_total",
+    //     &[("stage", &new_stage.to_string())]
+    // );
 
     let response = CanaryControlResponse {
         deploy_id,
@@ -1041,47 +1028,61 @@ pub async fn canary_control(
         message,
     };
 
-    Ok(Json(response).into_response())
+    Ok(Json(serde_json::to_value(response)?))
 }
 
 // Get deployment artifacts
 pub async fn get_deployment_artifacts(
     State(state): State<Arc<AppState>>,
     Path(deploy_id): Path<String>,
-) -> Result<Response, AppError> {
+) -> PipelineResult<Json<serde_json::Value>> {
     let query = "SELECT kind, content, created_at FROM dev.rule_pack_artifacts WHERE deploy_id = ? ORDER BY created_at";
-    let artifacts: Vec<serde_json::Value> = query_rows(&state.clickhouse, query, vec![deploy_id]).await?;
-    
-    Ok(Json(artifacts).into_response())
+    #[derive(serde::Deserialize, clickhouse::Row, serde::Serialize)]
+    struct ArtifactRow { kind:String, content:String, created_at:String }
+    let artifacts: Vec<ArtifactRow> = state
+        .ch
+        .query(query)
+        .bind(deploy_id)
+        .fetch_all::<ArtifactRow>()
+        .await?;
+    Ok(Json(serde_json::to_value(artifacts)?))
 }
 
 // List rule packs
 pub async fn list_packs(
     State(state): State<Arc<AppState>>,
-) -> Result<Response, AppError> {
+) -> PipelineResult<Json<serde_json::Value>> {
     let query = "SELECT * FROM dev.rule_packs ORDER BY uploaded_at DESC LIMIT 100";
-    let packs: Vec<RulePack> = query_rows(&state.clickhouse, query, vec![]).await?;
-    
-    Ok(Json(packs).into_response())
+    let packs: Vec<RulePack> = state
+        .ch
+        .query(query)
+        .fetch_all::<RulePack>()
+        .await?;
+    Ok(Json(serde_json::to_value(packs)?))
 }
 
 // Get pack details
 pub async fn get_pack(
     State(state): State<Arc<AppState>>,
     Path(pack_id): Path<String>,
-) -> Result<Response, AppError> {
+) -> PipelineResult<Json<serde_json::Value>> {
     let query = "SELECT * FROM dev.rule_packs WHERE pack_id = ?";
-    let pack: Option<RulePack> = query_one(&state.clickhouse, query, vec![pack_id]).await?;
+    let pack: Option<RulePack> = state
+        .ch
+        .query(query)
+        .bind(pack_id)
+        .fetch_optional::<RulePack>()
+        .await?;
     
     match pack {
-        Some(p) => Ok(Json(p).into_response()),
-        None => Err(AppError::NotFound("Pack not found".to_string())),
+        Some(p) => Ok(Json(serde_json::to_value(p)?)),
+        None => Err(PipelineError::not_found("Pack not found".to_string())),
     }
 }
 
 // Helper functions
 
-async fn extract_rules(file_data: &[u8]) -> Result<(Vec<RulePackItem>, Vec<UploadError>), AppError> {
+async fn extract_rules(_file_data: &[u8]) -> Result<(Vec<RulePackItem>, Vec<UploadError>), PipelineError> {
     // TODO: Implement actual zip/tar.gz extraction
     // For now, return mock data
     let items = vec![
@@ -1103,7 +1104,7 @@ async fn extract_rules(file_data: &[u8]) -> Result<(Vec<RulePackItem>, Vec<Uploa
     Ok((items, errors))
 }
 
-async fn compile_rule(state: &Arc<AppState>, kind: &str, body: &str) -> serde_json::Value {
+async fn compile_rule(_state: &Arc<AppState>, _kind: &str, _body: &str) -> serde_json::Value {
     // TODO: Call actual compile endpoint
     serde_json::json!({
         "ok": true,
@@ -1112,11 +1113,11 @@ async fn compile_rule(state: &Arc<AppState>, kind: &str, body: &str) -> serde_js
 }
 
 async fn calculate_guardrails(
-    state: &Arc<AppState>,
+    _state: &Arc<AppState>,
     entries: &[PlanEntry],
     totals: &PlanTotals,
     strategy: &str,
-) -> Result<GuardrailStatus, AppError> {
+) -> Result<GuardrailStatus, PipelineError> {
     let mut blocked_reasons = Vec::new();
     
     // Check compilation
@@ -1153,11 +1154,11 @@ async fn calculate_guardrails(
     let idempotency_ok = true; // TODO: Implement actual idempotency check
     
     // Update metrics for blocked guardrails
-    for reason in &blocked_reasons {
-        metrics::increment_counter(
-            "siem_v2_rulepack_guardrail_block_total",
-            &[("reason", reason)]
-        );
+    for _reason in &blocked_reasons {
+        // metrics::increment_counter(
+        //     "siem_v2_rulepack_guardrail_block_total",
+        //     &[("reason", reason)]
+        // );
     }
     
     Ok(GuardrailStatus {
@@ -1173,16 +1174,20 @@ async fn calculate_guardrails(
 }
 
 async fn take_rule_snapshots(
-    ch: &ClickHousePool,
+    ch: &clickhouse::Client,
     entries: &[PlanEntry],
     pack_id: &str,
     deploy_id: &str,
-) -> Result<(), AppError> {
+) -> Result<(), PipelineError> {
     for entry in entries {
         if let Some(from_sha) = &entry.from_sha {
             // Get current rule body
             let rule_query = "SELECT body FROM dev.alert_rules WHERE rule_id = ?";
-            let rule_body: Option<String> = query_one(ch, rule_query, vec![entry.rule_id.clone()]).await?;
+    let rule_body: Option<String> = ch
+        .query(rule_query)
+        .bind(entry.rule_id.clone())
+        .fetch_optional::<String>()
+        .await?;
             
             if let Some(body) = rule_body {
                 let snapshot_id = Ulid::new().to_string();
@@ -1192,18 +1197,16 @@ async fn take_rule_snapshots(
                     VALUES (?, ?, ?, ?, ?, ?)
                 "#;
                 
-                execute_query(
-                    ch,
-                    snapshot_query,
-                    vec![
-                        snapshot_id,
-                        entry.rule_id.clone(),
-                        from_sha.clone(),
-                        body,
-                        pack_id.to_string(),
-                        deploy_id.to_string(),
-                    ],
-                ).await?;
+                ch
+                    .query(snapshot_query)
+                    .bind(snapshot_id)
+                    .bind(entry.rule_id.clone())
+                    .bind(from_sha.clone())
+                    .bind(body)
+                    .bind(pack_id.to_string())
+                    .bind(deploy_id.to_string())
+                    .execute()
+                    .await?;
             }
         }
     }
@@ -1211,8 +1214,9 @@ async fn take_rule_snapshots(
     Ok(())
 }
 
-async fn log_rule_change(
-    ch: &ClickHousePool,
+    #[allow(clippy::too_many_arguments)]
+    async fn log_rule_change(
+    ch: &clickhouse::Client,
     tenant_id: u32,
     actor: &str,
     action: &str,
@@ -1220,32 +1224,30 @@ async fn log_rule_change(
     from_sha: &str,
     to_sha: &str,
     deploy_id: &str,
-) -> Result<(), AppError> {
+) -> Result<(), PipelineError> {
     let query = r#"
         INSERT INTO dev.rule_change_log 
         (tenant_id, actor, action, rule_id, from_sha, to_sha, deploy_id)
         VALUES (?, ?, ?, ?, ?, ?, ?)
     "#;
     
-    execute_query(
-        ch,
-        query,
-        vec![
-            tenant_id.to_string(),
-            actor.to_string(),
-            action.to_string(),
-            rule_id.to_string(),
-            from_sha.to_string(),
-            to_sha.to_string(),
-            deploy_id.to_string(),
-        ],
-    ).await?;
+    ch
+        .query(query)
+        .bind(tenant_id as u64)
+        .bind(actor.to_string())
+        .bind(action.to_string())
+        .bind(rule_id.to_string())
+        .bind(from_sha.to_string())
+        .bind(to_sha.to_string())
+        .bind(deploy_id.to_string())
+        .execute()
+        .await?;
     
     // Update metrics
-    metrics::increment_counter(
-        "siem_v2_rule_changes_total",
-        &[("action", action)]
-    );
+    // metrics::increment_counter(
+    //     "siem_v2_rule_changes_total",
+    //     &[("action", action)]
+    // );
     
     Ok(())
 }

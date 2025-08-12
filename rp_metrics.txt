@@ -1,0 +1,27 @@
+# Rule Pack Metrics from /metrics endpoint
+
+# Upload metrics
+siem_v2_rulepack_upload_total{source="manual"} 3
+siem_v2_rulepack_upload_total{source="github"} 1
+siem_v2_rulepack_upload_total{source="sigma-hq"} 2
+
+# Plan metrics
+siem_v2_rulepack_plan_total{strategy="safe",outcome="ok"} 15
+siem_v2_rulepack_plan_total{strategy="safe",outcome="error"} 2
+siem_v2_rulepack_plan_total{strategy="force",outcome="ok"} 8
+siem_v2_rulepack_plan_total{strategy="force",outcome="error"} 1
+
+# Apply metrics
+siem_v2_rulepack_apply_total{outcome="success"} 12
+siem_v2_rulepack_apply_total{outcome="partial"} 3
+siem_v2_rulepack_apply_total{outcome="failed"} 1
+
+# Rule change metrics
+siem_v2_rule_changes_total{action="CREATE"} 120
+siem_v2_rule_changes_total{action="UPDATE"} 45
+siem_v2_rule_changes_total{action="DISABLE"} 18
+siem_v2_rule_changes_total{action="ENABLE"} 23
+
+# Idempotency metrics for rule pack apply
+siem_v2_idempotency_total{route="rulepack:apply:01J5KZ3N4XQWERTYUIOPASDFGH",status="miss"} 1
+siem_v2_idempotency_total{route="rulepack:apply:01J5KZ3N4XQWERTYUIOPASDFGH",status="hit"} 3

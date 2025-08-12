@@ -1,6 +1,6 @@
 use crate::v2::state::AppState;
 use crate::error::PipelineError;
-use redis::{cmd, Script};
+use redis::Script;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};

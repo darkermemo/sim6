@@ -165,6 +165,7 @@ env_logger = "0.10"
 [features]
 default = []
 legacy = []
+legacy-admin = []
 core = []
 
 # Legacy features (kept for compatibility; gated behind `legacy`)

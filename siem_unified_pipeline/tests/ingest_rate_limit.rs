@@ -1,28 +1,54 @@
+mod helpers;
 use reqwest::Client;
 
 #[tokio::test]
-async fn rate_limit_returns_429_and_increments_metric() {
-    // Assumes server already running on localhost:9999 and CH available; this is a lightweight integration check
-    let client = Client::new();
-    // Seed strict limits for default tenant
-    let _ = client.post("http://localhost:8123/")
-        .query(&[("query","INSERT INTO dev.tenant_limits (tenant_id,eps_limit,burst_limit,retention_days,updated_at) VALUES ('default',1,1,30,toUInt32(now()))".to_string())])
-        .header("Content-Length","0").send().await;
+async fn rate_limit_returns_429_and_increments_metric() -> anyhow::Result<()> {
+    // Spawn server on random port with required env
+    let mut srv = tokio::task::spawn_blocking(|| {
+        helpers::spawn_server(&[
+            ("CLICKHOUSE_URL", "http://127.0.0.1:8123"),
+            ("CLICKHOUSE_DATABASE", "dev"),
+            ("REDIS_URL", "redis://127.0.0.1:6379"),
+        ])
+    }).await??;
+    let base = srv.base.clone();
 
-    let body = serde_json::json!({
-        "logs": (0..200).map(|i| serde_json::json!({
-            "tenant_id":"default","timestamp":"2024-07-01T00:00:00Z","log_type":"fw","src_ip":format!("1.1.1.{}", i%255)
-        })).collect::<Vec<_>>()
-    });
-    let resp = client.post("http://127.0.0.1:9999/api/v2/ingest/raw").json(&body).send().await.unwrap();
-    // Either 200 (if limit row not yet visible) or 429; accept either in CI smoke env, but assert metrics after
-    if resp.status().as_u16() == 429 {
-        // Retry-After header should be present
-        assert!(resp.headers().get("retry-after").is_some());
-    }
-    // Metrics should include rate_limited counter for default
-    let m = client.get("http://127.0.0.1:9999/metrics").send().await.unwrap().text().await.unwrap();
-    assert!(m.contains("siem_ingest_rate_limited_total"));
+    let client = Client::new();
+    // Seed strict limits for 'default' via ClickHouse fallback table
+    let _ = client
+        .post("http://127.0.0.1:8123/")
+        .query(&[("query", "INSERT INTO dev.tenant_limits (tenant_id, eps_limit, burst_limit, retention_days, updated_at) VALUES ('default', 1, 2, 30, toUInt32(now()))".to_string())])
+        .header("Content-Length", "0")
+        .send().await?;
+
+    // Create a raw payload with 5 logs to exceed burst immediately
+    let now = chrono::Utc::now().timestamp();
+    let logs: Vec<serde_json::Value> = (0..5).map(|i| serde_json::json!({
+        "event_id": format!("t{}", i),
+        "event_timestamp": now,
+        "tenant_id": "default",
+        "message": "rate test",
+        "raw_event": "{}",
+        "source_type": "manual",
+        "created_at": now,
+        "retention_days": 30
+    })).collect();
+    let payload = serde_json::json!({"logs": logs});
+    let res = client
+        .post(format!("{}/api/v2/ingest/raw", base))
+        .header("content-type","application/json")
+        .json(&payload)
+        .send().await?;
+    assert_eq!(res.status().as_u16(), 429, "expected 429 from burst-exceeding payload");
+    assert!(res.headers().get("Retry-After").is_some());
+
+    // Metrics should include v2 rate-limit (accept legacy during transition)
+    let met = client.get(format!("{}/metrics", base)).send().await?.text().await?;
+    let ok = met.contains("siem_v2_rate_limit_total") || met.contains("siem_ingest_rate_limited_total");
+    assert!(ok, "rate-limit counter missing in metrics:\n{}", met);
+
+    srv.shutdown();
+    Ok(())
 }
 
 

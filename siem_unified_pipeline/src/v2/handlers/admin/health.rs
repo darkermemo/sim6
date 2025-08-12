@@ -62,13 +62,15 @@ pub async fn get_deep_health(
     
     // Test ClickHouse
     let clickhouse_start = Instant::now();
-    let clickhouse_ok = state.clickhouse.ping().await.is_ok();
+    let clickhouse_ok = state.ch.ping().await.is_ok();
     let clickhouse_latency = clickhouse_start.elapsed().as_millis() as u64;
     
     let clickhouse_version = if clickhouse_ok {
-        state.clickhouse.query("SELECT version() as v", &[]).await.ok()
-            .and_then(|mut r| r.next().await.ok())
-            .and_then(|row| row.get("v").ok())
+        // TODO: Fix async issue - for now just return None
+        None
+        // state.ch.query("SELECT version() as v", &[]).await.ok()
+        //     .and_then(|mut r| r.next().await.ok())
+        //     .and_then(|row| row.get("v").ok())
     } else {
         None
     };
@@ -117,7 +119,7 @@ pub async fn get_deep_health(
         timestamp: chrono::Utc::now().to_rfc3339(),
     };
     
-    Ok(Json(response))
+    Ok(Json(serde_json::to_value(response)?))
 }
 
 pub async fn test_connection(
@@ -145,7 +147,7 @@ pub async fn test_connection(
     //     ("outcome", if ok { "success" } else { "failure" }),
     // ]);
     
-    Ok(Json(response))
+    Ok(Json(serde_json::to_value(response)?))
 }
 
 pub async fn get_config(

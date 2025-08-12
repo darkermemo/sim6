@@ -24,9 +24,8 @@ pub async fn search_execute(
         req.dsl
     } else {
         // Fallback to simplified translator
-        let dsl2 = crate::v2::search_api::compiler::translate_to_dsl(&body)
-            .map_err(|e| crate::error::PipelineError::validation(format!("invalid body: {e}")))?;
-        dsl2
+        crate::v2::search_api::compiler::translate_to_dsl(&body)
+            .map_err(|e| crate::error::PipelineError::validation(format!("invalid body: {e}")))?
     };
     let compiled = compile_search(&dsl, &st.events_table)
         .map_err(crate::error::PipelineError::validation)?;

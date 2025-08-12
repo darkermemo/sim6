@@ -1,0 +1,29 @@
+{
+  "deploy_id": "01J5KZ6FEDCBA0987654321ZYX",
+  "summary": {
+    "rules_created": [
+      "rule_failed_login_attempts",
+      "rule_admin_group_add",
+      "rule_test_5",
+      "rule_test_6",
+      "rule_test_7",
+      "rule_test_8",
+      "rule_test_9",
+      "rule_test_10",
+      "rule_ssh_brute_force",
+      "rule_data_exfiltration"
+    ],
+    "rules_updated": [
+      "rule_test_3"
+    ],
+    "rules_disabled": []
+  },
+  "totals": {
+    "create": 10,
+    "update": 1,
+    "disable": 0,
+    "skip": 1
+  },
+  "errors": [],
+  "replayed": true
+}

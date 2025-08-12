@@ -56,7 +56,7 @@ pub struct ValidateParserRequest {
 }
 
 pub async fn validate_parser(
-    Path(parser_id): Path<String>,
+    Path(_parser_id): Path<String>,
     Query(_q): Query<std::collections::HashMap<String, String>>
 ) -> PipelineResult<Json<serde_json::Value>> {
     // Stub: return validation result

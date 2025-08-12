@@ -1,0 +1,57 @@
+{
+  "meta": {
+    "took_ms": 23,
+    "row_count": 3,
+    "next_cursor": "eyJvZmZzZXQiOjEwMH0="
+  },
+  "data": [
+    {
+      "rule_id": "rule_failed_logins",
+      "tenant_id": 101,
+      "name": "Multiple Failed Login Attempts",
+      "description": "Detects multiple failed login attempts from the same user or IP",
+      "severity": "HIGH",
+      "enabled": true,
+      "kind": "NATIVE",
+      "dsl": "event_type:login AND result:failure | stats count() by user, src_ip where count > 5",
+      "watermark_sec": 120,
+      "throttle_seconds": 300,
+      "alert_key": "coalesce(user, src_ip)",
+      "created_at": "2024-02-01T10:00:00.000Z",
+      "updated_at": "2024-02-15T08:30:00.000Z",
+      "tags": ["authentication", "brute-force", "critical"]
+    },
+    {
+      "rule_id": "rule_data_exfil",
+      "tenant_id": 101,
+      "name": "Potential Data Exfiltration",
+      "description": "Detects large outbound data transfers to external IPs",
+      "severity": "CRITICAL",
+      "enabled": true,
+      "kind": "NATIVE",
+      "dsl": "bytes_out > 1000000000 AND NOT dst_ip:10.0.0.0/8 AND NOT dst_ip:172.16.0.0/12",
+      "watermark_sec": 180,
+      "throttle_seconds": 600,
+      "alert_key": "coalesce(src_ip, user, host)",
+      "created_at": "2024-01-15T12:00:00.000Z",
+      "updated_at": "2024-02-14T16:45:00.000Z",
+      "tags": ["exfiltration", "dlp"]
+    },
+    {
+      "rule_id": "rule_privilege_escalation",
+      "tenant_id": 101,
+      "name": "Windows Privilege Escalation",
+      "description": "Detects potential privilege escalation attempts on Windows systems",
+      "severity": "MEDIUM",
+      "enabled": false,
+      "kind": "SIGMA",
+      "sigma_yaml": "title: Windows Privilege Escalation\nid: 67f7e67e-fa35-4630-9b3a-84a7dcc0d0b7\nstatus: experimental\ndescription: Detects privilege escalation\nlogsource:\n  product: windows\n  service: security\ndetection:\n  selection:\n    EventID:\n      - 4672\n      - 4673\n      - 4674\n  condition: selection",
+      "watermark_sec": 120,
+      "throttle_seconds": 0,
+      "alert_key": "user",
+      "created_at": "2024-02-10T14:00:00.000Z",
+      "updated_at": "2024-02-12T09:15:00.000Z",
+      "tags": ["windows", "privilege-escalation", "t1068"]
+    }
+  ]
+}

@@ -34,7 +34,7 @@ impl Drop for IdemGuard {
             m.remove(&key);
         };
         // Fire and forget; we are in Drop
-        let _ = tokio::spawn(fut);
+        tokio::spawn(fut);
     }
 }
 

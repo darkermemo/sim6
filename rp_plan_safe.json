@@ -1,0 +1,51 @@
+{
+  "plan_id": "01J5KZ4ABCDEFGHIJKLMNOPQRS",
+  "totals": {
+    "create": 10,
+    "update": 1,
+    "disable": 0,
+    "skip": 1
+  },
+  "entries": [
+    {
+      "action": "CREATE",
+      "rule_id": "rule_failed_login_attempts",
+      "name": "Multiple Failed Login Attempts",
+      "from_sha": null,
+      "to_sha": "abc123def456",
+      "warnings": []
+    },
+    {
+      "action": "CREATE",
+      "rule_id": "rule_admin_group_add",
+      "name": "User Added to Admin Group",
+      "from_sha": null,
+      "to_sha": "def456ghi789",
+      "warnings": []
+    },
+    {
+      "action": "UPDATE",
+      "rule_id": "rule_test_3",
+      "name": "Test Rule 3",
+      "from_sha": "old123hash",
+      "to_sha": "new456hash",
+      "warnings": []
+    },
+    {
+      "action": "SKIP",
+      "rule_id": "rule_test_4",
+      "name": "Test Rule 4",
+      "from_sha": "same789hash",
+      "to_sha": "same789hash",
+      "warnings": []
+    },
+    {
+      "action": "CREATE",
+      "rule_id": "rule_ssh_brute_force",
+      "name": "SSH Brute Force Detection",
+      "from_sha": null,
+      "to_sha": "ssh123hash",
+      "warnings": []
+    }
+  ]
+}

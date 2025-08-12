@@ -64,7 +64,7 @@ async fn main() -> anyhow::Result<()> {
         };
         tokio::spawn(fut);
     }
-    let app = router::build(st.clone());
+    let app = router::build(st.clone().into());
 
     // Kafka consumer already started above if KAFKA_BROKERS is set
 
@@ -80,8 +80,13 @@ async fn main() -> anyhow::Result<()> {
     // Start rules scheduler (gated by RULE_SCHEDULER=1)
     run_scheduler(st.clone().into()).await;
 
-    let addr = "0.0.0.0:9999".parse::<std::net::SocketAddr>()?;
+    // Bind address configurable for tests; default to 127.0.0.1:9999
+    let bind_addr = std::env::var("BIND_ADDR").unwrap_or_else(|_| "127.0.0.1:9999".to_string());
+    let addr = bind_addr.parse::<std::net::SocketAddr>()?;
     let listener = tokio::net::TcpListener::bind(addr).await?;
+    if listener.local_addr()?.port() != 9999 {
+        println!("listening_on={}", listener.local_addr()?);
+    }
     axum::serve(listener, app).await?;
     Ok(())
 }

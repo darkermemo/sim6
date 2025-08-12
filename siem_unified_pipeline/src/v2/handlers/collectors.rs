@@ -1,13 +1,12 @@
 use axum::{
-    extract::{State, Path, Query},
+    extract::State,
     Json,
-    http::StatusCode,
 };
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use chrono::Utc;
 
-use crate::v2::{state::AppState, metrics};
+use crate::v2::state::AppState;
 use crate::error::{Result, PipelineError};
 
 #[derive(Debug, Serialize)]
@@ -52,7 +51,7 @@ static START_TIME: std::sync::OnceLock<std::time::Instant> = std::sync::OnceLock
 
 /// GET /health - Collector health endpoint
 pub async fn health(State(_st): State<Arc<AppState>>) -> Result<Json<CollectorHealth>> {
-    let start = START_TIME.get_or_init(|| std::time::Instant::now());
+    let start = START_TIME.get_or_init(std::time::Instant::now);
     let uptime = start.elapsed().as_secs() as i64;
     
     // In a real implementation, these would come from actual collector state

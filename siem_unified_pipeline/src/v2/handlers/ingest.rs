@@ -10,7 +10,7 @@ use axum::{extract::Query};
 use base64::Engine;
 
 use crate::v2::{state::AppState, models::SiemEvent, dal::ClickHouseRepo, metrics};
-use crate::v2::util::rate_limit::{check_eps, EpsDecision};
+use crate::v2::util::rate_limit::check_eps;
 use crate::v2::normalize;
 use clickhouse::Row;
 use crate::error::{Result, PipelineError};
@@ -30,15 +30,29 @@ static TOKEN_BUCKET: Lazy<Mutex<HashMap<String, (f64, u64)>>> = Lazy::new(|| Mut
 async fn fetch_limits(st: &AppState, tenant: &str) -> Limits {
     #[derive(serde::Deserialize, Row)]
     struct L { eps_limit:u32, burst_limit:u32, retention_days:u16 }
-    let row: Option<L> = st.ch
+    // Prefer admin view if present
+    let admin_row: Option<L> = st.ch
         .query("SELECT eps_limit,burst_limit,retention_days FROM dev.tenant_limits_admin WHERE tenant_id=? ORDER BY updated_at DESC LIMIT 1")
         .bind(tenant)
         .fetch_optional()
         .await
         .ok()
         .flatten();
-    if let Some(r) = row { Limits{ eps_limit:r.eps_limit, burst_limit:r.burst_limit, retention_days:r.retention_days } }
-    else { Limits{ eps_limit:50, burst_limit:100, retention_days:30 } }
+    if let Some(r) = admin_row {
+        return Limits{ eps_limit:r.eps_limit, burst_limit:r.burst_limit, retention_days:r.retention_days };
+    }
+    // Fallback to legacy table used by tests
+    let legacy_row: Option<L> = st.ch
+        .query("SELECT eps_limit,burst_limit,retention_days FROM dev.tenant_limits WHERE tenant_id=? ORDER BY updated_at DESC LIMIT 1")
+        .bind(tenant)
+        .fetch_optional()
+        .await
+        .ok()
+        .flatten();
+    if let Some(r) = legacy_row {
+        return Limits{ eps_limit:r.eps_limit, burst_limit:r.burst_limit, retention_days:r.retention_days };
+    }
+    Limits{ eps_limit:50, burst_limit:100, retention_days:30 }
 }
 
 async fn get_limits_cached(st: &AppState, tenant: &str) -> Limits {
@@ -111,6 +125,15 @@ pub async fn ingest_raw(
         let limits = get_limits_cached(&st, &first_tenant).await;
         for ev in out.iter_mut() { ev.retention_days = Some(limits.retention_days); }
         metrics::set_retention_days(&first_tenant, limits.retention_days);
+        // Local in-process token bucket guard to immediately protect when CH limits are strict
+        let batch = out.len() as u32;
+        if !token_bucket_allow(&first_tenant, batch, limits).await {
+            let src = out.first().and_then(|e| e.source_type.clone()).unwrap_or_else(|| "unknown".to_string());
+            metrics::inc_ingest_rate_limited(&first_tenant, &src);
+            metrics::inc_eps_throttles(&first_tenant);
+            metrics::inc_v2_rate_limit_total(&first_tenant, &src, "throttle");
+            return Err(PipelineError::rate_limit("EPS exceeded by local guard"));
+        }
         // Use Redis-based rate limiter
         let tenant_id = first_tenant.parse::<u64>().unwrap_or(0);
         let source = out.first().and_then(|e| e.source_type.clone());
@@ -336,7 +359,7 @@ return {ok, retry}
     let inserted = ClickHouseRepo::insert_events(&st, &out).await?;
     if quarantined > 0 {
         // increment quarantined counter per reason
-        for (r, c) in reasons.iter() { crate::v2::metrics::inc_v2_ingest_quarantined(&tenant, r, *c as u64); }
+        for (r, c) in reasons.iter() { crate::v2::metrics::inc_v2_ingest_quarantined(&tenant, r, *c); }
     }
     // Enqueue to Redis Stream (compact envelope) with backpressure guard
     if let Some(cm) = st.redis.as_ref() {

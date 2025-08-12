@@ -28,11 +28,7 @@ pub fn translate_to_dsl(body: &Value) -> Result<SearchDsl, String> {
     } else { 
         None 
     };
-    let section = SearchSection {
-        time_range: tr,
-        where_: where_,
-        tenant_ids: vec![tenant],
-    };
+    let section = SearchSection { time_range: tr, where_, tenant_ids: vec![tenant] };
     Ok(SearchDsl { version: Some("1".into()), search: Some(section), threshold: None, cardinality: None, sequence: None })
 }
 
@@ -40,8 +36,7 @@ pub fn translate_to_dsl(body: &Value) -> Result<SearchDsl, String> {
 /// Supports: field:value, "exact phrase", value (implies message contains), AND/OR/NOT, ranges field:[a TO b], cidr, regex:/.../ (guarded), json path with dot notation
 pub fn parse_kql(input: &str) -> Option<Expr> {
     let mut tokens = tokenize(input);
-    let expr = parse_or(&mut tokens);
-    expr
+    parse_or(&mut tokens)
 }
 
 /// Parse free-text search query into multiSearch expression
@@ -102,7 +97,7 @@ pub fn parse_free_text(input: &str) -> Option<Expr> {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-enum Tok { And, Or, Not, LBracket, RBracket, Field(String), Phrase(String), Regex(String), Word(String), Range(String,String,String) }
+enum Tok { And, Or, Not, LBracket, RBracket, Field(String), Phrase(String), Regex(String), Word(String) }
 
 fn tokenize(s: &str) -> Vec<Tok> {
     let mut out = Vec::new();
@@ -142,8 +137,8 @@ fn parse_or(ts: &mut Vec<Tok>) -> Option<Expr> {
 
 fn parse_and(ts: &mut Vec<Tok>) -> Option<Expr> {
     let mut parts: Vec<Expr> = Vec::new();
-    loop {
-        if let Some(e) = parse_term(ts) { parts.push(e); } else { break; }
+    while let Some(e) = parse_term(ts) {
+        parts.push(e);
         if matches!(ts.first(), Some(Tok::And)) { ts.remove(0); continue; }
         // implicit AND on whitespace between terms
         if matches!(ts.first(), Some(Tok::Or)) { break; }
@@ -167,7 +162,7 @@ fn parse_term(ts: &mut Vec<Tok>) -> Option<Expr> {
                 if v.starts_with('[') && v.ends_with(']') {
                     let inner = v.trim_matches(&['[', ']'][..]);
                     if let Some((a,b)) = inner.split_once("TO") { let a=a.trim(); let b=b.trim(); if let (Ok(a_n), Ok(b_n)) = (a.parse::<f64>(), b.parse::<f64>()) { return Some(Expr::Between((f.to_string(), a_n, b_n))); } }
-                } else if v.contains('/') && v.chars().filter(|&c| c=='/').count()==1 && v.split('/').last().and_then(|p| p.parse::<u8>().ok()).is_some() {
+                } else if v.contains('/') && v.chars().filter(|&c| c=='/').count()==1 && v.split('/').next_back().and_then(|p| p.parse::<u8>().ok()).is_some() {
                     return Some(Expr::IpInCidr((f.to_string(), v.to_string())));
                 } else if v.starts_with('/') && v.ends_with('/') { let re=v.trim_matches('/'); if re.len()<=128 { return Some(Expr::Regex((f.to_string(), re.to_string())));} }
                 else if f.starts_with("metadata.") || f.starts_with("raw_event.") {

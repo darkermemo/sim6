@@ -100,7 +100,7 @@ pub async fn create_key(State(st): State<Arc<AppState>>, Json(b): Json<CreateReq
 pub async fn update_key(State(st): State<Arc<AppState>>, Path(id): Path<String>, Json(b): Json<UpdateReq>) -> Result<Json<OkResp>, crate::error::PipelineError> {
     let mut sets: Vec<String> = Vec::new();
     if let Some(name)=b.name { sets.push(format!("name='{}'", name.replace("'","''"))); }
-    if let Some(scopes)=b.scopes { sets.push(format!("scopes={}", format!("[{}]", scopes.into_iter().map(|s| format!("'{}'", s.replace("'","''"))).collect::<Vec<_>>().join(",")))); }
+    if let Some(scopes)=b.scopes { sets.push(format!("scopes=[{}]", scopes.into_iter().map(|s| format!("'{}'", s.replace("'","''"))).collect::<Vec<_>>().join(","))); }
     if let Some(enabled)=b.enabled { sets.push(format!("enabled={}", enabled)); }
     if sets.is_empty(){ return Ok(Json(OkResp{ id, status: "updated" })); }
     sets.push("updated_at=toUInt32(now())".to_string());

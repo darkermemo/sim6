@@ -1,15 +1,14 @@
 use axum::{
     extract::{Path, Query, State},
-    http::StatusCode,
-    response::{IntoResponse, Response},
     Json,
 };
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use uuid::Uuid;
+// use uuid::Uuid;
 
-use crate::v2::{AppError, AppState};
-use crate::v2::metrics;
+use crate::v2::state::AppState;
+use crate::error::{Result as PipelineResult, PipelineError};
+// use crate::v2::metrics;
 
 #[derive(Debug, Deserialize)]
 pub struct ListTenantsQuery {
@@ -61,8 +60,8 @@ pub struct CreateTenantResponse {
 pub async fn list_tenants(
     State(state): State<Arc<AppState>>,
     Query(query): Query<ListTenantsQuery>,
-) -> Result<Response, AppError> {
-    let limit = query.limit.unwrap_or(50).min(100);
+) -> PipelineResult<Json<serde_json::Value>> {
+    let limit: u64 = query.limit.unwrap_or(50).min(100) as u64;
     let offset = query.cursor.and_then(|c| c.parse::<u64>().ok()).unwrap_or(0);
     
     let mut sql = "SELECT tenant_id, slug, name, status, region, created_at FROM dev.tenants WHERE 1=1".to_string();
@@ -76,28 +75,14 @@ pub async fn list_tenants(
     
     sql.push_str(&format!(" ORDER BY tenant_id LIMIT {} OFFSET {}", limit, offset));
     
-    let mut result = state.clickhouse.query(&sql, &params).await?;
-    
-    let mut tenants = Vec::new();
-    while let Some(row) = result.next().await? {
-        tenants.push(Tenant {
-            tenant_id: row.get("tenant_id")?,
-            slug: row.get("slug")?,
-            name: row.get("name")?,
-            status: row.get("status")?,
-            region: row.get("region")?,
-            created_at: row.get("created_at")?,
-        });
-    }
+    #[derive(Deserialize, clickhouse::Row)]
+    struct Row { tenant_id: u64, slug: String, name: String, status: String, region: String, created_at: String }
+    let rows: Vec<Row> = state.ch.query(&sql).fetch_all::<Row>().await?;
+    let tenants: Vec<Tenant> = rows.into_iter().map(|r| Tenant{ tenant_id:r.tenant_id, slug:r.slug, name:r.name, status:r.status, region:r.region, created_at:r.created_at }).collect();
     
     // Get total count
     let count_sql = "SELECT count() as total FROM dev.tenants WHERE 1=1";
-    let mut count_result = state.clickhouse.query(count_sql, &[]).await?;
-    let total: u64 = if let Some(row) = count_result.next().await? {
-        row.get("total")?
-    } else {
-        0
-    };
+    let total: u64 = state.ch.query(count_sql).fetch_one::<u64>().await.unwrap_or(0);
     
     let next_cursor = if tenants.len() == limit as usize {
         Some((offset + limit).to_string())
@@ -111,13 +96,13 @@ pub async fn list_tenants(
         total,
     };
     
-    Ok(Json(response).into_response())
+    Ok(Json(serde_json::to_value(response)?))
 }
 
 pub async fn create_tenant(
     State(state): State<Arc<AppState>>,
     Json(req): Json<CreateTenantRequest>,
-) -> Result<Response, AppError> {
+) -> PipelineResult<Json<serde_json::Value>> {
     let tenant_id = req.tenant_id.unwrap_or_else(|| {
         // Generate a new tenant ID if not provided
         std::time::SystemTime::now()
@@ -131,20 +116,22 @@ pub async fn create_tenant(
     
     // Check if tenant already exists
     let existing_sql = "SELECT tenant_id FROM dev.tenants WHERE tenant_id = ? OR slug = ?";
-    let mut existing_result = state.clickhouse.query(existing_sql, &[tenant_id.to_string(), req.slug.clone()]).await?;
-    
-    let replayed = existing_result.next().await?.is_some();
+    let replayed: Option<u8> = state.ch.query(existing_sql).fetch_optional::<u8>().await?;
+    let replayed = replayed.is_some();
     
     if !replayed {
         // Insert new tenant
         let insert_sql = "INSERT INTO dev.tenants (tenant_id, slug, name, status, region) VALUES (?, ?, ?, ?, ?)";
-        state.clickhouse.execute(insert_sql, &[
-            tenant_id.to_string(),
-            req.slug.clone(),
-            req.name.clone(),
-            status.clone(),
-            region.clone(),
-        ]).await?;
+        state
+            .ch
+            .query(insert_sql)
+            .bind(tenant_id.to_string())
+            .bind(req.slug.clone())
+            .bind(req.name.clone())
+            .bind(status.clone())
+            .bind(region.clone())
+            .execute()
+            .await?;
     }
     
     let tenant = Tenant {
@@ -161,36 +148,25 @@ pub async fn create_tenant(
         replayed,
     };
     
-    Ok(Json(response).into_response())
+    Ok(Json(serde_json::to_value(response)?))
 }
 
 pub async fn get_tenant(
     State(state): State<Arc<AppState>>,
     Path(tenant_id): Path<u64>,
-) -> Result<Response, AppError> {
+) -> PipelineResult<Json<serde_json::Value>> {
     let sql = "SELECT tenant_id, slug, name, status, region, created_at FROM dev.tenants WHERE tenant_id = ?";
-    let mut result = state.clickhouse.query(sql, &[tenant_id.to_string()]).await?;
-    
-    if let Some(row) = result.next().await? {
-        let tenant = Tenant {
-            tenant_id: row.get("tenant_id")?,
-            slug: row.get("slug")?,
-            name: row.get("name")?,
-            status: row.get("status")?,
-            region: row.get("region")?,
-            created_at: row.get("created_at")?,
-        };
-        Ok(Json(tenant).into_response())
-    } else {
-        Err(AppError::NotFound("Tenant not found".to_string()))
-    }
+    #[derive(Deserialize, clickhouse::Row)]
+    struct TR { tenant_id: u64, slug: String, name: String, status: String, region: String, created_at: String }
+    let row: Option<TR> = state.ch.query(sql).bind(tenant_id).fetch_optional::<TR>().await?;
+    match row { Some(r) => Ok(Json(serde_json::to_value(Tenant{ tenant_id:r.tenant_id, slug:r.slug, name:r.name, status:r.status, region:r.region, created_at:r.created_at })?)), None => Err(PipelineError::not_found("Tenant not found")) }
 }
 
 pub async fn update_tenant(
     State(state): State<Arc<AppState>>,
     Path(tenant_id): Path<u64>,
     Json(req): Json<UpdateTenantRequest>,
-) -> Result<Response, AppError> {
+) -> PipelineResult<Json<serde_json::Value>> {
     let mut updates = Vec::new();
     let mut params = Vec::new();
     
@@ -215,7 +191,7 @@ pub async fn update_tenant(
     }
     
     if updates.is_empty() {
-        return Err(AppError::BadRequest("No fields to update".to_string()));
+        return Err(PipelineError::validation("No fields to update"));
     }
     
     params.push(tenant_id.to_string());
@@ -225,7 +201,7 @@ pub async fn update_tenant(
         updates.join(", ")
     );
     
-    state.clickhouse.execute(&sql, &params).await?;
+    state.ch.query(&sql).execute().await?;
     
-    Ok(StatusCode::OK.into_response())
+    Ok(Json(serde_json::json!({"status": "ok"})))
 }

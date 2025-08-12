@@ -32,9 +32,7 @@ pub fn normalize(raw: &str, parser_id: Option<&str>) -> Normalized {
 
 /// Okta normalization (ECS/CIM style)
 fn normalize_okta(raw: &str) -> Normalized {
-    let mut norm = Normalized::default();
-    norm.vendor = "Okta".to_string();
-    norm.product = "SSO".to_string();
+    let mut norm = Normalized { vendor: "Okta".to_string(), product: "SSO".to_string(), ..Default::default() };
     
     if let Ok(json) = serde_json::from_str::<Value>(raw) {
         // Event categorization
@@ -97,9 +95,7 @@ fn normalize_okta(raw: &str) -> Normalized {
 
 /// Windows Security Event Log normalization
 fn normalize_windows(raw: &str) -> Normalized {
-    let mut norm = Normalized::default();
-    norm.vendor = "Microsoft".to_string();
-    norm.product = "Windows".to_string();
+    let mut norm = Normalized { vendor: "Microsoft".to_string(), product: "Windows".to_string(), ..Default::default() };
     
     if let Ok(json) = serde_json::from_str::<Value>(raw) {
         // Event ID mapping
@@ -161,12 +157,14 @@ fn normalize_windows(raw: &str) -> Normalized {
 
 /// Zeek HTTP log normalization
 fn normalize_zeek_http(raw: &str) -> Normalized {
-    let mut norm = Normalized::default();
-    norm.vendor = "Zeek".to_string();
-    norm.product = "Network Security Monitor".to_string();
-    norm.event_category = "network".to_string();
-    norm.event_type = "protocol".to_string();
-    norm.action = "http_request".to_string();
+    let mut norm = Normalized {
+        vendor: "Zeek".to_string(),
+        product: "Network Security Monitor".to_string(),
+        event_category: "network".to_string(),
+        event_type: "protocol".to_string(),
+        action: "http_request".to_string(),
+        ..Default::default()
+    };
     
     if let Ok(json) = serde_json::from_str::<Value>(raw) {
         // IPs
@@ -237,10 +235,7 @@ fn auto_detect_and_normalize(raw: &str) -> Normalized {
 
 /// Generic normalization for unknown formats
 fn normalize_generic(raw: &str) -> Normalized {
-    let mut norm = Normalized::default();
-    norm.event_category = "unknown".to_string();
-    norm.event_type = "info".to_string();
-    norm.severity = 3;
+    let mut norm = Normalized { event_category: "unknown".to_string(), event_type: "info".to_string(), severity: 3, ..Default::default() };
     
     // Try to extract basic fields
     if let Ok(json) = serde_json::from_str::<Value>(raw) {
@@ -298,15 +293,11 @@ pub fn extract_iocs(norm: &Normalized) -> Vec<(String, String)> {
     
     // Extract from parsed fields
     for (key, value) in &norm.parsed_fields {
-        if key.contains("domain") || key.contains("host") {
-            if !value.is_empty() && value.contains('.') {
-                iocs.push((value.clone(), "domain".to_string()));
-            }
+        if (key.contains("domain") || key.contains("host")) && !value.is_empty() && value.contains('.') {
+            iocs.push((value.clone(), "domain".to_string()));
         }
-        if key.contains("hash") || key.contains("md5") || key.contains("sha") {
-            if value.len() >= 32 && value.chars().all(|c| c.is_ascii_hexdigit()) {
-                iocs.push((value.clone(), "hash".to_string()));
-            }
+        if (key.contains("hash") || key.contains("md5") || key.contains("sha")) && value.len() >= 32 && value.chars().all(|c| c.is_ascii_hexdigit()) {
+            iocs.push((value.clone(), "hash".to_string()));
         }
     }
     
@@ -335,9 +326,7 @@ mod tests {
     
     #[test]
     fn test_extract_iocs() {
-        let mut norm = Normalized::default();
-        norm.source_ip = "192.168.1.100".to_string();
-        norm.host = "malicious.example.com".to_string();
+        let norm = Normalized { source_ip: "192.168.1.100".to_string(), host: "malicious.example.com".to_string(), ..Default::default() };
         
         let iocs = extract_iocs(&norm);
         assert_eq!(iocs.len(), 2);

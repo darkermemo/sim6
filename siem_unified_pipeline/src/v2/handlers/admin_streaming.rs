@@ -4,7 +4,7 @@ use serde::Serialize;
 use std::sync::Arc;
 
 use crate::v2::state::AppState;
-use crate::error::{Result, PipelineError};
+use crate::error::Result;
 
 #[derive(Debug, serde::Deserialize)]
 pub struct StatusQ { pub tenant_id: String }

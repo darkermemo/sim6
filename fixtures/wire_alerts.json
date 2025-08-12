@@ -1,0 +1,59 @@
+{
+  "meta": {
+    "took_ms": 42,
+    "row_count": 3,
+    "next_cursor": "eyJvZmZzZXQiOjEwMH0="
+  },
+  "data": [
+    {
+      "tenant_id": 101,
+      "alert_id": "01HQM8X5B7HNQMZVKWBX7G4JMN",
+      "rule_id": "rule_failed_logins",
+      "created_at": "2024-02-15T10:30:00.000Z",
+      "event_timestamp": "2024-02-15T10:29:45.000Z",
+      "severity": "HIGH",
+      "status": "OPEN",
+      "title": "Multiple Failed Login Attempts",
+      "summary": "5 failed login attempts detected for user 'alice' from IP 10.0.0.42",
+      "alert_key": "failed_login_alice_10.0.0.42",
+      "dedupe_hash": 123456789,
+      "source": "auth_logs",
+      "user": "alice",
+      "src_ip": "10.0.0.42",
+      "host": "web-server-01"
+    },
+    {
+      "tenant_id": 101,
+      "alert_id": "01HQM8Y7D9KPQRSTVWXYZABCDE",
+      "rule_id": "rule_data_exfil",
+      "created_at": "2024-02-15T09:15:00.000Z",
+      "event_timestamp": "2024-02-15T09:14:30.000Z",
+      "severity": "CRITICAL",
+      "status": "ACK",
+      "title": "Potential Data Exfiltration Detected",
+      "summary": "Large outbound data transfer (2.5GB) to unknown external IP",
+      "alert_key": "data_exfil_192.168.1.100_185.199.108.133",
+      "source": "network_logs",
+      "user": "bob",
+      "src_ip": "192.168.1.100",
+      "dst_ip": "185.199.108.133",
+      "host": "db-server-02",
+      "tags": ["investigated", "true_positive"]
+    },
+    {
+      "tenant_id": 101,
+      "alert_id": "01HQM8Z9F2MNPQRSTWXYZABCDF",
+      "rule_id": "rule_privilege_escalation",
+      "created_at": "2024-02-15T08:00:00.000Z",
+      "severity": "MEDIUM",
+      "status": "CLOSED",
+      "title": "Privilege Escalation Attempt",
+      "summary": "User 'charlie' attempted to execute sudo commands without authorization",
+      "alert_key": "priv_esc_charlie_10.0.0.15",
+      "source": "system_logs",
+      "user": "charlie",
+      "src_ip": "10.0.0.15",
+      "host": "app-server-03"
+    }
+  ]
+}

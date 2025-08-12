@@ -1,24 +1,53 @@
 use axum::{
-    extract::{DefaultBodyLimit, Path, Query, State},
+    extract::DefaultBodyLimit,
     routing::{get, post, delete, patch, put},
-    Json, Router,
+    Router,
 };
 use std::sync::Arc;
 
 use crate::v2::state::AppState;
 use crate::v2::handlers::{
     alerts, alert_rules, rule_packs, search, agents, incidents, investigations,
-    saved_searches, admin_log_sources, admin_parsers, admin_api_keys, admin_tenants,
-    sources, parsers, health, metrics, events, schema, cim, investigate, sse,
+    saved_searches, health, metrics, events, schema, cim, investigate,
     admin_streaming, admin_storage, collectors, ingest, parse, assets,
-    admin::{health as admin_health, sources as admin_sources, parsers as admin_parsers_main}
 };
+use crate::v2::metrics as v2_metrics;
+
+// v2 admin (authoritative)
+use crate::v2::handlers::admin::{parsers as v2_admin_parsers, tenants as v2_admin_tenants, limits as v2_admin_limits};
+use crate::v2::handlers::admin_log_sources as v2_admin_log_sources;
+
+// legacy admin (optional)
+#[cfg(feature = "legacy-admin")]
+use crate::v2::handlers::admin::{apikeys as legacy_admin_apikeys, roles as legacy_admin_roles, agents as legacy_admin_agents, health as legacy_admin_health};
+
+#[cfg(feature = "legacy-admin")]
+fn legacy_admin_router<S>() -> Router<S>
+where
+    S: Clone + Send + Sync + 'static,
+{
+    use axum::routing::{get, post, delete};
+    Router::new()
+        .route("/api/v2/admin/apikeys", post(legacy_admin_apikeys::create_key).get(legacy_admin_apikeys::list_keys))
+        .route("/api/v2/admin/apikeys/:id", get(legacy_admin_apikeys::get_key).delete(legacy_admin_apikeys::delete_key))
+        .route("/api/v2/admin/roles", get(legacy_admin_roles::list_roles))
+        .route("/api/v2/admin/agents", get(legacy_admin_agents::list_agents))
+        .route("/api/v2/admin/health", get(legacy_admin_health::get_config))
+}
+
+#[cfg(not(feature = "legacy-admin"))]
+fn legacy_admin_router<S>() -> Router<S>
+where
+    S: Clone + Send + Sync + 'static,
+{
+    Router::new()
+}
 
 pub fn create_router(state: Arc<AppState>) -> Router {
     Router::new()
         // Health and metrics endpoints
         .route("/health", get(health::health_check))
-        .route("/metrics", get(metrics::get_quick_stats))
+        .route("/metrics", get(v2_metrics::metrics_text))
         .route("/api/v2/health", get(health::health_check))
         .route("/api/v2/metrics", get(metrics::get_quick_stats))
         
@@ -63,12 +92,12 @@ pub fn create_router(state: Arc<AppState>) -> Router {
         .route("/api/v2/saved-searches/:id", patch(saved_searches::update_saved))
         .route("/api/v2/saved-searches/:id", delete(saved_searches::delete_saved))
         
-        // Log sources endpoints
-        .route("/api/v2/log-sources", get(sources::list_sources))
-        .route("/api/v2/log-sources", post(sources::create_source))
-        .route("/api/v2/log-sources/:id", get(sources::get_source))
-        .route("/api/v2/log-sources/:id", patch(sources::patch_source))
-        .route("/api/v2/log-sources/:id", delete(sources::deploy_source))
+        // Log sources endpoints (v2 admin authoritative handlers)
+        .route("/api/v2/log-sources", get(v2_admin_log_sources::list_sources))
+        .route("/api/v2/log-sources", post(v2_admin_log_sources::create_source))
+        .route("/api/v2/log-sources/:id", get(v2_admin_log_sources::get_source))
+        .route("/api/v2/log-sources/:id", patch(v2_admin_log_sources::update_source))
+        .route("/api/v2/log-sources/:id", delete(v2_admin_log_sources::delete_source))
         
         // Incidents endpoints
         .route("/api/v2/incidents", get(incidents::list_incidents))
@@ -84,54 +113,24 @@ pub fn create_router(state: Arc<AppState>) -> Router {
         .route("/api/v2/investigations/:id", patch(investigations::update_view))
         .route("/api/v2/investigations/:id", delete(investigations::delete_view))
         
-        // Admin API keys endpoints
-        .route("/api/v2/admin/api-keys", get(admin_api_keys::list_keys))
-        .route("/api/v2/admin/api-keys", post(admin_api_keys::create_key))
-        .route("/api/v2/admin/api-keys/:id", get(admin_api_keys::get_key))
-        .route("/api/v2/admin/api-keys/:id", patch(admin_api_keys::update_key))
-        .route("/api/v2/admin/api-keys/:id", delete(admin_api_keys::delete_key))
-        .route("/api/v2/admin/api-keys/:id/rotate", post(admin_api_keys::rotate_key))
-        
-        // Admin log sources endpoints
-        .route("/api/v2/admin/log-sources", get(admin_log_sources::list_sources))
-        .route("/api/v2/admin/log-sources", post(admin_log_sources::create_source))
-        .route("/api/v2/admin/log-sources/:id", get(admin_log_sources::get_source))
-        .route("/api/v2/admin/log-sources/:id", patch(admin_log_sources::update_source))
-        .route("/api/v2/admin/log-sources/:id", delete(admin_log_sources::delete_source))
-        
-        // Admin parsers endpoints
-        .route("/api/v2/admin/parsers", get(admin_parsers::list_parsers))
-        .route("/api/v2/admin/parsers", post(admin_parsers::create_parser))
-        .route("/api/v2/admin/parsers/:id", get(admin_parsers::get_parser))
-        .route("/api/v2/admin/parsers/:id", patch(admin_parsers::update_parser))
-        .route("/api/v2/admin/parsers/:id", delete(admin_parsers::delete_parser))
-        
-        // Admin tenants endpoints
-        .route("/admin/tenants", get(admin_tenants::list_tenants).post(admin_tenants::create_tenant))
-        .route("/admin/tenants/:id", get(admin_tenants::get_tenant).patch(admin_tenants::patch_tenant))
-        .route("/admin/tenants/:id/limits", get(admin_tenants::get_limits).put(admin_tenants::put_limits))
-        .route("/admin/tenants/:id/api-keys", get(admin_tenants::list_api_keys).post(admin_tenants::create_api_key))
-        .route("/admin/tenants/:id/api-keys/:key_id", delete(admin_tenants::revoke_api_key))
-        
-        // Admin roles endpoints
-        .route("/admin/roles", get(admin_health::get_config))
-        .route("/admin/roles/:role", put(admin_health::put_config))
-        
-        // Admin deep health endpoints
-        .route("/admin/deep-health", get(admin_health::get_config).post(admin_health::put_config))
-        
-        // Admin sources endpoints
-        .route("/admin/sources", get(admin_sources::list_sources).post(admin_sources::create_source))
-        .route("/admin/sources/:source_id", patch(admin_sources::update_source).delete(admin_sources::delete_source))
-        .route("/admin/sources/:source_id/test-connection", post(admin_sources::test_connection))
-        .route("/admin/sources/:source_id/test-connection/:token/tail", get(sse::tail_stream))
-        .route("/admin/sources/:source_id/test-sample", post(admin_sources::test_sample))
-        
-        // Admin parsers endpoints
-        .route("/admin/parsers", get(admin_parsers_main::list_parsers).post(admin_parsers_main::create_parser))
-        .route("/admin/parsers/:parser_id/validate", get(admin_parsers_main::validate_parser))
-        .route("/admin/parsers/:parser_id/sample", post(admin_parsers_main::test_sample))
-        .route("/admin/parsers/:parser_id", delete(admin_parsers_main::delete_parser))
+        // v2 Admin log sources endpoints
+        .route("/api/v2/admin/log-sources", get(v2_admin_log_sources::list_sources))
+        .route("/api/v2/admin/log-sources", post(v2_admin_log_sources::create_source))
+        .route("/api/v2/admin/log-sources/:id", get(v2_admin_log_sources::get_source))
+        .route("/api/v2/admin/log-sources/:id", patch(v2_admin_log_sources::update_source))
+        .route("/api/v2/admin/log-sources/:id", delete(v2_admin_log_sources::delete_source))
+
+        // v2 Admin parsers endpoints
+        .route("/api/v2/admin/parsers", get(v2_admin_parsers::list_parsers))
+        .route("/api/v2/admin/parsers", post(v2_admin_parsers::create_parser))
+        .route("/api/v2/admin/parsers/:parser_id/validate", get(v2_admin_parsers::validate_parser))
+        .route("/api/v2/admin/parsers/:parser_id/sample", post(v2_admin_parsers::test_sample))
+        .route("/api/v2/admin/parsers/:parser_id", delete(v2_admin_parsers::delete_parser))
+
+        // v2 Admin tenants endpoints
+        .route("/api/v2/admin/tenants", get(v2_admin_tenants::list_tenants).post(v2_admin_tenants::create_tenant))
+        .route("/api/v2/admin/tenants/:id", get(v2_admin_tenants::get_tenant).patch(v2_admin_tenants::update_tenant))
+        .route("/api/v2/admin/tenants/:id/limits", get(v2_admin_limits::get_tenant_limits).put(v2_admin_limits::update_tenant_limits))
         
         // Agents endpoints
         .route("/agents", get(agents::list_agents))
@@ -175,7 +174,13 @@ pub fn create_router(state: Arc<AppState>) -> Router {
         
         .route("/favicon.ico", get(assets::favicon))
         
+        .merge(legacy_admin_router::<Arc<AppState>>())
         .with_state(state)
+}
+
+// Backwards-compatible name expected by main.rs
+pub fn build(state: Arc<AppState>) -> Router {
+    create_router(state)
 }
 
 

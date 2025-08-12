@@ -1,14 +1,10 @@
-use axum::{
-    extract::{Path, Query, State},
-    http::StatusCode,
-    response::{IntoResponse, Response},
-    Json,
-};
+use axum::{extract::{Path, Query, State}, Json};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use uuid::Uuid;
 
-use crate::v2::{AppError, AppState};
+use crate::v2::state::AppState;
+use crate::error::{Result as PipelineResult, PipelineError};
 
 #[derive(Debug, Deserialize)]
 pub struct ListParsersQuery {
@@ -68,83 +64,88 @@ pub struct TestSampleResponse {
 pub async fn list_parsers(
     State(state): State<Arc<AppState>>,
     Query(query): Query<ListParsersQuery>,
-) -> Result<Response, AppError> {
-    let limit = 50;
-    let offset = query.cursor.and_then(|c| c.parse::<u64>().ok()).unwrap_or(0);
-    
-    let mut sql = "SELECT parser_id, name, version, kind, body, created_at FROM dev.parsers_admin WHERE 1=1".to_string();
-    let mut params: Vec<String> = Vec::new();
-    
-    if let Some(search) = &query.q {
-        sql.push_str(" AND (name ILIKE ? OR kind ILIKE ?)");
-        params.push(format!("%{}%", search));
-        params.push(format!("%{}%", search));
-    }
-    
-    sql.push_str(&format!(" ORDER BY parser_id, version DESC LIMIT {} OFFSET {}", limit, offset));
-    
-    let mut result = state.clickhouse.query(&sql, &params).await?;
-    
-    let mut parsers = Vec::new();
-    while let Some(row) = result.next().await? {
-        parsers.push(Parser {
-            parser_id: row.get("parser_id")?,
-            name: row.get("name")?,
-            version: row.get("version")?,
-            kind: row.get("kind")?,
-            body: row.get("body")?,
-            created_at: row.get("created_at")?,
-        });
-    }
-    
-    // Get total count
-    let count_sql = "SELECT count() as total FROM dev.parsers_admin WHERE 1=1";
-    let mut count_result = state.clickhouse.query(count_sql, &[]).await?;
-    let total: u64 = if let Some(row) = count_result.next().await? {
-        row.get("total")?
+) -> PipelineResult<Json<serde_json::Value>> {
+    let limit: u64 = 50;
+    let offset: u64 = query.cursor.and_then(|c| c.parse::<u64>().ok()).unwrap_or(0);
+
+    let like = query.q.unwrap_or_default();
+    let sql = if like.is_empty() {
+        r#"
+        SELECT parser_id, name, version, kind, body, created_at
+        FROM dev.parsers_admin
+        ORDER BY parser_id, version DESC
+        LIMIT {lim:UInt64} OFFSET {off:UInt64}
+        "#
     } else {
-        0
+        r#"
+        SELECT parser_id, name, version, kind, body, created_at
+        FROM dev.parsers_admin
+        WHERE name ILIKE {s:String} OR kind ILIKE {s2:String}
+        ORDER BY parser_id, version DESC
+        LIMIT {lim:UInt64} OFFSET {off:UInt64}
+        "#
     };
-    
-    let next_cursor = if parsers.len() == limit as usize {
-        Some((offset + limit).to_string())
-    } else {
-        None
-    };
-    
-    let response = ListParsersResponse {
-        parsers,
-        next_cursor,
-        total,
-    };
-    
-    Ok(Json(response).into_response())
+
+    let mut q = state.ch.query(sql).bind(limit).bind(offset);
+    if !like.is_empty() {
+        let wildcard = format!("%{}%", like);
+        q = q.bind(&wildcard).bind(&wildcard);
+    }
+
+    #[derive(Deserialize, clickhouse::Row)]
+    struct Row { parser_id: String, name: String, version: u32, kind: String, body: String, created_at: String }
+    let rows: Vec<Row> = q.fetch_all().await?;
+
+    let parsers: Vec<Parser> = rows
+        .into_iter()
+        .map(|r| Parser { parser_id: r.parser_id, name: r.name, version: r.version, kind: r.kind, body: r.body, created_at: r.created_at })
+        .collect();
+
+    // Count
+    let total: u64 = state
+        .ch
+        .query("SELECT count() as total FROM dev.parsers_admin")
+        .fetch_one::<u64>()
+        .await
+        .unwrap_or(0);
+
+    let next_cursor = if parsers.len() as u64 == limit { Some((offset + limit).to_string()) } else { None };
+
+    let response = ListParsersResponse { parsers, next_cursor, total };
+    Ok(Json(serde_json::to_value(response)?))
 }
 
 pub async fn create_parser(
     State(state): State<Arc<AppState>>,
     Json(req): Json<CreateParserRequest>,
-) -> Result<Response, AppError> {
+) -> PipelineResult<Json<serde_json::Value>> {
     let parser_id = req.parser_id.unwrap_or_else(|| Uuid::new_v4().to_string());
     
     // Get next version for this parser
-    let version_sql = "SELECT max(version) as max_version FROM dev.parsers_admin WHERE parser_id = ?";
-    let mut version_result = state.clickhouse.query(version_sql, &[parser_id.clone()]).await?;
+    let version_sql = r#"SELECT toUInt32OrZero(max(version)) as max_version FROM dev.parsers_admin WHERE parser_id={id:String}"#;
+    let max_version: u32 = state
+        .ch
+        .query(version_sql)
+        .bind(&parser_id)
+        .fetch_one::<u32>()
+        .await?;
+    let next_version: u32 = max_version + 1;
     
-    let next_version: u32 = if let Some(row) = version_result.next().await? {
-        row.get("max_version").unwrap_or(0) + 1
-    } else {
-        1
-    };
-    
-    let insert_sql = "INSERT INTO dev.parsers_admin (parser_id, name, version, kind, body) VALUES (?, ?, ?, ?, ?)";
-    state.clickhouse.execute(insert_sql, &[
-        parser_id.clone(),
-        req.name.clone(),
-        next_version.to_string(),
-        req.kind.clone(),
-        req.body.clone(),
-    ]).await?;
+    state
+        .ch
+        .query(
+            r#"
+            INSERT INTO dev.parsers_admin (parser_id, name, version, kind, body)
+            VALUES ({id:String},{name:String},{version:UInt32},{kind:String},{body:String})
+            "#,
+        )
+        .bind(&parser_id)
+        .bind(&req.name)
+        .bind(next_version)
+        .bind(&req.kind)
+        .bind(&req.body)
+        .execute()
+        .await?;
     
     let parser = Parser {
         parser_id,
@@ -155,35 +156,33 @@ pub async fn create_parser(
         created_at: chrono::Utc::now().to_rfc3339(),
     };
     
-    Ok(Json(parser).into_response())
+    Ok(Json(serde_json::to_value(parser)?))
 }
 
 pub async fn validate_parser(
     State(state): State<Arc<AppState>>,
     Path(parser_id): Path<String>,
     Query(query): Query<ValidateParserQuery>,
-) -> Result<Response, AppError> {
+) -> PipelineResult<Json<serde_json::Value>> {
     let version = query.version.unwrap_or(0);
-    
-    let sql = if version > 0 {
-        "SELECT body FROM dev.parsers_admin WHERE parser_id = ? AND version = ?"
+
+    let body: Option<String> = if version > 0 {
+        state
+            .ch
+            .query("SELECT body FROM dev.parsers_admin WHERE parser_id={id:String} AND version={v:UInt32}")
+            .bind(&parser_id)
+            .bind(version)
+            .fetch_optional::<String>()
+            .await?
     } else {
-        "SELECT body FROM dev.parsers_admin WHERE parser_id = ? ORDER BY version DESC LIMIT 1"
+        state
+            .ch
+            .query("SELECT body FROM dev.parsers_admin WHERE parser_id={id:String} ORDER BY version DESC LIMIT 1")
+            .bind(&parser_id)
+            .fetch_optional::<String>()
+            .await?
     };
-    
-    let params = if version > 0 {
-        vec![parser_id.clone(), version.to_string()]
-    } else {
-        vec![parser_id.clone()]
-    };
-    
-    let mut result = state.clickhouse.query(&sql, &params).await?;
-    
-    let body: String = if let Some(row) = result.next().await? {
-        row.get("body")?
-    } else {
-        return Err(AppError::NotFound("Parser not found".to_string()));
-    };
+    let _body = body.ok_or_else(|| PipelineError::not_found("Parser not found"))?;
     
     // TODO: Implement actual parser validation logic
     // For now, return placeholder validation
@@ -193,23 +192,25 @@ pub async fn validate_parser(
         warnings: vec!["Parser validation not fully implemented yet".to_string()],
     };
     
-    Ok(Json(response).into_response())
+    Ok(Json(serde_json::to_value(response)?))
 }
 
 pub async fn test_sample(
     State(state): State<Arc<AppState>>,
     Path(parser_id): Path<String>,
     Json(req): Json<TestSampleRequest>,
-) -> Result<Response, AppError> {
+) -> PipelineResult<Json<serde_json::Value>> {
     // Get parser body
-    let sql = "SELECT body, kind FROM dev.parsers_admin WHERE parser_id = ? ORDER BY version DESC LIMIT 1";
-    let mut result = state.clickhouse.query(sql, &[parser_id.clone()]).await?;
-    
-    let (body, kind): (String, String) = if let Some(row) = result.next().await? {
-        (row.get("body")?, row.get("kind")?)
-    } else {
-        return Err(AppError::NotFound("Parser not found".to_string()));
-    };
+    #[derive(Deserialize, clickhouse::Row)]
+    struct BK { body: String, kind: String }
+    let bk: Option<BK> = state
+        .ch
+        .query("SELECT body, kind FROM dev.parsers_admin WHERE parser_id={id:String} ORDER BY version DESC LIMIT 1")
+        .bind(&parser_id)
+        .fetch_optional::<BK>()
+        .await?;
+    let bk = bk.ok_or_else(|| PipelineError::not_found("Parser not found"))?;
+    let (_body, kind) = (bk.body, bk.kind);
     
     // TODO: Implement actual normalization logic based on parser kind and body
     // For now, return placeholder response
@@ -219,26 +220,35 @@ pub async fn test_sample(
         iocs: None,
     };
     
-    Ok(Json(response).into_response())
+    Ok(Json(serde_json::to_value(response)?))
 }
 
 pub async fn delete_parser(
     State(state): State<Arc<AppState>>,
     Path(parser_id): Path<String>,
     Query(query): Query<ValidateParserQuery>,
-) -> Result<Response, AppError> {
+) -> PipelineResult<Json<serde_json::Value>> {
     let version = query.version.unwrap_or(0);
     
     if version > 0 {
-        // Delete specific version
-        let delete_sql = "ALTER TABLE dev.parsers_admin DELETE WHERE parser_id = ? AND version = ?";
-        state.clickhouse.execute(delete_sql, &[parser_id.clone(), version.to_string()]).await?;
+        state
+            .ch
+            .query("ALTER TABLE dev.parsers_admin DELETE WHERE parser_id={id:String} AND version={v:UInt32}")
+            .bind(&parser_id)
+            .bind(version)
+            .execute()
+            .await?;
     } else {
-        // Soft delete by marking as inactive (would need status column)
-        // For now, just delete the latest version
-        let delete_sql = "ALTER TABLE dev.parsers_admin DELETE WHERE parser_id = ? AND version = (SELECT max(version) FROM dev.parsers_admin WHERE parser_id = ?)";
-        state.clickhouse.execute(delete_sql, &[parser_id.clone(), parser_id.clone()]).await?;
+        state
+            .ch
+            .query(
+                "ALTER TABLE dev.parsers_admin DELETE WHERE parser_id={id:String} AND version=(SELECT max(version) FROM dev.parsers_admin WHERE parser_id={id2:String})",
+            )
+            .bind(&parser_id)
+            .bind(&parser_id)
+            .execute()
+            .await?;
     }
     
-    Ok(StatusCode::OK.into_response())
+    Ok(Json(serde_json::json!({"status": "ok"})))
 }

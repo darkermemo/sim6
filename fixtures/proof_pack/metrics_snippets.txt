@@ -1,0 +1,34 @@
+# Prometheus Metrics from /metrics endpoint
+
+# Rules execution metrics
+siem_v2_rules_run_total{tenant_id="101",rule_id="rule_failed_logins",status="success"} 127
+siem_v2_rules_run_total{tenant_id="101",rule_id="rule_failed_logins",status="error"} 3
+siem_v2_rules_run_total{tenant_id="101",rule_id="rule_data_exfil",status="success"} 89
+
+# Window and lag metrics
+siem_v2_rules_window_seconds{tenant_id="101",rule_id="rule_failed_logins"} 300
+siem_v2_rules_lag_seconds{tenant_id="101",rule_id="rule_failed_logins"} 124
+siem_v2_rules_lag_seconds{tenant_id="101",rule_id="rule_data_exfil"} 156
+
+# Idempotency metrics
+siem_v2_idempotency_total{route="rules:run-now:rule_failed_logins",status="miss"} 45
+siem_v2_idempotency_total{route="rules:run-now:rule_failed_logins",status="hit"} 12
+siem_v2_idempotency_total{route="rules:run-now:rule_data_exfil",status="miss"} 38
+siem_v2_idempotency_total{route="rules:run-now:rule_data_exfil",status="hit"} 7
+
+# Watermark tracking
+siem_v2_rules_watermark_ts{tenant_id="101",rule_id="rule_failed_logins"} 1708096925
+siem_v2_rules_watermark_advance_total{tenant_id="101",rule_id="rule_failed_logins"} 127
+
+# Compile and dry-run metrics
+siem_v2_rules_compile_total{tenant_id="101",kind="NATIVE",status="success"} 234
+siem_v2_rules_compile_total{tenant_id="101",kind="NATIVE",status="error"} 19
+siem_v2_rules_compile_total{tenant_id="101",kind="SIGMA",status="success"} 56
+siem_v2_rules_dryrun_total{tenant_id="101"} 89
+
+# Redis metrics
+siem_v2_redis_commands_total{command="SET",status="success"} 12456
+siem_v2_redis_commands_total{command="GET",status="success"} 34789
+siem_v2_redis_latency_seconds_bucket{le="0.001"} 29876
+siem_v2_redis_latency_seconds_bucket{le="0.01"} 34123
+siem_v2_redis_latency_seconds_bucket{le="0.1"} 34789

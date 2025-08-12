@@ -1,7 +1,6 @@
 use axum::{
     extract::{Path, Query, State},
-    http::StatusCode,
-    response::{IntoResponse, Response, sse::Event, sse::Sse},
+    response::{sse::Event, Sse},
     Json,
 };
 use serde::{Deserialize, Serialize};
@@ -11,7 +10,8 @@ use futures::stream::Stream;
 use tokio::sync::mpsc;
 use uuid::Uuid;
 
-use crate::v2::{AppError, AppState};
+use crate::v2::state::AppState;
+use crate::error::{Result as PipelineResult, PipelineError};
 
 #[derive(Debug, Deserialize)]
 pub struct ListSourcesQuery {
@@ -85,7 +85,7 @@ pub struct TestSampleResponse {
 pub async fn list_sources(
     State(state): State<Arc<AppState>>,
     Query(query): Query<ListSourcesQuery>,
-) -> Result<Response, AppError> {
+) -> PipelineResult<Json<serde_json::Value>> {
     let limit = 50;
     let offset = query.cursor.and_then(|c| c.parse::<u64>().ok()).unwrap_or(0);
     
@@ -105,32 +105,14 @@ pub async fn list_sources(
     
     sql.push_str(&format!(" ORDER BY created_at DESC LIMIT {} OFFSET {}", limit, offset));
     
-    let mut result = state.clickhouse.query(&sql, &params).await?;
-    
-    let mut sources = Vec::new();
-    while let Some(row) = result.next().await? {
-        sources.push(LogSource {
-            tenant_id: row.get("tenant_id")?,
-            source_id: row.get("source_id")?,
-            name: row.get("name")?,
-            kind: row.get("kind")?,
-            transport: row.get("transport")?,
-            endpoint: row.get("endpoint")?,
-            parser_id: row.get("parser_id")?,
-            status: row.get("status")?,
-            created_at: row.get("created_at")?,
-            updated_at: row.get("updated_at")?,
-        });
-    }
+    #[derive(Deserialize, clickhouse::Row)]
+    struct Row { tenant_id:u64, source_id:String, name:String, kind:String, transport:String, endpoint:String, parser_id:String, status:String, created_at:String, updated_at:String }
+    let rows: Vec<Row> = state.ch.query(&sql).fetch_all::<Row>().await?;
+    let sources: Vec<LogSource> = rows.into_iter().map(|r| LogSource{ tenant_id:r.tenant_id, source_id:r.source_id, name:r.name, kind:r.kind, transport:r.transport, endpoint:r.endpoint, parser_id:r.parser_id, status:r.status, created_at:r.created_at, updated_at:r.updated_at }).collect();
     
     // Get total count
     let count_sql = "SELECT count() as total FROM dev.log_sources_admin WHERE 1=1";
-    let mut count_result = state.clickhouse.query(count_sql, &[]).await?;
-    let total: u64 = if let Some(row) = count_result.next().await? {
-        row.get("total")?
-    } else {
-        0
-    };
+    let total: u64 = state.ch.query(count_sql).fetch_one::<u64>().await.unwrap_or(0);
     
     let next_cursor = if sources.len() == limit as usize {
         Some((offset + limit).to_string())
@@ -144,26 +126,27 @@ pub async fn list_sources(
         total,
     };
     
-    Ok(Json(response).into_response())
+    Ok(Json(serde_json::to_value(response)?))
 }
 
 pub async fn create_source(
     State(state): State<Arc<AppState>>,
     Json(req): Json<CreateSourceRequest>,
-) -> Result<Response, AppError> {
+) -> PipelineResult<Json<serde_json::Value>> {
     let source_id = req.source_id.unwrap_or_else(|| Uuid::new_v4().to_string());
     let parser_id = req.parser_id.unwrap_or_default();
     
     let insert_sql = "INSERT INTO dev.log_sources_admin (tenant_id, source_id, name, kind, transport, endpoint, parser_id) VALUES (?, ?, ?, ?, ?, ?, ?)";
-    state.clickhouse.execute(insert_sql, &[
-        req.tenant_id.to_string(),
-        source_id.clone(),
-        req.name.clone(),
-        req.kind.clone(),
-        req.transport.clone(),
-        req.endpoint.clone(),
-        parser_id.clone(),
-    ]).await?;
+    state.ch.query(insert_sql)
+        .bind(req.tenant_id.to_string())
+        .bind(source_id.clone())
+        .bind(req.name.clone())
+        .bind(req.kind.clone())
+        .bind(req.transport.clone())
+        .bind(req.endpoint.clone())
+        .bind(parser_id.clone())
+        .execute()
+        .await?;
     
     let source = LogSource {
         tenant_id: req.tenant_id,
@@ -178,14 +161,14 @@ pub async fn create_source(
         updated_at: chrono::Utc::now().to_rfc3339(),
     };
     
-    Ok(Json(source).into_response())
+    Ok(Json(serde_json::to_value(source)?))
 }
 
 pub async fn update_source(
     State(state): State<Arc<AppState>>,
     Path(source_id): Path<String>,
     Json(req): Json<UpdateSourceRequest>,
-) -> Result<Response, AppError> {
+) -> PipelineResult<Json<serde_json::Value>> {
     let mut updates = Vec::new();
     let mut params = Vec::new();
     
@@ -220,7 +203,7 @@ pub async fn update_source(
     }
     
     if updates.is_empty() {
-        return Err(AppError::BadRequest("No fields to update".to_string()));
+        return Err(PipelineError::validation("No fields to update"));
     }
     
     updates.push("updated_at = ?");
@@ -232,34 +215,29 @@ pub async fn update_source(
         updates.join(", ")
     );
     
-    state.clickhouse.execute(&sql, &params).await?;
+    state.ch.query(&sql).execute().await?;
     
-    Ok(StatusCode::OK.into_response())
+    Ok(Json(serde_json::json!({"status": "ok"})))
 }
 
 pub async fn delete_source(
     State(state): State<Arc<AppState>>,
     Path(source_id): Path<String>,
-) -> Result<Response, AppError> {
+) -> PipelineResult<Json<serde_json::Value>> {
     let update_sql = "ALTER TABLE dev.log_sources_admin UPDATE status = 'DISABLED' WHERE source_id = ?";
-    state.clickhouse.execute(update_sql, &[source_id.clone()]).await?;
+    state.ch.query(update_sql).bind(source_id.clone()).execute().await?;
     
-    Ok(StatusCode::OK.into_response())
+    Ok(Json(serde_json::json!({"status": "ok"})))
 }
 
 pub async fn test_connection(
     State(state): State<Arc<AppState>>,
     Path(source_id): Path<String>,
-) -> Result<Response, AppError> {
+) -> PipelineResult<Json<serde_json::Value>> {
     // Get source details
     let sql = "SELECT transport FROM dev.log_sources_admin WHERE source_id = ?";
-    let mut result = state.clickhouse.query(sql, &[source_id.clone()]).await?;
-    
-    let transport: String = if let Some(row) = result.next().await? {
-        row.get("transport")?
-    } else {
-        return Err(AppError::NotFound("Source not found".to_string()));
-    };
+    let transport: Option<String> = state.ch.query(sql).fetch_optional::<String>().await?;
+    let transport = transport.ok_or_else(|| PipelineError::not_found("Source not found"))?;
     
     let token = Uuid::new_v4().to_string();
     let expires_at = chrono::Utc::now() + chrono::Duration::minutes(1);
@@ -272,18 +250,19 @@ pub async fn test_connection(
             ("http".to_string(), format!("POST NDJSON to test endpoint. Token: {}", token))
         }
         _ => {
-            return Err(AppError::BadRequest(format!("Unsupported transport: {}", transport)));
+            return Err(PipelineError::validation(format!("Unsupported transport: {}", transport)));
         }
     };
     
     // Store test token
     let insert_sql = "INSERT INTO dev.test_connection_tokens (token, tenant_id, source_id, mode) VALUES (?, ?, ?, ?)";
-    state.clickhouse.execute(insert_sql, &[
-        token.clone(),
-        "1".to_string(), // TODO: Get actual tenant_id
-        source_id.clone(),
-        mode.clone(),
-    ]).await?;
+    state.ch.query(insert_sql)
+        .bind(token.clone())
+        .bind("1".to_string())
+        .bind(source_id.clone())
+        .bind(mode.clone())
+        .execute()
+        .await?;
     
     let response = TestConnectionResponse {
         mode,
@@ -292,23 +271,18 @@ pub async fn test_connection(
         expires_at: expires_at.to_rfc3339(),
     };
     
-    Ok(Json(response).into_response())
+    Ok(Json(serde_json::to_value(response)?))
 }
 
 pub async fn test_sample(
     State(state): State<Arc<AppState>>,
-    Path(source_id): Path<String>,
+    Path(_source_id): Path<String>,
     Json(req): Json<TestSampleRequest>,
-) -> Result<Response, AppError> {
+) -> PipelineResult<Json<serde_json::Value>> {
     // Get source details including parser
     let sql = "SELECT parser_id FROM dev.log_sources_admin WHERE source_id = ?";
-    let mut result = state.clickhouse.query(sql, &[source_id.clone()]).await?;
-    
-    let parser_id: String = if let Some(row) = result.next().await? {
-        row.get("parser_id")?
-    } else {
-        return Err(AppError::NotFound("Source not found".to_string()));
-    };
+    let parser_id: Option<String> = state.ch.query(sql).fetch_optional::<String>().await?;
+    let _parser_id = parser_id.ok_or_else(|| PipelineError::not_found("Source not found"))?;
     
     // TODO: Implement actual normalization logic
     // For now, return placeholder response
@@ -318,20 +292,17 @@ pub async fn test_sample(
         iocs: None,
     };
     
-    Ok(Json(response).into_response())
+    Ok(Json(serde_json::to_value(response)?))
 }
 
 pub async fn tail_test_connection(
     State(state): State<Arc<AppState>>,
-    Path((source_id, token)): Path<(String, String)>,
-) -> Result<Sse<Pin<Box<dyn Stream<Item = Result<Event, AppError>> + Send>>>, AppError> {
+    Path((_source_id, token)): Path<(String, String)>,
+) -> Result<Sse<Pin<Box<dyn Stream<Item = Result<Event, std::convert::Infallible>> + Send>>>, PipelineError> {
     // Verify token is valid and not expired
     let sql = "SELECT * FROM dev.test_connection_tokens WHERE token = ? AND expires_at > now()";
-    let mut result = state.clickhouse.query(sql, &[token.clone()]).await?;
-    
-    if result.next().await?.is_none() {
-        return Err(AppError::BadRequest("Invalid or expired token".to_string()));
-    }
+    let exists: Option<u8> = state.ch.query(sql).fetch_optional::<u8>().await?;
+    if exists.is_none() { return Err(PipelineError::validation("Invalid or expired token")); }
     
     // Create SSE stream
     let (tx, mut rx) = mpsc::channel(100);

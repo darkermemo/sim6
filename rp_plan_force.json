@@ -1,0 +1,59 @@
+{
+  "plan_id": "01J5KZ5ZYXWVUTSRQPONMLKJIH",
+  "totals": {
+    "create": 10,
+    "update": 1,
+    "disable": 2,
+    "skip": 1
+  },
+  "entries": [
+    {
+      "action": "CREATE",
+      "rule_id": "rule_failed_login_attempts",
+      "name": "Multiple Failed Login Attempts",
+      "from_sha": null,
+      "to_sha": "abc123def456",
+      "warnings": []
+    },
+    {
+      "action": "CREATE",
+      "rule_id": "rule_admin_group_add",
+      "name": "User Added to Admin Group",
+      "from_sha": null,
+      "to_sha": "def456ghi789",
+      "warnings": []
+    },
+    {
+      "action": "UPDATE",
+      "rule_id": "rule_test_3",
+      "name": "Test Rule 3",
+      "from_sha": "old123hash",
+      "to_sha": "new456hash",
+      "warnings": ["Rule has alerts in last 30 days"]
+    },
+    {
+      "action": "DISABLE",
+      "rule_id": "rule_legacy_1",
+      "name": "Legacy Rule 1",
+      "from_sha": "legacy123",
+      "to_sha": null,
+      "warnings": []
+    },
+    {
+      "action": "DISABLE",
+      "rule_id": "rule_legacy_2",
+      "name": "Legacy Rule 2",
+      "from_sha": "legacy456",
+      "to_sha": null,
+      "warnings": ["Rule has alerts in last 30 days - disabled with FORCE"]
+    },
+    {
+      "action": "SKIP",
+      "rule_id": "rule_test_4",
+      "name": "Test Rule 4",
+      "from_sha": "same789hash",
+      "to_sha": "same789hash",
+      "warnings": []
+    }
+  ]
+}

@@ -35,6 +35,10 @@ pub struct CircuitBreaker {
     cooldown_ms: u64,
 }
 
+impl Default for CircuitBreaker {
+    fn default() -> Self { Self::new() }
+}
+
 impl CircuitBreaker {
     pub fn new() -> Self {
         let errors_to_open = std::env::var("CB_ERRORS_TO_OPEN")
@@ -195,7 +199,7 @@ pub fn wrap_ch_error(e: clickhouse::error::Error, _upstream: &str) -> PipelineEr
     
     // Check if it's a timeout error by examining the message
     if msg.contains("timeout") || msg.contains("Timeout") {
-        PipelineError::TimeoutError(format!("ClickHouse query timeout"))
+        PipelineError::TimeoutError("ClickHouse query timeout".to_string())
     } else {
         // Trim long errors
         let trimmed = if msg.len() > 200 {

@@ -68,7 +68,7 @@ pub async fn run_scheduler(state: Arc<AppState>) {
                                 let name = r.get("name").and_then(|x| x.as_str()).unwrap_or(&id).to_string();
                                 let q = r.get("compiled_sql").and_then(|x| x.as_str()).unwrap_or("").to_string();
                                 let schedule_sec = r.get("schedule_sec").and_then(|x| x.as_u64()).unwrap_or(60) as u32;
-                                let throttle_seconds = r.get("throttle_seconds").and_then(|x| x.as_u64()).unwrap_or(0) as u32;
+                                let _throttle_seconds = r.get("throttle_seconds").and_then(|x| x.as_u64()).unwrap_or(0) as u32;
                                 let severity = r.get("severity").and_then(|x| x.as_str()).unwrap_or("MEDIUM").to_string();
                                 if id.is_empty() || q.is_empty() { continue; }
                                 let tenant_scope = r.get("tenant_scope").and_then(|x| x.as_str()).unwrap_or("all").to_string();
@@ -95,7 +95,7 @@ pub async fn run_scheduler(state: Arc<AppState>) {
                                     let filtered_q = if tenant == "all" { q.clone() } else { format!("SELECT * FROM ({}) t WHERE tenant_id = '{}'", q, tenant.replace("'","''")) };
                                     // Check rule_state for this tenant
                                     let st_sql = format!("SELECT last_run_ts, last_alert_ts, dedup_hash, watermark_ts FROM dev.rule_state WHERE rule_id = '{}' AND tenant_id = '{}' LIMIT 1 FORMAT JSON", id.replace("'","''"), tenant.replace("'","''"));
-                                    let (mut last_run_ts, mut last_alert_ts, mut last_dedup): (u32,u32,String) = (0,0,String::new());
+                                    let (mut last_run_ts, mut _last_alert_ts, mut _last_dedup): (u32,u32,String) = (0,0,String::new());
                                     let mut watermark_ts: u32 = 0;
                                     if let Ok(st_resp) = client.get("http://localhost:8123/").query(&[("query", st_sql)]).send().await {
                                         if st_resp.status().is_success() {
@@ -103,8 +103,8 @@ pub async fn run_scheduler(state: Arc<AppState>) {
                                                 if let Ok(stv) = serde_json::from_str::<serde_json::Value>(&st_text) {
                                                     if let Some(row) = stv.get("data").and_then(|a| a.as_array()).and_then(|a| a.first()) {
                                                         last_run_ts = row.get("last_run_ts").and_then(|x| x.as_u64()).unwrap_or(0) as u32;
-                                                        last_alert_ts = row.get("last_alert_ts").and_then(|x| x.as_u64()).unwrap_or(0) as u32;
-                                                        last_dedup = row.get("dedup_hash").and_then(|x| x.as_str()).unwrap_or("").to_string();
+                                                        _last_alert_ts = row.get("last_alert_ts").and_then(|x| x.as_u64()).unwrap_or(0) as u32;
+                                                        _last_dedup = row.get("dedup_hash").and_then(|x| x.as_str()).unwrap_or("").to_string();
                                                         watermark_ts = row.get("watermark_ts").and_then(|x| x.as_u64()).unwrap_or(0) as u32;
                                                     }
                                                 }

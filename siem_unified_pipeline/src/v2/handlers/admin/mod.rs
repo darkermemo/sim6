@@ -1,15 +1,21 @@
+// v2 admin handlers (authoritative, used by router)
 pub mod tenants;
-pub mod limits;
-pub mod apikeys;
-pub mod roles;
-pub mod health;
-pub mod sources;
 pub mod parsers;
+pub mod sources; // aka log_sources in router imports
+pub mod limits;
 
-pub use tenants::*;
-pub use limits::*;
-pub use apikeys::*;
-pub use roles::*;
-pub use health::*;
-pub use sources::*;
-pub use parsers::*;
+// Legacy/unused admin pieces — compile only when the feature is enabled.
+#[cfg(feature = "legacy-admin")]
+pub mod apikeys;
+
+#[cfg(feature = "legacy-admin")]
+pub mod roles;
+
+#[cfg(feature = "legacy-admin")]
+pub mod agents;
+
+#[cfg(feature = "legacy-admin")]
+pub mod health;
+
+// IMPORTANT: Do NOT `pub use ...::*;` here.
+// Keep handlers namespaced (admin::<module>::func) to avoid collisions.

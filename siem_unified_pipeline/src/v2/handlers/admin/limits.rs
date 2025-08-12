@@ -1,13 +1,12 @@
 use axum::{
     extract::{Path, State},
-    http::StatusCode,
-    response::{IntoResponse, Response},
     Json,
 };
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
-use crate::v2::{AppError, AppState};
+use crate::v2::state::AppState;
+use crate::error::{Result as PipelineResult, PipelineError};
 
 #[derive(Debug, Deserialize)]
 pub struct UpdateLimitsRequest {
@@ -32,33 +31,17 @@ pub struct TenantLimits {
 pub async fn get_tenant_limits(
     State(state): State<Arc<AppState>>,
     Path(tenant_id): Path<u64>,
-) -> Result<Response, AppError> {
+) -> PipelineResult<Json<serde_json::Value>> {
     let sql = "SELECT tenant_id, eps_hard, eps_soft, burst, retention_days, export_daily_mb, updated_at FROM dev.tenant_limits WHERE tenant_id = ?";
-    let mut result = state.clickhouse.query(sql, &[tenant_id.to_string()]).await?;
-    
-    if let Some(row) = result.next().await? {
-        let limits = TenantLimits {
-            tenant_id: row.get("tenant_id")?,
-            eps_hard: row.get("eps_hard")?,
-            eps_soft: row.get("eps_soft")?,
-            burst: row.get("burst")?,
-            retention_days: row.get("retention_days")?,
-            export_daily_mb: row.get("export_daily_mb")?,
-            updated_at: row.get("updated_at")?,
-        };
-        Ok(Json(limits).into_response())
-    } else {
-        // Return default limits if none set
-        let default_limits = TenantLimits {
-            tenant_id,
-            eps_hard: 1000,
-            eps_soft: 500,
-            burst: 2000,
-            retention_days: 90,
-            export_daily_mb: 100,
-            updated_at: chrono::Utc::now().to_rfc3339(),
-        };
-        Ok(Json(default_limits).into_response())
+    #[derive(Deserialize, clickhouse::Row)]
+    struct Row { tenant_id:u64, eps_hard:u64, eps_soft:u64, burst:u64, retention_days:u16, export_daily_mb:u64, updated_at:String }
+    let row: Option<Row> = state.ch.query(sql).fetch_optional::<Row>().await?;
+    match row {
+        Some(r) => Ok(Json(serde_json::to_value(TenantLimits{ tenant_id:r.tenant_id, eps_hard:r.eps_hard, eps_soft:r.eps_soft, burst:r.burst, retention_days:r.retention_days, export_daily_mb:r.export_daily_mb, updated_at:r.updated_at })?)),
+        None => {
+            let default_limits = TenantLimits { tenant_id, eps_hard:1000, eps_soft:500, burst:2000, retention_days:90, export_daily_mb:100, updated_at: chrono::Utc::now().to_rfc3339() };
+            Ok(Json(serde_json::to_value(default_limits)?))
+        }
     }
 }
 
@@ -66,48 +49,49 @@ pub async fn update_tenant_limits(
     State(state): State<Arc<AppState>>,
     Path(tenant_id): Path<u64>,
     Json(req): Json<UpdateLimitsRequest>,
-) -> Result<Response, AppError> {
+) -> PipelineResult<Json<serde_json::Value>> {
     // Validate limits
     if req.eps_soft > req.eps_hard {
-        return Err(AppError::BadRequest("eps_soft cannot exceed eps_hard".to_string()));
+        return Err(PipelineError::validation("eps_soft cannot exceed eps_hard"));
     }
     
     if req.burst > req.eps_hard * 3 {
-        return Err(AppError::BadRequest("burst cannot exceed eps_hard * 3".to_string()));
+        return Err(PipelineError::validation("burst cannot exceed eps_hard * 3"));
     }
     
     if !(1..=3650).contains(&req.retention_days) {
-        return Err(AppError::BadRequest("retention_days must be between 1 and 3650".to_string()));
+        return Err(PipelineError::validation("retention_days must be between 1 and 3650"));
     }
     
     // Check if limits already exist
     let existing_sql = "SELECT tenant_id FROM dev.tenant_limits WHERE tenant_id = ?";
-    let mut existing_result = state.clickhouse.query(existing_sql, &[tenant_id.to_string()]).await?;
-    
-    if existing_result.next().await?.is_some() {
+    let exists: Option<u64> = state.ch.query(existing_sql).fetch_optional::<u64>().await?;
+    if exists.is_some() {
         // Update existing limits
         let update_sql = "ALTER TABLE dev.tenant_limits UPDATE eps_hard = ?, eps_soft = ?, burst = ?, retention_days = ?, export_daily_mb = ?, updated_at = ? WHERE tenant_id = ?";
-        state.clickhouse.execute(update_sql, &[
-            req.eps_hard.to_string(),
-            req.eps_soft.to_string(),
-            req.burst.to_string(),
-            req.retention_days.to_string(),
-            req.export_daily_mb.to_string(),
-            chrono::Utc::now().to_rfc3339(),
-            tenant_id.to_string(),
-        ]).await?;
+        state.ch.query(update_sql)
+            .bind(req.eps_hard.to_string())
+            .bind(req.eps_soft.to_string())
+            .bind(req.burst.to_string())
+            .bind(req.retention_days.to_string())
+            .bind(req.export_daily_mb.to_string())
+            .bind(chrono::Utc::now().to_rfc3339())
+            .bind(tenant_id.to_string())
+            .execute()
+            .await?;
     } else {
         // Insert new limits
         let insert_sql = "INSERT INTO dev.tenant_limits (tenant_id, eps_hard, eps_soft, burst, retention_days, export_daily_mb) VALUES (?, ?, ?, ?, ?, ?)";
-        state.clickhouse.execute(insert_sql, &[
-            tenant_id.to_string(),
-            req.eps_hard.to_string(),
-            req.eps_soft.to_string(),
-            req.burst.to_string(),
-            req.retention_days.to_string(),
-            req.export_daily_mb.to_string(),
-        ]).await?;
+        state.ch.query(insert_sql)
+            .bind(tenant_id.to_string())
+            .bind(req.eps_hard.to_string())
+            .bind(req.eps_soft.to_string())
+            .bind(req.burst.to_string())
+            .bind(req.retention_days.to_string())
+            .bind(req.export_daily_mb.to_string())
+            .execute()
+            .await?;
     }
     
-    Ok(StatusCode::OK.into_response())
+    Ok(Json(serde_json::json!({"status": "ok"})))
 }

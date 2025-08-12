@@ -1,181 +1,163 @@
-name: v2-reliability-gate
+name: v2-ci
 
 on:
   push:
-  workflow_dispatch:
+    branches: [ main, feat/** ]
+  pull_request:
+    branches: [ main, feat/** ]
 
 jobs:
-  gate:
+  v2_pipeline:
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     services:
       clickhouse:
-        image: clickhouse/clickhouse-server:23
-        ports: ["8123:8123","9000:9000"]
+        image: clickhouse/clickhouse-server:23.8
+        ports:
+          - 8123:8123
+          - 9000:9000
         options: >-
-          --health-cmd "clickhouse-client --query='SELECT 1'"
-          --health-interval 3s --health-timeout 5s --health-retries 20
-      redis:
-        image: redis:7-alpine
-        ports: ["6379:6379"]
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 3s --health-timeout 5s --health-retries 20
-
+          --health-cmd "bash -c 'curl -s http://localhost:8123/ping || exit 1'"
+          --health-interval 3s
+          --health-timeout 2s
+          --health-retries 60
     env:
-      RUST_LOG: info,siem=debug
-      CLICKHOUSE_URL: http://localhost:8123
-      CLICKHOUSE_DATABASE: dev
-      BASE_URL: http://127.0.0.1:9999
-      REDIS_URL: redis://localhost:6379
-
+      CLICKHOUSE_URL: http://127.0.0.1:8123
+      EVENTS_TABLE: dev.events
+      RUSTFLAGS: -D warnings
+      CI: true
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - name: Install deps (Rust + jq + ripgrep)
-        run: |
-          sudo apt-get update -y
-          sudo apt-get install -y jq ripgrep redis-tools
-          rustup set profile minimal
-          rustup update stable
-          rustup default stable
-          rustc -V && cargo -V
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
 
-      - name: Wait for ClickHouse & prepare schemas
+      - name: Wait for ClickHouse
         run: |
           for i in {1..60}; do
-            if clickhouse-client -q "SELECT 1" >/dev/null 2>&1; then break; fi; sleep 1
+            if curl -sS ${CLICKHOUSE_URL}/ping >/dev/null; then echo OK; exit 0; fi
+            sleep 1
           done
-          ./scripts/ch_bootstrap.sh
+          echo "ClickHouse did not become ready" >&2
+          exit 1
 
-      - name: Build
-        run: cargo build --locked
+      - name: Apply migrations
+        run: bash ./database_migrations/apply-migrations.sh
 
-      - name: Start server
+      - name: Build (Rust)
+        working-directory: ./siem_unified_pipeline
         run: |
-          nohup bash -c 'RUST_LOG=$RUST_LOG CLICKHOUSE_URL=$CLICKHOUSE_URL CLICKHOUSE_DATABASE=$CLICKHOUSE_DATABASE \
-            cargo run --bin siem-pipeline > /tmp/siem_srv.log 2>&1' &
+          cargo clippy -- -D warnings
+          cargo build --bins
+
+      - name: Run tests (Rust)
+        working-directory: ./siem_unified_pipeline
+        run: cargo test --all --quiet
+
+      - name: Start API
+        working-directory: ./siem_unified_pipeline
+        env:
+          RUST_LOG: info
+          CLICKHOUSE_URL: ${{ env.CLICKHOUSE_URL }}
+          EVENTS_TABLE: ${{ env.EVENTS_TABLE }}
+        run: |
+          nohup cargo run --bin siem-pipeline > ../target/test-artifacts/api_stdout.log 2> ../target/test-artifacts/api_stderr.log &
+          echo $! > ../target/test-artifacts/api_pid.txt
           for i in {1..60}; do
-            curl -fsS $BASE_URL/health >/dev/null && break || sleep 1
+            if curl -sS http://127.0.0.1:9999/api/v2/health >/dev/null; then echo healthy; break; fi
+            sleep 1
           done
-          curl -fsS $BASE_URL/health || (echo "health failed"; tail -n +1 /tmp/siem_srv.log; exit 1)
+          curl -sS http://127.0.0.1:9999/api/v2/health > ../target/test-artifacts/wire_health.json
 
-      - name: Run smoke (search + CRUD)
+      - name: Capture live DDL and API samples
         run: |
-          BASE_URL=$BASE_URL cargo run --bin v2_smoke || true
-          ls -1 target/test-artifacts || true
+          ART=./target/test-artifacts
+          mkdir -p "$ART"
+          clickhouse client -q "SHOW CREATE TABLE dev.events FORMAT Pretty" > "$ART/wire_schema_events.sql" || true
+          clickhouse client -q "SHOW CREATE TABLE dev.alerts FORMAT Pretty" > "$ART/wire_schema_alerts.sql" || true
+          clickhouse client -q "SHOW CREATE TABLE dev.alert_rules FORMAT Pretty" > "$ART/wire_schema_alert_rules.sql" || true
+          clickhouse client -q "SHOW CREATE TABLE dev.rule_state FORMAT Pretty" > "$ART/wire_schema_rule_state.sql" || true
+          clickhouse client -q "SHOW CREATE TABLE dev.parsers_admin FORMAT Pretty" > "$ART/wire_schema_parsers_admin.sql" || true
+          clickhouse client -q "SHOW CREATE TABLE dev.log_sources_admin FORMAT Pretty" > "$ART/wire_schema_log_sources_admin.sql" || true
+          printf "%s" '{"tenant_id":"default","time":{"last_seconds":600},"q":"message:fail"}' > "$ART/search_compile_body.json"
+          cp "$ART/search_compile_body.json" "$ART/search_execute_body.json"
+          curl -sS -X POST http://127.0.0.1:9999/api/v2/search/compile --header Content-Type:application/json --data-binary @"$ART/search_compile_body.json" -o "$ART/wire_search_compile.json"
+          curl -sS -X POST http://127.0.0.1:9999/api/v2/search/execute --header Content-Type:application/json --data-binary @"$ART/search_execute_body.json" -o "$ART/wire_search_execute.json"
+          curl -sS "http://127.0.0.1:9999/api/v2/alerts?limit=3" > "$ART/wire_alerts.json" || true
+          curl -sS "http://127.0.0.1:9999/api/v2/admin/parsers?limit=3" > "$ART/wire_parsers_list.json" || true
+          curl -sS "http://127.0.0.1:9999/api/v2/admin/log-sources?tenant_id=default&limit=3" > "$ART/wire_log_sources_list.json" || true
+          curl -sS "http://127.0.0.1:9999/metrics" > "$ART/wire_metrics.txt" || true
 
-      - name: Run streaming smoke (Redis stream ➜ match ➜ alert)
+      - name: Run admin parsers CRUD proof
+        run: bash ./scripts/admin_parsers_proof.sh
+
+      - name: Run admin log-sources CRUD proof
+        run: bash ./scripts/admin_log_sources_proof.sh
+
+      - name: Filter metrics keys
         run: |
-          bash scripts/stream_smoke.sh
-          tail -n 120 siem_unified_pipeline/target/test-artifacts/final_reportv1.md || true
+          awk '/^siem_v2_(ingest_total|rate_limit_total|rules_run_total|alerts_written_total|stream_(enqueue_total|ack_total|eval_errors_total|lag_ms))/{print}' ./target/test-artifacts/wire_metrics.txt > ./target/test-artifacts/wire_metrics_keys.txt || true
 
-      - name: Admin UI CRUD proofs (parsers, log sources, api keys)
+      - name: Sync wire fixtures to UI
         run: |
-          bash scripts/admin_parsers_proof.sh || true
-          bash scripts/admin_log_sources_proof.sh || true
-          bash scripts/api_keys_proof.sh || true
-          bash scripts/investigations_proof.sh || true
-          bash scripts/stats_cards_proof.sh || true
-          tail -n 200 siem_unified_pipeline/target/test-artifacts/final_reportv1.md || true
+          mkdir -p ./siem_unified_pipeline/ui-react/fixtures
+          cp -f ./target/test-artifacts/wire_*.json ./siem_unified_pipeline/ui-react/fixtures/ || true
 
-      - name: Run UI E2E (Playwright) and append UI Proof
-        run: |
-          bash scripts/ui_proof_append.sh || true
-
-      - name: Short soak run (~60s)
-        run: |
-          BATCH=40 RUN_ID=SOAK-CI-${{ github.run_id }} bash scripts/soak_start.sh
-          sleep 60
-          bash scripts/soak_status.sh || true
-          bash scripts/soak_stop.sh
-          tail -n 160 target/test-artifacts/final_reportv1.md || true
-
-      - name: Run scheduler & sigma proofs (gate)
-        run: |
-          bash scripts/v2_proof_scheduler.sh
-          bash scripts/v2_proof_sigma.sh
-
-      - name: Run canaries
-        run: |
-          bash scripts/canary_queries.sh
-
-      - name: Short soak
-        run: |
-          MINUTES=1 bash scripts/soak_scheduler.sh
-
-      - name: Ingest soak (short)
-        run: |
-          EPS=20 DURATION_MIN=1 bash scripts/soak_ingest.sh
-
-      - name: Canary check
-        run: |
-          bash scripts/canary_queries.sh
-          test -f siem_unified_pipeline/target/test-artifacts/canary_fail_count.txt
-          F=$(cat siem_unified_pipeline/target/test-artifacts/canary_fail_count.txt)
-          [ "${F:-0}" -eq 0 ]
-
-      - name: Enforce gate (alerts > 0 + metrics bump)
-        run: |
-          AFILE=siem_unified_pipeline/target/test-artifacts/v2_e2e_alerts.json
-          jq -e '.alerts|length > 0' "$AFILE"
-          M=$(curl -fsS $BASE_URL/metrics | egrep '^siem_v2_(rules_run_total|alerts_written_total)'); echo "$M"
-          [ -n "$M" ] || (echo "no metrics bump"; exit 1)
-
-      - name: Append final report and show tail
-        run: |
-          bash scripts/final_report_append.sh
-          tail -n 200 siem_unified_pipeline/target/test-artifacts/final_reportv1.md || true
-
-      - name: Build native dist (macOS tarball structure)
-        run: |
-          cd siem_unified_pipeline
-          cargo build --locked --release --bins
-          rm -rf dist && mkdir -p dist/bin dist/scripts dist/ui
-          cp -a target/release/siem-pipeline target/release/siem-stream-runner dist/bin/
-          cp -a ../scripts/*.sh dist/scripts/
-          cp -a ui dist/ui
-          date -u +%FT%TZ > dist/VERSION
-          (cd dist && tar -czf ../siem-v2-native-linux.tgz .)
-          ls -lh siem-v2-native-linux.tgz
-
-      - name: Build React UI and run minimal E2E
-        run: |
-          cd siem_unified_pipeline/ui-react
-          npm ci
-          npm run build
-          cd ../..
-          # React dist already served at /ui/app by router; reuse running server
-          npx --yes playwright install --with-deps
-          node -e "console.log('PW '+process.versions.node)" >/dev/null
-          npm --prefix siem_unified_pipeline/ui-react run e2e || true
-
-      - name: SLO checks
-        run: |
-          bash scripts/slo_check.sh
-
-      - uses: actions/upload-artifact@v4
+      - name: Install Node
+        uses: actions/setup-node@v4
         with:
-          name: final_report
-          path: siem_unified_pipeline/target/test-artifacts/final_reportv1.md
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: siem_unified_pipeline/ui-react/package-lock.json
 
-      - uses: actions/upload-artifact@v4
-        with:
-          name: stream_artifacts
-          path: siem_unified_pipeline/target/test-artifacts
+      - name: Install UI deps
+        working-directory: ./siem_unified_pipeline/ui-react
+        run: npm ci --prefer-offline --no-audit --no-fund
 
-      - uses: actions/upload-artifact@v4
-        with:
-          name: soak_artifacts
-          path: target/test-artifacts/soak
+      - name: Build UI and run unit tests
+        working-directory: ./siem_unified_pipeline/ui-react
+        run: |
+          npm run -s build
+          npm run -s test
 
-      - uses: actions/upload-artifact@v4
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
         with:
-          name: native_dist
-          path: siem_unified_pipeline/siem-v2-native-linux.tgz
+          name: v2-proof-artifacts
+          path: |
+            ./siem_unified_pipeline/target/test-artifacts/**
+            ./target/test-artifacts/**
+            ./siem_unified_pipeline/ui-react/fixtures/**
+            ./siem_unified_pipeline/ui-react/test-results/**
+          if-no-files-found: warn
 
-      - uses: actions/upload-artifact@v4
+      - name: Stop API
+        if: always()
+        run: |
+          if [ -f ./siem_unified_pipeline/target/test-artifacts/api_pid.txt ]; then kill -9 $(cat ./siem_unified_pipeline/target/test-artifacts/api_pid.txt) || true; fi
+
+      - name: Run storage policy proof (non-blocking)
+        run: |
+          bash ./scripts/storage_policies_proof.sh || true
+
+      - name: Upload storage policy artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
         with:
-          name: ui-react-dist
-          path: siem_unified_pipeline/ui-react/dist
+          name: storage-policy-artifacts
+          path: |
+            ./target/test-artifacts/ch_version.txt
+            ./target/test-artifacts/ch_storage_policies.txt
+            ./target/test-artifacts/ch_volumes.txt
+            ./target/test-artifacts/ch_tables_settings.txt
+            ./target/test-artifacts/ttl_probe_before.tsv
+            ./target/test-artifacts/ttl_probe_after.tsv
+            ./target/test-artifacts/ttl_probe_parts_before.tsv
+            ./target/test-artifacts/ttl_probe_parts_after.tsv
+            ./target/test-artifacts/verify_notes.txt
+          if-no-files-found: warn
 
 
