@@ -16,7 +16,7 @@ export interface SearchExecuteRequest {
 }
 
 // Execute response is dynamic JSON rows; keep it as any for table rendering
-export type SearchExecuteResponse = any;
+export type SearchExecuteResponseDyn = any;
 
 export interface SchemaWrap { create_sql: string }
 

@@ -1,116 +1,50 @@
-import { Search, Play, Radio, Save, Download } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
+import React from "react";
+import type { SearchModel } from "../../hooks/useSearchModel";
 
-interface QueryBarProps {
-  tenant?: string;
-  query: string;
-  isLoading?: boolean;
-  onQueryChange: (query: string) => void;
-  onCompile: () => void;
+type Props = {
+  value: SearchModel;
+  onChange: (m: SearchModel) => void;
   onRun: () => void;
-  onTail: () => void;
-  onSave: () => void;
-  onExport: () => void;
-}
+};
 
-export function QueryBar({
-  tenant,
-  query,
-  isLoading,
-  onQueryChange,
-  onCompile,
-  onRun,
-  onTail,
-  onSave,
-  onExport,
-}: QueryBarProps) {
-  const canRun = Boolean(tenant);
+const FIELDS = [
+  "message",
+  "source_ip",
+  "destination_ip",
+  "event_type",
+  "host",
+  "user",
+];
+
+export function QueryBar({ value, onChange, onRun }: Props) {
+  const set = (patch: Partial<SearchModel>) => onChange({ ...value, ...patch });
+  const setWhere = (field: string, op: any, arg: string) =>
+    set({ where: { op: op || "contains", args: [field, arg] } as any });
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
-      <div className="space-y-4">
-        {/* Query Input */}
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-          <input
-            type="text"
-            value={query}
-            onChange={(e) => onQueryChange(e.target.value)}
-            placeholder='Enter your search query (e.g., message:"failed" AND user:alice)'
-            className={cn(
-              "w-full pl-10 pr-4 py-3 border rounded-lg",
-              "bg-white dark:bg-gray-700",
-              "border-gray-300 dark:border-gray-600",
-              "text-gray-900 dark:text-gray-100",
-              "placeholder-gray-500 dark:placeholder-gray-400",
-              "focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent",
-              !canRun && "opacity-50 cursor-not-allowed"
-            )}
-            disabled={!canRun}
-          />
-        </div>
-
-        {/* Helper text when no tenant selected */}
-        {!tenant && (
-          <p className="text-sm text-amber-600 dark:text-amber-400">
-            Choose a tenant from the top bar to enable search
-          </p>
-        )}
-
-        {/* Action Buttons */}
-        <div className="flex flex-wrap gap-2">
-          <Button
-            onClick={onCompile}
-            variant="outline"
-            disabled={!canRun || isLoading}
-          >
-            Compile
-          </Button>
-          
-          <Button
-            onClick={onRun}
-            variant="default"
-            disabled={!canRun || isLoading}
-            className="gap-2"
-          >
-            <Play className="w-4 h-4" />
-            Run Search
-          </Button>
-
-          <Button
-            onClick={onTail}
-            variant="outline"
-            disabled={!canRun || isLoading}
-            className="gap-2"
-          >
-            <Radio className="w-4 h-4" />
-            Tail
-          </Button>
-
-          <div className="ml-auto flex gap-2">
-            <Button
-              onClick={onSave}
-              variant="ghost"
-              disabled={!canRun || !query}
-              className="gap-2"
-            >
-              <Save className="w-4 h-4" />
-              Save Search
-            </Button>
-
-            <Button
-              onClick={onExport}
-              variant="ghost"
-              disabled={!canRun || isLoading}
-              className="gap-2"
-            >
-              <Download className="w-4 h-4" />
-              Export
-            </Button>
-          </div>
-        </div>
+    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr 1fr auto", gap: 8, alignItems: "center" }}>
+      <input placeholder="tenant" value={value.tenant_ids[0]}
+        onChange={e => set({ tenant_ids: [e.target.value] })} />
+      <select value={value.where?.args[0] || "message"} onChange={e => setWhere(e.target.value, value.where?.op || "contains", value.where?.args[1] || "") }>
+        {FIELDS.map(f => <option key={f} value={f}>{f}</option>)}
+      </select>
+      <select value={value.where?.op || "contains"} onChange={e => setWhere(value.where?.args[0] || "message", e.target.value as any, value.where?.args[1] || "") }>
+        <option value="contains">contains</option>
+        <option value="json_eq">json_eq</option>
+        <option value="ipincidr">ipincidr</option>
+      </select>
+      <input placeholder="value" value={value.where?.args[1] || ""}
+        onChange={e => setWhere(value.where?.args[0] || "message", value.where?.op || "contains", e.target.value)} />
+      <input type="number" min={1} max={1000} value={value.limit} onChange={e => set({ limit: Math.max(1, Math.min(1000, Number(e.target.value)||200)) })} />
+      <button onClick={onRun}>Run</button>
+      <div style={{ gridColumn: "1 / span 2" }}>
+        <label>Last seconds</label>
+        <input type="number" min={1} max={86400} value={value.time_range.last_seconds || 600}
+          onChange={e => set({ time_range: { last_seconds: Math.max(1, Math.min(86400, Number(e.target.value)||600)) } })} />
       </div>
     </div>
   );
 }
+
+export default QueryBar;
+

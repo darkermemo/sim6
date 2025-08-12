@@ -1,4 +1,4 @@
-import type { Health, SearchExecuteRequest, SearchExecuteResponse } from "../types/api";
+import type { Health, SearchExecuteRequest } from "../types/api";
 
 const API_BASE = (import.meta as any).env?.VITE_API_BASE || "/";
 
@@ -27,7 +27,7 @@ export const api = {
       clearTimeout(t);
     }
   },
-  searchExecute: (body: SearchExecuteRequest) => getJson<SearchExecuteResponse>("/api/v2/search/execute", {
+  searchExecute: (body: SearchExecuteRequest) => getJson<any>("/api/v2/search/execute", {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(body),
