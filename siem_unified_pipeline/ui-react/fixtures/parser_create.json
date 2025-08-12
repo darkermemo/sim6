@@ -1,0 +1,1 @@
+{"name":"demo-parser","version":1,"kind":"regex","body":{"pattern":"^msg:(.*)$"},"samples":["msg:hello"],"enabled":1}

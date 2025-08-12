@@ -9,10 +9,20 @@ use axum::http::HeaderMap;
 use totp_rs::{Algorithm as TotpAlgorithm, TOTP};
 use base32;
 use rand::Rng;
+use base64::{engine::general_purpose, Engine as _};
 
 use crate::models::{User, UserRole, UserSession};
 use crate::error::PipelineError;
-use crate::database::DatabaseManager;
+
+// Temporary stub for DatabaseManager until we implement proper database layer
+#[derive(Clone, Debug)]
+pub struct DatabaseManager;
+
+impl DatabaseManager {
+    pub fn new() -> Self {
+        Self
+    }
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Claims {
@@ -273,12 +283,8 @@ impl AuthManager {
             .get("authorization")
             .and_then(|auth_header| auth_header.to_str().ok())
             .and_then(|auth_str| {
-                if auth_str.starts_with("Bearer ") {
-                    Some(auth_str[7..].to_string())
-                } else {
-                    None
-                }
-            })
+                 auth_str.strip_prefix("Bearer ").map(|stripped| stripped.to_string())
+             })
     }
 
     pub async fn logout(&self, session_id: Uuid) -> Result<(), PipelineError> {
@@ -334,7 +340,7 @@ impl AuthManager {
         let secret = self.generate_mfa_secret();
         
         // Create TOTP
-        let totp = TOTP::new(
+        let _totp = TOTP::new(
             TotpAlgorithm::SHA1,
             6,
             1,
@@ -345,7 +351,7 @@ impl AuthManager {
         // Generate QR code URL
         let qr_code_url = format!(
             "otpauth://totp/{}?secret={}&issuer=SIEM",
-            user_id,
+            user.username,
             base32::encode(base32::Alphabet::RFC4648 { padding: true }, secret.as_bytes())
         );
 
@@ -463,7 +469,7 @@ impl AuthManager {
     }
 
     fn verify_mfa_code_with_secret(&self, secret: &str, code: &str) -> Result<bool, PipelineError> {
-        let secret_bytes = base64::decode(secret)
+        let secret_bytes = general_purpose::STANDARD.decode(secret)
             .map_err(|e| PipelineError::internal(format!("Failed to decode MFA secret: {}", e)))?;
 
         let totp = TOTP::new(
@@ -667,6 +673,30 @@ impl UserRole {
                 VIEW_EVENTS.to_string(),
                 CREATE_EVENTS.to_string(),
                 VIEW_ALERTS.to_string(),
+            ],
+            UserRole::SuperAdmin => vec![
+                VIEW_EVENTS.to_string(),
+                CREATE_EVENTS.to_string(),
+                UPDATE_EVENTS.to_string(),
+                DELETE_EVENTS.to_string(),
+                VIEW_ALERTS.to_string(),
+                CREATE_ALERTS.to_string(),
+                UPDATE_ALERTS.to_string(),
+                DELETE_ALERTS.to_string(),
+                ASSIGN_ALERTS.to_string(),
+                VIEW_RULES.to_string(),
+                CREATE_RULES.to_string(),
+                UPDATE_RULES.to_string(),
+                DELETE_RULES.to_string(),
+                VIEW_USERS.to_string(),
+                CREATE_USERS.to_string(),
+                UPDATE_USERS.to_string(),
+                DELETE_USERS.to_string(),
+                VIEW_SYSTEM.to_string(),
+                MANAGE_SYSTEM.to_string(),
+                VIEW_AUDIT_LOGS.to_string(),
+                INVESTIGATE.to_string(),
+                RESPOND.to_string(),
             ],
         }
     }

@@ -1,0 +1,1 @@
+{"tenant_id":"default","source_id":"A1402CBC-E225-45AD-A3D0-7FC0817CE149","name":"UI Web","kind":"vector","config":{"endpoint":"http://127.0.0.1:9999/api/v2/ingest/bulk","token":"REDACT"},"enabled":1}

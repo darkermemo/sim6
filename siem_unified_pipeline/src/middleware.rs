@@ -386,7 +386,7 @@ pub async fn logging_middleware(
     let method = request.method().clone();
     let uri = request.uri().clone();
     let client_ip = extract_client_ip(&request);
-    let user_agent = extract_user_agent(&request);
+    let _user_agent = extract_user_agent(&request); // Extracted for future logging enhancement
     let request_id = extract_request_id(&request);
     
     debug!(
@@ -433,7 +433,7 @@ pub async fn logging_middleware(
     }
     
     // Record metrics
-    if let Some(context) = response.extensions().get::<RequestContext>() {
+    if let Some(_context) = response.extensions().get::<RequestContext>() {
         metrics.record_component_activity(
             "http_server",
             duration.as_millis() as f64,
@@ -510,11 +510,7 @@ fn extract_bearer_token(request: &Request) -> Option<String> {
         .get("authorization")
         .and_then(|auth| auth.to_str().ok())
         .and_then(|auth_str| {
-            if auth_str.starts_with("Bearer ") {
-                Some(auth_str[7..].to_string())
-            } else {
-                None
-            }
+            auth_str.strip_prefix("Bearer ").map(|stripped| stripped.to_string())
         })
 }
 

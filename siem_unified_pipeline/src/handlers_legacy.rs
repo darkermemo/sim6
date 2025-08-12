@@ -16,92 +16,18 @@ use futures::stream::{Stream};
 use redis::streams::{StreamReadOptions, StreamReadReply};
 use redis::AsyncCommands;
 use validator::Validate;
-use rusqlite::Connection;
+
 
 use crate::error::{Result, PipelineError};
 use crate::pipeline::{Pipeline, PipelineEvent, ProcessingStage};
 use crate::metrics::{MetricsCollector, ComponentStatus};
 use crate::config::PipelineConfig;
+use crate::health::HealthService;
+use crate::clickhouse_pool::{ClickHousePool, create_clickhouse_pool, query_ch_counts, CountRow};
+use clickhouse::Client as ClickHouseClient;
 
-// SQLite search function
-async fn search_events_from_sqlite(search_query: &crate::models::SearchQuery) -> std::result::Result<Vec<crate::models::Event>, Box<dyn std::error::Error>> {
-    let conn = Connection::open("siem.db")?;
-    
-    let mut sql = "SELECT id, timestamp, source, source_type, severity, facility, hostname, process, message, raw_message, source_ip, source_port, protocol, tags, fields, processing_stage, created_at FROM events WHERE 1=1".to_string();
-    let mut params: Vec<Box<dyn rusqlite::ToSql>> = vec![];
-    
-    // Add time range filter
-    sql.push_str(" AND timestamp >= ?1 AND timestamp <= ?2");
-    params.push(Box::new(search_query.time_range.start.format("%Y-%m-%d %H:%M:%S").to_string()));
-    params.push(Box::new(search_query.time_range.end.format("%Y-%m-%d %H:%M:%S").to_string()));
-    
-    // Add filters
-    let mut param_index = 3;
-    for (key, value) in &search_query.filters {
-        if let Some(str_value) = value.as_str() {
-            sql.push_str(&format!(" AND {} = ?{}", key, param_index));
-            params.push(Box::new(str_value.to_string()));
-            param_index += 1;
-        }
-    }
-    
-    // Add search query if provided
-    if !search_query.query.is_empty() {
-        sql.push_str(&format!(" AND (message LIKE ?{} OR raw_message LIKE ?{})", param_index, param_index + 1));
-        let search_term = format!("%{}%", search_query.query);
-        params.push(Box::new(search_term.clone()));
-        params.push(Box::new(search_term));
-    }
-    
-    // Add ordering and limit
-    sql.push_str(" ORDER BY timestamp DESC LIMIT ? OFFSET ?");
-    params.push(Box::new(search_query.limit as i64));
-    params.push(Box::new(search_query.offset as i64));
-    
-    let mut stmt = conn.prepare(&sql)?;
-    let param_refs: Vec<&dyn rusqlite::ToSql> = params.iter().map(|p| p.as_ref()).collect();
-    
-    let rows = stmt.query_map(&param_refs[..], |row| {
-        let timestamp_str: String = row.get("timestamp")?;
-        let created_at_str: String = row.get("created_at")?;
-        
-        let timestamp = chrono::DateTime::parse_from_str(&timestamp_str, "%Y-%m-%d %H:%M:%S")
-            .map_err(|e| rusqlite::Error::InvalidColumnType(0, "timestamp".to_string(), rusqlite::types::Type::Text))?
-            .with_timezone(&chrono::Utc);
-            
-        let created_at = chrono::DateTime::parse_from_str(&created_at_str, "%Y-%m-%d %H:%M:%S")
-            .map_err(|e| rusqlite::Error::InvalidColumnType(0, "created_at".to_string(), rusqlite::types::Type::Text))?
-            .with_timezone(&chrono::Utc);
-        
-        Ok(crate::models::Event {
-            id: uuid::Uuid::parse_str(&row.get::<_, String>("id")?).map_err(|e| rusqlite::Error::InvalidColumnType(0, "id".to_string(), rusqlite::types::Type::Text))?,
-            timestamp,
-            source: row.get("source")?,
-            source_type: row.get("source_type")?,
-            severity: row.get("severity")?,
-            facility: row.get("facility")?,
-            hostname: row.get("hostname")?,
-            process: row.get("process")?,
-            message: row.get("message")?,
-            raw_message: row.get("raw_message")?,
-            source_ip: row.get("source_ip")?,
-            source_port: row.get::<_, i64>("source_port")? as i32,
-            protocol: row.get("protocol")?,
-            tags: serde_json::from_str(&row.get::<_, String>("tags")?).unwrap_or_default(),
-            fields: serde_json::from_str(&row.get::<_, String>("fields")?).unwrap_or_default(),
-            processing_stage: row.get("processing_stage")?,
-            created_at,
-            updated_at: created_at, // Use created_at as default for updated_at
-        })
-    })?;
-    
-    let mut events = Vec::new();
-    for row in rows {
-        events.push(row?);
-    }
-    
-    Ok(events)
-}
+
+
 
 // Shared application state
 #[derive(Clone)]
@@ -110,6 +36,7 @@ pub struct AppState {
     pub metrics: Arc<MetricsCollector>,
     pub config: Arc<tokio::sync::RwLock<PipelineConfig>>,
     pub redis_client: Option<Arc<redis::Client>>,
+    pub ch_pool: Arc<ClickHousePool>,
 }
 
 impl AppState {
@@ -136,11 +63,48 @@ impl AppState {
             }
         };
 
+        // Initialize ClickHouse connection pool
+        let ch_pool = {
+            // Extract ClickHouse config from destinations
+            let mut ch_url = "http://localhost:8123".to_string();
+            let mut ch_database = "dev".to_string();
+            let mut ch_username = "default".to_string();
+            let mut ch_password = "".to_string();
+            let mut max_connections = 10;
+
+            // Try to find ClickHouse destination in config
+            for (name, dest) in &config.destinations {
+                if let crate::config::DestinationType::ClickHouse { connection_string, database, .. } = &dest.destination_type {
+                    ch_url = connection_string.clone();
+                    ch_database = database.clone();
+                    // Use database config for username/password if available
+                    ch_username = config.database.username.clone();
+                    ch_password = config.database.password.clone();
+                    max_connections = config.database.max_connections;
+                    break;
+                } else if name.to_lowercase().contains("clickhouse") {
+                    // Fallback for other ClickHouse configurations
+                    break;
+                }
+            }
+
+            let pool = create_clickhouse_pool(
+                ch_url,
+                ch_database,
+                ch_username,
+                ch_password,
+                max_connections,
+            ).await.map_err(|e| PipelineError::database(format!("Failed to create ClickHouse pool: {}", e)))?;
+
+            Arc::new(pool)
+        };
+
         Ok(AppState {
             pipeline,
             metrics,
             config: config_arc,
             redis_client,
+            ch_pool,
         })
     }
 }
@@ -255,6 +219,31 @@ pub struct PageInfo {
     pub has_previous: bool,
 }
 
+// EPS endpoint structs
+#[derive(Serialize, Clone)]
+struct EpsStats {
+    avg_eps: f64,
+    current_eps: f64,
+    peak_eps: f64,
+    window_seconds: u64,
+}
+
+#[derive(Serialize)]
+struct EpsResponse {
+    global: EpsStats,
+    per_tenant: HashMap<String, EpsStats>,
+    timestamp: chrono::DateTime<chrono::Utc>,
+    sql: String,
+    rows_used: u64,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct VectorHealthResponse {
+    pub status: String,
+    pub healthy: bool,
+    pub events_processed: Option<i64>,
+}
+
 // Create the router with all endpoints
 pub fn create_router(state: AppState) -> Router {
     let api_v1_router = Router::new()
@@ -270,6 +259,8 @@ pub fn create_router(state: AppState) -> Router {
         .route("/metrics/components", get(get_component_metrics))
         .route("/metrics/performance", get(get_performance_metrics))
         .route("/metrics/historical", get(get_historical_metrics))
+        .route("/metrics/eps", get(get_eps_metrics))
+        .route("/vector/health", get(get_vector_health))
         
         // Event ingestion endpoints
         .route("/events/ingest", post(ingest_single_event))
@@ -408,6 +399,7 @@ pub fn create_router(state: AppState) -> Router {
     Router::new()
         .nest("/api/v1", api_v1_router)
         // Dev UI routes - full working dashboard with debug visualizations
+        .route("/dev", get(dev_dashboard))  // Route without trailing slash
         .route("/dev/", get(dev_dashboard))
         .route("/dev/index.html", get(dev_dashboard))
         .route("/dev/dashboard.html", get(dev_dashboard))
@@ -422,8 +414,10 @@ pub fn create_router(state: AppState) -> Router {
         .route("/dev/settings", get(dev_settings))
         .route("/dev/settings.html", get(dev_settings))
         .route("/dev/metrics/eps", get(dev_eps_metrics))
+        .route("/dev/metrics/live", get(dev_metrics_live))
+        .route("/dev/health", get(health_report))
         // Keep legacy routes for backward compatibility
-        .route("/health", get(health_check))
+        .route("/health", get(health_summary))
         .route("/metrics", get(get_metrics))
         .route("/events/ingest", post(ingest_single_event))
         .route("/events/search", get(search_events))
@@ -461,8 +455,187 @@ pub async fn dev_settings() -> Result<impl IntoResponse> {
     Ok(Html(html_content))
 }
 
+// Helper function to get ClickHouse client from config
+async fn get_clickhouse_client(
+    state: &AppState,
+) -> crate::error::Result<ClickHouseClient> {
+    let config = state.config.read().await;
+
+    // Extract ClickHouse connection details from the config
+    // This assumes ClickHouse is configured as a destination
+    let clickhouse_dest = config
+        .destinations
+        .iter()
+        .find(|(_, dest)| {
+            matches!(
+                dest.destination_type,
+                crate::config::DestinationType::ClickHouse { .. }
+            )
+        })
+        .ok_or_else(|| {
+            crate::error::PipelineError::configuration("No ClickHouse destination configured")
+        })?;
+
+    let (url, database) = match &clickhouse_dest.1.destination_type {
+        crate::config::DestinationType::ClickHouse {
+            connection_string,
+            database,
+            ..
+        } => (connection_string.clone(), database.clone()),
+        _ => {
+            return Err(crate::error::PipelineError::configuration(
+                "Invalid ClickHouse destination",
+            ))
+        }
+    };
+
+    let client = ClickHouseClient::default()
+        .with_url(&url)
+        .with_database(&database);
+
+    Ok(client)
+}
+
+/// Get real-time EPS metrics from ClickHouse with per-tenant breakdown
+pub async fn get_eps_metrics(State(state): State<AppState>) -> Result<impl IntoResponse> {
+    debug!("Real-time EPS metrics requested");
+    
+    // Try to get ClickHouse client, fallback to pipeline metrics if unavailable
+    let clickhouse_result = get_clickhouse_client(&state).await;
+    
+    match clickhouse_result {
+        Ok(client) => {
+            // Query ClickHouse for real-time EPS data
+            let global_eps_query = "
+                SELECT count() / 60 as eps
+                FROM events 
+                WHERE timestamp >= now() - INTERVAL 1 MINUTE
+            ";
+            
+            let tenant_eps_query = "
+                SELECT 
+                    tenant_id,
+                    count() / 60 as eps
+                FROM events 
+                WHERE timestamp >= now() - INTERVAL 1 MINUTE
+                GROUP BY tenant_id
+                ORDER BY eps DESC
+            ";
+            
+            // Execute queries with proper error handling
+            let global_eps = match client.query(global_eps_query).fetch_one::<f64>().await {
+                Ok(eps) => eps,
+                Err(e) => {
+                    warn!("Failed to query global EPS from ClickHouse: {}", e);
+                    // Fallback to pipeline metrics
+                    state.metrics.get_pipeline_metrics().await.processing_rate_per_sec
+                }
+            };
+            
+            let tenant_eps_result: crate::error::Result<Vec<(String, f64)>> = client
+                .query(tenant_eps_query)
+                .fetch_all::<(String, f64)>()
+                .await
+                .map_err(PipelineError::ClickHouseError);
+                
+            let mut per_tenant = HashMap::new();
+            match tenant_eps_result {
+                Ok(rows) => {
+                    for (tenant_id, eps) in rows {
+                        per_tenant.insert(tenant_id, EpsStats {
+                            avg_eps: eps,
+                            current_eps: eps,
+                            peak_eps: eps,
+                            window_seconds: 60,
+                        });
+                    }
+                },
+                Err(e) => {
+                    warn!("Failed to query tenant EPS from ClickHouse: {}", e);
+                    // Return empty tenant map on error
+                }
+            };
+            
+            let response = EpsResponse {
+                global: EpsStats {
+                    avg_eps: global_eps,
+                    current_eps: global_eps,
+                    peak_eps: global_eps,
+                    window_seconds: 60,
+                },
+                per_tenant: per_tenant.clone(),
+                timestamp: chrono::Utc::now(),
+                sql: format!("{} | {}", global_eps_query.trim(), tenant_eps_query.trim()),
+                rows_used: per_tenant.len() as u64 + 1,
+            };
+            
+            Ok(Json(response))
+        }
+        Err(e) => {
+            warn!("ClickHouse not available, falling back to pipeline metrics: {}", e);
+            
+            // Fallback to existing pipeline metrics
+            let pipeline_metrics = state.metrics.get_pipeline_metrics().await;
+            let global_eps = pipeline_metrics.processing_rate_per_sec;
+            
+            // Return mock tenant data as fallback
+            let mut per_tenant = HashMap::new();
+            per_tenant.insert("default".to_string(), EpsStats {
+                avg_eps: global_eps * 0.8,
+                current_eps: global_eps * 0.8,
+                peak_eps: global_eps,
+                window_seconds: 60,
+            });
+            
+            let response = EpsResponse {
+                global: EpsStats {
+                    avg_eps: global_eps,
+                    current_eps: global_eps,
+                    peak_eps: global_eps,
+                    window_seconds: 60,
+                },
+                per_tenant,
+                timestamp: chrono::Utc::now(),
+                sql: "fallback_to_pipeline_metrics".to_string(),
+                rows_used: 1,
+            };
+            
+            Ok(Json(response))
+        }
+    }
+}
+
+/// Dev metrics live page handler
+pub async fn dev_metrics_live() -> impl IntoResponse {
+    Html(r#"
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Live Metrics - SIEM Dev</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; }
+        .metric { margin: 10px 0; padding: 10px; border: 1px solid #ddd; }
+    </style>
+</head>
+<body>
+    <h1>Live Metrics</h1>
+    <div class="metric">
+        <h3>EPS Metrics</h3>
+        <p><a href="/dev/metrics/eps">View EPS JSON</a></p>
+    </div>
+    <div class="metric">
+        <h3>Health Status</h3>
+        <p><a href="/dev/health">View Health JSON</a></p>
+    </div>
+</body>
+</html>
+    "#)
+}
+
+/// Legacy EPS endpoint for backward compatibility
+/// EPS metrics endpoint that returns data in the expected test format
 pub async fn dev_eps_metrics(State(state): State<AppState>) -> Result<impl IntoResponse> {
-    debug!("EPS metrics requested");
+    debug!("EPS metrics requested in expected test format");
     
     // Get current EPS from pipeline metrics
     let pipeline_metrics = state.metrics.get_pipeline_metrics().await;
@@ -471,27 +644,77 @@ pub async fn dev_eps_metrics(State(state): State<AppState>) -> Result<impl IntoR
     let avg_eps = performance_metrics.throughput_events_per_sec;
     let peak_eps = performance_metrics.throughput_events_per_sec * 1.5; // Mock peak
     
-    // For now, return mock tenant EPS data since the method doesn't exist
-    let tenant_eps = serde_json::json!({
-        "default": {
-            "current_eps": current_eps * 0.8,
-            "avg_eps": avg_eps * 0.8,
-            "peak_eps": peak_eps * 0.8
-        }
-    });
+    // Create per-tenant metrics in expected format
+    let mut per_tenant = HashMap::new();
+    per_tenant.insert("default".to_string(), serde_json::json!({
+        "avg_eps": avg_eps,
+        "current_eps": current_eps,
+        "peak_eps": peak_eps
+    }));
     
+    // Create response in expected format matching test schema
     let response = serde_json::json!({
         "global": {
-            "current_eps": current_eps,
             "avg_eps": avg_eps,
+            "current_eps": current_eps,
             "peak_eps": peak_eps,
             "window_seconds": 60
         },
-        "per_tenant": tenant_eps,
-        "timestamp": chrono::Utc::now()
+        "per_tenant": per_tenant,
+        "timestamp": chrono::Utc::now().to_rfc3339()
     });
     
     Ok(Json(response))
+}
+
+/// Get Vector health status and metrics
+pub async fn get_vector_health(State(state): State<AppState>) -> Result<impl IntoResponse> {
+    debug!("Vector health check requested");
+    
+    // Check if Vector client is available in metrics collector
+    let metrics = &state.metrics;
+    
+    // Try to get Vector health from the metrics collector's Vector client
+    // This assumes the MetricsCollector has a method to check Vector health
+    let vector_health = match metrics.get_vector_client().await {
+        Some(vector_client) => {
+            match vector_client.health().await {
+                Ok(_) => {
+                    // Try to get events processed from Prometheus metrics
+                    let events_processed = match vector_client.scrape_prom().await {
+                        Ok(metrics_text) => {
+                            // Parse the prometheus metrics to extract events processed
+                            crate::vector::parse_prom_number(&metrics_text, "vector_events_processed_total").map(|f| f as i64)
+                        }
+                        Err(_) => None,
+                    };
+                    
+                    VectorHealthResponse {
+                        status: "healthy".to_string(),
+                        healthy: true,
+                        events_processed,
+                    }
+                }
+                Err(e) => {
+                    warn!("Vector health check failed: {}", e);
+                    VectorHealthResponse {
+                        status: format!("unhealthy: {}", e),
+                        healthy: false,
+                        events_processed: None,
+                    }
+                }
+            }
+        }
+        None => {
+            VectorHealthResponse {
+                status: "not_configured".to_string(),
+                healthy: false,
+                events_processed: None,
+            }
+        }
+    };
+    
+    Ok(Json(vector_health))
 }
 
 // Health check handlers
@@ -560,6 +783,51 @@ pub async fn system_status(State(state): State<AppState>) -> Result<impl IntoRes
     });
     
     Ok(Json(status))
+}
+
+/// Health summary endpoint - returns simple status for /health
+pub async fn health_summary(State(state): State<AppState>) -> Result<impl IntoResponse> {
+    let health_service = HealthService::new(state.clone()).await;
+    let report = health_service.get_last_report().await;
+    
+    let status = match report {
+        Some(r) => match r.overall_status {
+            crate::health::HealthStatus::Healthy => "healthy",
+            crate::health::HealthStatus::Degraded => "degraded", 
+            crate::health::HealthStatus::Unhealthy => "unhealthy",
+            crate::health::HealthStatus::Unknown => "unknown",
+            crate::health::HealthStatus::NotConfigured => "not_configured",
+        },
+        None => "unknown"
+    };
+    
+    Ok(Json(serde_json::json!({
+        "status": status,
+        "timestamp": Utc::now()
+    })))
+}
+
+/// Health report endpoint - returns detailed health information for /dev/health
+pub async fn health_report(State(state): State<AppState>) -> Result<impl IntoResponse> {
+    let health_service = HealthService::new(state.clone()).await;
+    let report = health_service.get_last_report().await;
+    
+    match report {
+        Some(r) => Ok(Json(r)),
+        None => {
+            // If no cached report, run a quick health check
+            let config = state.config.read().await.clone();
+            let check_config = crate::health::HealthCheckConfig::default();
+            let health_checker = crate::health::HealthChecker::new(config, check_config);
+            match health_checker.run_health_checks().await {
+                Ok(fresh_report) => Ok(Json(fresh_report)),
+                Err(e) => {
+                     error!("Failed to run health checks: {}", e);
+                     Err(crate::error::PipelineError::HealthCheckError(format!("Health check failed: {}", e)).into())
+                 }
+            }
+        }
+    }
 }
 
 pub async fn version_info() -> Result<impl IntoResponse> {
@@ -786,7 +1054,7 @@ pub async fn search_events(
             start: query.start_time.unwrap_or_else(|| Utc::now() - chrono::Duration::hours(24)),
             end: query.end_time.unwrap_or_else(Utc::now),
         },
-        sort_by: Some("timestamp".to_string()),
+        sort_by: Some("event_timestamp".to_string()),
         sort_order: crate::models::SortOrder::Desc,
         limit: query.limit.unwrap_or(100),
         offset: query.offset.unwrap_or(0),
@@ -815,19 +1083,19 @@ pub async fn search_events(
         search_query.filters.insert("tenant_id".to_string(), serde_json::Value::String(tenant_id.to_string()));
     }
     
-    // Execute search using SQLite database
-    let search_result = search_events_from_sqlite(&search_query).await;
+    // Execute search using ClickHouse database
+    let search_result = state.pipeline.search_events(&search_query).await;
     match search_result {
         Ok(search_result) => {
             let query_time_ms = start_time.elapsed().as_millis() as f64;
             
-            let events: Vec<crate::schemas::EventDetail> = search_result
+            let events: Vec<crate::schemas::EventDetail> = search_result.items
             .into_iter()
             .map(|event: crate::models::Event| event.into())
             .collect();
             
             let total_count = events.len() as u64;
-            let total_pages = (total_count as f64 / search_query.limit as f64).ceil() as u32;
+            let _total_pages = (total_count as f64 / search_query.limit as f64).ceil() as u32;
             let current_page = (search_query.offset / search_query.limit) + 1;
             
             let response = crate::schemas::EventSearchResponse {
@@ -851,7 +1119,7 @@ pub async fn search_events(
 }
 
 pub async fn get_event_by_id(
-    State(state): State<AppState>,
+    State(_state): State<AppState>,
     Path(id): Path<String>,
 ) -> Result<impl IntoResponse> {
     info!("Retrieving event by ID: {}", id);
@@ -954,7 +1222,7 @@ pub async fn events_stream_clickhouse(
 
 // Create a stream of events from ClickHouse
 fn create_clickhouse_event_stream(
-    pipeline: Arc<Pipeline>,
+    _pipeline: Arc<Pipeline>,
     source_filter: Option<String>,
     severity_filter: Option<String>,
     security_event_filter: Option<bool>,
@@ -972,7 +1240,7 @@ fn create_clickhouse_event_stream(
                     let now = chrono::Utc::now();
                     
                     // Query ClickHouse for events since last check
-                    let query = format!(
+                    let _query = format!(
                         "SELECT event_id, tenant_id, source_type, severity, raw_event, event_timestamp, 
                          source_ip, user, tags, fields, processing_stage, created_at
                          FROM events 
@@ -1305,7 +1573,7 @@ pub async fn reload_config(State(state): State<AppState>) -> Result<impl IntoRes
 }
 
 // Routing management handlers
-pub async fn get_routing_rules(State(state): State<AppState>) -> Result<impl IntoResponse> {
+pub async fn get_routing_rules(State(_state): State<AppState>) -> Result<impl IntoResponse> {
     info!("Retrieving all routing rules");
     
     // Get routing manager from pipeline
@@ -1331,7 +1599,7 @@ pub async fn get_routing_rules(State(state): State<AppState>) -> Result<impl Int
 }
 
 pub async fn create_routing_rule(
-    State(state): State<AppState>,
+    State(_state): State<AppState>,
     Json(request): Json<crate::schemas::CreateRoutingRuleRequest>,
 ) -> Result<impl IntoResponse> {
     info!("Creating new routing rule: {}", request.name);
@@ -1348,7 +1616,7 @@ pub async fn create_routing_rule(
     // Check if rule with same name already exists
     // TODO: Implement proper routing manager access when available
     let existing_rule: Option<crate::routing::RoutingRule> = None;
-    if let Some(existing_rule) = existing_rule {
+    if let Some(_existing_rule) = existing_rule {
         warn!("Routing rule with name '{}' already exists", request.name);
         return Err(PipelineError::bad_request(format!("Rule with name '{}' already exists", request.name)));
     }
@@ -1401,7 +1669,7 @@ pub async fn create_routing_rule(
 }
 
 pub async fn get_routing_rule(
-    State(state): State<AppState>,
+    State(_state): State<AppState>,
     Path(name): Path<String>,
 ) -> Result<impl IntoResponse> {
     info!("Retrieving routing rule: {}", name);
@@ -1426,7 +1694,7 @@ pub async fn get_routing_rule(
 }
 
 pub async fn update_routing_rule(
-    State(state): State<AppState>,
+    State(_state): State<AppState>,
     Path(name): Path<String>,
     Json(request): Json<crate::schemas::UpdateRoutingRuleRequest>,
 ) -> Result<impl IntoResponse> {
@@ -1501,7 +1769,7 @@ pub async fn update_routing_rule(
 }
 
 pub async fn delete_routing_rule(
-    State(state): State<AppState>,
+    State(_state): State<AppState>,
     Path(name): Path<String>,
 ) -> Result<impl IntoResponse> {
     info!("Deleting routing rule: {}", name);
@@ -1620,7 +1888,7 @@ pub async fn shutdown_system(State(state): State<AppState>) -> Result<impl IntoR
 }
 
 pub async fn get_system_logs(
-    State(state): State<AppState>,
+    State(_state): State<AppState>,
     Query(params): Query<HashMap<String, String>>,
 ) -> Result<impl IntoResponse> {
     info!("System logs requested with params: {:?}", params);

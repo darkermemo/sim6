@@ -122,6 +122,7 @@ pub struct SyslogParser {
 pub struct JsonParser;
 
 pub struct CefParser {
+    #[allow(dead_code)]
     regex: Regex,
 }
 
@@ -137,15 +138,18 @@ pub struct ThreatIntelEnricher {
 }
 
 pub struct AssetEnricher {
+    #[allow(dead_code)]
     assets: HashMap<String, AssetInfo>,
 }
 
 pub struct UserEnricher {
+    #[allow(dead_code)]
     users: HashMap<String, UserInfo>,
 }
 
 // Built-in filters
 pub struct SeverityFilter {
+    #[allow(dead_code)]
     min_severity: String,
 }
 
@@ -154,7 +158,9 @@ pub struct SourceFilter {
 }
 
 pub struct RegexFilter {
+    #[allow(dead_code)]
     pattern: Regex,
+    #[allow(dead_code)]
     field: String,
 }
 

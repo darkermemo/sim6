@@ -3,11 +3,26 @@ use std::collections::HashMap;
 use std::path::Path;
 use crate::error::{Result, PipelineError};
 
+/// Feature flags for enabling/disabling SIEM components
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub struct FeatureFlags {
+    /// Enable Kafka integration for event ingestion and routing
+    pub enable_kafka: bool,
+    /// Enable Vector integration for log collection and forwarding
+    pub enable_vector: bool,
+    /// Enable Redis integration for caching and streaming
+    pub enable_redis: bool,
+    /// Enable ClickHouse Server-Sent Events for real-time streaming
+    pub enable_ch_sse: bool,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub struct PipelineConfig {
     pub server: ServerConfig,
     pub database: DatabaseConfig,
+    pub features: FeatureFlags,
     pub sources: HashMap<String, DataSource>,
     pub transformations: HashMap<String, TransformationPipeline>,
     pub destinations: HashMap<String, DataDestination>,
@@ -17,6 +32,7 @@ pub struct PipelineConfig {
     pub security: SecurityConfig,
     pub performance: PerformanceConfig,
     pub rate_limiting: RateLimitingConfig,
+    pub vector: VectorConfig,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -393,7 +409,7 @@ pub struct AuthConfig {
 #[serde(rename_all = "snake_case")]
 pub enum AuthMethod {
     ApiKey,
-    JWT,
+    Jwt,
     Basic,
     OAuth2,
     Mutual,
@@ -457,6 +473,22 @@ pub struct RateLimitingConfig {
     pub burst_size: u32,
 }
 
+/// Configuration for Vector monitoring integration
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub struct VectorConfig {
+    /// Whether Vector monitoring is enabled
+    pub enabled: bool,
+    /// Vector base URL
+    pub base_url: Option<String>,
+    /// Vector health check path
+    pub health_path: String,
+    /// Vector metrics path
+    pub metrics_path: String,
+    /// Request timeout in milliseconds
+    pub timeout_ms: u64,
+}
+
 impl PipelineConfig {
     pub fn load<P: AsRef<Path>>(path: P) -> Result<Self> {
         let content = std::fs::read_to_string(path)
@@ -490,6 +522,7 @@ impl PipelineConfig {
         // Load from environment variables with SIEM_ prefix
         let mut config = Self::default();
         
+        // Server configuration
         if let Ok(host) = std::env::var("SIEM_SERVER_HOST") {
             config.server.host = host;
         }
@@ -498,6 +531,84 @@ impl PipelineConfig {
         }
         if let Ok(workers) = std::env::var("SIEM_SERVER_WORKERS") {
             config.server.workers = workers.parse().unwrap_or(num_cpus::get());
+        }
+        
+        // Feature flags environment variables
+        if let Ok(enable_kafka) = std::env::var("ENABLE_KAFKA") {
+            config.features.enable_kafka = enable_kafka.parse().unwrap_or(false);
+        }
+        if let Ok(enable_vector) = std::env::var("ENABLE_VECTOR") {
+            config.features.enable_vector = enable_vector.parse().unwrap_or(false);
+        }
+        if let Ok(enable_redis) = std::env::var("ENABLE_REDIS") {
+            config.features.enable_redis = enable_redis.parse().unwrap_or(false);
+        }
+        if let Ok(enable_ch_sse) = std::env::var("ENABLE_CH_SSE") {
+            config.features.enable_ch_sse = enable_ch_sse.parse().unwrap_or(false);
+        }
+        
+        // Vector configuration environment variables
+        if let Ok(base_url) = std::env::var("VECTOR_BASE_URL") {
+            config.vector.base_url = Some(base_url);
+        }
+        if let Ok(health_path) = std::env::var("VECTOR_HEALTH_PATH") {
+            config.vector.health_path = health_path;
+        }
+        if let Ok(metrics_path) = std::env::var("VECTOR_METRICS_PATH") {
+            config.vector.metrics_path = metrics_path;
+        }
+        if let Ok(timeout_ms) = std::env::var("VECTOR_TIMEOUT_MS") {
+            config.vector.timeout_ms = timeout_ms.parse().unwrap_or(5000);
+        }
+        
+        config.validate()?;
+        Ok(config)
+    }
+    
+    /// Load configuration from file and override with environment variables
+    /// This allows file-based configuration with environment variable overrides
+    pub async fn from_file_with_env_overrides<P: AsRef<Path>>(path: P) -> Result<Self> {
+        // First load from file
+        let mut config = Self::from_file(path).await?;
+        
+        // Then apply environment variable overrides
+        // Server configuration
+        if let Ok(host) = std::env::var("SIEM_SERVER_HOST") {
+            config.server.host = host;
+        }
+        if let Ok(port) = std::env::var("SIEM_SERVER_PORT") {
+            config.server.port = port.parse().unwrap_or(config.server.port);
+        }
+        if let Ok(workers) = std::env::var("SIEM_SERVER_WORKERS") {
+            config.server.workers = workers.parse().unwrap_or(config.server.workers);
+        }
+        
+        // Feature flags environment variables
+        if let Ok(enable_kafka) = std::env::var("ENABLE_KAFKA") {
+            config.features.enable_kafka = enable_kafka.parse().unwrap_or(config.features.enable_kafka);
+        }
+        if let Ok(enable_vector) = std::env::var("ENABLE_VECTOR") {
+            config.features.enable_vector = enable_vector.parse().unwrap_or(config.features.enable_vector);
+        }
+        if let Ok(enable_redis) = std::env::var("ENABLE_REDIS") {
+            config.features.enable_redis = enable_redis.parse().unwrap_or(config.features.enable_redis);
+        }
+        if let Ok(enable_ch_sse) = std::env::var("ENABLE_CH_SSE") {
+            config.features.enable_ch_sse = enable_ch_sse.parse().unwrap_or(config.features.enable_ch_sse);
+        }
+        
+        // Vector configuration environment variables
+        if let Ok(base_url) = std::env::var("VECTOR_BASE_URL") {
+            config.vector.base_url = Some(base_url);
+        }
+        if let Ok(health_path) = std::env::var("VECTOR_HEALTH_PATH") {
+            config.vector.health_path = health_path;
+        }
+        if let Ok(metrics_path) = std::env::var("VECTOR_METRICS_PATH") {
+            config.vector.metrics_path = metrics_path;
+        }
+        if let Ok(timeout_ms) = std::env::var("VECTOR_TIMEOUT_MS") {
+            config.vector.timeout_ms = timeout_ms.parse().unwrap_or(config.vector.timeout_ms);
         }
         
         config.validate()?;
@@ -569,6 +680,12 @@ impl Default for PipelineConfig {
                 connection_timeout: 30,
                 idle_timeout: 600,
                 max_lifetime: 3600,
+            },
+            features: FeatureFlags {
+                enable_kafka: false,
+                enable_vector: true,
+                enable_redis: false,
+                enable_ch_sse: true,
             },
             sources: HashMap::new(),
             transformations: HashMap::new(),
@@ -646,6 +763,13 @@ impl Default for PipelineConfig {
                 enabled: true,
                 requests_per_second: 10000,
                 burst_size: 50000,
+            },
+            vector: VectorConfig {
+                enabled: true,
+                base_url: Some("http://127.0.0.1:8686".to_string()),
+                health_path: "/health".to_string(),
+                metrics_path: "/metrics".to_string(),
+                timeout_ms: 1500,
             },
         }
     }

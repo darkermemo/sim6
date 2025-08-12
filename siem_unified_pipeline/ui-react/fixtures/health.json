@@ -1,0 +1,8 @@
+{
+  "status": "ok",
+  "cidr_fn": "IPv4CIDRMatch",
+  "ingest_path": "api",
+  "redis": "ok"
+}
+
+

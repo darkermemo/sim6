@@ -12,7 +12,7 @@ use tracing::{debug, error, info, warn};
 use uuid::Uuid;
 
 use crate::error::Result;
-use crate::handlers::AppState;
+use crate::state::AppState;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LogSource {
@@ -53,7 +53,7 @@ pub struct CreateLogSourceResponse {
 // Helper function to get ClickHouse client from config
 async fn get_clickhouse_client(
     state: &AppState,
-) -> Result<ClickHouseClient, crate::error::PipelineError> {
+) -> Result<ClickHouseClient> {
     let config = state.config.read().await;
 
     let clickhouse_dest = config
