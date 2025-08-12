@@ -21,7 +21,10 @@ npm run build
 PORT=5173
 if lsof -i :$PORT >/dev/null 2>&1; then
   echo "[e2e] port $PORT in use; killing process"
-  lsof -ti :$PORT | xargs -n1 kill -9 || true
+  PIDS="$(lsof -ti :$PORT || true)"
+  for PID in $PIDS; do
+    kill -9 "$PID" 2>/dev/null || true
+  done
 fi
 nohup npm run preview -- --strictPort --port $PORT >"$ART/ui_preview.log" 2>&1 & echo $! > "$ART/ui_preview.pid"
 for i in {1..30}; do
