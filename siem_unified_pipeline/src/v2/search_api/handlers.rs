@@ -1,4 +1,7 @@
 use axum::{extract::State, Json, response::sse::{Event, Sse}};
+use std::convert::Infallible;
+use std::pin::Pin;
+use futures_util::stream::{Stream, StreamExt};
 use serde_json::Value;
 use std::sync::Arc;
 use futures_util::stream;
@@ -66,39 +69,61 @@ pub async fn aggs(State(st): State<Arc<AppState>>, Json(body): Json<Value>) -> R
     })))
 }
 
-pub async fn tail(State(st): State<Arc<AppState>>, Json(body): Json<Value>) -> Sse<impl futures_util::Stream<Item = Result<Event, axum::Error>>> {
+pub async fn tail(
+    State(st): State<Arc<AppState>>,
+    Json(body): Json<Value>
+) -> Sse<Pin<Box<dyn Stream<Item = Result<Event, Infallible>> + Send>>> {
+    // Helper to create a boxed SSE stream from a single Event
+    fn single_event(msg: &'static str) -> Pin<Box<dyn Stream<Item = Result<Event, Infallible>> + Send>> {
+        let ev = Event::default().data(msg);
+        let s = futures_util::stream::once(async move { Ok::<Event, Infallible>(ev) });
+        Box::pin(s)
+    }
+
+    // Parse body into DSL
     let dsl = match translate_to_dsl(&body) {
         Ok(d) => d,
-        Err(_) => return Sse::new(stream::once(async { Ok(Event::default().data("error: invalid query")) }))
+        Err(_) => return Sse::new(single_event("error: invalid query")),
     };
-    
+
+    // Compile DSL to SQL
     let compiled = match compile_search(&dsl, &st.events_table) {
         Ok(c) => c,
-        Err(_) => return Sse::new(stream::once(async { Ok(Event::default().data("error: compilation failed")) }))
+        Err(_) => return Sse::new(single_event("error: compilation failed")),
     };
-    
+
     // Add ORDER BY event_timestamp DESC LIMIT 1000 for tail mode
-    let tail_sql = format!("{} ORDER BY event_timestamp DESC LIMIT 1000 FORMAT JSONEachRow", compiled.sql);
-    
-    let stream = stream::once(async move {
-        let client = reqwest::Client::new();
-        let resp = client.get("http://localhost:8123/")
-            .query(&[("query", tail_sql)])
-            .send()
-            .await;
-            
-        match resp {
-            Ok(r) if r.status().is_success() => {
-                let text = r.text().await.unwrap_or_default();
-                let lines: Vec<&str> = text.lines().filter(|l| l.trim().len() > 0).collect();
-                
-                Ok(Event::default().data(format!("found {} events", lines.len())))
+    let tail_sql = format!(
+        "{} ORDER BY event_timestamp DESC LIMIT 1000 FORMAT JSONEachRow",
+        compiled.sql
+    );
+
+    // Query ClickHouse and emit a single summary event. Box the stream so all
+    // branches share the same concrete type.
+    let stream_boxed: Pin<Box<dyn Stream<Item = Result<Event, Infallible>> + Send>> = {
+        let s = async_stream::stream! {
+            let client = reqwest::Client::new();
+            let resp = client
+                .get("http://localhost:8123/")
+                .query(&[("query", tail_sql)])
+                .send()
+                .await;
+            match resp {
+                Ok(r) if r.status().is_success() => {
+                    let text = r.text().await.unwrap_or_default();
+                    let lines: Vec<&str> = text.lines().filter(|l| !l.trim().is_empty()).collect();
+                    yield Event::default().data(format!("found {} events", lines.len()));
+                }
+                _ => {
+                    yield Event::default().data("error: query failed");
+                }
             }
-            _ => Ok(Event::default().data("error: query failed"))
         }
-    });
-    
-    Sse::new(stream)
+        .map(|e| Ok::<Event, Infallible>(e));
+        Box::pin(s)
+    };
+
+    Sse::new(stream_boxed)
 }
 
 pub async fn export(State(st): State<Arc<AppState>>, Json(body): Json<Value>) -> Result<axum::response::Response, axum::http::StatusCode> {

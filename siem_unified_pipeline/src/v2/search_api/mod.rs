@@ -1,9 +1,11 @@
 use axum::{routing::{post, get, delete}, Router};
+use std::sync::Arc;
+use crate::v2::state::AppState;
 
 pub mod compiler;
 pub mod handlers;
 
-pub fn router() -> Router {
+pub fn routes(state: Arc<AppState>) -> Router<Arc<AppState>> {
     Router::new()
         .route("/api/v2/search/compile", post(handlers::compile))
         .route("/api/v2/search/execute", post(handlers::execute))
@@ -13,6 +15,7 @@ pub fn router() -> Router {
         .route("/api/v2/search/saved", get(handlers::saved_searches))
         .route("/api/v2/search/saved", post(handlers::save_search))
         .route("/api/v2/search/saved/:id", delete(handlers::delete_search))
+        .with_state(state)
 }
 
 

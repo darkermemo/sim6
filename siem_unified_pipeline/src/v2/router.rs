@@ -9,6 +9,7 @@ use crate::v2::search_api;
 pub fn build(state: AppState) -> Router {
     let state = Arc::new(state);
     v2metrics::init();
+    let search = search_api::routes(state.clone());
     Router::new()
         .route("/favicon.ico", get(favicon))
         .route("/health", get(health_check))
@@ -28,19 +29,11 @@ pub fn build(state: AppState) -> Router {
         .route("/api/v2/metrics/ch_storage", get(get_ch_storage))
         .route("/api/v2/metrics/kafka_partitions", get(get_kafka_partitions))
         .route("/api/v2/metrics/redis_memory", get(get_redis_memory))
-        // Compiler exploratory stubs
         // New Search API (simple-body compile/execute/aggs)
-        .route("/api/v2/search/compile", axum::routing::post(crate::v2::search_api::handlers::compile))
-        .route("/api/v2/search/execute", axum::routing::post(crate::v2::search_api::handlers::execute))
-        .route("/api/v2/search/aggs", axum::routing::post(crate::v2::search_api::handlers::aggs))
+        .merge(search)
         .route("/api/v2/search/estimate", axum::routing::post(search_estimate))
         .route("/api/v2/search/facets", axum::routing::post(search_facets))
-         // Saved searches CRUD
-         .route("/api/v2/search/saved", get(|state: axum::extract::State<std::sync::Arc<AppState>>, q: axum::extract::Query<crate::v2::handlers::saved_searches::ListQ>| async move { crate::v2::handlers::saved_searches::list_saved(state, q).await }))
-         .route("/api/v2/search/saved", axum::routing::post(crate::v2::handlers::saved_searches::create_saved))
-         .route("/api/v2/search/saved/:id", get(crate::v2::handlers::saved_searches::get_saved))
-         .route("/api/v2/search/saved/:id", axum::routing::put(crate::v2::handlers::saved_searches::update_saved))
-         .route("/api/v2/search/saved/:id", axum::routing::delete(crate::v2::handlers::saved_searches::delete_saved))
+         // Saved searches CRUD provided by search_api routes; avoid duplicates here
         .route("/api/v2/schema/fields", get(get_fields))
         .route("/api/v2/schema/enums", get(get_enums))
         .route("/api/v2/system/config", get(get_system_config))

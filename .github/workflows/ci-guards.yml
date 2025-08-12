@@ -1,0 +1,54 @@
+name: CI Guards
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  guards:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Guard - No legacy UI references
+      run: bash scripts/guards/no_legacy_ui.sh
+      
+    - name: Guard - AppShell architecture
+      run: |
+        START_SHA=802d220 \
+        SIG_IMPORT_PATH="@/components/layout/AppShell" \
+        SIG_TAG_NAME="AppShell" \
+        bash scripts/ui_appshell_guard.sh
+
+  ui-tests:
+    runs-on: ubuntu-latest
+    needs: guards
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: siem_unified_pipeline/ui-react/package-lock.json
+    
+    - name: Setup Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        
+    - name: UX - E2E on ui-react
+      run: bash scripts/ga/50_ux.sh
+      
+    - name: Upload Playwright Report
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: playwright-report
+        path: target/test-artifacts/ui_playwright_report/
+        retention-days: 30
