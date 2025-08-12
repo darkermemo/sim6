@@ -1,0 +1,7 @@
+{
+  "sql": "SELECT * FROM dev.events WHERE 1 ORDER BY event_timestamp DESC LIMIT 10000 SETTINGS max_execution_time=8",
+  "where_sql": "1",
+  "warnings": []
+}
+
+

@@ -1,8 +1,12 @@
-export default function App(){
+import { RouterProvider } from 'react-router-dom';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { router } from './routes';
+import { queryClient } from './lib/api';
+
+export default function App() {
   return (
-    <div className="p-4">
-      <h1 className="text-2xl font-semibold">SIEM React</h1>
-      <p className="text-slate-600">Starter app. Routes and pages will be added.</p>
-    </div>
-  )
+    <QueryClientProvider client={queryClient}>
+      <RouterProvider router={router} />
+    </QueryClientProvider>
+  );
 }

@@ -1,0 +1,19 @@
+{
+  "alerts": [
+    {
+      "alert_id": "sample",
+      "tenant_id": "default",
+      "rule_id": "rule-1",
+      "alert_title": "Stream: message has hammer",
+      "alert_description": "Matched stream event",
+      "event_refs": "[]",
+      "severity": "LOW",
+      "status": "OPEN",
+      "alert_timestamp": 1754823949,
+      "created_at": 1754823949,
+      "updated_at": 1754823949
+    }
+  ]
+}
+
+

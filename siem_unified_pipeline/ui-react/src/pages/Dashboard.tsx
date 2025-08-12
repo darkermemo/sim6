@@ -34,7 +34,7 @@ export default function Dashboard(){
   const [ackPerSec, setAckPerSec] = useState(0)
 
   useEffect(()=>{ (async()=>{
-    setHealth(await fetchJson('/health'))
+    setHealth(await fetchJson('/api/v2/health'))
     try{ const j = await fetch(`/api/v2/alerts?limit=50`).then(r=>r.json()); setAlerts(j.alerts||[]) }catch{}
   })() }, [tenant, range])
 
@@ -59,7 +59,7 @@ export default function Dashboard(){
         // metrics for deltas + streaming status + quick stats
         const [mTxt, stJson, qJson] = await Promise.all([
           fetchText('/metrics'),
-          fetchJson('/api/v2/admin/streaming/status'),
+          fetchJson(`/api/v2/admin/streaming/status?tenant_id=${encodeURIComponent(tenant)}`),
           fetchJson('/api/v2/metrics/quick'),
         ])
         if(!mounted) return
@@ -116,7 +116,7 @@ export default function Dashboard(){
               <option value="7d">Last 7d</option>
             </select></label>
             <button className="btn" onClick={()=>{ setHealth({}); setMetrics(''); setAlerts([]); setTimeout(()=>{ (async()=>{
-              setHealth(await fetchJson('/health')); setMetrics(await fetchText('/metrics')); try{ const j = await fetch(`/api/v2/alerts?limit=20`).then(r=>r.json()); setAlerts(j.alerts||[]) }catch{}
+              setHealth(await fetchJson('/api/v2/health')); setMetrics(await fetchText('/metrics')); try{ const j = await fetch(`/api/v2/alerts?limit=20`).then(r=>r.json()); setAlerts(j.alerts||[]) }catch{}
             })()}, 0) }}>Refresh</button>
           </div>
         </div>

@@ -1,0 +1,15 @@
+{
+  "sql": "SELECT * FROM dev.events WHERE 1 ORDER BY event_timestamp DESC LIMIT 10000 SETTINGS max_execution_time=8",
+  "data": {
+    "data": [],
+    "meta": [
+      { "name": "tenant_id", "type": "LowCardinality(String)" }
+    ],
+    "rows": 0,
+    "rows_before_limit_at_least": 0,
+    "statistics": { "bytes_read": 0, "rows_read": 0, "elapsed": 0.0 }
+  },
+  "timings_ms": 3
+}
+
+

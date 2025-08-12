@@ -1,0 +1,1 @@
+{"sql":"SELECT * FROM dev.events WHERE tenant_id IN ('default') AND event_timestamp >= toUInt32(now()) - 600 AND message = 'fail' ORDER BY event_timestamp DESC LIMIT 10000 SETTINGS max_execution_time=8","warnings":[],"where_sql":"tenant_id IN ('default') AND event_timestamp >= toUInt32(now()) - 600 AND message = 'fail'"}
