@@ -1,3 +1,25 @@
+// Generated from captured wire files in target/test-artifacts
+
+export interface Health {
+  status: string;
+  cidr_fn: string;
+  ingest_path: string;
+  redis: string;
+  clickhouse: { ok: boolean; latency_ms: number };
+  redis_detail: { ok: boolean };
+}
+
+export interface SearchExecuteRequest {
+  tenant_id: string;
+  time: { last_seconds?: number; from?: number; to?: number };
+  q?: string;
+}
+
+// Execute response is dynamic JSON rows; keep it as any for table rendering
+export type SearchExecuteResponse = any;
+
+export interface SchemaWrap { create_sql: string }
+
 // Derived strictly from live wire_* fixtures and DDL. Do not invent fields.
 
 export interface HealthResponse {

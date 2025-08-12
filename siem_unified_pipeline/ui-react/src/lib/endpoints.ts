@@ -1,3 +1,41 @@
+import type { Health, SearchExecuteRequest, SearchExecuteResponse } from "../types/api";
+
+const API_BASE = (import.meta as any).env?.VITE_API_BASE || "/";
+
+async function getJson<T>(path: string, init?: RequestInit): Promise<T> {
+  const ctl = new AbortController();
+  const t = setTimeout(() => ctl.abort(), 8000);
+  try {
+    const res = await fetch(`${API_BASE}${path}`, { ...init, signal: ctl.signal });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return (await res.json()) as T;
+  } finally {
+    clearTimeout(t);
+  }
+}
+
+export const api = {
+  health: () => getJson<Health>("/health"),
+  metricsText: async () => {
+    const ctl = new AbortController();
+    const t = setTimeout(() => ctl.abort(), 8000);
+    try {
+      const res = await fetch(`${API_BASE}/metrics`, { signal: ctl.signal });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return await res.text();
+    } finally {
+      clearTimeout(t);
+    }
+  },
+  searchExecute: (body: SearchExecuteRequest) => getJson<SearchExecuteResponse>("/api/v2/search/execute", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body),
+  }),
+};
+
+export type ApiClient = typeof api;
+
 import type {
   HealthResponse,
   SearchExecuteResponse,
