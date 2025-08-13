@@ -1,4 +1,5 @@
 use axum::{extract::State, Json, response::sse::{Event, Sse}};
+use axum::response::IntoResponse;
 use std::convert::Infallible;
 use std::pin::Pin;
 use futures_util::stream::{Stream, StreamExt};
@@ -19,13 +20,43 @@ pub async fn compile(State(_st): State<Arc<AppState>>, Json(body): Json<Value>) 
 pub async fn execute(State(st): State<Arc<AppState>>, Json(body): Json<Value>) -> Result<Json<Value>, axum::http::StatusCode> {
     let dsl = translate_to_dsl(&body).map_err(|_| axum::http::StatusCode::UNPROCESSABLE_ENTITY)?;
     let compiled = compile_search(&dsl, &st.events_table).map_err(|_| axum::http::StatusCode::UNPROCESSABLE_ENTITY)?;
-    let sql = format!("{} FORMAT JSON", compiled.sql);
+
+    // Apply requested limit with a safe cap
+    let requested_limit = body
+        .get("limit")
+        .and_then(|v| v.as_u64())
+        .unwrap_or(200);
+    let safe_limit = requested_limit.min(10_000);
+
+    // compiled.sql ends with "LIMIT 10000 SETTINGS ..." in default search path.
+    // Replace the default limit with the safe limit. Fallback to appending LIMIT if pattern is not found.
+    let sql_limited = if compiled.sql.contains("LIMIT 10000") {
+        compiled.sql.replace("LIMIT 10000", &format!("LIMIT {}", safe_limit))
+    } else {
+        format!("{} LIMIT {}", compiled.sql, safe_limit)
+    };
+
+    // Execute via ClickHouse HTTP JSON
+    let sql = format!("{} FORMAT JSON", sql_limited);
     let client = reqwest::Client::new();
-    let resp = client.get("http://localhost:8123/").query(&[("query", sql.clone())]).send().await.map_err(|_| axum::http::StatusCode::BAD_GATEWAY)?;
-    if !resp.status().is_success() { return Err(axum::http::StatusCode::BAD_GATEWAY); }
+    let t0 = std::time::Instant::now();
+    let resp = client
+        .get("http://localhost:8123/")
+        .query(&[("query", sql.clone())])
+        .send()
+        .await
+        .map_err(|_| axum::http::StatusCode::BAD_GATEWAY)?;
+    if !resp.status().is_success() {
+        // Include ClickHouse error mapping if available in crate::error
+        let status = resp.status();
+        let txt = resp.text().await.unwrap_or_default();
+        tracing::error!(target = "search_execute", %status, ch_error = %txt, "ClickHouse error in search_execute");
+        return Err(crate::error::map_clickhouse_http_error(status, &txt, Some(&sql)).into_response().status());
+    }
     let text = resp.text().await.unwrap_or("{}".to_string());
     let data: Value = serde_json::from_str(&text).unwrap_or(serde_json::json!({"raw": text}));
-    Ok(Json(serde_json::json!({"sql": compiled.sql, "data": data, "took_ms": 0 })))
+    let took_ms = t0.elapsed().as_millis() as u64;
+    Ok(Json(serde_json::json!({"sql": sql_limited, "data": data, "took_ms": took_ms })))
 }
 
 pub async fn aggs(State(st): State<Arc<AppState>>, Json(body): Json<Value>) -> Result<Json<Value>, axum::http::StatusCode> {

@@ -46,4 +46,5 @@ pub mod streaming {
 pub mod schema {
     pub mod catalog;
 }
+pub mod dashboard_metrics;
 
