@@ -67,7 +67,7 @@ export function AppShell() {
   });
   
   // URL state for tenant and time range
-  const [urlState, setUrlState] = useUrlState({
+  const [urlState, setUrlState] = useUrlState('appState', {
     tenant: '101',
     range: '15m'
   });

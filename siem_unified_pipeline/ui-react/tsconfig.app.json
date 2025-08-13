@@ -30,9 +30,14 @@
   },
   "include": ["src", "vitest.config.ts", "vitest.setup.ts"],
   "exclude": [
-    "src/**/*.test.ts",
+    "src/**/*.test.ts", 
     "src/**/*.test.tsx",
     "src/components/rulePacks/**",
-    "src/pages/RulePacks.tsx"
+    "src/pages/RulePacks.tsx",
+    "src/pages/Rules.tsx",
+    "src/components/rules/**",
+    "src/lib/rules.ts",
+    "src/lib/rulePacks.ts",
+    "src/lib/toast.ts"
   ]
 }

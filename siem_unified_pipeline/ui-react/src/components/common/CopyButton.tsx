@@ -1,41 +1,40 @@
-import React from 'react';
-import { Copy, Check } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
+import React from 'react'
+import { Copy, Check } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
 
 interface CopyButtonProps {
-  text: string;
-  className?: string;
-  variant?: 'default' | 'ghost' | 'outline';
-  size?: 'default' | 'sm' | 'lg' | 'icon';
+  text: string
+  className?: string
+  size?: 'sm' | 'md' | 'lg'
 }
 
-export function CopyButton({ text, className, variant = 'ghost', size = 'icon' }: CopyButtonProps) {
-  const [copied, setCopied] = React.useState(false);
+export function CopyButton({ text, className, size = 'sm' }: CopyButtonProps) {
+  const [copied, setCopied] = React.useState(false)
 
   const handleCopy = async () => {
     try {
-      await navigator.clipboard.writeText(text);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      await navigator.clipboard.writeText(text)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
     } catch (err) {
-      console.error('Failed to copy:', err);
+      console.error('Failed to copy text:', err)
     }
-  };
+  }
 
   return (
     <Button
-      variant={variant}
-      size={size}
+      variant="ghost"
+      size={size === 'sm' ? 'sm' : 'default'}
       onClick={handleCopy}
-      className={cn("transition-all", className)}
-      aria-label={copied ? "Copied!" : "Copy to clipboard"}
+      className={cn('h-6 w-6 p-0', className)}
     >
       {copied ? (
-        <Check className="w-4 h-4 text-green-600" />
+        <Check className="h-3 w-3 text-green-600" />
       ) : (
-        <Copy className="w-4 h-4" />
+        <Copy className="h-3 w-3" />
       )}
+      <span className="sr-only">Copy to clipboard</span>
     </Button>
-  );
+  )
 }

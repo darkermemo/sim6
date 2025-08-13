@@ -56,7 +56,7 @@ function CompileDrawer({ sql, warnings, error, onClose }: CompileDrawerProps) {
 }
 
 export function SearchPage() {
-  const [urlState, setUrlState] = useUrlState({
+  const [urlState, setUrlState] = useUrlState('searchState', {
     tenant: '',
     range: '15m',
     q: '',
@@ -237,17 +237,16 @@ export function SearchPage() {
           {/* Results or empty state */}
           <div className="mt-6">
             {!urlState.tenant ? (
-              <EmptyState type="no-tenant" />
+              <EmptyState title="No tenant selected" description="Please select a tenant to start searching" />
             ) : searchError ? (
               <EmptyState 
-                type="error" 
-                error={searchError.message}
-                onRetry={executeSearch}
+                title="Search failed"
+                description={searchError.message}
               />
             ) : searchResults && searchResults.data.length === 0 ? (
               <EmptyState 
-                type="no-results"
-                onLoadDemo={() => console.log('Load demo data')}
+                title="No results found"
+                description="Try adjusting your search criteria"
               />
             ) : searchResults ? (
               <>

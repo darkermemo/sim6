@@ -1,46 +1,56 @@
-import { useCallback, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useState, useEffect, useCallback } from 'react';
 
-/**
- * Custom hook to sync state with URL query parameters
- * Provides read/write access to URL state with type safety
- */
-export function useUrlState<T extends Record<string, string>>(
-  defaultValues: T
-): [T, (updates: Partial<T>) => void] {
-  const [searchParams, setSearchParams] = useSearchParams();
-
-  // Read current state from URL with defaults
-  const state = Object.keys(defaultValues).reduce((acc, key) => {
-    const urlValue = searchParams.get(key);
-    acc[key as keyof T] = (urlValue ?? defaultValues[key]) as T[keyof T];
-    return acc;
-  }, {} as T);
-
-  // Update URL with new values
-  const setState = useCallback((updates: Partial<T>) => {
-    setSearchParams((prev) => {
-      const newParams = new URLSearchParams(prev);
-      
-      Object.entries(updates).forEach(([key, value]) => {
-        if (value === undefined || value === null || value === '') {
-          newParams.delete(key);
-        } else {
-          newParams.set(key, String(value));
-        }
-      });
-      
-      return newParams;
-    });
-  }, [setSearchParams]);
-
-  // Set initial defaults on mount if not present
-  useEffect(() => {
-    const hasAnyParam = Object.keys(defaultValues).some(key => searchParams.has(key));
-    if (!hasAnyParam) {
-      setState(defaultValues);
+export function useUrlState<T extends Record<string, any>>(key: string, defaultValue: T): [T, (value: Partial<T>) => void] {
+  const [state, setState] = useState<T>(() => {
+    if (typeof window === 'undefined') return defaultValue;
+    
+    const url = new URL(window.location.href);
+    const param = url.searchParams.get(key);
+    
+    if (param === null) return defaultValue;
+    
+    try {
+      return JSON.parse(param);
+    } catch {
+      return defaultValue;
     }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  });
 
-  return [state, setState];
+  const updateUrl = useCallback((value: Partial<T>) => {
+    if (typeof window === 'undefined') return;
+    
+    const newState = { ...state, ...value };
+    const url = new URL(window.location.href);
+    
+    if (JSON.stringify(newState) === JSON.stringify(defaultValue)) {
+      url.searchParams.delete(key);
+    } else {
+      url.searchParams.set(key, JSON.stringify(newState));
+    }
+    
+    window.history.replaceState({}, '', url.toString());
+    setState(newState);
+  }, [key, defaultValue, state]);
+
+  useEffect(() => {
+    const handlePopState = () => {
+      const url = new URL(window.location.href);
+      const param = url.searchParams.get(key);
+      
+      if (param === null) {
+        setState(defaultValue);
+      } else {
+        try {
+          setState(JSON.parse(param));
+        } catch {
+          setState(defaultValue);
+        }
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [key, defaultValue]);
+
+  return [state, updateUrl];
 }

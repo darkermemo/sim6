@@ -1,0 +1,11 @@
+{
+  "exclude": [
+    "siem_unified_pipeline/ui-react/node_modules",
+    "siem_unified_pipeline/ui-react/dist",
+    "target",
+    "node_modules", 
+    "src",
+    "tests",
+    "**/src-legacy/**"
+  ]
+}

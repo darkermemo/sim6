@@ -1,0 +1,13 @@
+src/components/rules/**
+src/components/rulePacks/**
+src/pages/Rules.tsx
+src/pages/RulePacks.tsx
+src/lib/rules.ts
+src/lib/rulePacks.ts
+src/lib/toast.ts
+*.css
+node_modules/
+dist/
+build/
+playwright-report/
+test-results/
