@@ -1,11 +1,16 @@
 {
+  "files": [],
+  "references": [{ "path": "./siem_unified_pipeline/ui-react/tsconfig.app.json" }],
+  "compilerOptions": {
+    "composite": true,
+    "skipLibCheck": true
+  },
   "exclude": [
-    "siem_unified_pipeline/ui-react/node_modules",
-    "siem_unified_pipeline/ui-react/dist",
+    "node_modules",
     "target",
-    "node_modules", 
+    "**/dist/**",
+    "**/src-legacy/**",
     "src",
-    "tests",
-    "**/src-legacy/**"
+    "tests"
   ]
 }

@@ -1,29 +1,18 @@
 {
-  "name": "siem-ui-api-bridge",
-  "version": "1.0.0",
-  "description": "API bridge server for SIEM UI to provide missing endpoints",
-  "main": "siem_ui_api_server.js",
+  "name": "siem-workspace",
+  "private": true,
+  "workspaces": [
+    "siem_unified_pipeline/ui-react"
+  ],
   "scripts": {
-    "start": "node siem_ui_api_server.js",
-    "dev": "nodemon siem_ui_api_server.js"
-  },
-  "dependencies": {
-    "axios": "^1.6.2",
-    "cors": "^2.8.5",
-    "express": "^4.18.2",
-    "jsonwebtoken": "^9.0.2"
+    "ui:lint": "cd siem_unified_pipeline/ui-react && npm run lint",
+    "ui:build": "cd siem_unified_pipeline/ui-react && npm run build",
+    "ui:preview": "cd siem_unified_pipeline/ui-react && npm run preview"
   },
   "devDependencies": {
-    "@playwright/test": "^1.54.1",
-    "nodemon": "^3.0.2",
-    "typescript": "^5.3.3"
-  },
-  "keywords": [
-    "siem",
-    "api",
-    "bridge",
-    "security"
-  ],
-  "author": "SIEM Team",
-  "license": "MIT"
+    "@typescript-eslint/eslint-plugin": "^6.21.0",
+    "@typescript-eslint/parser": "^6.21.0",
+    "eslint": "^8.57.1",
+    "typescript": "^5.9.2"
+  }
 }

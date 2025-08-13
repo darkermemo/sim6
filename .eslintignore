@@ -1,5 +1,3 @@
-src/
-tests/
-**/src-legacy/**
-node_modules/
 target/
+**/dist/**
+**/src-legacy/**
