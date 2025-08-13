@@ -23,9 +23,9 @@ import * as Types from "../lib/search-types";
 export default function SearchPage() {
   // Core search state
   const [state, setState] = useState<Types.SearchState>({
-    tenantId: "default",
-    query: "*",
-    time: { last_seconds: 600 },
+    tenantId: "hr", // Use tenant with most data for initial load
+    query: "",
+    time: { last_seconds: 86400 }, // 24 hours for initial load
     limit: 100,
     sort: [{ field: "event_timestamp", dir: "desc" }],
     sse: { enabled: false, connected: false },
@@ -47,6 +47,17 @@ export default function SearchPage() {
   // Load schema on mount - defensively
   // MVP: Skip schema/grammar fetch entirely
   useEffect(() => { /* no-op */ }, []);
+
+  // Auto-fetch latest 100 events on mount
+  useEffect(() => {
+    // Execute search with initial state (empty query = match all, last 24h, limit 100)
+    // Only run once on mount
+    const timer = setTimeout(() => {
+      execute();
+    }, 500); // Small delay to ensure component is fully mounted
+
+    return () => clearTimeout(timer);
+  }, []); // Empty dependency array - run only once
 
   const loadSchema = async (_signal?: AbortSignal) => {};
 
