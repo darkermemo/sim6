@@ -1,0 +1,402 @@
+/* OVERRIDES LAYER - Visual theme v2 with feature flag control */
+@layer overrides {
+  /* === FEATURE FLAG CONTROL === */
+  /* Only apply v2 theme when VISUAL_THEME=v2 is enabled */
+  :root[data-visual-theme="v2"] {
+    /* This selector activates the v2 visual theme */
+  }
+
+  /* === DARK MODE TOGGLE === */
+  /* Applied when dark mode class is present */
+  :root.dark[data-visual-theme="v2"] {
+    /* Dark mode specific overrides for v2 theme */
+  }
+
+  /* === SEARCH PAGE SPECIFIC OVERRIDES === */
+  /* Targeting the modern search page design that's already implemented */
+  :root[data-visual-theme="v2"] {
+    /* Search page main container */
+    :where([data-testid="page-search"]) {
+      background-color: var(--bg-muted);
+      font-family: var(--font-sans);
+    }
+
+    /* Search header */
+    :where([data-testid="page-search"] header) {
+      background-color: var(--surface);
+      border-bottom: 1px solid var(--border);
+      box-shadow: var(--shadow-1);
+    }
+
+    /* Search panels - sidebar */
+    :where([data-testid="page-search"] aside) {
+      background-color: var(--surface);
+      border-right: 1px solid var(--border);
+    }
+
+    /* Search main content */
+    :where([data-testid="page-search"] main) {
+      background-color: var(--surface);
+    }
+
+    /* Query bar */
+    :where([data-testid="page-search"]) .query-bar {
+      background-color: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: var(--space-4) var(--space-6);
+    }
+
+    /* Search results table */
+    :where([data-testid="result-table"]) {
+      background-color: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-3);
+    }
+
+    /* Form inputs in search */
+    :where([data-testid="page-search"]) input,
+    :where([data-testid="page-search"]) select,
+    :where([data-testid="page-search"]) textarea {
+      background-color: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--fg);
+      border-radius: var(--radius-2);
+      padding: var(--space-2) var(--space-3);
+      font-size: var(--text-sm);
+      transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+    }
+
+    :where([data-testid="page-search"]) input:focus,
+    :where([data-testid="page-search"]) select:focus,
+    :where([data-testid="page-search"]) textarea:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px var(--focus-ring);
+    }
+
+    /* Buttons in search */
+    :where([data-testid="page-search"]) button {
+      border-radius: var(--radius-2);
+      padding: var(--space-2) var(--space-4);
+      font-size: var(--text-sm);
+      font-weight: var(--font-weight-medium);
+      transition: all var(--transition-fast);
+    }
+
+    /* Primary buttons */
+    :where([data-testid="page-search"]) button:not(.btn-secondary):not(.btn-outline):not(.btn-ghost) {
+      background-color: var(--primary);
+      color: var(--primary-contrast);
+      border: none;
+    }
+
+    :where([data-testid="page-search"]) button:not(.btn-secondary):not(.btn-outline):not(.btn-ghost):hover:not(:disabled) {
+      background-color: var(--primary-hover);
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-2);
+    }
+  }
+
+  /* === APP SHELL OVERRIDES === */
+  :root[data-visual-theme="v2"] {
+    /* Main app container */
+    :where(#root) {
+      background-color: var(--bg);
+      color: var(--fg);
+      min-height: 100vh;
+    }
+
+    /* Navigation/Header improvements */
+    :where(nav, header) {
+      background-color: var(--surface);
+      border-bottom: 1px solid var(--border);
+      box-shadow: var(--shadow-1);
+    }
+
+    /* Navigation links */
+    :where(nav a, header a) {
+      color: var(--fg-muted);
+      transition: color var(--transition-fast);
+      padding: var(--space-2) var(--space-3);
+      border-radius: var(--radius-2);
+    }
+
+    :where(nav a:hover, header a:hover) {
+      color: var(--fg);
+      background-color: var(--hover-overlay);
+      text-decoration: none;
+    }
+
+    :where(nav a.active, header a.active) {
+      color: var(--primary);
+      background-color: var(--primary-muted);
+    }
+
+    /* Content areas */
+    :where(main) {
+      background-color: var(--bg);
+      min-height: calc(100vh - 64px); /* Adjust based on header height */
+    }
+  }
+
+  /* === PANEL AND CARD OVERRIDES === */
+  :root[data-visual-theme="v2"] {
+    /* Generic panels */
+    :where(.panel, .card) {
+      background-color: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-3);
+      box-shadow: var(--shadow-1);
+      overflow: hidden;
+    }
+
+    /* Panel headers */
+    :where(.panel-header) {
+      background-color: var(--surface-muted);
+      border-bottom: 1px solid var(--border);
+      padding: var(--space-3) var(--space-4);
+      font-weight: var(--font-weight-semibold);
+      font-size: var(--text-sm);
+      color: var(--fg-muted);
+    }
+
+    /* Panel content */
+    :where(.panel-content) {
+      padding: var(--space-4);
+    }
+  }
+
+  /* === TABLE OVERRIDES === */
+  :root[data-visual-theme="v2"] {
+    :where(table) {
+      background-color: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-3);
+      overflow: hidden;
+    }
+
+    :where(thead) {
+      background-color: var(--surface-muted);
+    }
+
+    :where(th) {
+      background-color: var(--surface-muted);
+      color: var(--fg-muted);
+      font-weight: var(--font-weight-semibold);
+      font-size: var(--text-sm);
+      padding: var(--space-3) var(--space-4);
+      border-bottom: 1px solid var(--border);
+    }
+
+    :where(td) {
+      padding: var(--space-3) var(--space-4);
+      border-bottom: 1px solid var(--border-muted);
+      font-size: var(--text-sm);
+    }
+
+    :where(tbody tr:hover) {
+      background-color: var(--hover-overlay);
+    }
+
+    :where(tbody tr:last-child td) {
+      border-bottom: none;
+    }
+  }
+
+  /* === FORM OVERRIDES === */
+  :root[data-visual-theme="v2"] {
+    :where(input, textarea, select) {
+      background-color: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--fg);
+      border-radius: var(--radius-2);
+      padding: var(--space-2) var(--space-3);
+      font-size: var(--text-sm);
+      transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+    }
+
+    :where(input:focus, textarea:focus, select:focus) {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px var(--focus-ring);
+    }
+
+    :where(input:disabled, textarea:disabled, select:disabled) {
+      background-color: var(--surface-muted);
+      color: var(--fg-subtle);
+      opacity: 0.6;
+    }
+  }
+
+  /* === BUTTON OVERRIDES === */
+  :root[data-visual-theme="v2"] {
+    :where(button) {
+      border-radius: var(--radius-2);
+      padding: var(--space-2) var(--space-4);
+      font-size: var(--text-sm);
+      font-weight: var(--font-weight-medium);
+      transition: all var(--transition-fast);
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-2);
+    }
+
+    /* Primary button (default) */
+    :where(button:not(.btn-secondary):not(.btn-outline):not(.btn-ghost)) {
+      background-color: var(--primary);
+      color: var(--primary-contrast);
+      border: none;
+    }
+
+    :where(button:not(.btn-secondary):not(.btn-outline):not(.btn-ghost):hover:not(:disabled)) {
+      background-color: var(--primary-hover);
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-2);
+    }
+
+    :where(button:not(.btn-secondary):not(.btn-outline):not(.btn-ghost):active:not(:disabled)) {
+      background-color: var(--primary-active);
+      transform: translateY(0);
+    }
+
+    /* Secondary button */
+    :where(.btn-secondary) {
+      background-color: var(--surface);
+      color: var(--fg);
+      border: 1px solid var(--border);
+    }
+
+    :where(.btn-secondary:hover:not(:disabled)) {
+      background-color: var(--surface-muted);
+      border-color: var(--border-accent);
+    }
+
+    /* Outline button */
+    :where(.btn-outline) {
+      background-color: transparent;
+      color: var(--primary);
+      border: 1px solid var(--primary);
+    }
+
+    :where(.btn-outline:hover:not(:disabled)) {
+      background-color: var(--primary);
+      color: var(--primary-contrast);
+    }
+
+    /* Ghost button */
+    :where(.btn-ghost) {
+      background-color: transparent;
+      color: var(--fg-muted);
+      border: none;
+    }
+
+    :where(.btn-ghost:hover:not(:disabled)) {
+      background-color: var(--hover-overlay);
+      color: var(--fg);
+    }
+
+    /* Disabled state */
+    :where(button:disabled) {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+  }
+
+  /* === ALERT/NOTIFICATION OVERRIDES === */
+  :root[data-visual-theme="v2"] {
+    :where([role="alert"], .alert, .notification) {
+      border-radius: var(--radius-3);
+      padding: var(--space-4);
+      border: 1px solid;
+      font-size: var(--text-sm);
+    }
+
+    :where(.alert-success) {
+      background-color: var(--success-subtle);
+      border-color: var(--success-muted);
+      color: var(--success);
+    }
+
+    :where(.alert-warning) {
+      background-color: var(--warning-subtle);
+      border-color: var(--warning-muted);
+      color: var(--warning);
+    }
+
+    :where(.alert-danger) {
+      background-color: var(--danger-subtle);
+      border-color: var(--danger-muted);
+      color: var(--danger);
+    }
+
+    :where(.alert-info) {
+      background-color: var(--info-subtle);
+      border-color: var(--info-muted);
+      color: var(--info);
+    }
+  }
+
+  /* === LOADING STATE OVERRIDES === */
+  :root[data-visual-theme="v2"] {
+    :where(.loading, .skeleton) {
+      background-color: var(--surface-muted);
+      animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+      border-radius: var(--radius-2);
+    }
+
+    @keyframes pulse {
+      0%, 100% {
+        opacity: 1;
+      }
+      50% {
+        opacity: 0.5;
+      }
+    }
+  }
+
+  /* === ACCESSIBILITY IMPROVEMENTS === */
+  :root[data-visual-theme="v2"] {
+    /* Focus indicators */
+    :where(*:focus-visible) {
+      outline: 2px solid var(--primary);
+      outline-offset: var(--focus-ring-offset);
+      border-radius: var(--radius-1);
+    }
+
+    /* High contrast mode support */
+    @media (prefers-contrast: high) {
+      :where(*) {
+        border-color: var(--fg) !important;
+      }
+    }
+  }
+
+  /* === RESPONSIVE OVERRIDES === */
+  @media (max-width: 768px) {
+    :root[data-visual-theme="v2"] {
+      /* Mobile-specific adjustments */
+      :where(.container) {
+        padding: 0 var(--space-4);
+      }
+
+      :where([data-testid="page-search"]) {
+        font-size: var(--text-sm);
+      }
+
+      :where([data-testid="page-search"] aside) {
+        /* Make sidebar stack on mobile */
+        width: 100%;
+        border-right: none;
+        border-bottom: 1px solid var(--border);
+      }
+
+      :where(table) {
+        font-size: var(--text-xs);
+      }
+
+      :where(th, td) {
+        padding: var(--space-2) var(--space-3);
+      }
+    }
+  }
+}

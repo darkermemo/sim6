@@ -1,0 +1,224 @@
+/* DESIGN TOKENS - Foundation for the modern SIEM theme */
+@layer tokens {
+  :root {
+    /* === SPACING SYSTEM === */
+    --space-0: 0;
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-5: 20px;
+    --space-6: 24px;
+    --space-8: 32px;
+    --space-10: 40px;
+    --space-12: 48px;
+    --space-16: 64px;
+    --space-20: 80px;
+    --space-24: 96px;
+    --space-32: 128px;
+
+    /* === RADIUS SYSTEM === */
+    --radius-0: 0;
+    --radius-1: 4px;
+    --radius-2: 6px;
+    --radius-3: 8px;
+    --radius-4: 12px;
+    --radius-5: 16px;
+    --radius-6: 24px;
+
+    /* === SHADOW SYSTEM === */
+    --shadow-0: none;
+    --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.05);
+    --shadow-2: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
+    --shadow-3: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    --shadow-4: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    --shadow-5: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+
+    /* === TYPOGRAPHY SYSTEM === */
+    --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --font-mono: ui-monospace, 'Cascadia Code', 'Source Code Pro', monospace;
+    
+    --text-xs: 12px;
+    --text-sm: 14px;
+    --text-base: 16px;
+    --text-lg: 18px;
+    --text-xl: 20px;
+    --text-2xl: 24px;
+    --text-3xl: 32px;
+
+    --font-weight-normal: 400;
+    --font-weight-medium: 500;
+    --font-weight-semibold: 600;
+    --font-weight-bold: 700;
+
+    --line-height-tight: 1.25;
+    --line-height-snug: 1.375;
+    --line-height-normal: 1.5;
+    --line-height-relaxed: 1.625;
+
+    /* === TRANSITION SYSTEM === */
+    --transition-fast: 150ms ease-out;
+    --transition-normal: 200ms ease-out;
+    --transition-slow: 300ms ease-out;
+    
+    --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+    --ease-enter: cubic-bezier(0, 0, 0.2, 1);
+    --ease-exit: cubic-bezier(0.4, 0, 1, 1);
+
+    /* === LIGHT THEME COLORS === */
+    /* Background Colors */
+    --bg: #ffffff;
+    --bg-muted: #f8fafc;
+    --bg-subtle: #f1f5f9;
+    --bg-accent: #e2e8f0;
+    --bg-overlay: rgba(15, 23, 42, 0.8);
+
+    /* Foreground Colors */
+    --fg: #0f172a;
+    --fg-muted: #64748b;
+    --fg-subtle: #94a3b8;
+    --fg-accent: #475569;
+
+    /* Border Colors */
+    --border: #e2e8f0;
+    --border-muted: #f1f5f9;
+    --border-accent: #cbd5e1;
+
+    /* Primary Colors */
+    --primary: #3b82f6;
+    --primary-hover: #2563eb;
+    --primary-active: #1d4ed8;
+    --primary-contrast: #ffffff;
+    --primary-muted: #dbeafe;
+    --primary-subtle: #eff6ff;
+
+    /* Success Colors */
+    --success: #10b981;
+    --success-hover: #059669;
+    --success-contrast: #ffffff;
+    --success-muted: #d1fae5;
+    --success-subtle: #ecfdf5;
+
+    /* Warning Colors */
+    --warning: #f59e0b;
+    --warning-hover: #d97706;
+    --warning-contrast: #ffffff;
+    --warning-muted: #fef3c7;
+    --warning-subtle: #fffbeb;
+
+    /* Danger Colors */
+    --danger: #ef4444;
+    --danger-hover: #dc2626;
+    --danger-contrast: #ffffff;
+    --danger-muted: #fecaca;
+    --danger-subtle: #fef2f2;
+
+    /* Info Colors */
+    --info: #06b6d4;
+    --info-hover: #0891b2;
+    --info-contrast: #ffffff;
+    --info-muted: #cffafe;
+    --info-subtle: #ecfeff;
+
+    /* Surface Colors (for cards, panels) */
+    --surface: #ffffff;
+    --surface-contrast: #0f172a;
+    --surface-muted: #f8fafc;
+    --surface-accent: #f1f5f9;
+
+    /* Interactive States */
+    --hover-overlay: rgba(15, 23, 42, 0.04);
+    --active-overlay: rgba(15, 23, 42, 0.08);
+    --focus-ring: rgba(59, 130, 246, 0.2);
+    --focus-ring-offset: 2px;
+  }
+
+  /* === DARK THEME COLORS === */
+  :root.dark {
+    /* Background Colors */
+    --bg: #0f172a;
+    --bg-muted: #1e293b;
+    --bg-subtle: #334155;
+    --bg-accent: #475569;
+    --bg-overlay: rgba(0, 0, 0, 0.8);
+
+    /* Foreground Colors */
+    --fg: #f8fafc;
+    --fg-muted: #cbd5e1;
+    --fg-subtle: #94a3b8;
+    --fg-accent: #64748b;
+
+    /* Border Colors */
+    --border: #334155;
+    --border-muted: #1e293b;
+    --border-accent: #475569;
+
+    /* Primary Colors (maintain accessibility) */
+    --primary: #60a5fa;
+    --primary-hover: #3b82f6;
+    --primary-active: #2563eb;
+    --primary-contrast: #0f172a;
+    --primary-muted: #1e3a8a;
+    --primary-subtle: #172554;
+
+    /* Success Colors */
+    --success: #34d399;
+    --success-hover: #10b981;
+    --success-contrast: #0f172a;
+    --success-muted: #064e3b;
+    --success-subtle: #022c22;
+
+    /* Warning Colors */
+    --warning: #fbbf24;
+    --warning-hover: #f59e0b;
+    --warning-contrast: #0f172a;
+    --warning-muted: #78350f;
+    --warning-subtle: #451a03;
+
+    /* Danger Colors */
+    --danger: #f87171;
+    --danger-hover: #ef4444;
+    --danger-contrast: #0f172a;
+    --danger-muted: #7f1d1d;
+    --danger-subtle: #450a0a;
+
+    /* Info Colors */
+    --info: #22d3ee;
+    --info-hover: #06b6d4;
+    --info-contrast: #0f172a;
+    --info-muted: #164e63;
+    --info-subtle: #0c4a6e;
+
+    /* Surface Colors */
+    --surface: #1e293b;
+    --surface-contrast: #f8fafc;
+    --surface-muted: #334155;
+    --surface-accent: #475569;
+
+    /* Interactive States */
+    --hover-overlay: rgba(248, 250, 252, 0.04);
+    --active-overlay: rgba(248, 250, 252, 0.08);
+    --focus-ring: rgba(96, 165, 250, 0.3);
+  }
+
+  /* === FEATURE FLAG CONTROL === */
+  /* Only apply v2 theme when feature flag is enabled */
+  :root[data-visual-theme="v2"] {
+    /* v2 theme will be activated via this selector */
+  }
+
+  /* Accessibility - Reduce motion when requested */
+  @media (prefers-reduced-motion: reduce) {
+    :root {
+      --transition-fast: 0ms;
+      --transition-normal: 0ms;
+      --transition-slow: 0ms;
+    }
+    
+    * {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}

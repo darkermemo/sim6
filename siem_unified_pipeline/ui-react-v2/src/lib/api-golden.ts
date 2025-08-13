@@ -15,7 +15,7 @@ const FieldZ = z.object({
 const FieldsEnvelopeZ = z.object({ fields: z.array(FieldZ) });
 const FieldsResponseZ = z.union([FieldsEnvelopeZ, z.array(FieldZ)]);
 
-const EnumsFlatZ = z.record(z.array(z.string()));
+const EnumsFlatZ = z.record(z.string(), z.array(z.string()));
 const EnumsEnvelopeZ = z.object({ enums: EnumsFlatZ });
 const EnumsResponseZ = z.union([EnumsEnvelopeZ, EnumsFlatZ]).default({});
 

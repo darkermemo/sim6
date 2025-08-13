@@ -1,4 +1,13 @@
-/* Modern SIEM UI Design System */
+/* CASCADE LAYERS - Order matters for specificity control */
+@layer reset, tokens, base, components, utilities, overrides;
+
+/* Import all layer styles */
+@import './styles/tokens.css';
+@import './styles/reset.css';
+@import './styles/utilities.css';
+@import './styles/overrides.css';
+
+/* Modern SIEM UI Design System - Legacy styles (to be phased out) */
 
 :root {
   /* Colors */

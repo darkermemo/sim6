@@ -300,35 +300,81 @@ export default function SearchPage() {
   }, []);
 
   return (
-    <div data-testid="page-search" className="container" style={{ maxWidth: "100%", padding: 0 }}>
+    <div data-testid="page-search" style={{ 
+      height: "100vh", 
+      display: "flex", 
+      flexDirection: "column",
+      backgroundColor: "#f8fafc",
+      fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
+    }}>
+      {/* Header */}
+      <header style={{
+        backgroundColor: "#ffffff",
+        borderBottom: "1px solid #e2e8f0",
+        padding: "16px 24px",
+        boxShadow: "0 1px 3px 0 rgba(0, 0, 0, 0.1)",
+        zIndex: 10
+      }}>
+        <h1 style={{ 
+          margin: 0, 
+          fontSize: "24px", 
+          fontWeight: 600, 
+          color: "#1e293b" 
+        }}>
+          Search Events
+        </h1>
+      </header>
+
       {/* Error Banner */}
       {errorBanner && (
         <div 
           role="alert" 
           data-testid="error-banner"
           style={{
-            padding: "10px",
+            padding: "12px 24px",
             backgroundColor: "#fef2f2",
-            border: "1px solid #f87171",
-            borderRadius: "4px",
+            border: "1px solid #fca5a5",
+            borderLeft: "4px solid #ef4444",
             color: "#dc2626",
-            margin: "10px",
-            fontSize: "14px"
+            fontSize: "14px",
+            margin: "8px 24px"
           }}
         >
-          {errorBanner}
+          <strong>Error:</strong> {errorBanner}
         </div>
       )}
       
-      <h2>Search</h2>
-      <div style={{ display: "flex", gap: "var(--space-md)", minHeight: "calc(100vh - 64px)" }}>
-        {/* Left sidebar */}
+      <div style={{ 
+        display: "flex", 
+        flex: 1, 
+        overflow: "hidden",
+        gap: "1px",
+        backgroundColor: "#e2e8f0"
+      }}>
+        {/* Left sidebar - Collapsible */}
         <aside style={{ 
-          width: "320px", 
-          backgroundColor: "var(--bg-secondary)",
-          borderRight: "1px solid var(--border-color)",
-          overflowY: "auto"
+          width: "300px", 
+          backgroundColor: "#ffffff",
+          overflowY: "auto",
+          flexShrink: 0,
+          borderRadius: "0 8px 8px 0"
         }}>
+          <div style={{
+            padding: "16px",
+            borderBottom: "1px solid #f1f5f9",
+            backgroundColor: "#f8fafc"
+          }}>
+            <h3 style={{ 
+              margin: 0, 
+              fontSize: "14px", 
+              fontWeight: 600, 
+              color: "#64748b",
+              textTransform: "uppercase",
+              letterSpacing: "0.5px"
+            }}>
+              Search Controls
+            </h3>
+          </div>
           <SchemaPanel 
             fields={fields} 
             enums={enums} 
@@ -338,8 +384,15 @@ export default function SearchPage() {
           <SavedSearchBar tenantId={state.tenantId} onLoad={loadSavedSearch} />
         </aside>
 
-        {/* Main content */}
-        <main style={{ flex: 1, display: "flex", flexDirection: "column", padding: "var(--space-lg)" }}>
+        {/* Main content area */}
+        <main style={{ 
+          flex: 1, 
+          display: "flex", 
+          flexDirection: "column", 
+          overflow: "hidden",
+          backgroundColor: "#ffffff",
+          borderRadius: "8px 0 0 8px"
+        }}>
         {/* Query bar */}
         <QueryBar
           tenantId={state.tenantId}
@@ -358,63 +411,261 @@ export default function SearchPage() {
           running={running}
         />
 
-        {/* Compile result */}
-        {state.compile && (
-          <div data-testid="compile-sql" style={{ padding: "10px", background: "#f5f5f5" }}>
-            <div>SQL (server-generated)</div>
-            <pre>{state.compile.sql}</pre>
-            {state.compile.warnings.length > 0 && (
-              <div style={{ color: "orange" }}>
-                Warnings: {state.compile.warnings.join(", ")}
+          {/* Main content panels */}
+          <div style={{ 
+            flex: 1, 
+            display: "flex", 
+            flexDirection: "column", 
+            overflow: "hidden",
+            padding: "0 24px 16px 24px"
+          }}>
+            {/* SQL compilation panel */}
+            {state.compile && (
+              <div data-testid="compile-sql" style={{
+                backgroundColor: "#f8fafc",
+                border: "1px solid #e2e8f0",
+                borderRadius: "8px",
+                marginBottom: "16px",
+                overflow: "hidden"
+              }}>
+                <div style={{
+                  padding: "12px 16px",
+                  backgroundColor: "#64748b",
+                  color: "white",
+                  fontSize: "13px",
+                  fontWeight: 500,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px"
+                }}>
+                  🔧 Generated SQL
+                  {state.compile.warnings.length > 0 && (
+                    <span style={{
+                      backgroundColor: "#f59e0b",
+                      color: "white",
+                      padding: "2px 6px",
+                      borderRadius: "4px",
+                      fontSize: "11px"
+                    }}>
+                      {state.compile.warnings.length} warnings
+                    </span>
+                  )}
+                </div>
+                <div style={{ padding: "16px" }}>
+                  <pre style={{
+                    margin: 0,
+                    fontSize: "12px",
+                    fontFamily: "ui-monospace, 'Cascadia Code', 'Source Code Pro', monospace",
+                    backgroundColor: "white",
+                    padding: "12px",
+                    borderRadius: "6px",
+                    border: "1px solid #e2e8f0",
+                    overflow: "auto",
+                    maxHeight: "200px"
+                  }}>
+                    {state.compile.sql}
+                  </pre>
+                  {state.compile.warnings.length > 0 && (
+                    <div style={{
+                      marginTop: "12px",
+                      padding: "8px 12px",
+                      backgroundColor: "#fef3c7",
+                      borderRadius: "6px",
+                      fontSize: "12px",
+                      color: "#92400e"
+                    }}>
+                      ⚠️ Warnings: {state.compile.warnings.join(", ")}
+                    </div>
+                  )}
+                </div>
               </div>
             )}
+
+            {/* Error panel */}
+            {state.errors.length > 0 && (
+              <div style={{
+                backgroundColor: "#fef2f2",
+                border: "1px solid #fca5a5",
+                borderLeft: "4px solid #ef4444",
+                borderRadius: "8px",
+                padding: "12px 16px",
+                marginBottom: "16px",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "start"
+              }}>
+                <div>
+                  <div style={{ fontWeight: 600, color: "#dc2626", marginBottom: "8px" }}>
+                    🚨 Errors ({state.errors.length})
+                  </div>
+                  {state.errors.map((err, i) => (
+                    <div key={i} style={{ fontSize: "14px", color: "#dc2626", marginBottom: "4px" }}>
+                      {err}
+                    </div>
+                  ))}
+                </div>
+                <button 
+                  onClick={clearErrors}
+                  style={{
+                    backgroundColor: "transparent",
+                    border: "1px solid #dc2626",
+                    color: "#dc2626",
+                    padding: "4px 8px",
+                    borderRadius: "4px",
+                    fontSize: "12px",
+                    cursor: "pointer"
+                  }}
+                >
+                  Clear
+                </button>
+              </div>
+            )}
+
+            {/* Timeline visualization */}
+            {state.timeline && (
+              <div style={{
+                backgroundColor: "#ffffff",
+                border: "1px solid #e2e8f0",
+                borderRadius: "8px",
+                marginBottom: "16px",
+                overflow: "hidden"
+              }}>
+                <div style={{
+                  padding: "12px 16px",
+                  backgroundColor: "#f8fafc",
+                  borderBottom: "1px solid #f1f5f9",
+                  fontSize: "14px",
+                  fontWeight: 600,
+                  color: "#1e293b"
+                }}>
+                  📈 Event Timeline
+                </div>
+                <div style={{ padding: "16px" }}>
+                  <TimelineChart
+                    buckets={state.timeline}
+                    onBrush={(from, to) => updateTime({ from, to })}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Real-time controls */}
+            <div style={{
+              backgroundColor: "#ffffff",
+              border: "1px solid #e2e8f0",
+              borderRadius: "8px",
+              padding: "12px 16px",
+              marginBottom: "16px",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center"
+            }}>
+              <div style={{ fontSize: "14px", fontWeight: 500, color: "#1e293b" }}>
+                🔄 Real-time Updates
+              </div>
+              <StreamSwitch
+                enabled={state.sse.enabled}
+                connected={state.sse.connected}
+                lastEventTs={state.sse.lastEventTs}
+                onToggle={toggleSSE}
+                tenantId={state.tenantId}
+                query={state.query}
+                time={state.time}
+                onStatusUpdate={updateSSEStatus}
+              />
+            </div>
+
+            {/* Results section */}
+            <div style={{
+              backgroundColor: "#ffffff",
+              border: "1px solid #e2e8f0",
+              borderRadius: "8px",
+              flex: 1,
+              display: "flex",
+              flexDirection: "column",
+              overflow: "hidden"
+            }}>
+              {/* Results header */}
+              <div style={{
+                padding: "16px 20px",
+                borderBottom: "1px solid #f1f5f9",
+                backgroundColor: "#f8fafc",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center"
+              }}>
+                <div>
+                  <h3 style={{ 
+                    margin: 0, 
+                    fontSize: "16px", 
+                    fontWeight: 600, 
+                    color: "#1e293b" 
+                  }}>
+                    🔍 Search Results
+                  </h3>
+                  <div style={{ 
+                    fontSize: "13px", 
+                    color: "#64748b",
+                    marginTop: "4px"
+                  }}>
+                    {state.execute ? (
+                      <>
+                        📊 {state.execute.data.rows?.toLocaleString() || 0} events 
+                        {state.execute.data.rows_before_limit_at_least && 
+                         state.execute.data.rows_before_limit_at_least > (state.execute.data.rows || 0) && 
+                         ` (${state.execute.data.rows_before_limit_at_least.toLocaleString()} total, limited)`}
+                        {state.execute.took_ms && ` • ⚡ ${state.execute.took_ms}ms`}
+                      </>
+                    ) : (
+                      "Click 'Run' to search events"
+                    )}
+                  </div>
+                </div>
+                {state.sse.connected && (
+                  <div style={{
+                    fontSize: "12px",
+                    color: "#10b981",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "4px"
+                  }}>
+                    🟢 Live
+                  </div>
+                )}
+              </div>
+
+              {/* Results table */}
+              <div style={{ flex: 1, overflow: "hidden" }}>
+                {state.execute ? (
+                  <ResultTable
+                    data={state.execute.data.data}
+                    meta={state.execute.data.meta}
+                    rows={state.execute.data.rows}
+                    rowsBeforeLimit={state.execute.data.rows_before_limit_at_least}
+                    statistics={state.execute.data.statistics}
+                    sort={state.sort}
+                    onSort={updateSort}
+                    limit={state.limit}
+                    onLimitChange={updateLimit}
+                  />
+                ) : (
+                  <div style={{
+                    padding: "40px 20px",
+                    textAlign: "center",
+                    color: "#64748b"
+                  }}>
+                    <div style={{ fontSize: "48px", marginBottom: "16px" }}>🔍</div>
+                    <div style={{ fontSize: "16px", fontWeight: 500, marginBottom: "8px" }}>
+                      Ready to Search
+                    </div>
+                    <div style={{ fontSize: "14px" }}>
+                      Enter your search query above and click "Run" to view events
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
-        )}
-
-        {/* Errors */}
-        {state.errors.length > 0 && (
-          <div style={{ padding: "10px", background: "#fee", color: "#c00" }}>
-            {state.errors.map((err, i) => (
-              <div key={i}>{err}</div>
-            ))}
-            <button onClick={clearErrors}>Clear</button>
-          </div>
-        )}
-
-        {/* Timeline */}
-        {state.timeline && (
-          <TimelineChart
-            buckets={state.timeline}
-            onBrush={(from, to) => updateTime({ from, to })}
-          />
-        )}
-
-        {/* SSE switch */}
-        <StreamSwitch
-          enabled={state.sse.enabled}
-          connected={state.sse.connected}
-          lastEventTs={state.sse.lastEventTs}
-          onToggle={toggleSSE}
-          tenantId={state.tenantId}
-          query={state.query}
-          time={state.time}
-          onStatusUpdate={updateSSEStatus}
-        />
-
-        {/* Results */}
-        {state.execute && (
-          <ResultTable
-            data={state.execute.data.data}
-            meta={state.execute.data.meta}
-            rows={state.execute.data.rows}
-            rowsBeforeLimit={state.execute.data.rows_before_limit_at_least}
-            statistics={state.execute.data.statistics}
-            sort={state.sort}
-            onSort={updateSort}
-            limit={state.limit}
-            onLimitChange={updateLimit}
-          />
-        )}
         </main>
       </div>
     </div>
