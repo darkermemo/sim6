@@ -6,6 +6,7 @@ use futures_util::stream::{Stream, StreamExt};
 use serde_json::Value;
 use std::sync::Arc;
 use futures_util::stream;
+use uuid::Uuid;
 use crate::v2::{state::AppState, compiler::compile_search};
 use super::compiler::translate_to_dsl;
 
@@ -187,30 +188,318 @@ pub async fn export(State(st): State<Arc<AppState>>, Json(body): Json<Value>) ->
     Ok(response)
 }
 
-pub async fn saved_searches(State(_st): State<Arc<AppState>>) -> Result<Json<Value>, axum::http::StatusCode> {
-    // TODO: Implement saved searches from database
-    // For now, return empty list
-    Ok(Json(serde_json::json!({
-        "searches": []
-    })))
+use axum::extract::Query;
+
+#[derive(serde::Deserialize)]
+pub struct SavedSearchQuery {
+    pub tenant_id: Option<String>,
 }
 
-pub async fn save_search(State(_st): State<Arc<AppState>>, Json(body): Json<Value>) -> Result<Json<Value>, axum::http::StatusCode> {
-    // TODO: Implement save search to database
-    let name = body.get("name").and_then(|v| v.as_str()).unwrap_or("unnamed");
-    Ok(Json(serde_json::json!({
-        "id": "temp_id",
-        "name": name,
-        "saved": true
-    })))
+#[derive(serde::Serialize)]
+pub struct SavedSearch {
+    pub id: String,
+    pub name: String,
+    pub q: String,
+    pub time_last_seconds: u32,
+    pub filters: String,
+    pub pinned: u8,
+    pub created_at: String,
+    pub updated_at: String,
 }
 
-pub async fn delete_search(State(_st): State<Arc<AppState>>, axum::extract::Path(id): axum::extract::Path<String>) -> Result<Json<Value>, axum::http::StatusCode> {
-    // TODO: Implement delete search from database
+#[derive(serde::Serialize)]
+pub struct SavedSearchesResponse {
+    pub saved: Vec<SavedSearch>,
+}
+
+/// GET /api/v2/search/saved?tenant_id=default
+pub async fn saved_searches(
+    State(app): State<Arc<AppState>>,
+    Query(params): Query<SavedSearchQuery>
+) -> Result<Json<SavedSearchesResponse>, axum::http::StatusCode> {
+    let tenant = params.tenant_id.unwrap_or_else(|| "default".to_string());
+    
+    let sql = format!(
+        "SELECT id, name, q, time_last_seconds, filters, pinned, formatDateTime(created_at, '%Y-%m-%d %H:%M:%S') as created_at, formatDateTime(updated_at, '%Y-%m-%d %H:%M:%S') as updated_at FROM dev.saved_searches WHERE tenant_id = '{}' ORDER BY pinned DESC, updated_at DESC FORMAT JSON",
+        tenant.replace("'", "''")
+    );
+    
+    let client = reqwest::Client::new();
+    let resp = client
+        .get("http://localhost:8123/")
+        .query(&[("query", &sql)])
+        .send()
+        .await
+        .map_err(|_| axum::http::StatusCode::BAD_GATEWAY)?;
+
+    if !resp.status().is_success() {
+        return Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR);
+    }
+
+    let text = resp.text().await.map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
+    let v: Value = serde_json::from_str(&text).map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
+    
+    let rows = v.get("data").and_then(|d| d.as_array()).cloned().unwrap_or_default();
+    let mut saved_searches = Vec::new();
+    
+    for row in rows {
+        if let (Some(id), Some(name), Some(q)) = (
+            row.get("id").and_then(|v| v.as_str()),
+            row.get("name").and_then(|v| v.as_str()),
+            row.get("q").and_then(|v| v.as_str())
+        ) {
+            saved_searches.push(SavedSearch {
+                id: id.to_string(),
+                name: name.to_string(),
+                q: q.to_string(),
+                time_last_seconds: row.get("time_last_seconds").and_then(|v| v.as_u64()).unwrap_or(3600) as u32,
+                filters: row.get("filters").and_then(|v| v.as_str()).unwrap_or("").to_string(),
+                pinned: row.get("pinned").and_then(|v| v.as_u64()).unwrap_or(0) as u8,
+                created_at: row.get("created_at").and_then(|v| v.as_str()).unwrap_or("").to_string(),
+                updated_at: row.get("updated_at").and_then(|v| v.as_str()).unwrap_or("").to_string(),
+            });
+        }
+    }
+    
+    Ok(Json(SavedSearchesResponse { saved: saved_searches }))
+}
+
+#[derive(serde::Deserialize)]
+pub struct SaveSearchRequest {
+    pub tenant_id: String,
+    pub name: String,
+    pub q: String,
+    pub time_last_seconds: Option<u32>,
+    pub filters: Option<String>,
+    pub pinned: Option<u8>,
+}
+
+#[derive(serde::Serialize)]
+pub struct SaveSearchResponse {
+    pub id: String,
+}
+
+/// POST /api/v2/search/saved
+pub async fn save_search(
+    State(_app): State<Arc<AppState>>,
+    Json(req): Json<SaveSearchRequest>
+) -> Result<Json<SaveSearchResponse>, axum::http::StatusCode> {
+    let time_seconds = req.time_last_seconds.unwrap_or(3600);
+    let filters = req.filters.unwrap_or_default();
+    let pinned = req.pinned.unwrap_or(0);
+    
+    // Generate UUID and insert, then return it  
+    let new_id = Uuid::new_v4().to_string();
+    let sql = format!(
+        "INSERT INTO dev.saved_searches (tenant_id, id, name, q, time_last_seconds, filters, pinned) VALUES ('{}', toUUID('{}'), '{}', '{}', {}, '{}', {})",
+        req.tenant_id.replace("'", "''"),
+        new_id,
+        req.name.replace("'", "''"),
+        req.q.replace("'", "''"),
+        time_seconds,
+        filters.replace("'", "''"),
+        pinned
+    );
+    
+    let client = reqwest::Client::new();
+    let resp = client
+        .get("http://localhost:8123/")
+        .query(&[("query", &sql)])
+        .send()
+        .await
+        .map_err(|_| axum::http::StatusCode::BAD_GATEWAY)?;
+
+    if !resp.status().is_success() {
+        return Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR);
+    }
+    
+    Ok(Json(SaveSearchResponse { id: new_id }))
+}
+
+/// DELETE /api/v2/search/saved/:id
+pub async fn delete_search(
+    State(app): State<Arc<AppState>>,
+    axum::extract::Path(id): axum::extract::Path<String>
+) -> Result<Json<Value>, axum::http::StatusCode> {
+    let sql = format!(
+        "ALTER TABLE dev.saved_searches DELETE WHERE id = toUUID('{}')",
+        id.replace("'", "''")
+    );
+    
+    let client = reqwest::Client::new();
+    let resp = client
+        .get("http://localhost:8123/")
+        .query(&[("query", &sql)])
+        .send()
+        .await
+        .map_err(|_| axum::http::StatusCode::BAD_GATEWAY)?;
+
+    if !resp.status().is_success() {
+        return Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR);
+    }
+    
     Ok(Json(serde_json::json!({
         "deleted": true,
         "id": id
     })))
+}
+
+/// GET /api/v2/search/grammar - static grammar for UI help
+pub async fn grammar() -> Json<Value> {
+    Json(serde_json::json!({
+        "operators": ["AND","OR","NOT"],
+        "field_ops": {
+            "equals": "field:value",
+            "phrase": "\"quoted phrase\"",
+            "regex": "/re/",
+            "range": "field:[a TO b]"
+        },
+        "fields": [
+            "tenant_id","message","event_type","severity","source_type","vendor",
+            "product","host","user","source_ip","destination_ip","event_id",
+            "event_timestamp","created_at","event_category","event_action","event_outcome"
+        ]
+    }))
+}
+
+#[derive(serde::Deserialize)]
+pub struct FacetRequest {
+    pub tenant_id: String,
+    pub time: FacetTimeFilter,
+    pub q: String,
+    pub facets: Option<Vec<FacetSpec>>,
+}
+
+#[derive(serde::Deserialize, serde::Serialize)]
+#[serde(untagged)]
+pub enum FacetTimeFilter {
+    LastSeconds { last_seconds: u32 },
+    Range { from: u64, to: u64 },
+}
+
+#[derive(serde::Deserialize)]
+pub struct FacetSpec {
+    pub field: String,
+    pub size: Option<u32>,
+}
+
+#[derive(serde::Serialize)]
+pub struct FacetValue {
+    pub value: String,
+    pub count: u64,
+}
+
+#[derive(serde::Serialize)]
+pub struct FacetsResponse {
+    pub facets: std::collections::HashMap<String, Vec<FacetValue>>,
+}
+
+/// POST /api/v2/search/facets - facet counts for UI right panel
+pub async fn facets(
+    State(app): State<Arc<AppState>>,
+    Json(req): Json<FacetRequest>
+) -> Result<Json<FacetsResponse>, axum::http::StatusCode> {
+    use std::collections::HashMap;
+    
+    // Build time filter
+    let time_filter = match req.time {
+        FacetTimeFilter::LastSeconds { last_seconds } => {
+            format!("event_timestamp >= now() - INTERVAL {} SECOND", last_seconds)
+        },
+        FacetTimeFilter::Range { from, to } => {
+            format!("event_timestamp >= fromUnixTimestamp64Milli({}) AND event_timestamp <= fromUnixTimestamp64Milli({})", from, to)
+        }
+    };
+    
+    // Build tenant filter
+    let tenant_filter = if req.tenant_id == "all" {
+        "1 = 1".to_string()
+    } else {
+        format!("tenant_id = '{}'", req.tenant_id.replace("'", "''"))
+    };
+    
+    // Build query filter using existing compiler
+    let query_filter = if req.q.trim().is_empty() || req.q.trim() == "*" {
+        "1 = 1".to_string()
+    } else {
+        // Try to use existing compiler, fallback to simple message search
+        match super::compiler::translate_to_dsl(&serde_json::json!({
+            "tenant_id": req.tenant_id,
+            "time": req.time,
+            "q": req.q
+        })) {
+            Ok(dsl) => {
+                match crate::v2::compiler::compile_search(&dsl, &app.events_table) {
+                    Ok(compiled) => compiled.where_sql,
+                    Err(_) => {
+                        // Fallback to simple message search
+                        if req.q.contains(":") {
+                            format!("positionCaseInsensitive(message, '{}') > 0", req.q.replace("'", "''"))
+                        } else {
+                            format!("positionCaseInsensitive(message, '{}') > 0", req.q.replace("'", "''"))
+                        }
+                    }
+                }
+            },
+            Err(_) => {
+                format!("positionCaseInsensitive(message, '{}') > 0", req.q.replace("'", "''"))
+            }
+        }
+    };
+    
+    let base_where = format!("({}) AND ({}) AND ({})", tenant_filter, time_filter, query_filter);
+    let facets_to_compute = req.facets.unwrap_or_else(|| vec![
+        FacetSpec { field: "source_type".to_string(), size: Some(10) },
+        FacetSpec { field: "event_type".to_string(), size: Some(10) },
+        FacetSpec { field: "severity".to_string(), size: Some(5) },
+    ]);
+    
+    let mut result_facets = HashMap::new();
+    let client = reqwest::Client::new();
+    
+    for facet_spec in facets_to_compute {
+        let size = facet_spec.size.unwrap_or(10).min(100);
+        let sql = format!(
+            "SELECT {} AS value, count() AS c FROM {} WHERE {} GROUP BY value ORDER BY c DESC LIMIT {} FORMAT JSON",
+            facet_spec.field, app.events_table, base_where, size
+        );
+        
+        let resp = client
+            .get("http://localhost:8123/")
+            .query(&[("query", &sql)])
+            .send()
+            .await
+            .map_err(|_| axum::http::StatusCode::BAD_GATEWAY)?;
+
+        if resp.status().is_success() {
+            if let Ok(text) = resp.text().await {
+                if let Ok(v) = serde_json::from_str::<Value>(&text) {
+                    if let Some(rows) = v.get("data").and_then(|d| d.as_array()) {
+                        let facet_values: Vec<FacetValue> = rows
+                            .iter()
+                            .filter_map(|row| {
+                                let value = row.get("value").and_then(|v| v.as_str()).unwrap_or("").to_string();
+                                let count = row.get("c").and_then(|c| c.as_u64()).unwrap_or(0);
+                                if !value.is_empty() {
+                                    Some(FacetValue { value, count })
+                                } else {
+                                    None
+                                }
+                            })
+                            .collect();
+                        result_facets.insert(facet_spec.field.clone(), facet_values);
+                    }
+                }
+            }
+        }
+        
+        // Ensure we have at least an empty array for each requested field
+        if !result_facets.contains_key(&facet_spec.field) {
+            result_facets.insert(facet_spec.field, Vec::new());
+        }
+    }
+    
+    Ok(Json(FacetsResponse { facets: result_facets }))
 }
 
 

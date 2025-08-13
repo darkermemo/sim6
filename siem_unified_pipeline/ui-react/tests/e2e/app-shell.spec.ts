@@ -1,8 +1,8 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('App Shell', () => {
-  test.beforeEach(async ({ page }) => {
-    await page.goto('/ui/app/');
+  test.beforeEach(async ({ page, baseURL }) => {
+    await page.goto(baseURL || 'http://127.0.0.1:5173/ui/app/');
   });
 
   test('navigates between pages', async ({ page }) => {

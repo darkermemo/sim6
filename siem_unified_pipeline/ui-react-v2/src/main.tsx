@@ -1,9 +1,11 @@
 import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
+import { QueryClientProvider } from "@tanstack/react-query";
 import App from "./pages/App";
 import { installRuntimeGuard, markAppReady } from "./lib/runtimeGuard";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { VisualThemeProvider, ThemeToggle } from "./components/VisualThemeProvider";
+import { queryClient } from "./app/queryClient";
 import "./index.css";
 
 // Install runtime guard before app starts
@@ -16,12 +18,14 @@ installRuntimeGuard([
 const root = createRoot(document.getElementById("root")!);
 root.render(
   <ErrorBoundary>
-    <VisualThemeProvider defaultTheme="v2" defaultDarkMode={false}>
-      <BrowserRouter basename="/ui/v2">
-        <App />
-        <ThemeToggle />
-      </BrowserRouter>
-    </VisualThemeProvider>
+    <QueryClientProvider client={queryClient}>
+      <VisualThemeProvider defaultTheme="v2" defaultDarkMode={false}>
+        <BrowserRouter basename="/ui/v2">
+          <App />
+          <ThemeToggle />
+        </BrowserRouter>
+      </VisualThemeProvider>
+    </QueryClientProvider>
   </ErrorBoundary>
 );
 

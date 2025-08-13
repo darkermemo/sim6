@@ -1,30 +1,16 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Dashboard } from './components/Dashboard';
-import Alerts from './pages/Alerts';
-import Cases from './pages/Cases';
-import Admin from './pages/Admin';
 import { Rules } from './components/Rules';
 import { LogSourceManagement } from './components/LogSourceManagement';
-
 import { UserManagement } from './components/UserManagement';
-import ParserManagement from './components/ParserManagement';
-import TenantMetricsDashboard from './components/TenantMetricsDashboard';
+import { ParserManagement } from './components/ParserManagement';
 import { InteractiveParserBuilder } from './components/InteractiveParserBuilder';
-import { EventInvestigation } from './components/EventInvestigation';
-import { LogActivities } from './components/LogActivities';
-
-import DevEventsTable from './components/DevEventsTable';
 import { AlertDetailDrawer } from './components/AlertDetailDrawer';
 import { AdvancedRuleCreation } from './components/AdvancedRuleCreation';
-import { VendorMappingPage } from './pages/VendorMappingPage';
-import AgentFleetPage from './components/AgentFleetPage';
-import { TypedApiExample } from './components/TypedApiExample';
-import { AppLayout } from './components/AppLayout';
 import { Toaster } from './components/ui/Toaster';
 import { AuthGuard } from './components/AuthGuard';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { useUiStore } from './stores/uiStore';
-
 
 /**
  * Main App Component
@@ -34,72 +20,23 @@ import { useUiStore } from './stores/uiStore';
  * Critical Quality Gate Rule 6: Comprehensive Error Boundary (ErrorBoundary)
  */
 function App() {
-  type PageType = 'dashboard' | 'alerts' | 'cases' | 'admin' | 'rules' | 'log-sources' | 'enhanced-log-sources' | 'tenant-metrics' | 'users' | 'parsers' | 'interactive-parser' | 'events' | 'vendor-mapping' | 'log-activity' | 'agent-fleet' | 'typed-api-example' | 'dev-events';
-  
-  // Function to get page from URL path
-  const getPageFromPath = (pathname: string): PageType => {
-    const path = pathname.replace('/', '') || 'dashboard';
-    const validPages: PageType[] = ['dashboard', 'alerts', 'cases', 'admin', 'rules', 'log-sources', 'enhanced-log-sources', 'tenant-metrics', 'users', 'parsers', 'interactive-parser', 'events', 'vendor-mapping', 'log-activity', 'agent-fleet', 'typed-api-example', 'dev-events'];
-    return validPages.includes(path as PageType) ? (path as PageType) : 'dashboard';
-  };
-  
-  const [currentPage, setCurrentPage] = useState<PageType>(() => getPageFromPath(window.location.pathname));
-
-  // Handle browser navigation (back/forward buttons)
-  useEffect(() => {
-    const handlePopState = () => {
-      setCurrentPage(getPageFromPath(window.location.pathname));
-    };
-    
-    window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
-  }, []);
-
-  const handleNavigate = (page: string) => {
-    const newPage = page as PageType;
-    setCurrentPage(newPage);
-    // Update URL without page reload
-    const newPath = newPage === 'dashboard' ? '/' : `/${newPage}`;
-    window.history.pushState({}, '', newPath);
-  };
+  const [currentPage, setCurrentPage] = useState<'dashboard' | 'rules' | 'log-sources' | 'users' | 'parsers' | 'interactive-parser'>('dashboard');
   const { ruleDrawerOpen, selectedRuleId, closeRuleDrawer } = useUiStore();
 
   const renderPage = () => {
     switch (currentPage) {
       case 'dashboard':
         return <Dashboard />;
-      case 'alerts':
-        return <Alerts />;
-      case 'cases':
-        return <Cases />;
-      case 'admin':
-        return <Admin />;
       case 'rules':
         return <Rules />;
       case 'log-sources':
         return <LogSourceManagement />;
-      case 'enhanced-log-sources':
-        return <LogSourceManagement />;
-      case 'tenant-metrics':
-        return <TenantMetricsDashboard />;
       case 'users':
         return <UserManagement />;
       case 'parsers':
-        return <ParserManagement userRole={'Admin'} />;
+        return <ParserManagement />;
       case 'interactive-parser':
         return <InteractiveParserBuilder />;
-      case 'events':
-        return <EventInvestigation />;
-      case 'log-activity':
-        return <LogActivities />;
-      case 'vendor-mapping':
-        return <VendorMappingPage />;
-      case 'agent-fleet':
-        return <AgentFleetPage userRole={'Admin'} onNavigate={handleNavigate} />;
-      case 'typed-api-example':
-        return <TypedApiExample />;
-      case 'dev-events':
-        return <DevEventsTable />;
       default:
         return <Dashboard />;
     }
@@ -126,7 +63,78 @@ function App() {
   return (
     <ErrorBoundary>
       <AuthGuard>
-        <AppLayout currentPage={currentPage} onNavigate={handleNavigate}>
+        <div className="App">
+          {/* Simple Navigation */}
+          <nav className="bg-card border-b border-border px-6 py-4">
+            <div className="flex items-center justify-between max-w-7xl mx-auto">
+              <div className="flex items-center space-x-8">
+                <h1 className="text-xl font-bold text-primary-text">SIEM Analytics</h1>
+                <div className="flex space-x-4">
+                  <button
+                    onClick={() => setCurrentPage('dashboard')}
+                    className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                      currentPage === 'dashboard'
+                        ? 'bg-blue-100 text-blue-700'
+                        : 'text-secondary-text hover:text-primary-text'
+                    }`}
+                  >
+                    Dashboard
+                  </button>
+                  <button
+                    onClick={() => setCurrentPage('rules')}
+                    className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                      currentPage === 'rules'
+                        ? 'bg-blue-100 text-blue-700'
+                        : 'text-secondary-text hover:text-primary-text'
+                    }`}
+                  >
+                    Rules
+                  </button>
+                  <button
+                    onClick={() => setCurrentPage('log-sources')}
+                    className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                      currentPage === 'log-sources'
+                        ? 'bg-blue-100 text-blue-700'
+                        : 'text-secondary-text hover:text-primary-text'
+                    }`}
+                  >
+                    Log Sources
+                  </button>
+                  <button
+                    onClick={() => setCurrentPage('users')}
+                    className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                      currentPage === 'users'
+                        ? 'bg-blue-100 text-blue-700'
+                        : 'text-secondary-text hover:text-primary-text'
+                    }`}
+                  >
+                    Users
+                  </button>
+                  <button
+                    onClick={() => setCurrentPage('parsers')}
+                    className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                      currentPage === 'parsers'
+                        ? 'bg-blue-100 text-blue-700'
+                        : 'text-secondary-text hover:text-primary-text'
+                    }`}
+                  >
+                    Parsers
+                  </button>
+                  <button
+                    onClick={() => setCurrentPage('interactive-parser')}
+                    className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                      currentPage === 'interactive-parser'
+                        ? 'bg-blue-100 text-blue-700'
+                        : 'text-secondary-text hover:text-primary-text'
+                    }`}
+                  >
+                    Interactive Parser
+                  </button>
+                </div>
+              </div>
+            </div>
+          </nav>
+
           {/* Page Content */}
           {renderPage()}
 
@@ -134,10 +142,10 @@ function App() {
           <AlertDetailDrawer />
           <ConnectedRuleDrawer />
           <Toaster />
-        </AppLayout>
+        </div>
       </AuthGuard>
     </ErrorBoundary>
   );
 }
 
-export default App;
+export default App; 

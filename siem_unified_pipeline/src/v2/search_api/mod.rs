@@ -12,6 +12,8 @@ pub fn routes(state: Arc<AppState>) -> Router<Arc<AppState>> {
         .route("/api/v2/search/aggs", post(handlers::aggs))
         .route("/api/v2/search/tail", post(handlers::tail))
         .route("/api/v2/search/export", post(handlers::export))
+        .route("/api/v2/search/grammar", get(handlers::grammar))
+        .route("/api/v2/search/facets", post(handlers::facets))
         .route("/api/v2/search/saved", get(handlers::saved_searches))
         .route("/api/v2/search/saved", post(handlers::save_search))
         .route("/api/v2/search/saved/:id", delete(handlers::delete_search))

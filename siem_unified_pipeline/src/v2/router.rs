@@ -34,7 +34,6 @@ pub fn build(state: AppState) -> Router {
         // New Search API (simple-body compile/execute/aggs)
         .merge(search)
         .route("/api/v2/search/estimate", axum::routing::post(search_estimate))
-        .route("/api/v2/search/facets", axum::routing::post(search_facets))
          // Saved searches CRUD provided by search_api routes; avoid duplicates here
         .route("/api/v2/schema/fields", get(get_fields))
         .route("/api/v2/schema/enums", get(get_enums))

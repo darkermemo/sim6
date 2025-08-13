@@ -43,4 +43,4 @@ export const router = createBrowserRouter([
       },
     ],
   },
-]);
+], { basename: '/ui/app/' });
