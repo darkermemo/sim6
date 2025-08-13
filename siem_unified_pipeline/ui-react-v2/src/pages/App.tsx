@@ -8,6 +8,8 @@ import Health from "./Health";
 import Login from "./Login";
 import Dashboard from "./Dashboard";
 import DashboardGolden from "./DashboardGolden";
+import { SearchDemo } from "@/components/SearchDemo";
+import SearchGoldenV2 from "./SearchGoldenV2";
 
 /**
  * Feature flags from environment variables
@@ -30,9 +32,11 @@ export default function App() {
         <Route path="/" element={<Home />} />
         <Route path="/dashboard" element={<DashboardGolden />} />
         <Route path="/dashboard-old" element={<Dashboard />} />
-        <Route path="/search" element={<SearchGolden />} />
+        <Route path="/search" element={<SearchGoldenV2 />} />
+        <Route path="/search-legacy" element={<SearchGolden />} />
         <Route path="/search-v2" element={<SearchV2 />} />
         <Route path="/search-simple" element={<Search />} />
+        <Route path="/search-demo" element={<SearchDemo />} />
         <Route path="/health" element={<Health />} />
         
         {/* Feature-flagged routes (hidden by default) */}
