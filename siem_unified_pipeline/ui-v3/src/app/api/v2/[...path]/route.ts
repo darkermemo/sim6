@@ -1,60 +1,39 @@
-import { NextRequest, NextResponse } from 'next/server';
+// app/api/v2/[...path]/route.ts
+const ORIGIN = process.env.API_URL!.replace(/\/+$/, "");
 
-const BACKEND_URL = process.env.BACKEND_URL || 'http://127.0.0.1:9999';
+async function forward(req: Request, pathSegs: string[]) {
+  const url = new URL(req.url);
+  const qs  = url.search ? url.search : "";
+  const dest = `${ORIGIN}/api/v2/${pathSegs.join("/")}${qs}`;
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ path: string[] }> }
-) {
-  const resolvedParams = await params;
-  const path = resolvedParams.path.join('/');
-  const searchParams = request.nextUrl.searchParams.toString();
-  const url = `${BACKEND_URL}/api/v2/${path}${searchParams ? `?${searchParams}` : ''}`;
+  const headers = new Headers(req.headers);
+  headers.delete("host"); headers.delete("origin"); headers.delete("referer");
 
-  try {
-    const response = await fetch(url, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
+  const init: RequestInit = {
+    method: req.method,
+    headers,
+    body: req.method === "GET" || req.method === "HEAD" ? undefined : req.body,
+    redirect: "manual",
+  };
 
-    const data = await response.json();
-    return NextResponse.json(data, { status: response.status });
-  } catch (error) {
-    console.error('Proxy error:', error);
-    return NextResponse.json(
-      { error: 'Backend connection failed' },
-      { status: 502 }
-    );
-  }
+  const r = await fetch(dest, init);
+  const out = new Response(r.body, { status: r.status, statusText: r.statusText });
+  r.headers.forEach((v, k) => out.headers.set(k, v));
+  return out;
 }
 
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ path: string[] }> }
-) {
-  const resolvedParams = await params;
-  const path = resolvedParams.path.join('/');
-  const body = await request.text();
-  const url = `${BACKEND_URL}/api/v2/${path}`;
-
-  try {
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body,
-    });
-
-    const data = await response.json();
-    return NextResponse.json(data, { status: response.status });
-  } catch (error) {
-    console.error('Proxy error:', error);
-    return NextResponse.json(
-      { error: 'Backend connection failed' },
-      { status: 502 }
-    );
-  }
+export async function GET(req: Request, ctx: { params: Promise<{ path: string[] }> }) {
+  const { path } = await ctx.params; return forward(req, path);
+}
+export async function POST(req: Request, ctx: { params: Promise<{ path: string[] }> }) {
+  const { path } = await ctx.params; return forward(req, path);
+}
+export async function PUT(req: Request, ctx: { params: Promise<{ path: string[] }> }) {
+  const { path } = await ctx.params; return forward(req, path);
+}
+export async function PATCH(req: Request, ctx: { params: Promise<{ path: string[] }> }) {
+  const { path } = await ctx.params; return forward(req, path);
+}
+export async function DELETE(req: Request, ctx: { params: Promise<{ path: string[] }> }) {
+  const { path } = await ctx.params; return forward(req, path);
 }

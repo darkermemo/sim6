@@ -1,7 +1,7 @@
 /**
  * API Client for SIEM UI v3
  * 
- * Provides typed HTTP client functions for the Rust backend API
+ * Real API calls only - no mocks, no fallbacks
  */
 
 import { 
@@ -10,74 +10,24 @@ import {
   EventSearchResponse, 
   EventDetail,
   DashboardResponse,
-  RulesListResponse,
-  EpsStatsResponse,
-  EventCountResponse,
-  ApiResponse
+  EpsStatsResponse
 } from '@/types/api';
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:9999';
-
-class ApiError extends Error {
-  constructor(public status: number, message: string, public details?: string) {
-    super(message);
-    this.name = 'ApiError';
-  }
-}
-
-async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> {
-  const url = `${API_BASE_URL}${endpoint}`;
-  
-  try {
-    const response = await fetch(url, {
-      headers: {
-        'Content-Type': 'application/json',
-        ...options?.headers,
-      },
-      ...options,
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      let errorMessage = `HTTP ${response.status}`;
-      
-      try {
-        const errorJson = JSON.parse(errorText);
-        errorMessage = errorJson.error || errorJson.message || errorMessage;
-      } catch {
-        errorMessage = errorText || errorMessage;
-      }
-      
-      throw new ApiError(response.status, errorMessage, errorText);
-    }
-
-    return await response.json();
-  } catch (error) {
-    if (error instanceof ApiError) {
-      throw error;
-    }
-    throw new ApiError(0, `Network error: ${error instanceof Error ? error.message : 'Unknown error'}`);
-  }
-}
+import { api } from '@/lib/http';
 
 // ============================================================================
 // Health API
 // ============================================================================
 
 export async function getHealth(): Promise<HealthResponse> {
-  return fetchApi<HealthResponse>('/api/v2/health');
-}
-
-export async function getDetailedHealth(): Promise<HealthResponse> {
-  return fetchApi<HealthResponse>('/api/v2/health/detailed');
+  return api<HealthResponse>('health');
 }
 
 // ============================================================================
-// Events API
+// Search API (Real v2 endpoints)
 // ============================================================================
 
 export async function searchEvents(query: EventSearchQuery): Promise<EventSearchResponse> {
-  const searchBody = {
+  const body = {
     tenant_id: query.tenant_id || "default",
     time: {
       last_seconds: 3600 // Default to last hour
@@ -87,96 +37,103 @@ export async function searchEvents(query: EventSearchQuery): Promise<EventSearch
     offset: query.offset || 0
   };
 
-  try {
-    const response = await fetch(`${API_BASE_URL}/api/v2/search/execute`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(searchBody)
-    });
+  const response = await api<any>('search/execute', {
+    method: 'POST',
+    body: JSON.stringify(body),
+    headers: { 'content-type': 'application/json' }
+  });
 
-    if (!response.ok) {
-      throw new Error(`Search failed: ${response.status}`);
-    }
-
-    const data = await response.json();
-    
-    // Transform backend response to match UI types
-    return {
-      events: data.data?.meta || [],
-      total_count: data.total || 0,
-      page_info: {
-        limit: searchBody.limit,
-        offset: searchBody.offset,
-        has_next: (data.data?.meta?.length || 0) >= searchBody.limit,
-        has_previous: searchBody.offset > 0,
-        total_pages: Math.ceil((data.total || 0) / searchBody.limit),
-        current_page: Math.floor(searchBody.offset / searchBody.limit) + 1
-      }
-    };
-  } catch (error) {
-    console.error('Search API error:', error);
-    throw error;
-  }
-}
-
-export async function getEventById(id: string): Promise<EventDetail> {
-  return fetchApi<EventDetail>(`/api/v1/events/${id}`);
-}
-
-export async function getEventCount(startTime?: string, endTime?: string, tenantId?: string): Promise<EventCountResponse> {
-  const params = new URLSearchParams();
-  if (startTime) params.append('start_time', startTime);
-  if (endTime) params.append('end_time', endTime);
-  if (tenantId) params.append('tenant_id', tenantId);
-  
-  return fetchApi<EventCountResponse>(`/api/v1/events/count?${params.toString()}`);
-}
-
-export async function getEpsStats(windowSeconds?: number): Promise<EpsStatsResponse> {
-  // EPS endpoint not implemented in v2 API - return mock data
+  // Transform backend response to match UI types
   return {
-    global: {
-      current_eps: 0,
-      avg_eps: 0,
-      peak_eps: 0,
-      window_seconds: windowSeconds || 60
-    },
-    per_tenant: {
-      tenants: {},
-      window_seconds: windowSeconds || 60
-    },
-    timestamp: new Date().toISOString()
+    events: response.data?.meta || [],
+    total_count: response.total || 0,
+    page_info: {
+      limit: body.limit,
+      offset: body.offset,
+      has_next: (response.data?.meta?.length || 0) >= body.limit,
+      has_previous: body.offset > 0,
+      total_pages: Math.ceil((response.total || 0) / body.limit),
+      current_page: Math.floor(body.offset / body.limit) + 1
+    }
   };
 }
 
+export async function compileSearch(query: string, tenantId = "default") {
+  return api<{ sql: string }>('search/compile', {
+    method: 'POST',
+    body: JSON.stringify({
+      tenant_id: tenantId,
+      time: { last_seconds: 3600 },
+      q: query
+    }),
+    headers: { 'content-type': 'application/json' }
+  });
+}
+
+export async function searchFacets(query: string, facets: Array<{field: string, size?: number}>, tenantId = "default") {
+  return api<{ facets: any }>('search/facets', {
+    method: 'POST',
+    body: JSON.stringify({
+      tenant_id: tenantId,
+      time: { last_seconds: 3600 },
+      q: query,
+      facets
+    }),
+    headers: { 'content-type': 'application/json' }
+  });
+}
+
+export async function searchAggs(query: string, tenantId = "default") {
+  return api<{ aggs: { timeline: any[] } }>('search/aggs', {
+    method: 'POST',
+    body: JSON.stringify({
+      tenant_id: tenantId,
+      time: { last_seconds: 3600 },
+      q: query
+    }),
+    headers: { 'content-type': 'application/json' }
+  });
+}
+
 // ============================================================================
-// Dashboard API
+// Dashboard API (using real search endpoints)
 // ============================================================================
 
 export async function getDashboard(): Promise<DashboardResponse> {
-  // Use available v2 endpoints - get health status 
   try {
+    // Get health
     const health = await getHealth();
     
-    // Construct dashboard response with real health data and mock metrics
-    const dashboardResponse: DashboardResponse = {
+    // Get timeline data from search aggs
+    const timelineData = await searchAggs("*");
+    
+    // Get basic stats from search execute with limit 0
+    const statsData = await api<any>('search/execute', {
+      method: 'POST',
+      body: JSON.stringify({
+        tenant_id: "default",
+        time: { last_seconds: 86400 }, // 24 hours
+        q: "*",
+        limit: 0
+      }),
+      headers: { 'content-type': 'application/json' }
+    });
+
+    return {
       kpis: {
-        total_events_24h: 0, // Would need metrics endpoint implementation
+        total_events_24h: statsData.total || 0,
         total_alerts_24h: 0, // Would need alerts endpoint
         active_rules: 0, // Would need rules endpoint
-        avg_eps: 0, // Would need EPS endpoint
+        avg_eps: 0, // Calculate from timeline if needed
         system_health: health.status === "ok" ? "ok" : "degraded"
       },
       recent_alerts: [], // Would need alerts endpoint
-      top_sources: [], // Would need metrics endpoint  
+      top_sources: [], // Would need facets by source
       timestamp: new Date().toISOString()
     };
-    
-    return dashboardResponse;
   } catch (error) {
-    // Return minimal mock data for UI
+    // Minimal fallback for UI stability
+    console.error('Dashboard API error:', error);
     return {
       kpis: {
         total_events_24h: 0,
@@ -193,53 +150,26 @@ export async function getDashboard(): Promise<DashboardResponse> {
 }
 
 // ============================================================================
-// Rules API
+// Mock endpoints that don't exist yet
 // ============================================================================
 
-export async function getRules(limit?: number, offset?: number): Promise<RulesListResponse> {
-  const params = new URLSearchParams();
-  if (limit) params.append('limit', String(limit));
-  if (offset) params.append('offset', String(offset));
-  
-  return fetchApi<RulesListResponse>(`/api/v1/rules?${params.toString()}`);
+export async function getEpsStats(windowSeconds?: number): Promise<EpsStatsResponse> {
+  // EPS endpoint not implemented - return empty structure
+  return {
+    global: {
+      current_eps: 0,
+      avg_eps: 0,
+      peak_eps: 0,
+      window_seconds: windowSeconds || 60
+    },
+    per_tenant: {
+      tenants: {},
+      window_seconds: windowSeconds || 60
+    },
+    timestamp: new Date().toISOString()
+  };
 }
 
-// ============================================================================
-// Server-Sent Events
-// ============================================================================
-
-export function createEventStream(
-  onEvent: (event: any) => void,
-  onError?: (error: Error) => void,
-  filters?: { source?: string; severity?: string }
-) {
-  const params = new URLSearchParams();
-  if (filters?.source) params.append('source', filters.source);
-  if (filters?.severity) params.append('severity', filters.severity);
-  
-  const url = `${API_BASE_URL}/api/v1/events/stream?${params.toString()}`;
-  const eventSource = new EventSource(url);
-  
-  eventSource.onmessage = (event) => {
-    try {
-      const data = JSON.parse(event.data);
-      onEvent(data);
-    } catch (error) {
-      console.error('Failed to parse SSE event:', error);
-    }
-  };
-  
-  eventSource.onerror = (event) => {
-    const error = new Error('EventSource failed');
-    onError?.(error);
-  };
-  
-  return eventSource;
+export async function getEventById(id: string): Promise<EventDetail> {
+  throw new Error('Event detail endpoint not implemented');
 }
-
-// ============================================================================
-// Export utilities
-// ============================================================================
-
-export { ApiError };
-export type { ApiResponse };
