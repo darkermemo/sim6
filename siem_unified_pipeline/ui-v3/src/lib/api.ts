@@ -12,14 +12,14 @@ import {
   DashboardResponse,
   EpsStatsResponse
 } from '@/types/api';
-import { api } from '@/lib/http';
+import { http } from '@/lib/http';
 
 // ============================================================================
 // Health API
 // ============================================================================
 
 export async function getHealth(): Promise<HealthResponse> {
-  return api<HealthResponse>('health');
+  return http<HealthResponse>('/health');
 }
 
 // ============================================================================
@@ -37,7 +37,7 @@ export async function searchEvents(query: EventSearchQuery): Promise<EventSearch
     offset: query.offset || 0
   };
 
-  const response = await api<any>('search/execute', {
+  const response = await http<any>('/search/execute', {
     method: 'POST',
     body: JSON.stringify(body),
     headers: { 'content-type': 'application/json' }
@@ -59,7 +59,7 @@ export async function searchEvents(query: EventSearchQuery): Promise<EventSearch
 }
 
 export async function compileSearch(query: string, tenantId = "default") {
-  return api<{ sql: string }>('search/compile', {
+  return http<{ sql: string }>('/search/compile', {
     method: 'POST',
     body: JSON.stringify({
       tenant_id: tenantId,
@@ -71,7 +71,7 @@ export async function compileSearch(query: string, tenantId = "default") {
 }
 
 export async function searchFacets(query: string, facets: Array<{field: string, size?: number}>, tenantId = "default") {
-  return api<{ facets: any }>('search/facets', {
+  return http<{ facets: any }>('/search/facets', {
     method: 'POST',
     body: JSON.stringify({
       tenant_id: tenantId,
@@ -84,7 +84,7 @@ export async function searchFacets(query: string, facets: Array<{field: string, 
 }
 
 export async function searchAggs(query: string, tenantId = "default") {
-  return api<{ aggs: { timeline: any[] } }>('search/aggs', {
+  return http<{ aggs: { timeline: any[] } }>('/search/aggs', {
     method: 'POST',
     body: JSON.stringify({
       tenant_id: tenantId,
@@ -108,7 +108,7 @@ export async function getDashboard(): Promise<DashboardResponse> {
     const timelineData = await searchAggs("*");
     
     // Get basic stats from search execute with limit 0
-    const statsData = await api<any>('search/execute', {
+    const statsData = await http<any>('/search/execute', {
       method: 'POST',
       body: JSON.stringify({
         tenant_id: "default",

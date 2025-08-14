@@ -2,7 +2,7 @@
 set -euo pipefail
 
 API="${API:-http://127.0.0.1:9999/api/v2}"
-UI="${UI:-http://127.0.0.1:5183}"
+UI="${UI:-http://127.0.0.1:5183/ui/v3}"
 TENANT="${TENANT:-default}"
 
 say(){ printf "\n🧪 %s\n" "$*"; }

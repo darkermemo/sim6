@@ -1,40 +1,42 @@
-// app/api/v2/[...path]/route.ts
-const ORIGIN = process.env.API_URL!.replace(/\/+$/, "");
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
-async function forward(req: Request, pathSegs: string[]) {
+const API_ORIGIN = process.env.API_URL || 'http://127.0.0.1:9999';
+
+async function forward(req: Request, pathname: string) {
   const url = new URL(req.url);
-  const qs  = url.search ? url.search : "";
-  const dest = `${ORIGIN}/api/v2/${pathSegs.join("/")}${qs}`;
+  const dest = `${API_ORIGIN}/api/v2/${pathname}${url.search}`;
+  const h = new Headers(req.headers);
+  h.delete('host'); h.delete('origin'); h.delete('referer');
 
-  const headers = new Headers(req.headers);
-  headers.delete("host"); headers.delete("origin"); headers.delete("referer");
-
-  const init: RequestInit = {
+  return fetch(dest, {
     method: req.method,
-    headers,
-    body: req.method === "GET" || req.method === "HEAD" ? undefined : req.body,
-    redirect: "manual",
-    duplex: "half",
-  } as RequestInit;
-
-  const r = await fetch(dest, init);
-  const out = new Response(r.body, { status: r.status, statusText: r.statusText });
-  r.headers.forEach((v, k) => out.headers.set(k, v));
-  return out;
+    headers: h,
+    body: req.method === 'GET' || req.method === 'HEAD' ? undefined : req.body,
+    redirect: 'manual',
+    cache: 'no-store',
+    duplex: 'half',
+  } as RequestInit);
 }
 
-export async function GET(req: Request, ctx: { params: Promise<{ path: string[] }> }) {
-  const { path } = await ctx.params; return forward(req, path);
+// Next 15 requires awaiting params
+export async function GET(req: Request, ctx: { params: Promise<{ path?: string[] }> }) { 
+  const params = await ctx.params; 
+  return forward(req, (params.path ?? []).join('/')); 
 }
-export async function POST(req: Request, ctx: { params: Promise<{ path: string[] }> }) {
-  const { path } = await ctx.params; return forward(req, path);
+export async function POST(req: Request, ctx: { params: Promise<{ path?: string[] }> }) { 
+  const params = await ctx.params; 
+  return forward(req, (params.path ?? []).join('/')); 
 }
-export async function PUT(req: Request, ctx: { params: Promise<{ path: string[] }> }) {
-  const { path } = await ctx.params; return forward(req, path);
+export async function PUT(req: Request, ctx: { params: Promise<{ path?: string[] }> }) { 
+  const params = await ctx.params; 
+  return forward(req, (params.path ?? []).join('/')); 
 }
-export async function PATCH(req: Request, ctx: { params: Promise<{ path: string[] }> }) {
-  const { path } = await ctx.params; return forward(req, path);
+export async function PATCH(req: Request, ctx: { params: Promise<{ path?: string[] }> }) { 
+  const params = await ctx.params; 
+  return forward(req, (params.path ?? []).join('/')); 
 }
-export async function DELETE(req: Request, ctx: { params: Promise<{ path: string[] }> }) {
-  const { path } = await ctx.params; return forward(req, path);
+export async function DELETE(req: Request, ctx: { params: Promise<{ path?: string[] }> }) { 
+  const params = await ctx.params; 
+  return forward(req, (params.path ?? []).join('/')); 
 }

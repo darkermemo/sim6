@@ -1,7 +1,9 @@
 // lib/http.ts
-export async function api<T>(path: string, init?: RequestInit): Promise<T> {
-  const url = `/api/v2/${path.replace(/^\/+/, "")}`;
-  const r = await fetch(url, { ...init, cache: "no-store" });
-  if (!r.ok) throw new Error(`${r.status} ${await r.text()}`);
-  return r.json() as Promise<T>;
+const BASE = process.env.NEXT_PUBLIC_BASEPATH || '';
+const api = (p: string) => `${BASE}/api/v2${p.startsWith('/') ? p : `/${p}`}`;
+
+export async function http<T>(path: string, init?: RequestInit): Promise<T> {
+  const res = await fetch(api(path), { cache: 'no-store', ...init });
+  if (!res.ok) throw new Error(`${res.status} ${await res.text()}`);
+  return res.json();
 }
