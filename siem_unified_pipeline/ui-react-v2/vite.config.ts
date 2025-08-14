@@ -23,7 +23,7 @@ const sentryPlugin = process.env.NODE_ENV === 'production' && process.env.VITE_S
     })
   : undefined;
 
-export default defineConfig(({ command, mode }) => ({
+export default defineConfig(({ command }) => ({
   // Set correct root directory
   root: __dirname,
   base: command === 'build' ? '/ui/v2/' : '/',

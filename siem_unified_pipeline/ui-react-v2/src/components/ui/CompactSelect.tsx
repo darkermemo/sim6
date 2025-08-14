@@ -1,4 +1,6 @@
-import React from 'react';
+/**
+ * Compact Select Component
+ */
 
 interface Option {
   value: string | number;
@@ -74,9 +76,9 @@ export default function CompactSelect({
           aria-label={ariaLabel || label}
           style={{
             ...styles,
-            border: '1px solid var(--border-default)',
-            backgroundColor: disabled ? 'var(--bg-muted)' : 'var(--bg-surface)',
-            color: disabled ? 'var(--fg-muted)' : 'var(--fg-default)',
+            border: '1px solid var(--border)',
+            backgroundColor: disabled ? 'var(--muted)' : 'var(--surface)',
+            color: disabled ? 'var(--fg-muted)' : 'var(--fg)',
             cursor: disabled ? 'not-allowed' : 'pointer',
             outline: 'none',
             appearance: 'none',
@@ -88,11 +90,11 @@ export default function CompactSelect({
             transition: 'border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out',
           }}
           onFocus={(e) => {
-            e.target.style.borderColor = 'var(--color-primary)';
-            e.target.style.boxShadow = 'var(--focus-ring)';
+            e.target.style.borderColor = 'var(--accent-9)';
+            e.target.style.boxShadow = 'var(--ring)';
           }}
           onBlur={(e) => {
-            e.target.style.borderColor = 'var(--border-default)';
+            e.target.style.borderColor = 'var(--border)';
             e.target.style.boxShadow = 'none';
           }}
         >

@@ -1,0 +1,29 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "strict": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "exactOptionalPropertyTypes": false,
+    "noImplicitReturns": true,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false
+  },
+  "include": [
+    "src/styles/theme.css",
+    "src/lib/chart-colors.ts", 
+    "src/lib/accessibility-validator.ts",
+    "src/components/dev/AccessibilityValidator.tsx",
+    "src/components/ExcelTable.tsx",
+    "src/components/ColumnSelector.tsx",
+    "src/components/ui/CompactSelect.tsx",
+    "src/pages/SearchGolden.tsx",
+    "src/lib/api-golden.ts",
+    "src/components/search-golden/QueryBar.tsx",
+    "src/components/search-golden/SchemaPanel.tsx",
+    "src/components/search-golden/ResultTable.tsx",
+    "vite.config.ts", 
+    "playwright.config.ts"
+  ],
+  "exclude": ["node_modules", "dist"]
+}

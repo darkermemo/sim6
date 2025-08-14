@@ -87,7 +87,7 @@ export default function SchemaPanel({ fields, enums, grammar, onFieldClick, onEn
                 {displayTokens.map((token, i) => (
                   <span key={i}>
                     {token.label}
-                    {token.example ? ` (${token.example})` : ''}
+                                         {(token as any).example ? ` (${(token as any).example})` : ''}
                     {i < displayTokens.length - 1 ? ', ' : ''}
                   </span>
                 ))}

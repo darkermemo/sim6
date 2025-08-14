@@ -13,11 +13,11 @@ export default function FacetPanel({ facets, onToggle }: Props) {
   if (!facets) return null;
 
   return (
-    <div style={{ padding: "6px 8px", borderBottom: "1px solid #e2e8f0" }}>
-      <h3 style={{ margin: "0 0 6px 0", fontSize: "12px", fontWeight: "600", color: "#64748b" }}>Facets</h3>
+    <div style={{ padding: "6px 8px", borderBottom: "1px solid var(--border)", backgroundColor: "var(--card)" }}>
+      <h3 style={{ margin: "0 0 6px 0", fontSize: "12px", fontWeight: "600", color: "var(--fg-muted)" }}>Facets</h3>
       {Object.entries(facets).map(([field, buckets]) => (
         <div key={field} style={{ marginBottom: "8px" }}>
-          <h4 style={{ margin: "0 0 3px 0", fontSize: "11px", fontWeight: "600", color: "#64748b" }}>{field}</h4>
+          <h4 style={{ margin: "0 0 3px 0", fontSize: "11px", fontWeight: "600", color: "var(--fg-muted)" }}>{field}</h4>
           <div data-testid={`facet-${field}`}>
             {buckets.map(bucket => (
               <div 
@@ -31,11 +31,11 @@ export default function FacetPanel({ facets, onToggle }: Props) {
                   borderRadius: "2px",
                   fontSize: "10px"
                 }}
-                onMouseEnter={e => e.currentTarget.style.backgroundColor = "#f1f5f9"}
+                onMouseEnter={e => e.currentTarget.style.backgroundColor = "var(--muted)"}
                 onMouseLeave={e => e.currentTarget.style.backgroundColor = "transparent"}
               >
-                <span style={{ color: "#374151" }}>{bucket.value || "(empty)"}</span>
-                <span style={{ color: "#94a3b8", fontWeight: "600" }}>{bucket.count}</span>
+                <span style={{ color: "var(--fg)" }}>{bucket.value || "(empty)"}</span>
+                <span style={{ color: "var(--fg-muted)", fontWeight: "600" }}>{bucket.count}</span>
               </div>
             ))}
           </div>

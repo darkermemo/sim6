@@ -12,6 +12,7 @@
 
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import * as echarts from 'echarts/core';
+import { getChartThemeColors, getChartLoadingColors, getChartErrorColors, getChartColorsRgb } from '@/lib/chart-colors';
 import {
   TitleComponent,
   ToolboxComponent,
@@ -225,11 +226,12 @@ export function Chart({
   useEffect(() => {
     if (chartInstance.current) {
       if (loading) {
+        const loadingColors = getChartLoadingColors();
         chartInstance.current.showLoading('default', {
           text: loadingText,
-          color: resolvedTheme === 'dark' ? '#60a5fa' : '#3b82f6',
-          textColor: resolvedTheme === 'dark' ? '#f3f4f6' : '#333333',
-          maskColor: resolvedTheme === 'dark' ? 'rgba(31, 41, 55, 0.8)' : 'rgba(255, 255, 255, 0.8)',
+          color: loadingColors.color,
+          textColor: loadingColors.textColor,
+          maskColor: loadingColors.maskColor,
           zlevel: 0,
         });
       } else {
@@ -246,6 +248,7 @@ export function Chart({
 
   // Show error state
   if (error) {
+    const errorColors = getChartErrorColors();
     return (
       <div 
         className={`chart-error ${className}`}
@@ -255,15 +258,15 @@ export function Chart({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          background: resolvedTheme === 'dark' ? '#1f2937' : '#ffffff',
-          border: `1px solid ${resolvedTheme === 'dark' ? '#374151' : '#e5e7eb'}`,
+          background: errorColors.background,
+          border: `1px solid ${errorColors.border}`,
           borderRadius: '6px',
           ...style,
         }}
       >
         <div style={{ 
           textAlign: 'center',
-          color: resolvedTheme === 'dark' ? '#ef4444' : '#dc2626',
+          color: errorColors.icon,
           padding: '20px'
         }}>
           <div style={{ fontSize: '18px', marginBottom: '8px' }}>⚠️</div>

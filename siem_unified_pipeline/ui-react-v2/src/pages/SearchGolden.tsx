@@ -1,10 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import QueryBar from "../components/search-golden/QueryBar";
 import FacetPanel from "../components/search-golden/FacetPanel";
-import TimelineChart from "../components/search-golden/TimelineChart";
 import ResultTable from "../components/search-golden/ResultTable";
 import SavedSearchBar from "../components/search-golden/SavedSearchBar";
-import StreamSwitch from "../components/search-golden/StreamSwitch";
 import SchemaPanel from "../components/search-golden/SchemaPanel";
 import { 
   fetchSchemaFields,
@@ -15,6 +13,11 @@ import {
   fetchFacets 
 } from "../lib/api-golden";
 import * as Types from "../lib/search-types";
+
+// Global API declaration for legacy compatibility
+declare global {
+  const api: any;
+}
 
 /**
  * SearchPage - Golden Standard Implementation
@@ -211,9 +214,9 @@ export default function SearchPage() {
 
         setState((prev: Types.SearchState) => ({
           ...prev,
-          execute: executeRes,
-          facets: facetsRes.facets || {},
-          timeline: timelineRes.buckets || [],
+          execute: executeRes as Types.ExecuteResult,
+          facets: (facetsRes as any)?.facets || {},
+          timeline: (timelineRes as any)?.buckets || [],
         }));
 
         // Log optional endpoint failures for debugging (but don't crash UI)
@@ -231,7 +234,17 @@ export default function SearchPage() {
         // Set safe defaults
         setState((prev: Types.SearchState) => ({
           ...prev,
-          execute: { data: { data: [], meta: [] }, sql: '', took_ms: 0 },
+          execute: { 
+            data: { 
+              data: [], 
+              meta: [],
+              rows: 0,
+              rows_before_limit_at_least: 0,
+              statistics: {}
+            }, 
+            sql: '', 
+            took_ms: 0 
+          },
           facets: {},
           timeline: [],
         }));
@@ -274,12 +287,13 @@ export default function SearchPage() {
     setState((prev: Types.SearchState) => ({ ...prev, sse: { ...prev.sse, enabled } }));
   };
 
-  const updateSSEStatus = (connected: boolean, lastEventTs?: number) => {
-    setState((prev: Types.SearchState) => ({ 
-      ...prev, 
-      sse: { ...prev.sse, connected, lastEventTs } 
-    }));
-  };
+  // SSE status update (not currently used)
+  // const updateSSEStatus = (connected: boolean, lastEventTs?: number) => {
+  //   setState((prev: Types.SearchState) => ({ 
+  //     ...prev, 
+  //     sse: { ...prev.sse, connected, lastEventTs } 
+  //   }));
+  // };
 
   // Save search
   const saveSearch = async (name: string) => {
@@ -351,22 +365,22 @@ export default function SearchPage() {
       height: "100vh", 
       display: "flex", 
       flexDirection: "column",
-      backgroundColor: "#f8fafc",
+      backgroundColor: "var(--bg)",
       fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
     }}>
       {/* Header */}
       <header style={{
-        backgroundColor: "#ffffff",
-        borderBottom: "1px solid #e2e8f0",
+        backgroundColor: "var(--card)",
+        borderBottom: "1px solid var(--border)",
         padding: "8px 16px",
-        boxShadow: "0 1px 2px 0 rgba(0, 0, 0, 0.05)",
+        boxShadow: "var(--shadow-1)",
         zIndex: 10
       }}>
         <h1 style={{ 
           margin: 0, 
           fontSize: "16px", 
           fontWeight: 600, 
-          color: "#1e293b" 
+          color: "var(--fg)" 
         }}>
           Search Events
         </h1>
@@ -379,10 +393,10 @@ export default function SearchPage() {
           data-testid="error-banner"
           style={{
             padding: "12px 24px",
-            backgroundColor: "#fef2f2",
-            border: "1px solid #fca5a5",
-            borderLeft: "4px solid #ef4444",
-            color: "#dc2626",
+            backgroundColor: "var(--destructive-bg)",
+            border: "1px solid var(--destructive-border)",
+            borderLeft: "4px solid var(--destructive)",
+            color: "var(--destructive)",
             fontSize: "14px",
             margin: "8px 24px"
           }}
@@ -396,26 +410,26 @@ export default function SearchPage() {
         flex: 1, 
         overflow: "hidden",
         gap: "1px",
-        backgroundColor: "#e2e8f0"
+        backgroundColor: "var(--border)"
       }}>
         {/* Left sidebar - Collapsible */}
         <aside style={{ 
           width: "240px", 
-          backgroundColor: "#ffffff",
+          backgroundColor: "var(--card)",
           overflowY: "auto",
           flexShrink: 0,
           borderRadius: "0 4px 4px 0"
         }}>
           <div style={{
             padding: "8px 12px",
-            borderBottom: "1px solid #f1f5f9",
-            backgroundColor: "#f8fafc"
+            borderBottom: "1px solid var(--border)",
+            backgroundColor: "var(--muted)"
           }}>
             <h3 style={{ 
               margin: 0, 
               fontSize: "11px", 
               fontWeight: 600, 
-              color: "#64748b",
+              color: "var(--fg-muted)",
               textTransform: "uppercase",
               letterSpacing: "0.3px"
             }}>
@@ -465,7 +479,7 @@ export default function SearchPage() {
           onCompile={compile}
           onRun={execute}
           onSave={saveSearch}
-          onExport={exportSearch}
+          onExport={() => exportSearch('csv')}
           saving={state.saving}
           exporting={state.exporting}
           compiling={compiling}
@@ -603,7 +617,7 @@ export default function SearchPage() {
               }}>
                 Live: {state.sse.connected ? "ON" : "OFF"}
                 <button
-                  onClick={toggleSSE}
+                  onClick={() => toggleSSE(!state.sse.enabled)}
                   style={{
                     background: "none",
                     border: "none",

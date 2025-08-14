@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 
 interface Column {
   name: string;
@@ -17,6 +17,7 @@ interface Props {
 /**
  * ExcelTable - Excel-like data table with compact cells and resizable columns
  * Features: compact spacing, resizable columns, proper scrolling, Excel-like appearance
+ * Updated: Fixed sorting and resizing UX
  */
 export default function ExcelTable({
   data,
@@ -42,15 +43,17 @@ export default function ExcelTable({
     e.preventDefault();
     e.stopPropagation();
     
+    const startX = e.clientX;
+    const startWidth = getColumnWidth(columnName);
     setIsResizing(columnName);
-    resizeStartX.current = e.clientX;
-    resizeStartWidth.current = getColumnWidth(columnName);
+    
+    // Add visual feedback to body cursor
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
 
     const handleMouseMove = (moveEvent: MouseEvent) => {
-      if (!isResizing) return;
-      
-      const diff = moveEvent.clientX - resizeStartX.current;
-      const newWidth = Math.max(60, resizeStartWidth.current + diff);
+      const diff = moveEvent.clientX - startX;
+      const newWidth = Math.max(60, Math.min(500, startWidth + diff)); // Min 60px, Max 500px
       
       setColumnWidths(prev => ({
         ...prev,
@@ -60,13 +63,15 @@ export default function ExcelTable({
 
     const handleMouseUp = () => {
       setIsResizing(null);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
     };
 
     document.addEventListener('mousemove', handleMouseMove);
     document.addEventListener('mouseup', handleMouseUp);
-  }, [isResizing]);
+  }, []);
 
   // Handle column sort
   const handleSort = (columnName: string) => {
@@ -89,19 +94,20 @@ export default function ExcelTable({
       ref={tableRef}
       style={{ 
         height,
-        border: '1px solid var(--border-default)',
-        borderRadius: '4px',
+        border: '2px solid red', // TEMPORARY: Debug border to see if changes load
+        borderRadius: 'var(--radius-2)',
         overflow: 'hidden',
-        backgroundColor: 'var(--bg-surface)',
+        backgroundColor: 'var(--card)',
         display: 'flex',
         flexDirection: 'column'
       }}
+      title="ExcelTable - Updated with new sorting/resizing"
     >
       {/* Fixed Header */}
       <div
         style={{
-          backgroundColor: 'var(--bg-muted)',
-          borderBottom: '1px solid var(--border-default)',
+          backgroundColor: 'var(--muted)',
+          borderBottom: '1px solid var(--border)',
           display: 'flex',
           flexShrink: 0,
           position: 'relative',
@@ -126,17 +132,29 @@ export default function ExcelTable({
                 borderRight: index < columns.length - 1 ? '1px solid var(--border-muted)' : 'none',
                 fontSize: '10px',
                 fontWeight: 600,
-                color: 'var(--fg-default)',
-                backgroundColor: isSorted ? 'var(--bg-accent)' : 'var(--bg-muted)',
+                color: 'var(--fg)',
+                backgroundColor: isSorted ? 'var(--accent)' : 'var(--muted)',
                 cursor: 'pointer',
                 position: 'relative',
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'flex-start',
                 justifyContent: 'center',
-                userSelect: 'none'
+                userSelect: 'none',
+                transition: 'background-color 0.15s ease'
               }}
               onClick={() => handleSort(column.name)}
+              onMouseEnter={(e) => {
+                if (!isSorted) {
+                  e.currentTarget.style.backgroundColor = 'var(--accent)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!isSorted) {
+                  e.currentTarget.style.backgroundColor = 'var(--muted)';
+                }
+              }}
+              title={`Click to sort by ${column.name} ${isSorted ? (sortDirection === 'asc' ? '(currently ascending)' : '(currently descending)') : ''}`}
             >
               {/* Column Name */}
               <div style={{ 
@@ -153,9 +171,25 @@ export default function ExcelTable({
                 }}>
                   {column.name}
                 </span>
-                {isSorted && (
-                  <span style={{ color: 'var(--color-primary)', fontSize: '8px' }}>
-                    {sortDirection === 'asc' ? 'ASC' : 'DESC'}
+                {isSorted ? (
+                  <span style={{ 
+                    color: 'var(--accent-9)', 
+                    fontSize: '10px', 
+                    fontWeight: 'bold',
+                    backgroundColor: 'var(--bg)',
+                    padding: '1px 3px',
+                    borderRadius: '2px',
+                    border: '1px solid var(--accent-9)'
+                  }}>
+                    {sortDirection === 'asc' ? '↑' : '↓'}
+                  </span>
+                ) : (
+                  <span style={{ 
+                    color: 'var(--fg-muted)', 
+                    fontSize: '8px',
+                    opacity: 0.5
+                  }}>
+                    ↕
                   </span>
                 )}
               </div>
@@ -173,19 +207,32 @@ export default function ExcelTable({
               </div>
 
               {/* Resize Handle */}
-              <div
-                style={{
-                  position: 'absolute',
-                  right: '-2px',
-                  top: '0',
-                  bottom: '0',
-                  width: '4px',
-                  cursor: 'col-resize',
-                  backgroundColor: isResizing === column.name ? 'var(--color-primary)' : 'transparent',
-                  borderRight: '1px solid var(--border-default)'
-                }}
-                onMouseDown={(e) => handleResizeStart(e, column.name)}
-              />
+              {index < columns.length - 1 && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    right: '-4px',
+                    top: '0',
+                    bottom: '0',
+                    width: '8px',
+                    cursor: 'col-resize',
+                    backgroundColor: 'transparent',
+                    borderRight: isResizing === column.name ? '2px solid var(--accent-9)' : '1px solid var(--border)',
+                    transition: 'border-color 0.15s ease',
+                    zIndex: 10
+                  }}
+                  onMouseDown={(e) => handleResizeStart(e, column.name)}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderRight = '2px solid var(--accent-9)';
+                  }}
+                  onMouseLeave={(e) => {
+                    if (isResizing !== column.name) {
+                      e.currentTarget.style.borderRight = '1px solid var(--border)';
+                    }
+                  }}
+                  title={`Resize ${column.name} column`}
+                />
+              )}
             </div>
           );
         })}
@@ -196,7 +243,7 @@ export default function ExcelTable({
         style={{
           flex: 1,
           overflow: 'auto',
-          backgroundColor: 'var(--bg-surface)'
+          backgroundColor: 'var(--bg)'
         }}
       >
         {data.length === 0 ? (
@@ -215,7 +262,7 @@ export default function ExcelTable({
               style={{
                 display: 'flex',
                 borderBottom: '1px solid var(--border-muted)',
-                backgroundColor: rowIndex % 2 === 0 ? 'var(--bg-surface)' : 'var(--bg-muted)'
+                backgroundColor: rowIndex % 2 === 0 ? 'var(--bg)' : 'var(--muted)'
               }}
             >
 
@@ -235,7 +282,7 @@ export default function ExcelTable({
                       padding: '2px 4px',
                       borderRight: colIndex < columns.length - 1 ? '1px solid var(--border-muted)' : 'none',
                       fontSize: '10px',
-                      color: 'var(--fg-default)',
+                      color: 'var(--fg)',
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
                       whiteSpace: 'nowrap',

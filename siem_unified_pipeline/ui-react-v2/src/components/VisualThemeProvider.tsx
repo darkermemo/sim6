@@ -38,9 +38,9 @@ export function VisualThemeProvider({
   });
 
   const [isDark, setIsDark] = useState<boolean>(() => {
-    const saved = localStorage.getItem('dark-mode');
+    const saved = localStorage.getItem('theme');
     if (saved !== null) {
-      return JSON.parse(saved);
+      return saved === 'dark';
     }
     // Check system preference
     return window.matchMedia('(prefers-color-scheme: dark)').matches || defaultDarkMode;
@@ -62,7 +62,7 @@ export function VisualThemeProvider({
 
     // Save preferences
     localStorage.setItem('visual-theme', theme);
-    localStorage.setItem('dark-mode', JSON.stringify(isDark));
+    localStorage.setItem('theme', isDark ? 'dark' : 'light');
   }, [theme, isDark]);
 
   // Listen for system dark mode changes
@@ -70,8 +70,8 @@ export function VisualThemeProvider({
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
     const handleChange = (e: MediaQueryListEvent) => {
       // Only auto-switch if user hasn't manually set a preference
-      const savedDarkMode = localStorage.getItem('dark-mode');
-      if (savedDarkMode === null) {
+      const savedTheme = localStorage.getItem('theme');
+      if (savedTheme === null) {
         setIsDark(e.matches);
       }
     };

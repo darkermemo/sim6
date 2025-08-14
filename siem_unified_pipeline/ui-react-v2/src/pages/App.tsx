@@ -3,6 +3,7 @@ import AppShell from "@/components/layout/AppShell";
 import Home from "./Home";
 import SearchV2 from "./SearchV2";
 import Login from "./Login";
+import { AccessibilityValidator } from "@/components/dev/AccessibilityValidator";
 
 // Direct imports for stability (avoiding lazy loading issues)
 import SearchGolden from "./SearchGolden";
@@ -27,8 +28,10 @@ const FLAGS = {
  */
 export default function App() {
   return (
-    <Routes>
-      <Route element={<AppShell />}>
+    <>
+      <AccessibilityValidator />
+      <Routes>
+        <Route element={<AppShell />}>
         <Route path="/" element={<Home />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/search" element={<SearchGolden />} />
@@ -45,5 +48,6 @@ export default function App() {
         <Route path="*" element={<Navigate to="/" />} />
       </Route>
     </Routes>
+    </>
   );
 }

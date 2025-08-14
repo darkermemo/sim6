@@ -37,9 +37,7 @@ export default function ResultTable({
     onSort([{ field, dir: newDir }]);
   };
 
-  const copyRow = (row: any) => {
-    navigator.clipboard.writeText(JSON.stringify(row, null, 2));
-  };
+  // Copy functionality removed to save space per user request
 
   // UX controls: compact view, hide-empty, column picker
   const defaultCompact = useMemo(() => [
@@ -61,7 +59,7 @@ export default function ResultTable({
     allColumnNames.filter(n => defaultCompact.includes(n))
   );
   const [hideEmpty, setHideEmpty] = useState<boolean>(true);
-  const [showColumnPicker, setShowColumnPicker] = useState(false);
+  // Column picker removed to save space per user request
 
   const isEmptyValue = (v: any) => v === null || v === undefined || v === "" || (Array.isArray(v) && v.length === 0) || (typeof v === "object" && Object.keys(v).length === 0);
 
@@ -79,8 +77,8 @@ export default function ResultTable({
   }, [meta, visibleColumns, hideEmpty, nonEmptyByColumn, allColumnNames]);
 
   return (
-    <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", padding: "10px" }}>
-      <h3 style={{ margin: "0 0 8px 0", fontSize: "14px", fontWeight: 600 }}>Results</h3>
+    <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", padding: "10px", backgroundColor: "var(--bg)" }}>
+      <h3 style={{ margin: "0 0 8px 0", fontSize: "14px", fontWeight: 600, color: "var(--fg)" }}>Results</h3>
       {/* Compact Controls Row */}
       <div data-testid="result-meta" style={{ 
         marginBottom: "6px", 
@@ -89,21 +87,21 @@ export default function ResultTable({
         alignItems: "center", 
         fontSize: "10px",
         padding: "4px 6px",
-        backgroundColor: "#f8fafc",
+        backgroundColor: "var(--muted)",
         borderRadius: "3px",
-        border: "1px solid #e2e8f0"
+        border: "1px solid var(--border)"
       }}>
         {/* Result count - prominent */}
         <div style={{ 
           fontSize: "11px", 
           fontWeight: 600, 
-          color: "#374151",
+          color: "var(--fg)",
           marginRight: "auto"
         }}>
           {rows} rows
           {rowsBeforeLimit > rows && ` (${rowsBeforeLimit} total)`}
           {statistics && (
-            <span style={{ marginLeft: "8px", color: "#64748b", fontSize: "9px", fontWeight: 400 }}>
+            <span style={{ marginLeft: "8px", color: "var(--fg-muted)", fontSize: "9px", fontWeight: 400 }}>
               {statistics.elapsed}s • {statistics.rows_read} rows • {statistics.bytes_read} bytes
             </span>
           )}
@@ -176,7 +174,8 @@ export default function ResultTable({
   );
 }
 
-function formatValue(value: any, type: string): string {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+function _formatValue(value: any, type: string): string {
   if (value === null || value === undefined) return "";
 
   if (type.includes("DateTime")) {

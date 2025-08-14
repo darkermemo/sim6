@@ -55,13 +55,13 @@ export default function SavedSearchBar({ tenantId, onLoad }: Props) {
   };
 
   return (
-    <div style={{ padding: "6px 8px", flex: 1, overflow: "auto", borderBottom: "1px solid #e2e8f0" }}>
-      <h3 style={{ margin: "0 0 6px 0", fontSize: "12px", fontWeight: "600", color: "#64748b" }}>Saved Searches</h3>
+    <div style={{ padding: "6px 8px", flex: 1, overflow: "auto", borderBottom: "1px solid var(--border)", backgroundColor: "var(--card)" }}>
+      <h3 style={{ margin: "0 0 6px 0", fontSize: "12px", fontWeight: "600", color: "var(--fg-muted)" }}>Saved Searches</h3>
       
       {loading ? (
-        <div style={{ fontSize: "10px", color: "#94a3b8" }}>Loading...</div>
+        <div style={{ fontSize: "10px", color: "var(--fg-muted)" }}>Loading...</div>
       ) : !searches || searches.length === 0 ? (
-        <div style={{ color: "#94a3b8", fontSize: "10px" }}>No saved searches</div>
+        <div style={{ color: "var(--fg-muted)", fontSize: "10px" }}>No saved searches</div>
       ) : (
         <div>
           {(searches || []).map(saved => (
@@ -70,13 +70,13 @@ export default function SavedSearchBar({ tenantId, onLoad }: Props) {
               style={{
                 padding: "3px",
                 marginBottom: "3px",
-                border: "1px solid #e2e8f0",
+                border: "1px solid var(--border)",
                 borderRadius: "2px",
-                backgroundColor: "#f8fafc"
+                backgroundColor: "var(--muted)"
               }}
             >
-              <div style={{ fontWeight: "600", fontSize: "10px", color: "#374151" }}>{saved.name}</div>
-              <div style={{ fontSize: "9px", color: "#94a3b8", marginBottom: "2px" }}>
+              <div style={{ fontWeight: "600", fontSize: "10px", color: "var(--fg)" }}>{saved.name}</div>
+              <div style={{ fontSize: "9px", color: "var(--fg-muted)", marginBottom: "2px" }}>
                 {saved.q.length > 30 ? saved.q.substring(0, 30) + '...' : saved.q}
               </div>
               <div style={{ display: "flex", gap: "2px" }}>

@@ -2,7 +2,10 @@ type Json = Record<string, unknown> | unknown[];
 import type { ZodSchema } from 'zod';
 import { ZodError } from 'zod';
 
-const RAW_BASE = (import.meta.env.VITE_API_URL || "").trim().replace(/\/+$/, "");
+// Helper to safely handle AbortSignal in strict mode
+const safeSignal = (signal?: AbortSignal) => signal || undefined;
+
+const RAW_BASE = ((import.meta as any).env.VITE_API_URL || "").trim().replace(/\/+$/, "");
 if (!RAW_BASE) {
   console.warn("VITE_API_URL is empty; defaulting to http://127.0.0.1:9999");
 }
@@ -62,23 +65,23 @@ const safeJson = (s: string) => {
 
 export function get<T>(path: string, init?: RequestInit) {
   const { signal, ...rest } = init || {};
-  return http<T>(path, { ...(rest as RequestInit), signal: signal ?? undefined, method: "GET" });
+  return http<T>(path, { ...(rest as RequestInit), signal, method: "GET" });
 }
 
 export function post<T>(path: string, body?: Json, init?: RequestInit) {
   const { signal, ...rest } = init || {};
-  return http<T>(path, { ...(rest as RequestInit), signal: signal ?? undefined, method: "POST", body: body ? JSON.stringify(body) : undefined });
+  return http<T>(path, { ...(rest as RequestInit), signal, method: "POST", body: body ? JSON.stringify(body) : null });
 }
 
 // Enhanced versions with optional 404 handling
 type HttpOpts<T> = { signal?: AbortSignal; optional?: boolean; defaultValue?: T };
 
 export async function httpGet<T>(path: string, opts: HttpOpts<T> = {}): Promise<T> {
-  const API_BASE = import.meta.env.VITE_API_URL?.replace(/\/+$/, "") || "http://127.0.0.1:9999";
+  const API_BASE = (import.meta as any).env.VITE_API_URL?.replace(/\/+$/, "") || "http://127.0.0.1:9999";
   const url = `${API_BASE}/api/v2${path}`;
   
   const res = await fetch(url, {
-    signal: opts.signal,
+    signal: safeSignal(opts.signal),
     headers: { "content-type": "application/json" },
   });
   
@@ -88,12 +91,12 @@ export async function httpGet<T>(path: string, opts: HttpOpts<T> = {}): Promise<
 }
 
 export async function httpPost<T>(path: string, body: any, opts: HttpOpts<T> = {}): Promise<T> {
-  const API_BASE = import.meta.env.VITE_API_URL?.replace(/\/+$/, "") || "http://127.0.0.1:9999";
+  const API_BASE = (import.meta as any).env.VITE_API_URL?.replace(/\/+$/, "") || "http://127.0.0.1:9999";
   const url = `${API_BASE}/api/v2${path}`;
   
   const res = await fetch(url, {
     method: "POST",
-    signal: opts.signal,
+    signal: safeSignal(opts.signal),
     headers: { "content-type": "application/json" },
     body: JSON.stringify(body),
   });
@@ -105,12 +108,12 @@ export async function httpPost<T>(path: string, body: any, opts: HttpOpts<T> = {
 
 export function del<T>(path: string, init?: RequestInit) {
   const { signal, ...rest } = init || {};
-  return http<T>(path, { ...(rest as RequestInit), signal: signal ?? undefined, method: "DELETE" });
+  return http<T>(path, { ...(rest as RequestInit), signal, method: "DELETE" });
 }
 
 export function patch<T>(path: string, body?: Json, init?: RequestInit) {
   const { signal, ...rest } = init || {};
-  return http<T>(path, { ...(rest as RequestInit), signal: signal ?? undefined, method: "PATCH", body: body ? JSON.stringify(body) : undefined });
+  return http<T>(path, { ...(rest as RequestInit), signal, method: "PATCH", body: body ? JSON.stringify(body) : null });
 }
 
 // Remove aliases to avoid duplicate declarations (we have new httpGet/httpPost functions above)

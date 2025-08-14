@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import * as Types from "@/lib/search-types";
 import CompactSelect from "@/components/ui/CompactSelect";
 
@@ -85,8 +85,8 @@ export default function QueryBar({
 
   return (
     <div style={{ 
-      backgroundColor: "#f8fafc",
-      borderBottom: "1px solid #e2e8f0",
+      backgroundColor: "var(--muted)",
+      borderBottom: "1px solid var(--border)",
       padding: "4px 8px",
       flexShrink: 0
     }}>
@@ -98,7 +98,7 @@ export default function QueryBar({
         fontSize: "11px"
       }}>
         {/* Compact Tenant selector */}
-        <span style={{ fontSize: "9px", color: "#64748b", fontWeight: "600" }}>Tenant:</span>
+        <span style={{ fontSize: "9px", color: "var(--fg-muted)", fontWeight: "600" }}>Tenant:</span>
         <CompactSelect
           value={tenantId}
           onChange={(value) => onTenantChange(value.toString())}
@@ -120,9 +120,9 @@ export default function QueryBar({
         />
 
         {/* Compact Time range */}
-        <span style={{ fontSize: "9px", color: "#64748b", fontWeight: "600", marginLeft: "8px" }}>Time:</span>
+        <span style={{ fontSize: "9px", color: "var(--fg-muted)", fontWeight: "600", marginLeft: "8px" }}>Time:</span>
         <CompactSelect
-          value={'last_seconds' in time ? time.last_seconds.toString() : 'custom'}
+          value={'last_seconds' in time ? time.last_seconds?.toString() ?? 'custom' : 'custom'}
           onChange={(value) => handleTimeRangeChange(value.toString())}
           size="xs"
           aria-label="time range"

@@ -50,7 +50,7 @@ export default function Health() {
           marginBottom: 'var(--space-lg)'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-sm)' }}>
-            <span style={{ fontSize: '1rem', fontWeight: 'bold', color: '#ef4444' }}>ERROR</span>
+            <span style={{ fontSize: '1rem', fontWeight: 'bold', color: 'var(--destructive)' }}>ERROR</span>
             <div>
               <strong>Health Check Error</strong>
               <p style={{ margin: 0, marginTop: 'var(--space-xs)' }}>{err}</p>

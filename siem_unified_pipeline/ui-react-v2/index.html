@@ -4,6 +4,16 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>SIEM</title>
+    
+    <!-- Theme initialization script - runs before React to prevent flash -->
+    <script>
+      (function () {
+        const stored = localStorage.getItem('theme'); // 'light' | 'dark' | null
+        const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        const next = stored ?? (systemDark ? 'dark' : 'light');
+        document.documentElement.classList.toggle('dark', next === 'dark');
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

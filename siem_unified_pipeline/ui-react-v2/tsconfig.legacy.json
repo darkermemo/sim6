@@ -1,0 +1,26 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noImplicitAny": false,
+    "strictNullChecks": false,
+    "strictPropertyInitialization": false,
+    "strictBindCallApply": false,
+    "strictFunctionTypes": false,
+    "noImplicitReturns": false,
+    "noImplicitThis": false,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "exactOptionalPropertyTypes": false,
+    "skipLibCheck": true,
+    "allowUnreachableCode": true,
+    "allowUnusedLabels": true
+  },
+  "include": [
+    "src/pages/SearchGoldenV2.tsx",
+    "src/pages/SearchGoldenV4.tsx", 
+    "src/pages/SearchV2.tsx",
+    "src/components/search/**/*",
+    "src/components/__tests__/VirtualizedTable.test.tsx",
+    "src/lib/lazy-routes.tsx"
+  ]
+}

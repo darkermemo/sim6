@@ -2,7 +2,8 @@
 @layer reset, tokens, base, components, utilities, overrides;
 
 /* Import all layer styles */
-@import './styles/design-tokens.css';
+@import './styles/theme.css';           /* New Radix-based theme system */
+@import './styles/design-tokens.css';   /* Legacy tokens (to be phased out) */
 @import './styles/tokens.css';
 @import './styles/reset.css';
 @import './styles/utilities.css';
