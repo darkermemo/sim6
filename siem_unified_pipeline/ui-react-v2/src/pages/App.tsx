@@ -11,6 +11,7 @@ import DashboardGolden from "./DashboardGolden";
 import { SearchDemo } from "@/components/SearchDemo";
 import SearchGoldenV2 from "./SearchGoldenV2";
 import SearchGoldenV3 from "./SearchGoldenV3";
+import SearchGoldenV4 from "./SearchGoldenV4";
 
 /**
  * Feature flags from environment variables
@@ -33,7 +34,8 @@ export default function App() {
         <Route path="/" element={<Home />} />
         <Route path="/dashboard" element={<DashboardGolden />} />
         <Route path="/dashboard-old" element={<Dashboard />} />
-        <Route path="/search" element={<SearchGoldenV3 />} />
+        <Route path="/search" element={<SearchGoldenV4 />} />
+        <Route path="/search-v3" element={<SearchGoldenV3 />} />
         <Route path="/search-v2" element={<SearchGoldenV2 />} />
         <Route path="/search-legacy" element={<SearchGolden />} />
         <Route path="/search-simple" element={<Search />} />
