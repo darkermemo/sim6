@@ -4841,6 +4841,7 @@ dependencies = [
  "hyper 1.6.0",
  "jsonwebtoken",
  "kafka",
+ "lazy_static",
  "log",
  "lz4_flex",
  "maxminddb",

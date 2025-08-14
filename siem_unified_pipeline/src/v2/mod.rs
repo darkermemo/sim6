@@ -4,6 +4,7 @@ pub mod api;
 pub mod dal;
 pub mod handlers {
     pub mod health;
+    pub mod health_advanced;
     pub mod events;
     pub mod sse;
     pub mod alerts;
@@ -29,6 +30,10 @@ pub mod handlers {
     pub mod investigations;
     pub mod admin_storage;
 }
+pub mod types {
+    pub mod health;
+}
+pub mod collectors;
 pub mod router;
 pub mod workers {
     pub mod kafka_consumer;

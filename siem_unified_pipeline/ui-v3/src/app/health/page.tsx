@@ -5,510 +5,514 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { getHealth } from "@/lib/api";
-import { HealthResponse } from "@/types/api";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Switch } from "@/components/ui/switch";
+import { Progress } from "@/components/ui/progress";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { useRealtimeHealth, useHealthDiagnose, useHealthAutoFix } from "@/hooks/useHealth";
+import { PipelineFlow } from "@/components/health/PipelineFlow";
+import type { OverallStatus } from "@/types/health";
 import { 
   Activity, 
+  AlertTriangle, 
   Database, 
-  Server, 
-  Network,
-  RefreshCw,
-  CheckCircle,
+  CheckCircle, 
   XCircle,
-  AlertTriangle,
-  Clock,
+  Server,
   Cpu,
   HardDrive,
-  Wifi,
-  Zap,
-  MemoryStick,
-  Gauge,
+  Network,
+  RefreshCw,
+  Clock,
   TrendingUp,
-  TrendingDown,
-  Minus
+  Zap,
+  PlayCircle,
+  Wrench,
+  Eye,
+  Shield,
+  BarChart3
 } from "lucide-react";
 
 export default function HealthPage() {
-  const [healthData, setHealthData] = useState<HealthResponse | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
+  const [liveMode, setLiveMode] = useState(true);
+  const { 
+    data: health, 
+    loading, 
+    error, 
+    lastRefresh, 
+    connected, 
+    refetch, 
+    toggleStream,
+    streamEnabled 
+  } = useRealtimeHealth({ 
+    enableStream: liveMode, 
+    refreshInterval: liveMode ? 0 : 10000 
+  });
 
-  // Fetch health data
-  const fetchHealthData = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      const [basicHealth, detailedHealth] = await Promise.all([
-        getHealth().catch(() => null),
-        getHealth().catch(() => null)
-      ]);
-      
-      // Use detailed health if available, otherwise use basic health
-      setHealthData(detailedHealth || basicHealth);
-      setLastRefresh(new Date());
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch health data');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { diagnose, loading: diagnosing } = useHealthDiagnose();
+  const { autoFix, loading: fixing } = useHealthAutoFix();
 
-  // Initial fetch and periodic refresh
-  useEffect(() => {
-    fetchHealthData();
-    
-    const interval = setInterval(fetchHealthData, 30000); // Refresh every 30 seconds
-    return () => clearInterval(interval);
-  }, []);
-
-  // Helper functions
-  const getStatusColor = (status: string) => {
-    switch (status?.toLowerCase()) {
-      case 'ok':
-      case 'healthy':
+  const getOverallStatusInfo = (status: OverallStatus) => {
+    switch (status) {
       case 'up':
-        return 'text-green-600';
-      case 'warning':
+        return {
+          badge: <Badge className="bg-green-100 text-green-800 border-green-200"><CheckCircle className="h-3 w-3 mr-1" />Healthy</Badge>,
+          color: 'text-green-600',
+          description: 'All systems operational'
+        };
       case 'degraded':
-        return 'text-yellow-600';
-      case 'error':
+        return {
+          badge: <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 border-yellow-200"><AlertTriangle className="h-3 w-3 mr-1" />Degraded</Badge>,
+          color: 'text-yellow-600',
+          description: 'Some performance issues detected'
+        };
       case 'down':
-      case 'unhealthy':
-        return 'text-red-600';
+        return {
+          badge: <Badge variant="destructive"><XCircle className="h-3 w-3 mr-1" />Down</Badge>,
+          color: 'text-red-600',
+          description: 'Critical system failures'
+        };
       default:
-        return 'text-slate-600';
+        return {
+          badge: <Badge variant="outline"><AlertTriangle className="h-3 w-3 mr-1" />Unknown</Badge>,
+          color: 'text-gray-600',
+          description: 'Status unavailable'
+        };
     }
   };
 
-  const getStatusIcon = (status: string) => {
-    switch (status?.toLowerCase()) {
-      case 'ok':
-      case 'healthy':
-      case 'up':
-        return <CheckCircle className="h-4 w-4 text-green-600" />;
-      case 'warning':
-      case 'degraded':
-        return <AlertTriangle className="h-4 w-4 text-yellow-600" />;
-      case 'error':
-      case 'down':
-      case 'unhealthy':
-        return <XCircle className="h-4 w-4 text-red-600" />;
-      default:
-        return <Activity className="h-4 w-4 text-slate-600" />;
+  const handleDiagnose = async (component: string) => {
+    const result = await diagnose({ component });
+    if (result) {
+      console.log('Diagnostic result:', result);
+      // In real app, open a modal/drawer with results
     }
   };
 
-  const getStatusBadgeVariant = (status: string) => {
-    switch (status?.toLowerCase()) {
-      case 'ok':
-      case 'healthy':
-      case 'up':
-        return 'default';
-      case 'warning':
-      case 'degraded':
-        return 'secondary';
-      case 'error':
-      case 'down':
-      case 'unhealthy':
-        return 'destructive';
-      default:
-        return 'outline';
+  const handleAutoFix = async (kind: string, params: any, confirm: boolean = false) => {
+    const result = await autoFix({ kind, params, confirm });
+    if (result) {
+      console.log('Auto-fix result:', result);
+      // In real app, show success/failure notification
     }
   };
-
-  const getUptimePercent = () => {
-    if (healthData?.uptime_seconds) {
-      // Mock calculation - in real app this would be calculated from historical data
-      return 99.9;
-    }
-    return 99.5;
-  };
-
-  const formatUptime = (seconds: number) => {
-    const days = Math.floor(seconds / 86400);
-    const hours = Math.floor((seconds % 86400) / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    
-    if (days > 0) {
-      return `${days}d ${hours}h ${minutes}m`;
-    } else if (hours > 0) {
-      return `${hours}h ${minutes}m`;
-    } else {
-      return `${minutes}m`;
-    }
-  };
-
-  // System metrics (mock data - would come from real monitoring)
-  const systemMetrics = [
-    { name: "CPU Usage", value: 45, unit: "%", status: "healthy", icon: Cpu },
-    { name: "Memory Usage", value: 72, unit: "%", status: "warning", icon: MemoryStick },
-    { name: "Disk Usage", value: 34, unit: "%", status: "healthy", icon: HardDrive },
-    { name: "Network I/O", value: 1.2, unit: "Gbps", status: "healthy", icon: Wifi }
-  ];
-
-  const systemComponents = healthData?.components ? 
-    Object.entries(healthData.components).map(([name, health]) => ({
-      name: name.charAt(0).toUpperCase() + name.slice(1),
-      status: health.status,
-      description: `Response time: ${health.response_time_ms.toFixed(2)}ms`,
-      responseTime: health.response_time_ms,
-      errorCount: health.error_count,
-      lastCheck: health.last_check,
-      icon: name.toLowerCase().includes('clickhouse') ? Database :
-            name.toLowerCase().includes('redis') ? Database :
-            name.toLowerCase().includes('vector') ? Network :
-            name.toLowerCase().includes('api') ? Server : Activity
-    })) : [
-      {
-        name: "SIEM API",
-        status: healthData?.status || "unknown",
-        description: "Main SIEM API service",
-        responseTime: 1.2,
-        errorCount: 0,
-        lastCheck: new Date().toISOString(),
-        icon: Server
-      },
-      {
-        name: "ClickHouse",
-        status: "healthy",
-        description: "Primary event database",
-        responseTime: 2.1,
-        errorCount: 0,
-        lastCheck: new Date().toISOString(),
-        icon: Database
-      },
-      {
-        name: "Redis Cache",
-        status: "healthy", 
-        description: "Session and cache storage",
-        responseTime: 0.8,
-        errorCount: 0,
-        lastCheck: new Date().toISOString(),
-        icon: Database
-      },
-      {
-        name: "Vector Pipeline",
-        status: "healthy",
-        description: "Log processing pipeline",
-        responseTime: 3.2,
-        errorCount: 0,
-        lastCheck: new Date().toISOString(),
-        icon: Network
-      }
-    ];
 
   if (loading) {
-    return <HealthSkeleton />;
-  }
-
-  if (error) {
     return (
-      <div className="min-h-full bg-slate-50 dark:bg-slate-900">
-        <div className="p-6">
-          <Card className="border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-900/20">
-            <CardContent className="p-12 text-center">
-              <XCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-red-800 dark:text-red-200 mb-2">
-                Health Check Failed
-              </h3>
-              <p className="text-red-600 dark:text-red-300 mb-4">
-                Unable to connect to the SIEM API server
-              </p>
-              <Button 
-                variant="outline" 
-                onClick={fetchHealthData}
-                disabled={loading}
-                className="gap-2"
-              >
-                <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-                Retry Health Check
-              </Button>
-            </CardContent>
-          </Card>
+      <div className="container mx-auto py-8 space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold">Health Control Room</h1>
+            <p className="text-muted-foreground">Real-time system monitoring and automated remediation</p>
+          </div>
+          <Skeleton className="h-10 w-32" />
         </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+          {[...Array(5)].map((_, i) => (
+            <Card key={i}>
+              <CardHeader className="pb-3">
+                <Skeleton className="h-4 w-24" />
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-8 w-16 mb-2" />
+                <Skeleton className="h-3 w-20" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        <Skeleton className="h-96 w-full" />
       </div>
     );
   }
 
-  const overallStatus = healthData?.status === "ok" ? "healthy" : "unhealthy";
-  const uptime = healthData?.uptime_seconds || 86400;
-
-  return (
-    <div className="min-h-full bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
-      <div className="p-6 space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="space-y-1">
-            <h1 className="text-3xl font-bold text-slate-900 dark:text-white">
-              System Health
-            </h1>
-            <p className="text-slate-600 dark:text-slate-400">
-              Monitor the health and performance of all SIEM components
-            </p>
+  if (error) {
+    return (
+      <div className="container mx-auto py-8">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h1 className="text-3xl font-bold">Health Control Room</h1>
+            <p className="text-muted-foreground">Real-time system monitoring and automated remediation</p>
           </div>
-          <div className="flex items-center gap-3">
-            <div className="text-sm text-slate-500 dark:text-slate-400">
-              Last updated: {lastRefresh.toLocaleTimeString()}
-            </div>
-            <Button 
-              variant="outline" 
-              onClick={fetchHealthData}
-              disabled={loading}
-              className="gap-2"
-            >
-              <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-              Refresh
-            </Button>
-          </div>
+          <Button onClick={refetch} variant="outline">
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Retry
+          </Button>
         </div>
 
-        {/* Overall Status */}
-        <Card className="border-0 shadow-lg bg-white dark:bg-slate-800">
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-slate-900 dark:text-white">
-              <Activity className="h-5 w-5 text-green-600" />
-              System Overview
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="text-center">
-                <div className="flex justify-center mb-3">
-                  {getStatusIcon(healthData?.status || "unknown")}
-                </div>
-                <div className="text-2xl font-bold text-slate-900 dark:text-white mb-1">
-                  {overallStatus === "healthy" ? "Operational" : "Issues Detected"}
-                </div>
-                <Badge variant={getStatusBadgeVariant(healthData?.status || "unknown")}>
-                  {healthData?.status?.toUpperCase() || "UNKNOWN"}
-                </Badge>
-              </div>
-              <div className="text-center">
-                <div className="text-3xl font-bold text-green-600 mb-1">
-                  {getUptimePercent()}%
-                </div>
-                <div className="text-sm text-slate-600 dark:text-slate-400">
-                  Uptime
-                </div>
-                <div className="text-xs text-slate-500 dark:text-slate-500 mt-1">
-                  Running for {formatUptime(uptime)}
-                </div>
-              </div>
-              <div className="text-center">
-                <div className="text-3xl font-bold text-blue-600 mb-1">
-                  {healthData?.version || "v3.0.0"}
-                </div>
-                <div className="text-sm text-slate-600 dark:text-slate-400">
-                  Version
-                </div>
-                <div className="text-xs text-slate-500 dark:text-slate-500 mt-1">
-                  Last deployed: Today
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* System Metrics */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {systemMetrics.map((metric, index) => (
-            <Card key={index} className="border-0 shadow-lg bg-white dark:bg-slate-800">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-2">
-                    <p className="text-sm font-medium text-slate-600 dark:text-slate-400">
-                      {metric.name}
-                    </p>
-                    <p className="text-2xl font-bold text-slate-900 dark:text-white">
-                      {metric.value}{metric.unit}
-                    </p>
-                    <div className="flex items-center gap-2">
-                      {metric.status === 'healthy' ? (
-                        <TrendingUp className="h-3 w-3 text-green-500" />
-                      ) : metric.status === 'warning' ? (
-                        <AlertTriangle className="h-3 w-3 text-yellow-500" />
-                      ) : (
-                        <TrendingDown className="h-3 w-3 text-red-500" />
-                      )}
-                      <span className={`text-xs font-medium ${getStatusColor(metric.status)}`}>
-                        {metric.status}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="h-12 w-12 rounded-xl bg-slate-50 dark:bg-slate-700 flex items-center justify-center">
-                    <metric.icon className="h-6 w-6 text-slate-600 dark:text-slate-300" />
-                  </div>
-                </div>
-                {/* Progress bar for percentage metrics */}
-                {metric.unit === '%' && (
-                  <div className="mt-4">
-                    <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2">
-                      <div 
-                        className={`h-2 rounded-full transition-all duration-500 ${
-                          metric.value > 80 ? 'bg-red-500' : 
-                          metric.value > 60 ? 'bg-yellow-500' : 'bg-green-500'
-                        }`}
-                        style={{ width: `${metric.value}%` }}
-                      />
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        {/* Component Status */}
-        <Card className="border-0 shadow-lg bg-white dark:bg-slate-800">
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-slate-900 dark:text-white">
-              <Server className="h-5 w-5 text-blue-600" />
-              Component Health
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {systemComponents.map((component, index) => (
-                <div key={index} className="p-4 rounded-lg border border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-lg bg-slate-100 dark:bg-slate-600 flex items-center justify-center">
-                        <component.icon className="h-5 w-5 text-slate-600 dark:text-slate-300" />
-                      </div>
-                      <div>
-                        <div className="font-medium text-slate-900 dark:text-white">
-                          {component.name}
-                        </div>
-                        <div className="text-sm text-slate-500 dark:text-slate-400">
-                          {component.description}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {getStatusIcon(component.status)}
-                      <Badge variant={getStatusBadgeVariant(component.status)}>
-                        {component.status}
-                      </Badge>
-                    </div>
-                  </div>
-                  
-                  <div className="grid grid-cols-3 gap-4 text-sm">
-                    <div>
-                      <div className="text-slate-500 dark:text-slate-400">Response</div>
-                      <div className="font-medium text-slate-900 dark:text-white">
-                        {component.responseTime?.toFixed(1)}ms
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-slate-500 dark:text-slate-400">Errors</div>
-                      <div className="font-medium text-slate-900 dark:text-white">
-                        {component.errorCount || 0}
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-slate-500 dark:text-slate-400">Last Check</div>
-                      <div className="font-medium text-slate-900 dark:text-white">
-                        {new Date(component.lastCheck).toLocaleTimeString()}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Health History Chart Placeholder */}
-        <Card className="border-0 shadow-lg bg-white dark:bg-slate-800">
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-slate-900 dark:text-white">
-              <Gauge className="h-5 w-5 text-purple-600" />
-              Performance Trends
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="h-64 flex items-center justify-center text-slate-500 dark:text-slate-400">
-              <div className="text-center">
-                <Gauge className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>Performance charts coming soon</p>
-                <p className="text-sm">Historical performance and trend analysis</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Debug Information */}
-        {healthData && (
-          <Card className="border-0 shadow-lg bg-white dark:bg-slate-800">
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-slate-900 dark:text-white">
-                <Database className="h-5 w-5 text-green-600" />
-                Raw Health Data
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <pre className="text-xs bg-slate-100 dark:bg-slate-700 p-4 rounded-lg overflow-auto text-slate-700 dark:text-slate-300">
-                {JSON.stringify(healthData, null, 2)}
-              </pre>
-            </CardContent>
-          </Card>
-        )}
+        <Alert variant="destructive">
+          <XCircle className="h-4 w-4" />
+          <AlertDescription>
+            Failed to fetch health data: {error}
+          </AlertDescription>
+        </Alert>
       </div>
-    </div>
-  );
-}
+    );
+  }
 
-// Health loading skeleton
-function HealthSkeleton() {
+  if (!health) {
+    return <div>No health data available</div>;
+  }
+
+  const statusInfo = getOverallStatusInfo(health.overall);
+
   return (
-    <div className="min-h-full bg-slate-50 dark:bg-slate-900">
-      <div className="p-6 space-y-6">
-        <div className="flex items-center justify-between">
-          <div className="space-y-2">
-            <Skeleton className="h-8 w-48" />
-            <Skeleton className="h-4 w-96" />
+    <div className="container mx-auto py-8 space-y-6">
+      {/* Header with Live Mode Toggle */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Health Control Room</h1>
+          <p className="text-muted-foreground">
+            Real-time system monitoring and automated remediation
+          </p>
+          <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
+            <span>Last updated: {lastRefresh?.toLocaleTimeString()}</span>
+            {streamEnabled && connected && (
+              <span className="flex items-center gap-1 text-green-600">
+                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                Live
+              </span>
+            )}
+            {health.errors > 0 && (
+              <span className="text-red-600">
+                {health.errors} error{health.errors > 1 ? 's' : ''} detected
+              </span>
+            )}
           </div>
-          <Skeleton className="h-10 w-24" />
         </div>
-        
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <Zap className="h-4 w-4" />
+            <span className="text-sm">Live Mode</span>
+            <Switch 
+              checked={liveMode} 
+              onCheckedChange={(checked) => {
+                setLiveMode(checked);
+                if (checked) {
+                  toggleStream();
+                }
+              }} 
+            />
+          </div>
+          <Button onClick={refetch} variant="outline" size="sm">
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Refresh
+          </Button>
+        </div>
+      </div>
+
+      {/* Overall Status Banner */}
+      <Alert className={health.overall === 'up' ? 'border-green-200 bg-green-50' : health.overall === 'degraded' ? 'border-yellow-200 bg-yellow-50' : 'border-red-200 bg-red-50'}>
+        <Activity className="h-4 w-4" />
+        <AlertDescription className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            {statusInfo.badge}
+            <span className={statusInfo.color}>{statusInfo.description}</span>
+          </div>
+          <div className="text-sm">
+            {new Date(health.ts).toLocaleString()}
+          </div>
+        </AlertDescription>
+      </Alert>
+
+      {/* Key Metrics Overview */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <TrendingUp className="h-4 w-4" />
+              Pipeline EPS
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{health.pipeline.eps_parsed.toLocaleString()}</div>
+            <p className="text-xs text-muted-foreground">
+              {health.pipeline.parse_success_pct.toFixed(1)}% success rate
+            </p>
+            <Progress value={health.pipeline.parse_success_pct} className="mt-2 h-1" />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <Database className="h-4 w-4" />
+              ClickHouse
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Badge variant={health.clickhouse.ok ? 'default' : 'destructive'} className="mb-2">
+              {health.clickhouse.ok ? 'Healthy' : 'Down'}
+            </Badge>
+            <div className="text-sm text-muted-foreground">
+              {health.clickhouse.inserts_per_sec} IPS, {health.clickhouse.ingest_delay_ms}ms delay
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <Server className="h-4 w-4" />
+              Redis
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Badge variant={health.redis.ok ? 'default' : 'destructive'} className="mb-2">
+              {health.redis.ok ? 'Healthy' : 'Down'}
+            </Badge>
+            <div className="text-sm text-muted-foreground">
+              {health.redis.hit_ratio_pct.toFixed(1)}% hit ratio, {health.redis.ops_per_sec} OPS
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <Network className="h-4 w-4" />
+              Kafka
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Badge variant={health.kafka.ok ? 'default' : 'destructive'} className="mb-2">
+              {health.kafka.ok ? 'Healthy' : 'Down'}
+            </Badge>
+            <div className="text-sm text-muted-foreground">
+              {health.kafka.consumer_groups.reduce((sum, cg) => sum + cg.lag, 0)} total lag
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <Shield className="h-4 w-4" />
+              Detection
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Badge variant={health.services.detectors.every(d => d.ok) ? 'default' : 'destructive'} className="mb-2">
+              {health.services.detectors.every(d => d.ok) ? 'Active' : 'Issues'}
+            </Badge>
+            <div className="text-sm text-muted-foreground">
+              {health.services.detectors.reduce((sum, d) => sum + (d.alerts_per_min || 0), 0)} alerts/min
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Animated Pipeline Flow */}
+      <PipelineFlow health={health} />
+
+      {/* Detailed Component Metrics */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* ClickHouse Details */}
         <Card>
           <CardHeader>
-            <Skeleton className="h-6 w-40" />
+            <CardTitle className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Database className="h-5 w-5" />
+                ClickHouse Metrics
+              </div>
+              <Button 
+                size="sm" 
+                variant="outline" 
+                onClick={() => handleDiagnose('clickhouse')}
+                disabled={diagnosing}
+              >
+                <Eye className="h-4 w-4 mr-1" />
+                Diagnose
+              </Button>
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {Array.from({ length: 3 }).map((_, i) => (
-                <div key={i} className="text-center space-y-3">
-                  <Skeleton className="h-8 w-8 rounded-full mx-auto" />
-                  <Skeleton className="h-6 w-24 mx-auto" />
-                  <Skeleton className="h-4 w-16 mx-auto" />
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <div className="text-sm text-muted-foreground">Inserts/sec</div>
+                <div className="text-lg font-semibold">{health.clickhouse.inserts_per_sec}</div>
+              </div>
+              <div>
+                <div className="text-sm text-muted-foreground">Queries/sec</div>
+                <div className="text-lg font-semibold">{health.clickhouse.queries_per_sec}</div>
+              </div>
+              <div>
+                <div className="text-sm text-muted-foreground">Ingest Delay</div>
+                <div className="text-lg font-semibold">{health.clickhouse.ingest_delay_ms}ms</div>
+              </div>
+              <div>
+                <div className="text-sm text-muted-foreground">Parts</div>
+                <div className="text-lg font-semibold">{health.clickhouse.parts}</div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Redis Details */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Server className="h-5 w-5" />
+                Redis Metrics
+              </div>
+              <Button 
+                size="sm" 
+                variant="outline" 
+                onClick={() => handleDiagnose('redis')}
+                disabled={diagnosing}
+              >
+                <Eye className="h-4 w-4 mr-1" />
+                Diagnose
+              </Button>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <div className="text-sm text-muted-foreground">Memory Usage</div>
+                <div className="text-lg font-semibold">{health.redis.used_memory_mb}MB</div>
+                <Progress 
+                  value={(health.redis.used_memory_mb / health.redis.maxmemory_mb) * 100} 
+                  className="mt-1 h-1" 
+                />
+              </div>
+              <div>
+                <div className="text-sm text-muted-foreground">Hit Ratio</div>
+                <div className="text-lg font-semibold">{health.redis.hit_ratio_pct.toFixed(1)}%</div>
+                <Progress value={health.redis.hit_ratio_pct} className="mt-1 h-1" />
+              </div>
+              <div>
+                <div className="text-sm text-muted-foreground">Operations/sec</div>
+                <div className="text-lg font-semibold">{health.redis.ops_per_sec}</div>
+              </div>
+              <div>
+                <div className="text-sm text-muted-foreground">Connected Clients</div>
+                <div className="text-lg font-semibold">{health.redis.connected_clients}</div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Kafka Details */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Network className="h-5 w-5" />
+                Kafka Consumer Groups
+              </div>
+              <Button 
+                size="sm" 
+                variant="outline" 
+                onClick={() => handleDiagnose('kafka')}
+                disabled={diagnosing}
+              >
+                <Eye className="h-4 w-4 mr-1" />
+                Diagnose
+              </Button>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {health.kafka.consumer_groups.map((cg) => (
+                <div key={cg.group} className="flex items-center justify-between">
+                  <div>
+                    <div className="font-medium text-sm">{cg.group}</div>
+                    <div className="text-xs text-muted-foreground">{cg.tps} TPS</div>
+                  </div>
+                  <div className="text-right">
+                    <Badge variant={cg.lag < 1000 ? 'default' : cg.lag < 10000 ? 'secondary' : 'destructive'}>
+                      {cg.lag} lag
+                    </Badge>
+                  </div>
                 </div>
               ))}
             </div>
           </CardContent>
         </Card>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <Card key={i}>
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-2">
-                    <Skeleton className="h-4 w-20" />
-                    <Skeleton className="h-8 w-16" />
-                    <Skeleton className="h-3 w-12" />
+        {/* Services Status */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <BarChart3 className="h-5 w-5" />
+              Service Status
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {[
+                ...health.services.ingestors.map(s => ({ ...s, type: 'Ingestor' })),
+                ...health.services.parsers.map(s => ({ ...s, type: 'Parser' })),
+                ...health.services.detectors.map(s => ({ ...s, type: 'Detector' })),
+                ...health.services.sinks.map(s => ({ ...s, type: 'Sink' }))
+              ].map((service, i) => (
+                <div key={i} className="flex items-center justify-between">
+                  <div>
+                    <div className="font-medium text-sm">{service.name}</div>
+                    <div className="text-xs text-muted-foreground">{service.type}</div>
                   </div>
-                  <Skeleton className="h-12 w-12 rounded-xl" />
+                  <Badge variant={service.ok ? 'default' : 'destructive'}>
+                    {service.ok ? 'Running' : 'Down'}
+                  </Badge>
                 </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
       </div>
+
+      {/* Error Management Panel */}
+      {health.errors > 0 && (
+        <Card className="border-red-200">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-red-600">
+              <AlertTriangle className="h-5 w-5" />
+              Issues & Auto-Fix ({health.errors})
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Accordion type="single" collapsible>
+              <AccordionItem value="high-lag">
+                <AccordionTrigger className="text-sm">
+                  <div className="flex items-center gap-2">
+                    <Badge variant="destructive">High</Badge>
+                    Consumer group lag detected
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent>
+                  <div className="space-y-3">
+                    <p className="text-sm text-muted-foreground">
+                      The siem-parser consumer group has high lag ({health.kafka.consumer_groups.find(cg => cg.group === 'siem-parser')?.lag || 0} messages behind).
+                    </p>
+                    <div className="flex gap-2">
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={() => handleAutoFix('service_restart', { service: 'parser' }, false)}
+                        disabled={fixing}
+                      >
+                        <PlayCircle className="h-4 w-4 mr-1" />
+                        Dry Run
+                      </Button>
+                      <Button 
+                        size="sm"
+                        onClick={() => handleAutoFix('service_restart', { service: 'parser' }, true)}
+                        disabled={fixing}
+                      >
+                        <Wrench className="h-4 w-4 mr-1" />
+                        Restart Parser
+                      </Button>
+                    </div>
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
-
-
