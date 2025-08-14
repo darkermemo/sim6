@@ -1,17 +1,21 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 import AppShell from "@/components/layout/AppShell";
 import Home from "./Home";
-import Search from "./Search";
 import SearchV2 from "./SearchV2";
-import SearchGolden from "./SearchGolden";
-import Health from "./Health";
 import Login from "./Login";
-import Dashboard from "./Dashboard";
-import DashboardGolden from "./DashboardGolden";
-import { SearchDemo } from "@/components/SearchDemo";
-import SearchGoldenV2 from "./SearchGoldenV2";
-import SearchGoldenV3 from "./SearchGoldenV3";
-import SearchGoldenV4 from "./SearchGoldenV4";
+
+// Code-split imports for performance optimization
+import {
+  LazySearchGolden,
+  LazySearchGoldenV2, 
+  LazySearchGoldenV3,
+  LazySearchGoldenV4,
+  LazyDashboardGolden,
+  LazyDashboard,
+  LazyHealth,
+  LazySearch,
+  LazySearchDemo,
+} from "@/lib/lazy-routes";
 
 /**
  * Feature flags from environment variables
@@ -32,15 +36,15 @@ export default function App() {
     <Routes>
       <Route element={<AppShell />}>
         <Route path="/" element={<Home />} />
-        <Route path="/dashboard" element={<DashboardGolden />} />
-        <Route path="/dashboard-old" element={<Dashboard />} />
-        <Route path="/search" element={<SearchGoldenV4 />} />
-        <Route path="/search-v3" element={<SearchGoldenV3 />} />
-        <Route path="/search-v2" element={<SearchGoldenV2 />} />
-        <Route path="/search-legacy" element={<SearchGolden />} />
-        <Route path="/search-simple" element={<Search />} />
-        <Route path="/search-demo" element={<SearchDemo />} />
-        <Route path="/health" element={<Health />} />
+        <Route path="/dashboard" element={<LazyDashboardGolden />} />
+        <Route path="/dashboard-old" element={<LazyDashboard />} />
+        <Route path="/search" element={<LazySearchGoldenV4 />} />
+        <Route path="/search-v3" element={<LazySearchGoldenV3 />} />
+        <Route path="/search-v2" element={<LazySearchGoldenV2 />} />
+        <Route path="/search-legacy" element={<LazySearchGolden />} />
+        <Route path="/search-simple" element={<LazySearch />} />
+        <Route path="/search-demo" element={<LazySearchDemo />} />
+        <Route path="/health" element={<LazyHealth />} />
         
         {/* Feature-flagged routes (hidden by default) */}
         {FLAGS.ALERTS_ENABLED && <Route path="/alerts" element={<div>Alerts TBD</div>} />}

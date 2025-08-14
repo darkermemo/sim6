@@ -28,10 +28,22 @@ async function http<T>(
 ): Promise<T> {
   const url = path.startsWith("/") ? `${API_ROOT}${path}` : `${API_ROOT}/${path}`;
   const headers = new Headers(init.headers || {});
+  
+  // Enterprise HTTP optimizations
   if (!headers.has("content-type") && init.body) headers.set("content-type", "application/json");
   headers.set("accept", "application/json");
+  headers.set("accept-encoding", "gzip, deflate, br");
+  headers.set("connection", "keep-alive");
+  
+  // Performance optimizations
+  const enhancedInit: RequestInit = {
+    ...init,
+    headers,
+    keepalive: true, // Keep connections alive for better performance
+    cache: init.method === 'GET' ? 'default' : 'no-cache', // Cache GET requests
+  };
 
-  const resp = await fetch(url, { ...init, headers });
+  const resp = await fetch(url, enhancedInit);
   const requestId = resp.headers.get("x-request-id") ?? undefined;
 
   const text = await resp.text();

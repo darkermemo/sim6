@@ -6,7 +6,15 @@ import { installRuntimeGuard, markAppReady } from "./lib/runtimeGuard";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { VisualThemeProvider, ThemeToggle } from "./components/VisualThemeProvider";
 import { queryClient } from "./app/queryClient";
+import { initializeMonitoring, reportBundleSize, monitorMemoryUsage } from "./lib/monitoring";
 import "./index.css";
+
+// Initialize enterprise monitoring
+initializeMonitoring();
+
+// Start performance monitoring
+reportBundleSize();
+setTimeout(monitorMemoryUsage, 5000); // Check memory after app load
 
 // Install runtime guard before app starts
 // Allow optional endpoints that may return 404
