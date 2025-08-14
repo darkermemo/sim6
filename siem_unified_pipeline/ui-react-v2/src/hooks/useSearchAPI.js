@@ -28,7 +28,7 @@ const ExecuteResultZ = z.object({
             name: z.string(),
             type: z.string(),
         })),
-        data: z.array(z.record(z.any())).default([]),
+        data: z.array(z.record(z.string(), z.any())).default([]),
         rows: z.number().optional().default(0),
         rows_before_limit_at_least: z.number().optional().default(0),
         statistics: z.any().optional(),
