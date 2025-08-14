@@ -1,0 +1,177 @@
+/**
+ * Enterprise Design Tokens System
+ * Provides semantic CSS variables for consistent theming
+ * Compatible with light/dark modes and accessibility standards
+ */
+
+@layer tokens;
+
+:root {
+  /* Spacing Scale (8px grid system) */
+  --space-0: 0;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-20: 80px;
+  --space-24: 96px;
+
+  /* Radius Scale */
+  --radius-0: 0;
+  --radius-1: 2px;
+  --radius-2: 4px;
+  --radius-3: 6px;
+  --radius-4: 8px;
+  --radius-6: 12px;
+  --radius-8: 16px;
+  --radius-full: 9999px;
+
+  /* Typography Scale */
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+  --font-mono: "SF Mono", Monaco, "Cascadia Code", "Roboto Mono", Consolas, "Courier New", monospace;
+  
+  --text-xs: 12px;
+  --text-sm: 14px;
+  --text-md: 16px;
+  --text-lg: 18px;
+  --text-xl: 20px;
+  --text-2xl: 24px;
+  --text-3xl: 30px;
+  --text-4xl: 36px;
+
+  --line-xs: 1.25;
+  --line-sm: 1.375;
+  --line-md: 1.5;
+  --line-lg: 1.625;
+
+  --weight-normal: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+
+  /* Shadow Scale */
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.06);
+  --shadow-2: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
+  --shadow-3: 0 4px 6px rgba(0, 0, 0, 0.07), 0 2px 4px rgba(0, 0, 0, 0.06);
+  --shadow-4: 0 10px 15px rgba(0, 0, 0, 0.1), 0 4px 6px rgba(0, 0, 0, 0.05);
+  --shadow-5: 0 20px 25px rgba(0, 0, 0, 0.1), 0 10px 10px rgba(0, 0, 0, 0.04);
+
+  /* Animation Tokens */
+  --duration-fast: 150ms;
+  --duration-normal: 200ms;
+  --duration-slow: 300ms;
+  --ease-standard: cubic-bezier(0.4, 0.0, 0.2, 1);
+  --ease-enter: cubic-bezier(0.0, 0.0, 0.2, 1);
+  --ease-exit: cubic-bezier(0.4, 0.0, 1, 1);
+
+  /* Z-Index Scale */
+  --z-dropdown: 1000;
+  --z-modal: 1500;
+  --z-popover: 1600;
+  --z-tooltip: 1700;
+  --z-notification: 1800;
+
+  /* Semantic Color Tokens - Light Theme */
+  --bg-canvas: #ffffff;
+  --bg-surface: #f8fafc;
+  --bg-surface-hover: #f1f5f9;
+  --bg-muted: #f1f5f9;
+  --bg-accent: #e2e8f0;
+  --bg-accent-hover: #cbd5e1;
+
+  --fg-default: #0f172a;
+  --fg-muted: #64748b;
+  --fg-subtle: #94a3b8;
+  --fg-accent: #475569;
+  --fg-on-accent: #ffffff;
+
+  --border-default: #e2e8f0;
+  --border-muted: #f1f5f9;
+  --border-accent: #cbd5e1;
+  --border-strong: #94a3b8;
+
+  /* State Colors */
+  --color-primary: #3b82f6;
+  --color-primary-hover: #2563eb;
+  --color-primary-active: #1d4ed8;
+  --color-primary-fg: #ffffff;
+
+  --color-success: #10b981;
+  --color-success-hover: #059669;
+  --color-success-fg: #ffffff;
+
+  --color-warning: #f59e0b;
+  --color-warning-hover: #d97706;
+  --color-warning-fg: #ffffff;
+
+  --color-danger: #ef4444;
+  --color-danger-hover: #dc2626;
+  --color-danger-fg: #ffffff;
+
+  --color-info: #06b6d4;
+  --color-info-hover: #0891b2;
+  --color-info-fg: #ffffff;
+
+  /* Focus Ring */
+  --focus-ring: 0 0 0 2px var(--color-primary);
+  --focus-ring-offset: 0 0 0 2px var(--bg-canvas);
+}
+
+/* Dark Theme Tokens */
+:root.dark {
+  --bg-canvas: #0f172a;
+  --bg-surface: #1e293b;
+  --bg-surface-hover: #334155;
+  --bg-muted: #1e293b;
+  --bg-accent: #334155;
+  --bg-accent-hover: #475569;
+
+  --fg-default: #f8fafc;
+  --fg-muted: #94a3b8;
+  --fg-subtle: #64748b;
+  --fg-accent: #cbd5e1;
+  --fg-on-accent: #0f172a;
+
+  --border-default: #334155;
+  --border-muted: #1e293b;
+  --border-accent: #475569;
+  --border-strong: #64748b;
+
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-2: 0 1px 3px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-3: 0 4px 6px rgba(0, 0, 0, 0.35), 0 2px 4px rgba(0, 0, 0, 0.3);
+  --shadow-4: 0 10px 15px rgba(0, 0, 0, 0.4), 0 4px 6px rgba(0, 0, 0, 0.25);
+  --shadow-5: 0 20px 25px rgba(0, 0, 0, 0.4), 0 10px 10px rgba(0, 0, 0, 0.2);
+}
+
+/* High Contrast Mode */
+@media (prefers-contrast: high) {
+  :root {
+    --border-default: #000000;
+    --border-strong: #000000;
+    --fg-muted: #000000;
+    --bg-muted: #ffffff;
+  }
+
+  :root.dark {
+    --border-default: #ffffff;
+    --border-strong: #ffffff;
+    --fg-muted: #ffffff;
+    --bg-muted: #000000;
+  }
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-fast: 0ms;
+    --duration-normal: 0ms;
+    --duration-slow: 0ms;
+  }
+}
