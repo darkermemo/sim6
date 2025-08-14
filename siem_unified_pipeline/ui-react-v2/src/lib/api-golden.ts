@@ -4,7 +4,7 @@
  */
 
 import * as Types from './search-types';
-import { get, post, del, patch, API_ROOT, getOptional, zget, zpost, httpGet, httpPost } from './http';
+import { get, post, del, patch, API_ROOT, getOptional, httpGet, httpPost } from './http';
 import { z } from 'zod';
 
 // ---- Zod shapes for API normalization ----
@@ -237,8 +237,12 @@ export async function fetchSchemaBundle(): Promise<{
     const enums = EnumsResponseZ.parse(enumsAny ?? {});
     const grammar = { tokens: [], functions: [], examples: [], keywords: [], operators: [], specials: [] } as Types.Grammar;
     
-    const bundle = { fields, enums, grammar };
-    return bundle;
+    // Ensure we return the parsed data correctly
+    return {
+      fields,
+      enums: enums as Record<string, string[]>,
+      grammar
+    };
   } catch (err: any) {
     console.warn('Schema bundle failed, using safe defaults:', err?.message ?? 'unknown error');
     // Return safe defaults that won't crash the UI
