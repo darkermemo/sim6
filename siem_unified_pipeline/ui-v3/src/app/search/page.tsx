@@ -127,10 +127,12 @@ export default function SearchPage() {
   };
 
   // Get source icon
-  const getSourceIcon = (source: string) => {
-    if (source.includes('auth')) return User;
-    if (source.includes('web') || source.includes('http')) return Globe;
-    if (source.includes('firewall') || source.includes('security')) return Shield;
+  const getSourceIcon = (source: string | undefined) => {
+    if (!source) return Database;
+    const lowerSource = source.toLowerCase();
+    if (lowerSource.includes('auth')) return User;
+    if (lowerSource.includes('web') || lowerSource.includes('http')) return Globe;
+    if (lowerSource.includes('firewall') || lowerSource.includes('security')) return Shield;
     return Database;
   };
 
