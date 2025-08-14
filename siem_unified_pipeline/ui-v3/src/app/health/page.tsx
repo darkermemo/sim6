@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { getHealth, getDetailedHealth } from "@/lib/api";
+import { getHealth } from "@/lib/api";
 import { HealthResponse } from "@/types/api";
 import { 
   Activity, 
@@ -42,7 +42,7 @@ export default function HealthPage() {
       
       const [basicHealth, detailedHealth] = await Promise.all([
         getHealth().catch(() => null),
-        getDetailedHealth().catch(() => null)
+        getHealth().catch(() => null)
       ]);
       
       // Use detailed health if available, otherwise use basic health
