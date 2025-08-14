@@ -1,7 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  basePath: process.env.NEXT_PUBLIC_BASEPATH || '',
+  // Remove basePath for now to fix API routing
+  // basePath: process.env.NEXT_PUBLIC_BASEPATH || '',
   reactStrictMode: true,
   poweredByHeader: false,
 };

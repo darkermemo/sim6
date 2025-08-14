@@ -14,7 +14,8 @@ async function forward(req: Request, pathSegs: string[]) {
     headers,
     body: req.method === "GET" || req.method === "HEAD" ? undefined : req.body,
     redirect: "manual",
-  };
+    duplex: "half",
+  } as RequestInit;
 
   const r = await fetch(dest, init);
   const out = new Response(r.body, { status: r.status, statusText: r.statusText });
