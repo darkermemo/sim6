@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { normalizeSeverity, type Severity } from "@/lib/severity";
 
 import { ArrowUpDown, ArrowUp, ArrowDown, Database, Clock, HardDrive } from "lucide-react";
 
@@ -81,15 +82,17 @@ export function ResultTable({
       <ArrowDown className="h-3 w-3 ml-1" />;
   };
 
-  const getSeverityBadge = (severity: string) => {
-    const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
+  const getSeverityBadge = (severity: unknown) => {
+    const severityMap: Record<Severity, "default" | "secondary" | "destructive" | "outline"> = {
       "critical": "destructive",
       "high": "destructive", 
       "medium": "secondary",
       "low": "outline",
-      "info": "outline"
+      "info": "outline",
+      "unknown": "outline"
     };
-    return <Badge variant={variants[severity?.toLowerCase()] || "outline"}>{severity}</Badge>;
+    const normalizedSeverity = normalizeSeverity(severity);
+    return <Badge variant={severityMap[normalizedSeverity]}>{normalizedSeverity}</Badge>;
   };
 
   return (

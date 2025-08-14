@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getDashboard, getHealth, getEpsStats } from "@/lib/api";
 import { DashboardResponse, HealthResponse, EpsStatsResponse } from "@/types/api";
+import { normalizeSeverity } from "@/lib/severity";
 import { 
   Activity, 
   AlertTriangle, 
@@ -162,7 +163,7 @@ export default function DashboardPage() {
     if (dashboardData?.recent_alerts) {
       return dashboardData.recent_alerts.map(alert => ({
         id: alert.id,
-        severity: alert.severity.toLowerCase(),
+        severity: normalizeSeverity(alert.severity),
         title: alert.name,
         description: alert.description,
         time: new Date(alert.created_at).toLocaleString(),

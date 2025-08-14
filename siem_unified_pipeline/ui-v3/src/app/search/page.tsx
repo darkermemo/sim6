@@ -9,6 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { searchEvents, getEventById } from "@/lib/api";
 import { EventSearchQuery, EventSearchResponse, EventDetail } from "@/types/api";
+import { normalizeSeverity, type Severity } from "@/lib/severity";
 import { 
   Search, 
   Filter, 
@@ -115,14 +116,16 @@ export default function SearchPage() {
     }
   };
 
-  // Severity color mapping
-  const getSeverityColor = (severity: string) => {
-    switch (severity.toLowerCase()) {
+  // Safe severity color mapping
+  const getSeverityColor = (severity: unknown) => {
+    const sev = normalizeSeverity(severity);
+    switch (sev) {
       case 'critical': return 'bg-red-100 text-red-800 border-red-200';
       case 'high': return 'bg-orange-100 text-orange-800 border-orange-200';
       case 'medium': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
       case 'low': return 'bg-blue-100 text-blue-800 border-blue-200';
-      default: return 'bg-gray-100 text-gray-800 border-gray-200';
+      case 'info': return 'bg-sky-100 text-sky-800 border-sky-200';
+      case 'unknown': return 'bg-gray-100 text-gray-800 border-gray-200';
     }
   };
 
@@ -189,8 +192,8 @@ export default function SearchPage() {
                   )}
                   Search
                 </Button>
-              </div>
-
+      </div>
+      
               {/* Advanced Filters */}
               {showFilters && (
                 <div className="mt-6 pt-6 border-t border-slate-200 dark:border-slate-700">
@@ -347,8 +350,8 @@ export default function SearchPage() {
                                 <div className="flex items-center gap-1">
                                   <Globe className="h-3 w-3" />
                                   {event.source_ip}
-                                </div>
-                              )}
+                </div>
+              )}
                               {event.user && (
                                 <div className="flex items-center gap-1">
                                   <User className="h-3 w-3" />
@@ -511,8 +514,8 @@ function EventDetailModal({ event, onClose }: { event: EventDetail; onClose: () 
               <pre className="mt-1 p-3 bg-slate-100 dark:bg-slate-700 rounded-lg text-sm overflow-auto">
                 {event.raw_message}
               </pre>
-            </div>
-          </div>
+        </div>
+      </div>
         </CardContent>
       </Card>
     </div>
@@ -520,12 +523,14 @@ function EventDetailModal({ event, onClose }: { event: EventDetail; onClose: () 
 }
 
 // Helper function to define getSeverityColor within modal scope
-function getSeverityColorModal(severity: string) {
-  switch (severity.toLowerCase()) {
+function getSeverityColorModal(severity: unknown) {
+  const sev = normalizeSeverity(severity);
+  switch (sev) {
     case 'critical': return 'bg-red-100 text-red-800 border-red-200';
     case 'high': return 'bg-orange-100 text-orange-800 border-orange-200';
     case 'medium': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
     case 'low': return 'bg-blue-100 text-blue-800 border-blue-200';
-    default: return 'bg-gray-100 text-gray-800 border-gray-200';
+    case 'info': return 'bg-sky-100 text-sky-800 border-sky-200';
+    case 'unknown': return 'bg-gray-100 text-gray-800 border-gray-200';
   }
 }
