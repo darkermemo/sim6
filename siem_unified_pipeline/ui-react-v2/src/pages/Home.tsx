@@ -6,21 +6,21 @@ import { Link } from "react-router-dom";
 export default function Home() {
   const cards = [
     {
-      icon: '📊',
+
       title: 'Security Dashboard',
       description: 'Real-time security metrics and analytics',
       link: '/dashboard',
       color: 'var(--color-primary)'
     },
     {
-      icon: '🔍',
+
       title: 'Search Events',
       description: 'Query security events with powerful search capabilities',
       link: '/search',
       color: 'var(--color-info)'
     },
     {
-      icon: '🚨',
+
       title: 'Alerts',
       description: 'Monitor and manage security alerts in real-time',
       link: '/alerts',
@@ -28,7 +28,7 @@ export default function Home() {
       disabled: true
     },
     {
-      icon: '📋',
+
       title: 'Rules',
       description: 'Create and manage detection rules',
       link: '/rules',
@@ -36,7 +36,7 @@ export default function Home() {
       disabled: true
     },
     {
-      icon: '💚',
+
       title: 'System Health',
       description: 'Check system status and health metrics',
       link: '/health',
@@ -73,11 +73,11 @@ export default function Home() {
           const CardContent = (
             <>
               <div style={{ 
-                fontSize: '3rem', 
-                marginBottom: 'var(--space-md)',
-                filter: `drop-shadow(0 2px 4px ${card.color}33)`
+                height: '4px',
+                backgroundColor: card.color,
+                borderRadius: '2px',
+                marginBottom: 'var(--space-md)'
               }}>
-                {card.icon}
               </div>
               <h3 style={{ marginBottom: 'var(--space-sm)' }}>{card.title}</h3>
               <p className="text-secondary" style={{ marginBottom: 0 }}>

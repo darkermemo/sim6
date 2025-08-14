@@ -216,3 +216,5 @@ export function SearchDemo() {
     </div>
   );
 }
+
+export default SearchDemo;

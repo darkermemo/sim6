@@ -10,7 +10,11 @@
     "resolveJsonModule": true,
     "skipLibCheck": true,
     "baseUrl": ".",
-    "paths": { "@/*": ["src/*"] }
+    "paths": { "@/*": ["src/*"] },
+    "types": ["jest", "@testing-library/jest-dom", "node"],
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true
   },
-  "include": ["src", "vite.config.ts", "playwright.config.ts"]
+  "include": ["src", "vite.config.ts", "playwright.config.ts"],
+  "exclude": ["node_modules", "dist"]
 }

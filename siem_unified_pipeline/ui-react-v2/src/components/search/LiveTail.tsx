@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { api } from "@/lib/api-client";
+// TODO: Implement SSE using centralized HTTP helper
 import * as Types from "@/lib/api-types";
 
 interface Props {
@@ -43,12 +43,12 @@ export default function LiveTail({
       stream_id: streamId.current,
     });
     
-    es.addEventListener("hello", (e) => {
+    es.addEventListener("hello", (e: MessageEvent) => {
       const data = JSON.parse(e.data);
       console.log("Stream started:", data);
     });
     
-    es.addEventListener("row", (e) => {
+    es.addEventListener("row", (e: MessageEvent) => {
       if (!isPaused) {
         const row = JSON.parse(e.data);
         setEvents(prev => [...prev.slice(-999), row]); // Keep last 1000
@@ -60,17 +60,17 @@ export default function LiveTail({
       }
     });
     
-    es.addEventListener("stats", (e) => {
+    es.addEventListener("stats", (e: MessageEvent) => {
       const stats = JSON.parse(e.data);
       setStats(stats);
     });
     
-    es.addEventListener("warning", (e) => {
+    es.addEventListener("warning", (e: MessageEvent) => {
       const warning = JSON.parse(e.data);
       console.warn("Stream warning:", warning);
     });
     
-    es.onerror = (e) => {
+    es.onerror = (e: Event) => {
       console.error("Stream error:", e);
       stopStream();
     };

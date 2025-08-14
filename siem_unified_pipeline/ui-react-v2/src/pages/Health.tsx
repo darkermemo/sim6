@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { api } from "@/lib/api";
+import { httpGet } from "@/lib/http";
 
 /**
  * Health page - displays API health check status
@@ -11,7 +11,7 @@ export default function Health() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    api.health()
+    httpGet<any>('/health')
       .then(setJ)
       .catch(e => setErr(String(e)))
       .finally(() => setIsLoading(false));
@@ -27,16 +27,16 @@ export default function Health() {
   };
 
   const components = [
-    { name: 'API Server', status: j?.status || 'unknown', icon: '🖥️' },
-    { name: 'ClickHouse', status: j?.cidr_fn ? 'ok' : 'unknown', icon: '🗄️' },
-    { name: 'Redis', status: j?.redis || 'unknown', icon: '💾' },
-    { name: 'Ingest Path', status: j?.ingest_path ? 'ok' : 'unknown', icon: '📥' }
+    { name: 'API Server', status: j?.status || 'unknown' },
+    { name: 'ClickHouse', status: j?.cidr_fn ? 'ok' : 'unknown' },
+    { name: 'Redis', status: j?.redis || 'unknown' },
+    { name: 'Ingest Path', status: j?.ingest_path ? 'ok' : 'unknown' }
   ];
 
   return (
     <div className="container">
       <div style={{ marginBottom: 'var(--space-xl)' }}>
-        <h2 style={{ margin: 0, marginBottom: 'var(--space-xs)' }}>💚 System Health</h2>
+        <h2 style={{ margin: 0, marginBottom: 'var(--space-xs)' }}>System Health</h2>
         <p className="text-secondary" style={{ margin: 0 }}>
           Monitor the health status of all system components
         </p>
@@ -50,7 +50,7 @@ export default function Health() {
           marginBottom: 'var(--space-lg)'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-sm)' }}>
-            <span style={{ fontSize: '1.5rem' }}>⚠️</span>
+            <span style={{ fontSize: '1rem', fontWeight: 'bold', color: '#ef4444' }}>ERROR</span>
             <div>
               <strong>Health Check Error</strong>
               <p style={{ margin: 0, marginTop: 'var(--space-xs)' }}>{err}</p>
@@ -77,7 +77,12 @@ export default function Health() {
                 alignItems: 'center',
                 gap: 'var(--space-md)'
               }}>
-                <div style={{ fontSize: '2rem' }}>{comp.icon}</div>
+                <div style={{ 
+                  width: '8px', 
+                  height: '32px', 
+                  backgroundColor: getStatusColor(comp.status),
+                  borderRadius: '4px'
+                }}></div>
                 <div style={{ flex: 1 }}>
                   <h4 style={{ margin: 0, marginBottom: 'var(--space-xs)' }}>{comp.name}</h4>
                   <div style={{ 
@@ -108,7 +113,7 @@ export default function Health() {
 
           {j && (
             <div className="card">
-              <h3 style={{ marginBottom: 'var(--space-md)' }}>📋 Raw Health Response</h3>
+              <h3 style={{ marginBottom: 'var(--space-md)' }}>Raw Health Response</h3>
               <pre data-testid="health-json" style={{ 
                 margin: 0,
                 fontSize: '0.875rem',

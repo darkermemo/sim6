@@ -50,7 +50,7 @@ echarts.use([
 // === TYPES ===
 
 export interface ChartProps {
-  option: echarts.EChartsOption;
+  option: echarts.EChartsCoreOption;
   width?: string | number;
   height?: string | number;
   loading?: boolean;
@@ -361,7 +361,7 @@ export const ChartUtils = {
         lineStyle: { width: 2 },
         areaStyle: { opacity: 0.1 },
       }],
-    } as echarts.EChartsOption;
+    } as echarts.EChartsCoreOption;
   },
 
   /**
@@ -392,7 +392,7 @@ export const ChartUtils = {
           },
         },
       }],
-    } as echarts.EChartsOption;
+    } as echarts.EChartsCoreOption;
   },
 
   /**
@@ -426,7 +426,7 @@ export const ChartUtils = {
         data: data.map(item => item.value),
         itemStyle: { borderRadius: [2, 2, 0, 0] },
       }],
-    } as echarts.EChartsOption;
+    } as echarts.EChartsCoreOption;
   },
 };
 

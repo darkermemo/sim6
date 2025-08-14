@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import * as Types from "@/lib/api-types";
-import { api } from "@/lib/api-client";
+import { compileQuery } from "@/lib/api-golden";
 
 interface Props {
   query: string;

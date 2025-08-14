@@ -328,24 +328,24 @@ export function VirtualizedFacets({
 
   // Convert facets to groups and auto-expand first few
   const facetGroups = useMemo<FacetGroup[]>(() => {
-    const groups = Object.entries(facets).map(([field, values]) => ({
+    return Object.entries(facets).map(([field, values]) => ({
       field,
       label: formatFacetField(field),
-      values: values.sort((a, b) => b.count - a.count), // Sort by count desc
+      values: (values || []).slice().sort((a, b) => b.count - a.count),
       expanded: expandedGroups[field] ?? false,
     }));
+  }, [facets, expandedGroups]);
 
-    // Auto-expand first 3 groups if none are expanded
-    if (Object.keys(expandedGroups).length === 0 && groups.length > 0) {
+  // Auto-expand first 3 groups after facets load (avoid state updates during render)
+  React.useEffect(() => {
+    if (Object.keys(expandedGroups).length === 0 && facetGroups.length > 0) {
       const autoExpanded: Record<string, boolean> = {};
-      groups.slice(0, 3).forEach(group => {
+      facetGroups.slice(0, 3).forEach(group => {
         autoExpanded[group.field] = true;
       });
       setExpandedGroups(autoExpanded);
     }
-
-    return groups;
-  }, [facets, expandedGroups]);
+  }, [facetGroups, expandedGroups]);
 
   const handleToggleGroup = useCallback((field: string) => {
     setExpandedGroups(prev => ({
@@ -435,7 +435,7 @@ export function VirtualizedFacets({
             key={group.field}
             field={group.field}
             values={group.values}
-            expanded={group.expanded}
+            expanded={group.expanded ?? false}
             onToggle={() => handleToggleGroup(group.field)}
             onFacetClick={onFacetClick}
             maxHeight={maxHeight}

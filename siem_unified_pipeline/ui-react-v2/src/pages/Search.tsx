@@ -1,7 +1,21 @@
 import { useEffect, useState } from "react";
 import SearchQueryBar, { type Model } from "@/components/search/SearchQueryBar";
 import ResultsTable from "@/components/search/ResultsTable";
-import { api, type SearchIntent, type SearchResponse } from "@/lib/api";
+import { httpPost } from "@/lib/http";
+
+// Temporary types until we migrate to api-golden
+type SearchIntent = {
+  tenant_id: string;
+  time: { last_seconds?: number; from?: number; to?: number; };
+  q: string;
+  limit?: number;
+};
+
+type SearchResponse = {
+  data: any[];
+  meta: { name: string; type: string; }[];
+  statistics: { rows: number; took_ms: number; rows_read: number; bytes_read: number; };
+};
 
 /**
  * Search page - main search interface
@@ -38,7 +52,7 @@ export default function Search() {
       };
       
       // Execute search with structured intent
-      const response: SearchResponse = await api.search(intent);
+      const response: SearchResponse = await httpPost<SearchResponse>('/search/execute', intent);
       
       setRows(response.data);
       setMeta(response.meta);
@@ -63,7 +77,7 @@ export default function Search() {
   return (
     <div className="container">
       <div style={{ marginBottom: 'var(--space-xl)' }}>
-        <h2 style={{ margin: 0, marginBottom: 'var(--space-xs)' }}>🔍 Search Events</h2>
+        <h2 style={{ margin: 0, marginBottom: 'var(--space-xs)' }}>Search Events</h2>
         <p className="text-secondary" style={{ margin: 0 }}>
           Query your security events with powerful search capabilities
         </p>
@@ -84,7 +98,7 @@ export default function Search() {
           marginBottom: 'var(--space-lg)'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-sm)' }}>
-            <span style={{ fontSize: '1.5rem' }}>⚠️</span>
+            <span style={{ fontSize: '1rem', fontWeight: 'bold', color: '#ef4444' }}>ERROR</span>
             <div>
               <strong>Search Error</strong>
               <p style={{ margin: 0, marginTop: 'var(--space-xs)' }}>{error}</p>

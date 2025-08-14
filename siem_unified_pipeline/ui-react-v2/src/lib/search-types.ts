@@ -74,7 +74,7 @@ export type FieldMeta = {
 };
 
 export type Grammar = {
-  tokens: string[];
+  tokens: { label: string; example?: string }[];
   functions: string[];
   examples: string[];
   keywords: string[];

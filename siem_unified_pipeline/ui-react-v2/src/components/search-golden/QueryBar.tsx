@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import * as Types from "@/lib/search-types";
+import CompactSelect from "@/components/ui/CompactSelect";
 
 interface Props {
   tenantId: string;
@@ -11,17 +12,16 @@ interface Props {
   onCompile: () => void;
   onRun: () => void;
   onSave: (name: string) => void;
-  onExport: (format: Types.ExportFormat) => void;
-  saving: boolean;
-  exporting: boolean;
+  onExport: () => void;
+  saving?: boolean;
+  exporting?: boolean;
   compiling?: boolean;
   running?: boolean;
 }
 
 /**
- * QueryBar - Input controls for search
- * Handles tenant, query, time range, and action buttons
- * Hotkeys: Enter = Run, Cmd/Ctrl+S = Save
+ * QueryBar - Ultra-compact search controls in a single row
+ * Contains tenant, time range, query input, and essential actions
  */
 export default function QueryBar({
   tenantId,
@@ -39,12 +39,11 @@ export default function QueryBar({
   compiling,
   running,
 }: Props) {
-  const [showExportMenu, setShowExportMenu] = useState(false);
-
-  // Handle hotkeys
+  
+  // Global keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Enter" && e.target instanceof HTMLInputElement) {
+      if (e.key === 'Enter' && !e.metaKey && !e.ctrlKey) {
         e.preventDefault();
         onRun();
       } else if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
@@ -86,135 +85,88 @@ export default function QueryBar({
 
   return (
     <div style={{ 
-      backgroundColor: "#ffffff",
+      backgroundColor: "#f8fafc",
       borderBottom: "1px solid #e2e8f0",
-      padding: "16px 24px",
+      padding: "4px 8px",
       flexShrink: 0
     }}>
-      {/* Primary search controls */}
+      {/* Compact single-row controls */}
       <div style={{ 
-        display: "grid", 
-        gridTemplateColumns: "200px 180px 1fr 120px 100px", 
-        gap: "12px", 
-        alignItems: "end",
-        marginBottom: "12px"
+        display: "flex", 
+        gap: "6px", 
+        alignItems: "center",
+        fontSize: "11px"
       }}>
-        {/* Tenant selector */}
-        <div>
-          <label style={{ 
-            display: "block", 
-            fontSize: "12px", 
-            fontWeight: 500, 
-            color: "#64748b", 
-            marginBottom: "4px" 
-          }}>
-            Tenant
-          </label>
-          <select 
-            aria-label="Tenant"
-            value={tenantId} 
-            onChange={e => onTenantChange(e.target.value)}
-            style={{ 
-              padding: "8px 12px",
-              border: "1px solid #d1d5db",
-              borderRadius: "6px",
-              fontSize: "14px",
-              backgroundColor: "#ffffff",
-              minWidth: "120px"
-            }}
-          >
-        <option value="all">All tenants</option>
-        <option value="default">default</option>
-        <option value="1">1</option>
-        <option value="hr">hr</option>
-        <option value="finance">finance</option>
-        <option value="engineering">engineering</option>
-        <option value="sales">sales</option>
-        <option value="marketing">marketing</option>
-        <option value="ops">ops</option>
-        <option value="security">security</option>
-        <option value="admin">admin</option>
-          </select>
-        </div>
+        {/* Compact Tenant selector */}
+        <span style={{ fontSize: "9px", color: "#64748b", fontWeight: "600" }}>Tenant:</span>
+        <CompactSelect
+          value={tenantId}
+          onChange={(value) => onTenantChange(value.toString())}
+          size="xs"
+          aria-label="Tenant"
+          options={[
+            { value: "all", label: "All" },
+            { value: "default", label: "default" },
+            { value: "1", label: "1" },
+            { value: "hr", label: "hr" },
+            { value: "finance", label: "finance" },
+            { value: "engineering", label: "engineering" },
+            { value: "sales", label: "sales" },
+            { value: "marketing", label: "marketing" },
+            { value: "ops", label: "ops" },
+            { value: "security", label: "security" },
+            { value: "admin", label: "admin" },
+          ]}
+        />
 
-        {/* Time range */}
-        <div>
-          <label style={{ 
-            display: "block", 
-            fontSize: "12px", 
-            fontWeight: 500, 
-            color: "#64748b", 
-            marginBottom: "4px" 
-          }}>
-            Time Range
-          </label>
-          <select
-            aria-label="time range"
-            value={'last_seconds' in time ? time.last_seconds : 'custom'}
-            onChange={e => handleTimeRangeChange(e.target.value)}
-            style={{ 
-              padding: "8px 12px",
-              border: "1px solid #d1d5db",
-              borderRadius: "6px",
-              fontSize: "14px",
-              backgroundColor: "#ffffff",
-              minWidth: "140px"
-            }}
-          >
-        <option value="300">Last 5 minutes</option>
-        <option value="600">Last 10 minutes</option>
-        <option value="3600">Last 1 hour</option>
-        <option value="86400">Last 24 hours</option>
-        <option value="604800">Last 7 days</option>
-        <option value="2592000">Last 30 days</option>
-        <option value="7776000">Last 90 days</option>
-        <option value="10368000">Last 120 days</option>
-        <option value="21600000">Last 250 days</option>
-        <option value="31536000">Last 365 days</option>
-        <option value="315360000">Last 10 years (test data)</option>
-        <option value="custom">Custom range...</option>
-                </select>
-        </div>
+        {/* Compact Time range */}
+        <span style={{ fontSize: "9px", color: "#64748b", fontWeight: "600", marginLeft: "8px" }}>Time:</span>
+        <CompactSelect
+          value={'last_seconds' in time ? time.last_seconds.toString() : 'custom'}
+          onChange={(value) => handleTimeRangeChange(value.toString())}
+          size="xs"
+          aria-label="time range"
+          options={[
+            { value: "300", label: "5m" },
+            { value: "600", label: "10m" },
+            { value: "3600", label: "1h" },
+            { value: "86400", label: "24h" },
+            { value: "604800", label: "7d" },
+            { value: "2592000", label: "30d" },
+            { value: "custom", label: "Custom" },
+          ]}
+        />
 
-        {/* Query input - takes remaining space */}
-        <div>
-          <label style={{ 
-            display: "block", 
-            fontSize: "12px", 
-            fontWeight: 500, 
-            color: "#64748b", 
-            marginBottom: "4px" 
-          }}>
-            Search Query
-          </label>
-          <input
-            type="text"
-            aria-label="query"
-            value={query}
-            onChange={e => onQueryChange(e.target.value)}
-            onKeyDown={e => {
-              if (e.key === 'Enter') {
-                if (e.metaKey || e.ctrlKey) {
-                  onCompile();
-                } else {
-                  onRun();
-                }
+        {/* Compact Query input */}
+        <span style={{ fontSize: "9px", color: "#64748b", fontWeight: "600", marginLeft: "8px" }}>Query:</span>
+        <input
+          type="text"
+          aria-label="query"
+          value={query}
+          onChange={e => onQueryChange(e.target.value)}
+          onKeyDown={e => {
+            if (e.key === 'Enter') {
+              if (e.metaKey || e.ctrlKey) {
+                onCompile();
+              } else {
+                onRun();
               }
-            }}
-            placeholder="Enter search terms or leave empty for all events..."
-            style={{ 
-              width: "100%",
-              padding: "10px 12px",
-              border: "1px solid #d1d5db",
-              borderRadius: "6px",
-              fontSize: "14px",
-              backgroundColor: "#ffffff",
-              fontFamily: "ui-monospace, 'Cascadia Code', 'Source Code Pro', monospace"
-            }}
-          />
-        </div>
+            }
+          }}
+          placeholder="Search terms..."
+          style={{ 
+            flex: 1,
+            padding: "2px 6px",
+            border: "1px solid #d1d5db",
+            borderRadius: "2px",
+            fontSize: "10px",
+            backgroundColor: "#ffffff",
+            fontFamily: "ui-monospace, 'Cascadia Code', 'Source Code Pro', monospace",
+            minWidth: "200px"
+          }}
+        />
 
-        {/* Compile button */}
+        {/* Compact action buttons */}
         <button 
           onClick={onCompile} 
           disabled={!!compiling}
@@ -222,18 +174,16 @@ export default function QueryBar({
             backgroundColor: compiling ? "#e5e7eb" : "#3b82f6",
             color: compiling ? "#9ca3af" : "white",
             border: "none",
-            padding: "8px 16px",
-            borderRadius: "6px",
-            fontSize: "14px",
+            padding: "2px 6px",
+            borderRadius: "2px",
+            fontSize: "9px",
             fontWeight: 500,
-            cursor: compiling ? "not-allowed" : "pointer",
-            transition: "all 0.2s"
+            cursor: compiling ? "not-allowed" : "pointer"
           }}
         >
-          {compiling ? "Compiling…" : "Compile"}
+          {compiling ? "..." : "Compile"}
         </button>
 
-        {/* Run button */}
         <button 
           onClick={onRun} 
           disabled={!!running}
@@ -241,158 +191,52 @@ export default function QueryBar({
             backgroundColor: running ? "#e5e7eb" : "#10b981",
             color: running ? "#9ca3af" : "white",
             border: "none",
-            padding: "8px 16px",
-            borderRadius: "6px",
-            fontSize: "14px",
+            padding: "2px 6px",
+            borderRadius: "2px",
+            fontSize: "9px",
             fontWeight: 500,
-            cursor: running ? "not-allowed" : "pointer",
-            transition: "all 0.2s"
+            cursor: running ? "not-allowed" : "pointer"
           }}
         >
-          {running ? "Running…" : "Run"}
+          {running ? "..." : "Run"}
         </button>
-      </div>
 
-      {/* Secondary actions bar */}
-      <div style={{ 
-        display: "flex", 
-        justifyContent: "space-between",
-        alignItems: "center",
-        paddingTop: "12px",
-        borderTop: "1px solid #f1f5f9"
-      }}>
-        {/* Left side - Search stats */}
-        <div style={{ 
-          display: "flex", 
-          gap: "16px", 
-          alignItems: "center",
-          fontSize: "13px",
-          color: "#64748b"
-        }}>
-          <span>
-            💡 Hotkeys: <kbd style={{ 
-              padding: "2px 6px", 
-              backgroundColor: "#f1f5f9", 
-              borderRadius: "3px",
-              fontSize: "11px",
-              fontFamily: "ui-monospace, monospace"
-            }}>Enter</kbd> = Run, <kbd style={{ 
-              padding: "2px 6px", 
-              backgroundColor: "#f1f5f9", 
-              borderRadius: "3px",
-              fontSize: "11px",
-              fontFamily: "ui-monospace, monospace"
-            }}>Cmd+Enter</kbd> = Compile
-          </span>
-        </div>
+        {/* Essential actions - inline */}
+        <button 
+          onClick={() => {
+            const name = prompt("Save search as:");
+            if (name) onSave(name);
+          }}
+          disabled={saving}
+          style={{
+            backgroundColor: saving ? "#f3f4f6" : "#ffffff",
+            color: saving ? "#9ca3af" : "#374151",
+            border: "1px solid #d1d5db",
+            padding: "2px 4px",
+            borderRadius: "2px",
+            fontSize: "9px",
+            cursor: saving ? "not-allowed" : "pointer",
+            marginLeft: "8px"
+          }}
+        >
+          Save
+        </button>
 
-        {/* Right side - Actions */}
-        <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-          <button 
-            onClick={() => {
-              const name = prompt("Save search as:");
-              if (name) onSave(name);
-            }}
-            disabled={saving}
-            style={{
-              backgroundColor: saving ? "#f3f4f6" : "#ffffff",
-              color: saving ? "#9ca3af" : "#374151",
-              border: "1px solid #d1d5db",
-              padding: "6px 12px",
-              borderRadius: "6px",
-              fontSize: "12px",
-              cursor: saving ? "not-allowed" : "pointer",
-              display: "flex",
-              alignItems: "center",
-              gap: "4px"
-            }}
-          >
-            {saving ? "Saving..." : "💾 Save"}
-          </button>
-
-          {/* Export dropdown */}
-          <div style={{ position: "relative" }}>
-            <button 
-              onClick={() => setShowExportMenu(!showExportMenu)}
-              disabled={exporting}
-              style={{
-                backgroundColor: exporting ? "#f3f4f6" : "#ffffff",
-                color: exporting ? "#9ca3af" : "#374151",
-                border: "1px solid #d1d5db",
-                padding: "6px 12px",
-                borderRadius: "6px",
-                fontSize: "12px",
-                cursor: exporting ? "not-allowed" : "pointer",
-                display: "flex",
-                alignItems: "center",
-                gap: "4px"
-              }}
-            >
-              {exporting ? "Exporting..." : "📤 Export ▼"}
-            </button>
-            
-            {showExportMenu && (
-              <div style={{
-                position: "absolute",
-                top: "100%",
-                right: 0,
-                background: "white",
-                border: "1px solid #d1d5db",
-                borderRadius: "6px",
-                padding: "4px 0",
-                minWidth: "120px",
-                zIndex: 1000,
-                boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1)"
-              }}>
-                <button 
-                  onClick={() => { onExport("csv"); setShowExportMenu(false); }}
-                  style={{ 
-                    display: "block", 
-                    width: "100%", 
-                    textAlign: "left", 
-                    padding: "8px 12px", 
-                    border: "none",
-                    backgroundColor: "transparent",
-                    fontSize: "12px",
-                    cursor: "pointer"
-                  }}
-                >
-                  📄 CSV
-                </button>
-                <button 
-                  onClick={() => { onExport("ndjson"); setShowExportMenu(false); }}
-                  style={{ 
-                    display: "block", 
-                    width: "100%", 
-                    textAlign: "left", 
-                    padding: "8px 12px", 
-                    border: "none",
-                    backgroundColor: "transparent",
-                    fontSize: "12px",
-                    cursor: "pointer"
-                  }}
-                >
-                  🔧 NDJSON
-                </button>
-                <button 
-                  onClick={() => { onExport("parquet"); setShowExportMenu(false); }}
-                  style={{ 
-                    display: "block", 
-                    width: "100%", 
-                    textAlign: "left", 
-                    padding: "8px 12px", 
-                    border: "none",
-                    backgroundColor: "transparent",
-                    fontSize: "12px",
-                    cursor: "pointer"
-                  }}
-                >
-                  📦 Parquet
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
+        <button 
+          onClick={onExport}
+          disabled={exporting}
+          style={{
+            backgroundColor: exporting ? "#f3f4f6" : "#ffffff",
+            color: exporting ? "#9ca3af" : "#374151",
+            border: "1px solid #d1d5db",
+            padding: "2px 4px",
+            borderRadius: "2px",
+            fontSize: "9px",
+            cursor: exporting ? "not-allowed" : "pointer"
+          }}
+        >
+          Export
+        </button>
       </div>
     </div>
   );

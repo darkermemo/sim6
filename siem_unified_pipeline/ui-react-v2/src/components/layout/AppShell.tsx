@@ -89,22 +89,7 @@ export default function AppShell() {
               ))}
             </nav>
           </div>
-          <button
-            onClick={() => setIsDark(!isDark)}
-            style={{
-              padding: '0.5rem',
-              borderRadius: 'var(--radius-md)',
-              backgroundColor: 'transparent',
-              border: '1px solid var(--border-color)',
-              cursor: 'pointer',
-              fontSize: '1.25rem',
-              lineHeight: 1,
-              transition: 'all 0.2s'
-            }}
-            aria-label="Toggle theme"
-          >
-            {isDark ? '☀️' : '🌙'}
-          </button>
+
         </div>
       </header>
       <main style={{ flex: 1, backgroundColor: 'var(--bg-primary)' }}>

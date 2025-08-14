@@ -4,18 +4,12 @@ import Home from "./Home";
 import SearchV2 from "./SearchV2";
 import Login from "./Login";
 
-// Code-split imports for performance optimization
-import {
-  LazySearchGolden,
-  LazySearchGoldenV2, 
-  LazySearchGoldenV3,
-  LazySearchGoldenV4,
-  LazyDashboardGolden,
-  LazyDashboard,
-  LazyHealth,
-  LazySearch,
-  LazySearchDemo,
-} from "@/lib/lazy-routes";
+// Direct imports for stability (avoiding lazy loading issues)
+import SearchGolden from "./SearchGolden";
+import Dashboard from "./Dashboard"; 
+import Health from "./Health";
+import Search from "./Search";
+import Diag from "./Diag";
 
 /**
  * Feature flags from environment variables
@@ -36,15 +30,11 @@ export default function App() {
     <Routes>
       <Route element={<AppShell />}>
         <Route path="/" element={<Home />} />
-        <Route path="/dashboard" element={<LazyDashboardGolden />} />
-        <Route path="/dashboard-old" element={<LazyDashboard />} />
-        <Route path="/search" element={<LazySearchGoldenV4 />} />
-        <Route path="/search-v3" element={<LazySearchGoldenV3 />} />
-        <Route path="/search-v2" element={<LazySearchGoldenV2 />} />
-        <Route path="/search-legacy" element={<LazySearchGolden />} />
-        <Route path="/search-simple" element={<LazySearch />} />
-        <Route path="/search-demo" element={<LazySearchDemo />} />
-        <Route path="/health" element={<LazyHealth />} />
+        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/search" element={<SearchGolden />} />
+        <Route path="/search-simple" element={<Search />} />
+        <Route path="/health" element={<Health />} />
+        <Route path="/diag" element={<Diag />} />
         
         {/* Feature-flagged routes (hidden by default) */}
         {FLAGS.ALERTS_ENABLED && <Route path="/alerts" element={<div>Alerts TBD</div>} />}

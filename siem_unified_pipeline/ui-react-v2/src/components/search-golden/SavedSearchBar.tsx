@@ -55,45 +55,70 @@ export default function SavedSearchBar({ tenantId, onLoad }: Props) {
   };
 
   return (
-    <div style={{ padding: "10px", flex: 1, overflow: "auto" }}>
-      <h3>Saved Searches</h3>
+    <div style={{ padding: "6px 8px", flex: 1, overflow: "auto", borderBottom: "1px solid #e2e8f0" }}>
+      <h3 style={{ margin: "0 0 6px 0", fontSize: "12px", fontWeight: "600", color: "#64748b" }}>Saved Searches</h3>
       
       {loading ? (
-        <div>Loading...</div>
+        <div style={{ fontSize: "10px", color: "#94a3b8" }}>Loading...</div>
       ) : !searches || searches.length === 0 ? (
-        <div style={{ color: "#666" }}>No saved searches</div>
+        <div style={{ color: "#94a3b8", fontSize: "10px" }}>No saved searches</div>
       ) : (
         <div>
           {(searches || []).map(saved => (
             <div 
               key={saved.saved_id}
               style={{
-                padding: "5px",
-                marginBottom: "5px",
-                border: "1px solid #ddd",
-                borderRadius: "3px",
+                padding: "3px",
+                marginBottom: "3px",
+                border: "1px solid #e2e8f0",
+                borderRadius: "2px",
+                backgroundColor: "#f8fafc"
               }}
             >
-              <div style={{ fontWeight: "bold" }}>{saved.name}</div>
-              <div style={{ fontSize: "12px", color: "#666" }}>
-                {saved.q}
+              <div style={{ fontWeight: "600", fontSize: "10px", color: "#374151" }}>{saved.name}</div>
+              <div style={{ fontSize: "9px", color: "#94a3b8", marginBottom: "2px" }}>
+                {saved.q.length > 30 ? saved.q.substring(0, 30) + '...' : saved.q}
               </div>
-              <div style={{ marginTop: "5px" }}>
+              <div style={{ display: "flex", gap: "2px" }}>
                 <button 
                   onClick={() => onLoad(saved)}
-                  style={{ marginRight: "5px", fontSize: "12px" }}
+                  style={{ 
+                    padding: "1px 4px", 
+                    fontSize: "9px", 
+                    border: "1px solid #d1d5db", 
+                    borderRadius: "2px", 
+                    backgroundColor: "#3b82f6", 
+                    color: "white",
+                    cursor: "pointer"
+                  }}
                 >
                   Load
                 </button>
                 <button 
                   onClick={() => handleRename(saved)}
-                  style={{ marginRight: "5px", fontSize: "12px" }}
+                  style={{ 
+                    padding: "1px 4px", 
+                    fontSize: "9px", 
+                    border: "1px solid #d1d5db", 
+                    borderRadius: "2px", 
+                    backgroundColor: "#f3f4f6", 
+                    color: "#374151",
+                    cursor: "pointer"
+                  }}
                 >
                   Rename
                 </button>
                 <button 
                   onClick={() => handleDelete(saved.saved_id)}
-                  style={{ fontSize: "12px" }}
+                  style={{ 
+                    padding: "1px 4px", 
+                    fontSize: "9px", 
+                    border: "1px solid #d1d5db", 
+                    borderRadius: "2px", 
+                    backgroundColor: "#ef4444", 
+                    color: "white",
+                    cursor: "pointer"
+                  }}
                 >
                   Delete
                 </button>

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import CompactSelect from "@/components/ui/CompactSelect";
 
 export type Model = {
   tenant_id: string;
@@ -59,17 +60,13 @@ export default function SearchQueryBar(props: {
           <label htmlFor="timerange" className="text-sm text-secondary" style={{ display: 'block', marginBottom: 'var(--space-xs)', fontWeight: 500 }}>
             Time Range
           </label>
-          <select
-            id="timerange"
-            aria-label="last-seconds"
+          <CompactSelect
             value={m.last_seconds}
-            onChange={e => set("last_seconds", Number(e.target.value))}
-            style={{ width: '100%' }}
-          >
-            {timeOptions.map(opt => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
-            ))}
-          </select>
+            onChange={(value) => set("last_seconds", Number(value))}
+            size="md"
+            aria-label="Time range"
+            options={timeOptions.map(opt => ({ value: opt.value, label: opt.label }))}
+          />
         </div>
       </div>
       

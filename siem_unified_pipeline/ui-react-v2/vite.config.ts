@@ -23,7 +23,10 @@ const sentryPlugin = process.env.NODE_ENV === 'production' && process.env.VITE_S
     })
   : undefined;
 
-export default defineConfig({
+export default defineConfig(({ command, mode }) => ({
+  // Set correct root directory
+  root: __dirname,
+  base: command === 'build' ? '/ui/v2/' : '/',
   plugins: [
     react(),
     bundleAnalyzer,
@@ -74,9 +77,19 @@ export default defineConfig({
 
   // Development server optimizations
   server: {
+    host: true,
+    port: 5175,
+    strictPort: true,
     hmr: {
+      clientPort: 5175,
       overlay: true,
     },
+  },
+
+  preview: {
+    host: true,
+    port: 5175,
+    strictPort: true,
   },
 
   // Production optimizations
@@ -90,4 +103,4 @@ export default defineConfig({
     __APP_VERSION__: JSON.stringify(process.env.npm_package_version || '1.0.0'),
     __BUILD_TIME__: JSON.stringify(new Date().toISOString()),
   },
-})
+}))

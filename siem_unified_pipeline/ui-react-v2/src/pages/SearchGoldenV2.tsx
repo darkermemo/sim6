@@ -17,6 +17,7 @@ import ResultTable from "../components/search-golden/ResultTable";
 import SavedSearchBar from "../components/search-golden/SavedSearchBar";
 import StreamSwitch from "../components/search-golden/StreamSwitch";
 import SchemaPanel from "../components/search-golden/SchemaPanel";
+import CompactSelect from "@/components/ui/CompactSelect";
 
 import { 
   useCompile, 
@@ -225,30 +226,34 @@ export default function SearchGoldenV2() {
           <button onClick={handleRefresh} style={{ padding: '4px 8px', fontSize: '12px' }}>
             🔄 Refresh
           </button>
-          <label style={{ fontSize: '12px' }}>
-            Tenant:
-            <select 
-              value={tenantId} 
-              onChange={(e) => handleTenantChange(e.target.value)}
-              style={{ marginLeft: '5px', padding: '2px' }}
-            >
-              <option value="hr">HR</option>
-              <option value="default">Default</option>
-              <option value="finance">Finance</option>
-            </select>
-          </label>
-          <label style={{ fontSize: '12px' }}>
-            Time:
-            <select 
-              value={timeSeconds} 
-              onChange={(e) => handleTimeChange(parseInt(e.target.value))}
-              style={{ marginLeft: '5px', padding: '2px' }}
-            >
-              <option value={3600}>1 hour</option>
-              <option value={86400}>24 hours</option>
-              <option value={604800}>7 days</option>
-            </select>
-          </label>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+            <span style={{ fontSize: '10px', color: '#64748b', fontWeight: 600 }}>Tenant:</span>
+            <CompactSelect
+              value={tenantId}
+              onChange={(value) => handleTenantChange(value.toString())}
+              size="sm"
+              aria-label="Tenant"
+              options={[
+                { value: "hr", label: "HR" },
+                { value: "default", label: "Default" },
+                { value: "finance", label: "Finance" },
+              ]}
+            />
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+            <span style={{ fontSize: '10px', color: '#64748b', fontWeight: 600 }}>Time:</span>
+            <CompactSelect
+              value={timeSeconds}
+              onChange={(value) => handleTimeChange(parseInt(value.toString()))}
+              size="sm"
+              aria-label="Time range"
+              options={[
+                { value: 3600, label: "1 hour" },
+                { value: 86400, label: "24 hours" },
+                { value: 604800, label: "7 days" },
+              ]}
+            />
+          </div>
         </div>
       </div>
 
@@ -271,27 +276,29 @@ export default function SearchGoldenV2() {
           {/* Query Bar */}
           <div style={{ borderBottom: '1px solid #eee' }}>
             <QueryBar 
-              state={legacyState}
+              tenantId={tenant}
+              query={query}
+              time={timeRange}
+              onTenantChange={() => {}}
               onQueryChange={handleQueryChange}
-              onExecute={() => {}} // Auto-execute on query change
-              onTimeChange={() => {}} // Handled by controls above
-              onSortChange={() => {}} // TODO: Implement
+              onTimeChange={() => {}}
+              onCompile={() => {}}
+              onRun={() => {}}
+              onSave={() => {}}
+              onExport={() => {}}
+              saving={false}
+              exporting={false}
+              isLoading={isLoading}
+              compileResult={null}
             />
           </div>
 
           {/* Saved Searches */}
           <div style={{ borderBottom: '1px solid #eee' }}>
             <SavedSearchBar 
-              state={legacyState}
+              tenantId={tenant}
               onLoad={(search) => {
-                setQuery(search.query || "");
-                // TODO: Load other search parameters
-              }}
-              onSave={() => {
-                // TODO: Implement save with hooks
-              }}
-              onDelete={() => {
-                // TODO: Implement delete with hooks
+                setQuery(search.q || "");
               }}
             />
           </div>
@@ -307,7 +314,7 @@ export default function SearchGoldenV2() {
           </div>
 
           {/* Results Table */}
-          <div style={{ flex: 1, overflow: 'hidden' }}>
+          <div style={{ flex: 1, overflow: 'visible' }}>
             <ResultTable 
               state={legacyState}
               onRowClick={(row) => {

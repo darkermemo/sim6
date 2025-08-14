@@ -29,6 +29,7 @@ import {
   type CompileRequest,
   type FacetsRequest 
 } from "../hooks/useSearchAPI";
+import CompactSelect from "@/components/ui/CompactSelect";
 
 import VirtualizedTable, { type TableColumn, type TableRow } from "../components/VirtualizedTable";
 import VirtualizedFacets from "../components/VirtualizedFacets";
@@ -48,9 +49,9 @@ import useSSE from "../hooks/useSSE";
  */
 export default function SearchGoldenV4() {
   // === STATE ===
-  const [tenantId, setTenantId] = useState("hr");
-  const [query, setQuery] = useState("source_type:nginx.access");
-  const [timeSeconds, setTimeSeconds] = useState(3600);
+  const [tenantId, setTenantId] = useState("default");
+  const [query, setQuery] = useState("*");
+  const [timeSeconds, setTimeSeconds] = useState(86400);
   const [limit, setLimit] = useState(1000);
   
   // UI State
@@ -249,6 +250,19 @@ export default function SearchGoldenV4() {
   const hasErrors = !!(compileError || executeError || timelineError || facetsError);
   const mainError = compileError || executeError || timelineError || facetsError;
 
+  // Compute table height safely (avoid direct window usage during initialization)
+  const [tableHeight, setTableHeight] = useState<number>(600);
+  React.useEffect(() => {
+    const compute = () => {
+      const base = typeof window !== 'undefined' ? window.innerHeight : 800;
+      const offset = selectedRows.length > 0 ? 520 : 490;
+      setTableHeight(Math.max(300, base - offset));
+    };
+    compute();
+    window.addEventListener('resize', compute);
+    return () => window.removeEventListener('resize', compute);
+  }, [selectedRows.length]);
+
   return (
     <div className="search-golden-v4" style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
       
@@ -268,7 +282,7 @@ export default function SearchGoldenV4() {
           <div style={{ display: 'flex', gap: '12px', alignItems: 'center', fontSize: '12px' }}>
             {isAnyLoading && <span style={{ color: '#f59e0b' }}>⏳ Loading...</span>}
             {hasErrors && <span style={{ color: '#dc2626' }}>⚠️ {mainError?.message}</span>}
-            {compileResult && <span style={{ color: '#10b981' }}>✓ SQL ({compileResult.took_ms || 0}ms)</span>}
+            {compileResult && <span style={{ color: '#10b981' }}>✓ SQL compiled</span>}
             {executeResult && (
               <span style={{ color: '#3b82f6' }}>
                 📊 {executeResult.data.data.length.toLocaleString()} rows ({executeResult.took_ms}ms)
@@ -283,25 +297,29 @@ export default function SearchGoldenV4() {
 
           {/* Controls */}
           <div style={{ marginLeft: 'auto', display: 'flex', gap: '12px', alignItems: 'center' }}>
-            <select 
-              value={tenantId} 
-              onChange={(e) => setTenantId(e.target.value)}
-              style={{ padding: '4px 8px', fontSize: '12px', borderRadius: '4px', border: '1px solid #d1d5db' }}
-            >
-              <option value="hr">HR Tenant</option>
-              <option value="default">Default</option>
-              <option value="finance">Finance</option>
-            </select>
+            <CompactSelect
+              value={tenantId}
+              onChange={(value) => setTenantId(value.toString())}
+              size="sm"
+              aria-label="Tenant"
+              options={[
+                { value: "hr", label: "HR Tenant" },
+                { value: "default", label: "Default" },
+                { value: "finance", label: "Finance" },
+              ]}
+            />
             
-            <select 
-              value={timeSeconds} 
-              onChange={(e) => setTimeSeconds(parseInt(e.target.value))}
-              style={{ padding: '4px 8px', fontSize: '12px', borderRadius: '4px', border: '1px solid #d1d5db' }}
-            >
-              <option value={3600}>1 hour</option>
-              <option value={86400}>24 hours</option>
-              <option value={604800}>7 days</option>
-            </select>
+            <CompactSelect
+              value={timeSeconds}
+              onChange={(value) => setTimeSeconds(parseInt(value.toString()))}
+              size="sm"
+              aria-label="Time range"
+              options={[
+                { value: 3600, label: "1 hour" },
+                { value: 86400, label: "24 hours" },
+                { value: 604800, label: "7 days" },
+              ]}
+            />
 
             <label style={{ fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px' }}>
               <input
@@ -500,7 +518,7 @@ export default function SearchGoldenV4() {
           </div>
 
           {/* Results Table */}
-          <div style={{ flex: 1, overflow: 'hidden' }}>
+          <div style={{ flex: 1, overflow: 'visible' }}>
             {selectedRows.length > 0 && (
               <div style={{
                 padding: '8px 16px',
@@ -537,7 +555,7 @@ export default function SearchGoldenV4() {
               error={executeError}
               onRowClick={handleRowClick}
               onRowSelect={handleRowSelect}
-              height={window.innerHeight - (selectedRows.length > 0 ? 520 : 490)}
+              height={tableHeight}
               rowHeight={40}
               enableSelection={true}
               enableSorting={true}

@@ -28,7 +28,7 @@ root.render(
   <ErrorBoundary>
     <QueryClientProvider client={queryClient}>
       <VisualThemeProvider defaultTheme="v2" defaultDarkMode={false}>
-        <BrowserRouter basename="/ui/v2">
+        <BrowserRouter basename={import.meta.env.PROD ? '/ui/v2' : '/'}>
           <App />
           <ThemeToggle />
         </BrowserRouter>

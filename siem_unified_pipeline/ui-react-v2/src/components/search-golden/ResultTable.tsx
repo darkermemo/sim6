@@ -1,5 +1,8 @@
 import * as Types from "@/lib/search-types";
 import { useMemo, useState } from "react";
+import ColumnSelector from "@/components/ColumnSelector";
+import CompactSelect from "@/components/ui/CompactSelect";
+import ExcelTable from "@/components/ExcelTable";
 
 interface Props {
   data: any[];
@@ -76,116 +79,98 @@ export default function ResultTable({
   }, [meta, visibleColumns, hideEmpty, nonEmptyByColumn, allColumnNames]);
 
   return (
-    <div style={{ flex: 1, overflow: "auto", padding: "10px" }}>
-      <h3>Results</h3>
-      {/* Meta info */}
-      <div data-testid="result-meta" style={{ marginBottom: "10px", display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
-        <strong>{rows} rows</strong>
-        {rowsBeforeLimit > rows && ` (${rowsBeforeLimit} before limit)`}
-        {statistics && (
-          <span style={{ marginLeft: "8px", color: "#666" }}>
-            {statistics.elapsed}s elapsed, {statistics.rows_read} rows read, {statistics.bytes_read} bytes
-          </span>
-        )}
+    <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", padding: "10px" }}>
+      <h3 style={{ margin: "0 0 8px 0", fontSize: "14px", fontWeight: 600 }}>Results</h3>
+      {/* Compact Controls Row */}
+      <div data-testid="result-meta" style={{ 
+        marginBottom: "6px", 
+        display: "flex", 
+        gap: "8px", 
+        alignItems: "center", 
+        fontSize: "10px",
+        padding: "4px 6px",
+        backgroundColor: "#f8fafc",
+        borderRadius: "3px",
+        border: "1px solid #e2e8f0"
+      }}>
+        {/* Result count - prominent */}
+        <div style={{ 
+          fontSize: "11px", 
+          fontWeight: 600, 
+          color: "#374151",
+          marginRight: "auto"
+        }}>
+          {rows} rows
+          {rowsBeforeLimit > rows && ` (${rowsBeforeLimit} total)`}
+          {statistics && (
+            <span style={{ marginLeft: "8px", color: "#64748b", fontSize: "9px", fontWeight: 400 }}>
+              {statistics.elapsed}s • {statistics.rows_read} rows • {statistics.bytes_read} bytes
+            </span>
+          )}
+        </div>
 
-        {/* Limit selector */}
-        <label style={{ marginLeft: "auto", fontSize: 12 }}>
-          Rows:
-          <select
-            value={limit}
-            onChange={e => onLimitChange(parseInt(e.target.value))}
-            style={{ marginLeft: 6 }}
-          >
-            <option value="10">10</option>
-            <option value="50">50</option>
-            <option value="100">100</option>
-            <option value="500">500</option>
-            <option value="1000">1000</option>
-          </select>
-        </label>
+        {/* Compact controls */}
+        <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+          {/* Limit selector */}
+          <div style={{ display: "flex", alignItems: "center", gap: "3px" }}>
+            <span style={{ fontSize: "9px", color: "#64748b", fontWeight: 600 }}>Limit:</span>
+            <CompactSelect
+              value={limit}
+              onChange={(value) => onLimitChange(parseInt(value.toString()))}
+              size="xs"
+              aria-label="Row limit"
+              options={[
+                { value: 10, label: "10" },
+                { value: 50, label: "50" },
+                { value: 100, label: "100" },
+                { value: 500, label: "500" },
+                { value: 1000, label: "1000" },
+              ]}
+            />
+          </div>
 
-        {/* Hide empty */}
-        <label style={{ fontSize: 12 }}>
-          <input type="checkbox" checked={hideEmpty} onChange={e => setHideEmpty(e.target.checked)} /> Hide empty columns
-        </label>
+          {/* Hide empty checkbox */}
+          <label style={{ 
+            display: "flex", 
+            alignItems: "center", 
+            gap: "3px", 
+            cursor: "pointer",
+            fontSize: "9px",
+            color: "#64748b"
+          }}>
+            <input 
+              type="checkbox" 
+              checked={hideEmpty} 
+              onChange={e => setHideEmpty(e.target.checked)}
+              style={{ 
+                width: "12px", 
+                height: "12px",
+                cursor: "pointer"
+              }}
+            />
+            Hide empty
+          </label>
 
-        {/* Quick presets */}
-        <button onClick={() => setVisibleColumns(allColumnNames.filter(n => defaultCompact.includes(n)))} style={{ fontSize: 12 }}>
-          Compact
-        </button>
-        <button onClick={() => setVisibleColumns(allColumnNames)} style={{ fontSize: 12 }}>
-          All fields
-        </button>
-
-        {/* Column picker */}
-        <label style={{ fontSize: 12 }}>
-          Columns:
-          <select multiple value={visibleColumns} onChange={e => {
-            const options = Array.from(e.target.selectedOptions).map(o => o.value);
-            setVisibleColumns(options);
-          }} style={{ marginLeft: 6, minWidth: 200, maxHeight: 80 }}>
-            {allColumnNames.map(name => (
-              <option key={name} value={name}>{name}</option>
-            ))}
-          </select>
-        </label>
+          {/* Modern Column Selector */}
+          <ColumnSelector
+            columns={meta.map(m => ({ name: m.name, type: m.type }))}
+            selectedColumns={visibleColumns}
+            onChange={setVisibleColumns}
+            defaultColumns={defaultCompact}
+          />
+        </div>
       </div>
 
-      {/* Table */}
-      <div data-testid="result-table" style={{ overflowX: "auto" }}>
-        <table style={{ borderCollapse: "collapse", width: "100%" }}>
-          <thead>
-            <tr>
-              <th style={{ border: "1px solid #ccc", padding: "5px", position: "sticky", left: 0, background: "#fff", zIndex: 1 }}>Actions</th>
-              {columnsToRender.map(col => {
-                const currentSort = sort.find(s => s.field === col.name);
-                return (
-                  <th
-                    key={col.name}
-                    onClick={() => handleSort(col.name)}
-                    style={{
-                      border: "1px solid #ccc",
-                      padding: "5px",
-                      cursor: "pointer",
-                      backgroundColor: currentSort ? "#f0f0f0" : "white",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    {col.name}
-                    {currentSort && (
-                      <span> {currentSort.dir === "asc" ? "↑" : "↓"}</span>
-                    )}
-                    <div style={{ fontSize: "10px", color: "#666" }}>{col.type}</div>
-                  </th>
-                );
-              })}
-            </tr>
-          </thead>
-          <tbody>
-            {data.length === 0 ? (
-              <tr>
-                <td colSpan={columnsToRender.length + 1} style={{ textAlign: "center", padding: "20px" }}>
-                  No results
-                </td>
-              </tr>
-            ) : (
-              data.map((row, i) => (
-                <tr key={i}>
-                  <td style={{ border: "1px solid #ccc", padding: "5px", position: "sticky", left: 0, background: "#fff" }}>
-                    <button onClick={() => copyRow(row)} style={{ fontSize: "12px" }}>
-                      Copy
-                    </button>
-                  </td>
-                  {columnsToRender.map(col => (
-                    <td key={col.name} style={{ border: "1px solid #ccc", padding: "5px", maxWidth: 320, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      {formatValue(row[col.name], col.type)}
-                    </td>
-                  ))}
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+      {/* Excel-like Table */}
+      <div data-testid="result-table" style={{ flex: 1 }}>
+        <ExcelTable
+          data={data}
+          columns={columnsToRender}
+          onSort={handleSort}
+          sortField={sort.length > 0 ? sort[0].field : undefined}
+          sortDirection={sort.length > 0 ? sort[0].dir : undefined}
+          height={600}
+        />
       </div>
     </div>
   );

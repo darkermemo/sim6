@@ -163,7 +163,7 @@ export function ThemeToggle() {
           color: 'var(--fg)'
         }}
       >
-        {isDark ? '🌙' : '☀️'}
+        {isDark ? 'Dark' : 'Light'}
       </button>
     </div>
   );

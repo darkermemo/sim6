@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { api } from "@/lib/api-client";
+import { fetchSchemaFields, fetchEnums, compileQuery, executeQuery } from "@/lib/api-golden";
 import * as Types from "@/lib/api-types";
 import SearchQueryBuilder from "@/components/search/SearchQueryBuilder";
 import SearchResults from "@/components/search/SearchResults";
@@ -55,12 +55,12 @@ export default function SearchV2() {
   const loadSchema = async () => {
     try {
       const [fieldsRes, enumsRes, grammarRes] = await Promise.all([
-        api.schema.fields(tenant),
-        api.schema.enums(tenant),
-        api.schema.grammar(),
+        fetchSchemaFields(),
+        fetchEnums(),
+        Promise.resolve({ tokens: [], functions: [], examples: [] }), // Grammar not implemented yet
       ]);
-      setFields(fieldsRes.fields);
-      setEnums(enumsRes.enums);
+      setFields(fieldsRes || []);
+      setEnums(enumsRes || {});
       setGrammar(grammarRes);
     } catch (err) {
       console.error("Failed to load schema:", err);

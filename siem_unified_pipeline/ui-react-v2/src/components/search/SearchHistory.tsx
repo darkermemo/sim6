@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { api } from "@/lib/api-client";
+// TODO: Implement using centralized HTTP helper
 import * as Types from "@/lib/api-types";
 
 interface Props {

@@ -72,7 +72,7 @@ export async function compileQuery(body: {
   time?: Types.TimeRange; 
   q: string
 }): Promise<Types.CompileResult> {
-  return httpPost<Types.CompileResult, typeof body>('/search/compile', body);
+  return httpPost<Types.CompileResult>('/search/compile', body);
 }
 
 export async function executeQuery(body: {
@@ -82,12 +82,12 @@ export async function executeQuery(body: {
   limit?: number; 
   sort?: Types.SortSpec[]
 }): Promise<Types.ExecuteResult> {
-  return httpPost<Types.ExecuteResult, typeof body>('/search/execute', body);
+  return httpPost<Types.ExecuteResult>('/search/execute', body);
 }
 
 // Optional endpoints with safe defaults
 export async function fetchTimeline(body: any, signal?: AbortSignal): Promise<{ buckets: Types.TimelineBucket[] }> {
-  return httpPost<{ buckets: Types.TimelineBucket[] }, any>('/search/timeline', body, { 
+  return httpPost<{ buckets: Types.TimelineBucket[] }>('/search/timeline', body, { 
     signal, 
     optional: true, 
     defaultValue: { buckets: [] }
@@ -95,7 +95,7 @@ export async function fetchTimeline(body: any, signal?: AbortSignal): Promise<{ 
 }
 
 export async function fetchFacets(body: any, signal?: AbortSignal): Promise<{ facets: Record<string, Types.FacetBucket[]> }> {
-  return httpPost<{ facets: Record<string, Types.FacetBucket[]> }, any>('/search/facets', body, { 
+  return httpPost<{ facets: Record<string, Types.FacetBucket[]> }>('/search/facets', body, { 
     signal, 
     optional: true, 
     defaultValue: { facets: {} }
@@ -233,8 +233,8 @@ export async function fetchSchemaBundle(): Promise<{
     ]);
     
     // Safe parsing with fallbacks
-    const fields = FieldsIn.parse(fieldsAny ?? []) as unknown as Types.FieldMeta[];
-    const enums = EnumsIn.parse(enumsAny ?? {});
+    const fields = FieldsResponseZ.parse(fieldsAny ?? []) as unknown as Types.FieldMeta[];
+    const enums = EnumsResponseZ.parse(enumsAny ?? {});
     const grammar = { tokens: [], functions: [], examples: [], keywords: [], operators: [], specials: [] } as Types.Grammar;
     
     const bundle = { fields, enums, grammar };

@@ -70,6 +70,39 @@ export function post<T>(path: string, body?: Json, init?: RequestInit) {
   return http<T>(path, { ...(rest as RequestInit), signal: signal ?? undefined, method: "POST", body: body ? JSON.stringify(body) : undefined });
 }
 
+// Enhanced versions with optional 404 handling
+type HttpOpts<T> = { signal?: AbortSignal; optional?: boolean; defaultValue?: T };
+
+export async function httpGet<T>(path: string, opts: HttpOpts<T> = {}): Promise<T> {
+  const API_BASE = import.meta.env.VITE_API_URL?.replace(/\/+$/, "") || "http://127.0.0.1:9999";
+  const url = `${API_BASE}/api/v2${path}`;
+  
+  const res = await fetch(url, {
+    signal: opts.signal,
+    headers: { "content-type": "application/json" },
+  });
+  
+  if (res.ok) return (await res.json()) as T;
+  if (opts.optional && res.status === 404) return (opts.defaultValue as T);
+  throw await toApiError(res);
+}
+
+export async function httpPost<T>(path: string, body: any, opts: HttpOpts<T> = {}): Promise<T> {
+  const API_BASE = import.meta.env.VITE_API_URL?.replace(/\/+$/, "") || "http://127.0.0.1:9999";
+  const url = `${API_BASE}/api/v2${path}`;
+  
+  const res = await fetch(url, {
+    method: "POST",
+    signal: opts.signal,
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  
+  if (res.ok) return (await res.json()) as T;
+  if (opts.optional && res.status === 404) return (opts.defaultValue as T);
+  throw await toApiError(res);
+}
+
 export function del<T>(path: string, init?: RequestInit) {
   const { signal, ...rest } = init || {};
   return http<T>(path, { ...(rest as RequestInit), signal: signal ?? undefined, method: "DELETE" });
@@ -80,9 +113,7 @@ export function patch<T>(path: string, body?: Json, init?: RequestInit) {
   return http<T>(path, { ...(rest as RequestInit), signal: signal ?? undefined, method: "PATCH", body: body ? JSON.stringify(body) : undefined });
 }
 
-// Aliases with explicit names to avoid any tooling collisions
-export const httpGet = get;
-export const httpPost = post;
+// Remove aliases to avoid duplicate declarations (we have new httpGet/httpPost functions above)
 export const httpDel = del;
 export const httpPatch = patch;
 
@@ -142,12 +173,7 @@ export async function zpost<TReq extends Json | undefined, TRes>(
   return parsed.data;
 }
 
-// Enhanced HTTP helpers with optional endpoint support
-type HttpOpts<T> = { 
-  signal?: AbortSignal; 
-  optional?: boolean; 
-  defaultValue?: T 
-};
+// Remove duplicate HttpOpts type - already defined above
 
 async function toApiError(res: Response) {
   let body: any = undefined;
