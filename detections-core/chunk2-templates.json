@@ -1,0 +1,151 @@
+{
+  "process_burst": {
+    "name": "Process Burst Activity",
+    "description": "Process spawning 10x faster in 2min vs 10min baseline",
+    "severity": "high",
+    "mitre_tactics": ["Execution"],
+    "mitre_techniques": ["T1059"],
+    "category": "burst",
+    "spec": {
+      "type": "burst",
+      "tenant_id": "default",
+      "time": {"last_seconds": 3600},
+      "by": ["host"],
+      "where": {"sql": "event_type='connection'"},
+      "bucket_fast_sec": 120,
+      "bucket_slow_sec": 600,
+      "ratio_gt": 10,
+      "emit": {"limit": 200}
+    }
+  },
+
+  "night_owl_auth": {
+    "name": "Night Owl Authentication",
+    "description": "Authentication activity during 2-4 AM above 3 standard deviations",
+    "severity": "medium",
+    "mitre_tactics": ["Initial Access"],
+    "mitre_techniques": ["T1078"],
+    "category": "time_of_day",
+    "spec": {
+      "type": "time_of_day",
+      "tenant_id": "default",
+      "time": {"last_seconds": 86400},
+      "by": ["user"],
+      "where": {"sql": "event_type='auth' AND outcome='success'"},
+      "hour_start": 2,
+      "hour_end": 4,
+      "bucket_sec": 3600,
+      "hist_buckets": 24,
+      "z": 3
+    }
+  },
+
+  "weekend_activity": {
+    "name": "Weekend Unusual Activity",
+    "description": "High activity during weekend hours (Saturday-Sunday)",
+    "severity": "low",
+    "mitre_tactics": ["Persistence"],
+    "mitre_techniques": ["T1053"],
+    "category": "time_of_day",
+    "spec": {
+      "type": "time_of_day",
+      "tenant_id": "default", 
+      "time": {"last_seconds": 604800},
+      "by": ["user"],
+      "where": {"sql": "dayOfWeek(ts) IN (6,7)"},
+      "hour_start": 0,
+      "hour_end": 23,
+      "bucket_sec": 3600,
+      "hist_buckets": 168,
+      "z": 2
+    }
+  },
+
+  "impossible_travel_countries": {
+    "name": "Impossible Travel (Countries)",
+    "description": "User authentication from different countries within 1 hour",
+    "severity": "critical",
+    "mitre_tactics": ["Initial Access"],
+    "mitre_techniques": ["T1078"],
+    "category": "travel",
+    "spec": {
+      "type": "travel",
+      "tenant_id": "default",
+      "time": {"last_seconds": 604800},
+      "by": ["user"],
+      "max_interval_sec": 3600
+    }
+  },
+
+  "impossible_travel_speed": {
+    "name": "Impossible Travel (Speed)",
+    "description": "Authentication at impossible speed ≥ 900 km/h",
+    "severity": "critical",
+    "mitre_tactics": ["Initial Access"],
+    "mitre_techniques": ["T1078"],
+    "category": "travel",
+    "spec": {
+      "type": "travel",
+      "tenant_id": "default",
+      "time": {"last_seconds": 604800},
+      "by": ["user"],
+      "countries_only": false,
+      "max_interval_sec": 3600,
+      "speed_kmh_gt": 900
+    }
+  },
+
+  "dga_dns_queries": {
+    "name": "DGA-like DNS Queries",
+    "description": "Long base64/hex-like DNS queries indicating domain generation algorithms",
+    "severity": "high",
+    "mitre_tactics": ["Command and Control"],
+    "mitre_techniques": ["T1071.004"],
+    "category": "lexical",
+    "spec": {
+      "type": "lex",
+      "tenant_id": "default",
+      "time": {"last_seconds": 86400},
+      "by": ["src_ip"],
+      "field": "message",
+      "min_len": 30
+    }
+  },
+
+  "suspicious_cmdline": {
+    "name": "Suspicious Command Lines",
+    "description": "Command lines with custom lexical scoring for encoded commands",
+    "severity": "medium",
+    "mitre_tactics": ["Execution"],
+    "mitre_techniques": ["T1027", "T1059"],
+    "category": "lexical",
+    "spec": {
+      "type": "lex",
+      "tenant_id": "default",
+      "time": {"last_seconds": 86400},
+      "by": ["user", "host"],
+      "field": "message",
+      "min_len": 30,
+      "score_sql": {"sql": "greatest(0.0, length(message) - length(replaceRegexpAll(message,'[A-Za-z0-9]',''))) / length(message)"},
+      "score_gt": 0.25
+    }
+  },
+
+  "encoded_payloads": {
+    "name": "Encoded Payload Detection",
+    "description": "Base64/hex encoded payloads in network traffic or commands",
+    "severity": "high",
+    "mitre_tactics": ["Defense Evasion"],
+    "mitre_techniques": ["T1027"],
+    "category": "lexical",
+    "spec": {
+      "type": "lex", 
+      "tenant_id": "default",
+      "time": {"last_seconds": 86400},
+      "by": ["src_ip", "dest_ip"],
+      "field": "raw",
+      "min_len": 50,
+      "where": {"sql": "event_type='connection' OR event_type='web_request'"}
+    }
+  }
+}

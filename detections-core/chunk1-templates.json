@@ -1,0 +1,116 @@
+{
+  "auth_failure_spike": {
+    "name": "Authentication Failure Spike",
+    "description": "Detects authentication failure spikes above 3 standard deviations from 24-hour baseline",
+    "severity": "high",
+    "mitre_tactics": ["Credential Access"],
+    "mitre_techniques": ["T1110.001", "T1110.003"],
+    "category": "spike",
+    "spec": {
+      "type": "spike",
+      "tenant_id": "default",
+      "time": {"last_seconds": 7200},
+      "by": ["user", "src_ip"],
+      "metric": {"sql": "event_type='auth' AND outcome='fail'"},
+      "bucket_sec": 300,
+      "hist_buckets": 288,
+      "z": 3.0,
+      "emit": {"limit": 200}
+    }
+  },
+
+  "lateral_movement_spread": {
+    "name": "Lateral Movement (Host Spread)",
+    "description": "Same source IP accessing 20+ different hosts in 10 minutes",
+    "severity": "critical",
+    "mitre_tactics": ["Lateral Movement"],
+    "mitre_techniques": ["T1021"],
+    "category": "spread",
+    "spec": {
+      "type": "spread",
+      "tenant_id": "default",
+      "time": {"last_seconds": 3600},
+      "by": ["src_ip"],
+      "target": "host",
+      "where": {"sql": "event_type='connection' OR event_type='auth'"},
+      "window_sec": 600,
+      "min_distinct": 20
+    }
+  },
+
+  "user_diversity_spread": {
+    "name": "User Diversity Attack",
+    "description": "Same source IP touching 20+ users in 10 minutes",
+    "severity": "high",
+    "mitre_tactics": ["Discovery"],
+    "mitre_techniques": ["T1087"],
+    "category": "spread",
+    "spec": {
+      "type": "spread",
+      "tenant_id": "default",
+      "time": {"last_seconds": 3600},
+      "by": ["src_ip"],
+      "target": "user",
+      "window_sec": 600,
+      "min_distinct": 20
+    }
+  },
+
+  "download_peer_outlier": {
+    "name": "Excessive Downloads (Peer Outlier)",
+    "description": "Downloads per hour above peer group 95th percentile by event type",
+    "severity": "medium",
+    "mitre_tactics": ["Exfiltration"],
+    "mitre_techniques": ["T1041"],
+    "category": "peer_outlier",
+    "spec": {
+      "type": "peer_out",
+      "tenant_id": "default",
+      "time": {"last_seconds": 86400},
+      "by": ["user"],
+      "kpi": {"sql": "event_type='web_request' AND bytes_out > 1000000"},
+      "bucket_sec": 3600,
+      "peer_label_field": "event_type",
+      "p": 0.95
+    }
+  },
+
+  "connection_spike": {
+    "name": "Network Connection Spike",
+    "description": "Network connections spike above 2 standard deviations",
+    "severity": "medium",
+    "mitre_tactics": ["Command and Control"],
+    "mitre_techniques": ["T1071"],
+    "category": "spike",
+    "spec": {
+      "type": "spike",
+      "tenant_id": "default",
+      "time": {"last_seconds": 3600},
+      "by": ["src_ip"],
+      "metric": {"sql": "event_type='connection'"},
+      "bucket_sec": 300,
+      "hist_buckets": 144,
+      "z": 2.0,
+      "emit": {"limit": 100}
+    }
+  },
+
+  "auth_activity_peer_outlier": {
+    "name": "Authentication Activity Outlier",
+    "description": "Authentication attempts above peer 90th percentile by host",
+    "severity": "low",
+    "mitre_tactics": ["Credential Access"],
+    "mitre_techniques": ["T1110"],
+    "category": "peer_outlier",
+    "spec": {
+      "type": "peer_out",
+      "tenant_id": "default",
+      "time": {"last_seconds": 14400},
+      "by": ["user"],
+      "kpi": {"sql": "event_type='auth'"},
+      "bucket_sec": 1800,
+      "peer_label_field": "host",
+      "p": 0.90
+    }
+  }
+}

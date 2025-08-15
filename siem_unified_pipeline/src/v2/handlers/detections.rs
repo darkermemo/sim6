@@ -83,6 +83,15 @@ pub async fn compile_detection(
         "ratio" => compile_ratio(&spec),
         "first_seen" => compile_first_seen(&spec),
         "beaconing" => compile_beaconing(&spec),
+        // CHUNK 1: Advanced Detection Families
+        "spike" => compile_spike(&spec),
+        "spread" => compile_spread(&spec),
+        "peer_out" => compile_peer_out(&spec),
+        // CHUNK 2: Behavioral Detection Families
+        "burst" => compile_burst(&spec),
+        "time_of_day" => compile_time_of_day(&spec),
+        "travel" => compile_travel(&spec),
+        "lex" => compile_lex(&spec),
         _ => {
             errors.push(format!("unsupported rule type: {}", spec.rule_type));
             "-- Invalid rule type".to_string()
@@ -110,6 +119,10 @@ pub async fn run_detection(
         "ratio" => compile_ratio(&spec),
         "first_seen" => compile_first_seen(&spec),
         "beaconing" => compile_beaconing(&spec),
+        // CHUNK 1: Advanced Detection Families
+        "spike" => compile_spike(&spec),
+        "spread" => compile_spread(&spec),
+        "peer_out" => compile_peer_out(&spec),
         _ => return Err(axum::http::StatusCode::BAD_REQUEST),
     };
     
@@ -164,6 +177,15 @@ pub async fn test_detection(
         "ratio" => compile_ratio(&spec),
         "first_seen" => compile_first_seen(&spec),
         "beaconing" => compile_beaconing(&spec),
+        // CHUNK 1: Advanced Detection Families
+        "spike" => compile_spike(&spec),
+        "spread" => compile_spread(&spec),
+        "peer_out" => compile_peer_out(&spec),
+        // CHUNK 2: Behavioral Detection Families
+        "burst" => compile_burst(&spec),
+        "time_of_day" => compile_time_of_day(&spec),
+        "travel" => compile_travel(&spec),
+        "lex" => compile_lex(&spec),
         _ => {
             errors.push(format!("unsupported rule type: {}", spec.rule_type));
             "-- Invalid rule type".to_string()
@@ -247,7 +269,7 @@ fn compile_sequence(spec: &DetectionSpec) -> String {
          FROM siem_v3.events_norm \
          WHERE tenant_id='{}' AND {} \
          GROUP BY {} \
-         HAVING windowFunnel({}{})(ts, {}) >= 2 \
+         HAVING windowFunnel({}{})(ts_uint32, {}) >= 2 \
          ORDER BY last_ts DESC {}",
         by_clause, spec.tenant_id, time_clause, by_clause, window_sec, strict_param, stages, limit_clause
     )
@@ -268,7 +290,7 @@ fn compile_absence(spec: &DetectionSpec) -> String {
          FROM siem_v3.events_norm \
          WHERE tenant_id='{}' AND {} \
          GROUP BY {} \
-         HAVING windowFunnel({})(ts, ({}), ({})) < 2 AND countIf({}) > 0 \
+         HAVING windowFunnel({})(ts_uint32, ({}), ({})) < 2 AND countIf({}) > 0 \
          ORDER BY a_ts DESC {}",
         by_clause, a_cond, b_cond, spec.tenant_id, time_clause, by_clause, 
         window_sec, a_cond, b_cond, a_cond, limit_clause
@@ -289,7 +311,7 @@ fn compile_chain(spec: &DetectionSpec) -> String {
          FROM siem_v3.events_norm \
          WHERE tenant_id='{}' AND {} \
          GROUP BY {} \
-         HAVING windowFunnel({})(ts, {}) = 3 \
+         HAVING windowFunnel({})(ts_uint32, {}) = 3 \
          ORDER BY last_ts DESC {}",
         by_clause, spec.tenant_id, time_clause, by_clause, window_sec, stages, limit_clause
     )
@@ -407,4 +429,309 @@ fn compile_beaconing(spec: &DetectionSpec) -> String {
         partition, partition, spec.tenant_id, time_clause, partition, 
         partition, partition, min_events, rsd_lt, limit_clause
     )
+}
+
+// === CHUNK 1: Advanced Detection Compilers ===
+
+fn compile_spike(spec: &DetectionSpec) -> String {
+    let time_clause = time_where(&spec.time);
+    let by_clause = by_key(&spec.by);
+    let limit_clause = emit_limit(&spec.emit);
+    
+    let bucket_sec = spec.extra.get("bucket_sec").and_then(|v| v.as_u64()).unwrap_or(300);
+    let hist_buckets = spec.extra.get("hist_buckets").and_then(|v| v.as_u64()).unwrap_or(288);
+    let z_threshold = spec.extra.get("z").and_then(|v| v.as_f64()).unwrap_or(3.0);
+    let metric_sql = spec.extra.get("metric").and_then(|v| v.get("sql")).and_then(|v| v.as_str()).unwrap_or("1");
+    
+    format!(
+        "WITH b AS ( \
+           SELECT {}, toStartOfInterval(ts, INTERVAL {} SECOND) AS bkt, \
+                  countIf({}) AS c \
+           FROM siem_v3.events_norm \
+           WHERE tenant_id='{}' AND {} \
+           GROUP BY {}, bkt \
+         ), \
+         z AS ( \
+           SELECT {}, bkt, c, \
+                  avg(c) OVER (PARTITION BY {} ORDER BY bkt ROWS BETWEEN {} PRECEDING AND 1 PRECEDING) AS mu, \
+                  stddevPop(c) OVER (PARTITION BY {} ORDER BY bkt ROWS BETWEEN {} PRECEDING AND 1 PRECEDING) AS sigma \
+           FROM b \
+         ) \
+         SELECT {} AS entity_keys, bkt AS bucket_end, \
+                c AS current_value, mu AS baseline_avg, sigma AS baseline_stddev, \
+                (c - mu) / nullIf(sigma,0) AS z_score \
+         FROM z \
+         WHERE z_score >= {} \
+         ORDER BY bucket_end DESC, z_score DESC {}",
+        by_clause, bucket_sec, metric_sql, spec.tenant_id, time_clause, by_clause,
+        by_clause, by_clause, hist_buckets, by_clause, hist_buckets,
+        by_clause, z_threshold, limit_clause
+    )
+}
+
+fn compile_spread(spec: &DetectionSpec) -> String {
+    let time_clause = time_where(&spec.time);
+    let by_clause = by_key(&spec.by);
+    let limit_clause = emit_limit(&spec.emit);
+    
+    let window_sec = spec.extra.get("window_sec").and_then(|v| v.as_u64()).unwrap_or(600);
+    let min_distinct = spec.extra.get("min_distinct").and_then(|v| v.as_u64()).unwrap_or(20);
+    let target = spec.extra.get("target").and_then(|v| v.as_str()).unwrap_or("user");
+    let where_clause = spec.extra.get("where").and_then(|v| v.get("sql")).and_then(|v| v.as_str()).unwrap_or("");
+    let where_sql = if where_clause.is_empty() { String::new() } else { format!("AND ({})", where_clause) };
+    
+    format!(
+        "SELECT {} AS entity_keys, \
+                toStartOfInterval(ts, INTERVAL {} SECOND) AS window_start, \
+                uniqExact({}) AS distinct_{}, \
+                count() AS total_events \
+         FROM siem_v3.events_norm \
+         WHERE tenant_id='{}' AND {} {} \
+         GROUP BY {}, window_start \
+         HAVING distinct_{} >= {} \
+         ORDER BY window_start DESC, distinct_{} DESC {}",
+        by_clause, window_sec, target, target.replace(|c: char| !c.is_alphanumeric(), "_"),
+        spec.tenant_id, time_clause, where_sql, by_clause,
+        target.replace(|c: char| !c.is_alphanumeric(), "_"), min_distinct,
+        target.replace(|c: char| !c.is_alphanumeric(), "_"), limit_clause
+    )
+}
+
+fn compile_peer_out(spec: &DetectionSpec) -> String {
+    let time_clause = time_where(&spec.time);
+    let by_clause = by_key(&spec.by);
+    let limit_clause = emit_limit(&spec.emit);
+    
+    let bucket_sec = spec.extra.get("bucket_sec").and_then(|v| v.as_u64()).unwrap_or(3600);
+    let p = spec.extra.get("p").and_then(|v| v.as_f64()).unwrap_or(0.95);
+    let peer_field = spec.extra.get("peer_label_field").and_then(|v| v.as_str()).unwrap_or("event_type");
+    let kpi_sql = spec.extra.get("kpi").and_then(|v| v.get("sql")).and_then(|v| v.as_str()).unwrap_or("1");
+    
+    format!(
+        "WITH bucketed AS ( \
+           SELECT {}, {} AS peer_label, \
+                  toStartOfInterval(ts, INTERVAL {} SECOND) AS bkt, \
+                  sumIf(1, {}) AS kpi_value \
+           FROM siem_v3.events_norm \
+           WHERE tenant_id='{}' AND {} \
+           GROUP BY {}, peer_label, bkt \
+         ), \
+         peer_baseline AS ( \
+           SELECT peer_label, quantileTDigest({})(kpi_value) AS peer_pctl, \
+                  count() AS peer_observations \
+           FROM bucketed \
+           GROUP BY peer_label \
+         ) \
+         SELECT b.{} AS entity_keys, b.peer_label, b.bkt AS bucket_end, \
+                b.kpi_value, p.peer_pctl AS peer_{}th_percentile, p.peer_observations \
+         FROM bucketed b \
+         JOIN peer_baseline p USING (peer_label) \
+         WHERE b.kpi_value > p.peer_pctl \
+         ORDER BY bucket_end DESC, b.kpi_value DESC {}",
+        by_clause, peer_field, bucket_sec, kpi_sql, spec.tenant_id, time_clause,
+        by_clause, p, by_clause.replace("tenant_id, ", ""), (p * 100.0) as u32, limit_clause
+    )
+}
+
+// === CHUNK 2: Behavioral Detection Compilers ===
+
+fn compile_burst(spec: &DetectionSpec) -> String {
+    let time_clause = time_where(&spec.time);
+    let by_clause = by_key(&spec.by);
+    let limit_clause = emit_limit(&spec.emit);
+    
+    let bucket_fast_sec = spec.extra.get("bucket_fast_sec").and_then(|v| v.as_u64()).unwrap_or(120);
+    let bucket_slow_sec = spec.extra.get("bucket_slow_sec").and_then(|v| v.as_u64()).unwrap_or(600);
+    let ratio_gt = spec.extra.get("ratio_gt").and_then(|v| v.as_f64()).unwrap_or(10.0);
+    let where_clause = spec.extra.get("where").and_then(|v| v.get("sql")).and_then(|v| v.as_str()).unwrap_or("");
+    let where_sql = if where_clause.is_empty() { String::new() } else { format!("AND ({})", where_clause) };
+    
+    format!(
+        "WITH fast AS ( \
+           SELECT {}, toStartOfInterval(ts, INTERVAL {} SECOND) AS b, count() AS c_fast \
+           FROM siem_v3.events_norm \
+           WHERE tenant_id='{}' AND {} {} \
+           GROUP BY {}, b \
+         ), \
+         slow AS ( \
+           SELECT {}, toStartOfInterval(ts, INTERVAL {} SECOND) AS b_slow, count() AS c_slow \
+           FROM siem_v3.events_norm \
+           WHERE tenant_id='{}' AND {} {} \
+           GROUP BY {}, b_slow \
+         ), \
+         j AS ( \
+           SELECT f.{}, f.b AS bucket_end, f.c_fast, anyLast(s.c_slow) AS c_slow \
+           FROM fast f \
+           LEFT JOIN slow s ON {} AND s.b_slow <= f.b \
+           GROUP BY {}, f.b, f.c_fast \
+         ) \
+         SELECT {} AS entity_keys, bucket_end, c_fast, c_slow, c_fast / nullIf(c_slow,0) AS ratio \
+         FROM j \
+         WHERE c_slow > 0 AND ratio >= {} \
+         ORDER BY bucket_end DESC, ratio DESC {}",
+        by_clause, bucket_fast_sec, spec.tenant_id, time_clause, where_sql, by_clause,
+        by_clause, bucket_slow_sec, spec.tenant_id, time_clause, where_sql, by_clause,
+        by_clause.replace("tenant_id, ", ""),
+        spec.by.iter().map(|k| format!("f.{} = s.{}", k, k)).collect::<Vec<_>>().join(" AND "),
+        by_clause.replace("tenant_id, ", ""), by_clause, ratio_gt, limit_clause
+    )
+}
+
+fn compile_time_of_day(spec: &DetectionSpec) -> String {
+    let time_clause = time_where(&spec.time);
+    let by_clause = by_key(&spec.by);
+    let limit_clause = emit_limit(&spec.emit);
+    
+    let hour_start = spec.extra.get("hour_start").and_then(|v| v.as_u64()).unwrap_or(2);
+    let hour_end = spec.extra.get("hour_end").and_then(|v| v.as_u64()).unwrap_or(4);
+    let bucket_sec = spec.extra.get("bucket_sec").and_then(|v| v.as_u64()).unwrap_or(3600);
+    let hist_buckets = spec.extra.get("hist_buckets").and_then(|v| v.as_u64()).unwrap_or(24);
+    let z_threshold = spec.extra.get("z").and_then(|v| v.as_f64()).unwrap_or(3.0);
+    let where_clause = spec.extra.get("where").and_then(|v| v.get("sql")).and_then(|v| v.as_str()).unwrap_or("");
+    let where_sql = if where_clause.is_empty() { String::new() } else { format!("AND ({})", where_clause) };
+    
+    format!(
+        "WITH b AS ( \
+           SELECT {}, toStartOfInterval(ts, INTERVAL {} SECOND) AS bkt, toHour(ts) AS hr, count() AS c \
+           FROM siem_v3.events_norm \
+           WHERE tenant_id='{}' AND {} {} \
+           GROUP BY {}, bkt, hr \
+         ), \
+         f AS ( \
+           SELECT * FROM b WHERE hr BETWEEN {} AND {} \
+         ), \
+         z AS ( \
+           SELECT {}, bkt, c, \
+                  avg(c) OVER (PARTITION BY {} ORDER BY bkt ROWS BETWEEN {} PRECEDING AND 1 PRECEDING) AS mu, \
+                  stddevPop(c) OVER (PARTITION BY {} ORDER BY bkt ROWS BETWEEN {} PRECEDING AND 1 PRECEDING) AS sigma \
+           FROM f \
+         ) \
+         SELECT {} AS entity_keys, bkt AS bucket_end, c AS current_value, \
+                mu AS baseline_avg, sigma AS baseline_stddev, \
+                (c - mu) / nullIf(sigma,0) AS z_score \
+         FROM z \
+         WHERE z_score >= {} \
+         ORDER BY bucket_end DESC, z_score DESC {}",
+        by_clause, bucket_sec, spec.tenant_id, time_clause, where_sql, by_clause,
+        hour_start, hour_end, by_clause, by_clause, hist_buckets, by_clause, hist_buckets,
+        by_clause, z_threshold, limit_clause
+    )
+}
+
+fn compile_travel(spec: &DetectionSpec) -> String {
+    let time_clause = time_where(&spec.time);
+    let by_clause = by_key(&spec.by);
+    let limit_clause = emit_limit(&spec.emit);
+    
+    let max_interval = spec.extra.get("max_interval_sec").and_then(|v| v.as_u64()).unwrap_or(3600);
+    let countries_only = spec.extra.get("countries_only").and_then(|v| v.as_bool()).unwrap_or(true);
+    let speed_kmh = spec.extra.get("speed_kmh_gt").and_then(|v| v.as_f64());
+    
+    // Country-only detection (simplified)
+    if countries_only && speed_kmh.is_none() {
+        format!(
+            "WITH auth AS ( \
+               SELECT {}, ts, \
+                      assumeNotNull(coalesce(parsed_fields['country'], 'UNKNOWN')) AS country \
+               FROM siem_v3.events_norm \
+               WHERE tenant_id='{}' AND {} AND (event_type='auth' AND outcome='success') \
+             ), \
+             w AS ( \
+               SELECT {}, ts, country, \
+                      lagInFrame(ts) OVER (PARTITION BY {} ORDER BY ts) AS prev_ts, \
+                      lagInFrame(country) OVER (PARTITION BY {} ORDER BY ts) AS prev_country \
+               FROM auth \
+             ) \
+             SELECT {} AS entity_keys, ts, prev_ts, country, prev_country, \
+                    toUInt32(ts - prev_ts) AS dt_sec \
+             FROM w \
+             WHERE prev_ts IS NOT NULL AND country != prev_country \
+               AND country != 'UNKNOWN' AND prev_country != 'UNKNOWN' \
+               AND (ts - prev_ts) <= {} \
+             ORDER BY ts DESC {}",
+            by_clause, spec.tenant_id, time_clause, by_clause, by_clause, by_clause,
+            by_clause, max_interval, limit_clause
+        )
+    } else {
+        // Speed-based detection (requires geo data)
+        format!(
+            "WITH auth AS ( \
+               SELECT {}, ts, \
+                      toFloat64OrZero(parsed_fields['lat']) AS lat, \
+                      toFloat64OrZero(parsed_fields['lon']) AS lon \
+               FROM siem_v3.events_norm \
+               WHERE tenant_id='{}' AND {} AND (event_type='auth' AND outcome='success') \
+                 AND parsed_fields['lat'] != '' AND parsed_fields['lon'] != '' \
+             ), \
+             w AS ( \
+               SELECT {}, ts, lat, lon, \
+                      lagInFrame(ts) OVER (PARTITION BY {} ORDER BY ts) AS prev_ts, \
+                      lagInFrame(lat) OVER (PARTITION BY {} ORDER BY ts) AS prev_lat, \
+                      lagInFrame(lon) OVER (PARTITION BY {} ORDER BY ts) AS prev_lon \
+               FROM auth \
+             ), \
+             s AS ( \
+               SELECT {}, ts, prev_ts, \
+                      greatCircleDistance(lat, lon, prev_lat, prev_lon) / 1000.0 AS km, \
+                      toUInt32(ts - prev_ts) AS dt_sec \
+               FROM w WHERE prev_ts IS NOT NULL AND (ts - prev_ts) <= {} \
+             ) \
+             SELECT {} AS entity_keys, ts, prev_ts, km, dt_sec, \
+                    (km / nullIf(dt_sec,0)) * 3600.0 AS kmh \
+             FROM s \
+             WHERE kmh >= {} \
+             ORDER BY ts DESC {}",
+            by_clause, spec.tenant_id, time_clause, by_clause, by_clause, by_clause, by_clause,
+            by_clause, max_interval, by_clause, speed_kmh.unwrap_or(900.0), limit_clause
+        )
+    }
+}
+
+fn compile_lex(spec: &DetectionSpec) -> String {
+    let time_clause = time_where(&spec.time);
+    let by_clause = by_key(&spec.by);
+    let limit_clause = emit_limit(&spec.emit);
+    
+    let field = spec.extra.get("field").and_then(|v| v.as_str()).unwrap_or("message");
+    let min_len = spec.extra.get("min_len").and_then(|v| v.as_u64()).unwrap_or(30);
+    let where_clause = spec.extra.get("where").and_then(|v| v.get("sql")).and_then(|v| v.as_str()).unwrap_or("");
+    let where_sql = if where_clause.is_empty() { String::new() } else { format!("AND ({})", where_clause) };
+    
+    // Check for custom scoring
+    if let (Some(score_sql), Some(score_gt)) = (
+        spec.extra.get("score_sql").and_then(|v| v.get("sql")).and_then(|v| v.as_str()),
+        spec.extra.get("score_gt").and_then(|v| v.as_f64())
+    ) {
+        format!(
+            "SELECT {} AS entity_keys, ts, {} AS suspicious_value, ({}) AS lexical_score \
+             FROM siem_v3.events_norm \
+             WHERE tenant_id='{}' AND {} {} \
+               AND length({}) >= {} AND lexical_score >= {} \
+             ORDER BY ts DESC, lexical_score DESC {}",
+            by_clause, field, score_sql, spec.tenant_id, time_clause, where_sql,
+            field, min_len, score_gt, limit_clause
+        )
+    } else {
+        // Default heuristics
+        let min_pattern_len = std::cmp::max(24, min_len);
+        format!(
+            "SELECT {} AS entity_keys, ts, {} AS suspicious_value, length({}) AS string_length, \
+                    multiIf( \
+                      match({}, '^[A-Za-z0-9+/=]{{{}.*}}$'), 'base64_like', \
+                      match({}, '^[A-Fa-f0-9]{{{}.*}}$'), 'hex_like', \
+                      match({}, '[^A-Za-z0-9._-]{{10,}}'), 'symbol_heavy', \
+                      'other' \
+                    ) AS pattern_type \
+             FROM siem_v3.events_norm \
+             WHERE tenant_id='{}' AND {} {} \
+               AND length({}) >= {} \
+               AND (match({}, '^[A-Za-z0-9+/=]{{{}.*}}$') \
+                 OR match({}, '^[A-Fa-f0-9]{{{}.*}}$') \
+                 OR match({}, '[^A-Za-z0-9._-]{{10,}}')) \
+             ORDER BY ts DESC, string_length DESC {}",
+            by_clause, field, field, field, min_pattern_len, field, min_pattern_len, field,
+            spec.tenant_id, time_clause, where_sql, field, min_len,
+            field, min_pattern_len, field, min_pattern_len, field, limit_clause
+        )
+    }
 }
