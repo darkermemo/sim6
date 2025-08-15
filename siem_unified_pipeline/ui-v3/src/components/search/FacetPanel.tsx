@@ -235,12 +235,13 @@ export function FacetPanel({
                   <p className="text-xs text-red-600">{error}</p>
                 ) : facetData?.buckets?.length ? (
                   <div className="space-y-1">
-                    {facetData.buckets.map(bucket => {
+                    {facetData.buckets.map((bucket, index) => {
                       const isSelected = selectedFacets[config.field]?.includes(bucket.key);
+                      const uniqueKey = bucket.key || 'unknown';
                       
                       return (
                         <button
-                          key={`${config.field}-${bucket.key}-${bucket.doc_count}`}
+                          key={`${config.field}-${uniqueKey}-${bucket.doc_count}-${index}`}
                           onClick={() => handleFacetClick(config.field, bucket.key)}
                           className={`w-full flex items-center justify-between p-2 rounded text-xs hover:bg-slate-50 dark:hover:bg-slate-700 ${
                             isSelected ? 'bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700' : ''
@@ -249,7 +250,7 @@ export function FacetPanel({
                           <span className={`truncate ${
                             config.field === 'severity' ? getSeverityColor(bucket.key).split(' ')[1] : ''
                           }`}>
-                            {bucket.key}
+                            {bucket.key || 'Unknown'}
                           </span>
                           <Badge variant="outline" className="text-xs">
                             {bucket.doc_count.toLocaleString()}

@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useMemo } from 'react'
 import * as Dialog from '@radix-ui/react-dialog'
+import * as VisuallyHidden from '@radix-ui/react-visually-hidden'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
@@ -229,6 +230,11 @@ export function FilterBuilderDialog({ open, onOpenChange, onApply, tenantId }: F
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-50 bg-black/50 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
         <Dialog.Content className="fixed left-[50%] top-[50%] z-50 w-full max-w-6xl max-h-[95vh] translate-x-[-50%] translate-y-[-50%] border bg-background p-0 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 rounded-lg overflow-hidden">
+          
+          <VisuallyHidden.Root>
+            <Dialog.Title>Advanced Filter Builder</Dialog.Title>
+            <Dialog.Description>Create complex search filters using the v1.0 DSL specification</Dialog.Description>
+          </VisuallyHidden.Root>
           
           {/* Header */}
           <div className="flex items-center justify-between p-6 border-b bg-muted/50">
