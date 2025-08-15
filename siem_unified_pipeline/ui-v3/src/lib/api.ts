@@ -28,7 +28,7 @@ export async function getHealth(): Promise<HealthResponse> {
 
 export async function searchEvents(query: EventSearchQuery): Promise<EventSearchResponse> {
   const body = {
-    tenant_id: query.tenant_id || "default",
+    tenant_id: query.tenant_id || "admin",
     time: {
       last_seconds: query.time_range_seconds || 600 // Default to 10 minutes as per spec
     },
@@ -195,7 +195,7 @@ export async function getDashboard(): Promise<DashboardResponse> {
     const statsData = await http<any>('/search/execute', {
       method: 'POST',
       body: JSON.stringify({
-        tenant_id: "default",
+        tenant_id: "admin",
         time: { last_seconds: 86400 }, // 24 hours
         q: "*",
         limit: 0
