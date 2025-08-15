@@ -1,0 +1,9 @@
+=== 3) SEARCH API PROOFS ===
+--- Search Compile Test ---
+{
+  "sql": "SELECT * FROM dev.events WHERE tenant_id IN ('default') AND event_timestamp >= toUInt32(now()) - 900 AND positionCaseInsensitive(message, '*') > 0 ORDER BY event_timestamp DESC LIMIT 10000 SETTINGS max_execution_time=8",
+  "warnings": [],
+  "where_sql": "tenant_id IN ('default') AND event_timestamp >= toUInt32(now()) - 900 AND positionCaseInsensitive(message, '*') > 0"
+}
+--- Search Execute Test ---
+null

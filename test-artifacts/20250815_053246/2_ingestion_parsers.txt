@@ -1,0 +1,20 @@
+=== 2) INGESTION & PARSERS PROOFS ===
+--- Generate Attack Fixtures ---
+/Users/yasseralmohammed/sim6/tools/fixtures/generate_attack_fixtures.py:31: DeprecationWarning: datetime.datetime.utcfromtimestamp() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.fromtimestamp(timestamp, datetime.UTC).
+  def dt_ms(ms): return datetime.datetime.utcfromtimestamp(ms/1000.0).strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
+{"ok": false, "error": "501 Server Error: Not Implemented for url: http://127.0.0.1:8123/?database=siem_v3&query=INSERT%20INTO%20events_norm%20FORMAT%20JSONEachRow"}
+--- Check Existing Parse Quality ---
+9415	9415
+--- Recent Events Statistics ---
+0	1970-01-01 03:00:00.000	1970-01-01 03:00:00.000	0	0
+--- Event Types and Sample Data ---
+auth	24952
+web_request	12526
+connection	12523
+http_access	200
+network_flow	100
+auth_failed	100
+ids_alert	100
+ssh_login	100
+waf	100
+firewall	100

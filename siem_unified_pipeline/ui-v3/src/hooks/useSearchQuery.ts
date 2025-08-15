@@ -154,8 +154,12 @@ export function useSearchQuery(
   }, [query, tenantId, timeRangeSeconds, facetFilters, autoExecute, debouncedExecute]);
 
   // Manual execution (immediate, no debounce)
-  const execute = useCallback((limit?: number, offset?: number) => {
-    executeSearch(undefined, limit, offset);
+  const execute = useCallback((limit?: number, offset?: number, overrideQ?: string) => {
+    if (overrideQ && overrideQ.length) {
+      executeSearch(overrideQ, limit, offset)
+    } else {
+      executeSearch(undefined, limit, offset);
+    }
   }, [executeSearch]);
 
   // Clear results
