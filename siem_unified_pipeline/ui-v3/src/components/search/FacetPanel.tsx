@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { searchFacets } from '@/lib/api';
+import { generateStableKey } from '@/lib/filter-utils';
 import { 
   Filter, 
   AlertTriangle, 
@@ -149,13 +150,13 @@ export function FacetPanel({
     onFacetSelect(field, value);
   };
 
-  const getSeverityColor = (severity: string) => {
+  const getSeverityLevel = (severity: string) => {
     const sev = severity.toLowerCase();
-    if (sev.includes('critical') || sev.includes('fatal')) return 'bg-red-100 text-red-800 border-red-200';
-    if (sev.includes('high') || sev.includes('error')) return 'bg-orange-100 text-orange-800 border-orange-200';
-    if (sev.includes('medium') || sev.includes('warn')) return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-    if (sev.includes('low') || sev.includes('info')) return 'bg-blue-100 text-blue-800 border-blue-200';
-    return 'bg-gray-100 text-gray-800 border-gray-200';
+    if (sev.includes('critical') || sev.includes('fatal')) return 'critical';
+    if (sev.includes('high') || sev.includes('error')) return 'high';
+    if (sev.includes('medium') || sev.includes('warn')) return 'medium';
+    if (sev.includes('low') || sev.includes('info')) return 'low';
+    return 'low';
   };
 
   const hasSelectedFacets = Object.keys(selectedFacets).some(field => selectedFacets[field].length > 0);
@@ -237,21 +238,26 @@ export function FacetPanel({
                   <div className="space-y-1">
                     {facetData.buckets.map((bucket, index) => {
                       const isSelected = selectedFacets[config.field]?.includes(bucket.key);
-                      const uniqueKey = bucket.key || 'unknown';
+                      // Create a truly unique key using the utility function
+                      const stableKey = generateStableKey(config.field, bucket.key, index, bucket.doc_count.toString());
                       
                       return (
                         <button
-                          key={`${config.field}-${uniqueKey}-${bucket.doc_count}-${index}`}
+                          key={stableKey}
                           onClick={() => handleFacetClick(config.field, bucket.key)}
-                          className={`w-full flex items-center justify-between p-2 rounded text-xs hover:bg-slate-50 dark:hover:bg-slate-700 ${
-                            isSelected ? 'bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700' : ''
+                          className={`w-full flex items-center justify-between p-2 rounded text-xs hover:bg-accent/50 ${
+                            isSelected ? 'bg-accent/20 border border-primary/20' : ''
                           }`}
                         >
-                          <span className={`truncate ${
-                            config.field === 'severity' ? getSeverityColor(bucket.key).split(' ')[1] : ''
-                          }`}>
-                            {bucket.key || 'Unknown'}
-                          </span>
+                          {config.field === 'severity' ? (
+                            <span className="severity" data-level={getSeverityLevel(bucket.key)}>
+                              {bucket.key || 'Unknown'}
+                            </span>
+                          ) : (
+                            <span className="truncate">
+                              {bucket.key || 'Unknown'}
+                            </span>
+                          )}
                           <Badge variant="outline" className="text-xs">
                             {bucket.doc_count.toLocaleString()}
                           </Badge>
@@ -260,7 +266,7 @@ export function FacetPanel({
                     })}
                   </div>
                 ) : (
-                  <p className="text-xs text-slate-500">No data</p>
+                  <p className="text-xs text-muted-foreground">No data</p>
                 )}
               </CardContent>
             )}

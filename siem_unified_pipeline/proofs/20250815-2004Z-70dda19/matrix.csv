@@ -1,0 +1,36 @@
+ID,Requirement,Artifact,Check,Threshold
+A1,Kafka lag <500,ingest/consumer-lag.json,all(lag<500),500
+A2,DLQ reprocess works,ingest/dlq-metrics.json,dry_run.eligible>=1 && errors==0,1
+A3,Agent heartbeat in 60s,ingest/agent-heartbeats.json,last_heartbeat_age_s<60,60
+A4,Parser success ≥97%,health/summary.json,pipeline.parse_success_pct>=97,97
+B1,Facts schema unchanged,ch/tables.sql,diff(baseline)==empty,0
+B2,MVs present and running,ch/mv_status.json,all(status=='Running'),100
+B3,Projections exist,ch/projections.txt,count(projections)>=2,2
+B4,TTL policy active,ch/ttl_retention.txt,ttl_active==true,1
+B5,Execute P95 <1200ms,ch/perf_p95_ms.json,p95.execute<1200,1200
+C1,UI uses proxy only,ui/route-audit.json,direct_backend_calls==0,0
+C2,API endpoints return 200,health/summary.json,http_status==200,200
+C3,SSE produces events,health/stream.ndjson,events_count>=30,30
+D1,DSL compiler coverage,detections/compiler-golden/diff.txt,file_size==0,0
+D2,Golden tests pass,detections/compiler-golden/,all(diff.txt)==empty,100
+D3,Detection previews work,detections/run-previews.json,preview_results>0,1
+D4,Alert deduplication,detections/dedup-test.json,duplicate_alerts==0,0
+E1,Generator produces fixtures,sims/runs/run-001/generator-log.json,fixtures_created>0,1
+E2,Rules match within 60s,sims/runs/run-001/detections.json,matches>=1,1
+E3,Generator non-destructive,sims/runs/run-001/evidence.sql,delete_operations==0,0
+F1,Search loads 100 events,ui/cypress-report.json,hasSpec('load_100') && pass,1
+F2,Filter Builder works,ui/cypress-report.json,hasSpec('filter_builder') && pass,1
+F3,Saved Filters CRUD,ui/cypress-report.json,hasSpec('saved_filters') && pass,1
+F4,Console clean,ui/cypress-report.json,console_errors==0,0
+G1,Health summary complete,health/summary.json,null_criticals==0,0
+G2,SSE interval ≤2s,health/stream.ndjson,avg_interval_s<=2,2
+G3,Diagnose returns issues,health/diagnose_clickhouse.json,issues.length>0,1
+G4,Autofix plan exists,health/autofix_dryrun.json,actions_taken.length>0,1
+H1,RBAC denies viewer,security/rbac-deny.json,denied_requests>0,1
+H2,Tenant isolation works,security/tenancy-isolation.json,cross_tenant_results==0,0
+H3,Audit log captures changes,security/audit-log.ndjson,audit_entries>0,1
+I1,Metrics endpoint alive,sys/metrics.txt,file_size>0,1
+I2,Slow queries logged,ch/slow-queries.json,slow_queries.length>=0,0
+I3,SLO P95 thresholds met,ch/perf_p95_ms.json,execute_p95<1200 && aggs_p95<1500,1
+J1,Legacy redirects work,ui/redirect-test.json,status_code==301,301
+J2,Docs exist,sys/docs-check.json,all_docs_present==true,1

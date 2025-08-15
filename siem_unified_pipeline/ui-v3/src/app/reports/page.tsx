@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { ActionButton } from "@/components/ui/ActionButton";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -222,10 +222,15 @@ export default function ReportsPage() {
             Generate and manage security and compliance reports
           </p>
         </div>
-        <Button className="gap-2">
+        <ActionButton 
+          className="gap-2"
+          onClick={() => {/* TODO: open create report modal */}}
+          data-action="reports:create:new"
+          data-intent="open-modal"
+        >
           <Plus className="h-4 w-4" />
           Create Report
-        </Button>
+        </ActionButton>
       </div>
 
       {/* Stats Cards */}
@@ -393,31 +398,68 @@ export default function ReportsPage() {
                   <div className="flex items-center gap-2 ml-4">
                     {report.status === "Generated" && (
                       <>
-                        <Button variant="outline" size="sm" className="gap-2">
+                        <ActionButton 
+                          variant="outline" 
+                          size="sm" 
+                          className="gap-2"
+                          onClick={() => {/* TODO: view report */}}
+                          data-action="reports:item:view"
+                          data-intent="open-modal"
+                        >
                           <Eye className="h-4 w-4" />
                           View
-                        </Button>
-                        <Button variant="outline" size="sm" className="gap-2">
+                        </ActionButton>
+                        <ActionButton 
+                          variant="outline" 
+                          size="sm" 
+                          className="gap-2"
+                          onClick={() => {/* TODO: download report */}}
+                          data-action="reports:item:download"
+                          data-intent="api"
+                          data-endpoint="/api/v2/reports/download"
+                        >
                           <Download className="h-4 w-4" />
                           Download
-                        </Button>
-                        <Button variant="outline" size="sm" className="gap-2">
+                        </ActionButton>
+                        <ActionButton 
+                          variant="outline" 
+                          size="sm" 
+                          className="gap-2"
+                          onClick={() => {/* TODO: share report */}}
+                          data-action="reports:item:share"
+                          data-intent="open-modal"
+                        >
                           <Share2 className="h-4 w-4" />
                           Share
-                        </Button>
+                        </ActionButton>
                       </>
                     )}
                     {report.status === "Failed" && (
-                      <Button size="sm" className="gap-2">
+                      <ActionButton 
+                        size="sm" 
+                        className="gap-2"
+                        onClick={() => {/* TODO: retry report generation */}}
+                        data-action="reports:item:retry"
+                        data-intent="api"
+                        data-endpoint="/api/v2/reports/retry"
+                      >
                         <PlayCircle className="h-4 w-4" />
                         Retry
-                      </Button>
+                      </ActionButton>
                     )}
                     {report.status === "Scheduled" && (
-                      <Button variant="outline" size="sm" className="gap-2">
+                      <ActionButton 
+                        variant="outline" 
+                        size="sm" 
+                        className="gap-2"
+                        onClick={() => {/* TODO: run report now */}}
+                        data-action="reports:item:run-now"
+                        data-intent="api"
+                        data-endpoint="/api/v2/reports/run"
+                      >
                         <PlayCircle className="h-4 w-4" />
                         Run Now
-                      </Button>
+                      </ActionButton>
                     )}
                   </div>
                 </div>
@@ -438,10 +480,15 @@ export default function ReportsPage() {
                     : "Create your first security report to get started"
                   }
                 </p>
-                <Button className="gap-2">
+                <ActionButton 
+                  className="gap-2"
+                  onClick={() => {/* TODO: create first report */}}
+                  data-action="reports:create:first"
+                  data-intent="open-modal"
+                >
                   <Plus className="h-4 w-4" />
                   Create Report
-                </Button>
+                </ActionButton>
               </CardContent>
             </Card>
           )}

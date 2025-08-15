@@ -58,8 +58,9 @@ export interface EventSearchResponse {
 
 export interface EventSummary {
   id: string;
-  timestamp: string;
-  event_type: string;
+  timestamp?: string;        // Keep for backward compatibility
+  tsIso: string | null;      // New normalized timestamp
+  event_type?: string;
   source: string;
   severity: string;
   message: string;
@@ -69,6 +70,7 @@ export interface EventSummary {
   host?: string;
   tenant_id?: string;
   raw_message?: string;
+  row?: Record<string, any>; // Original raw row for detail views
   // Additional fields from ClickHouse
   event_category?: string;
   event_action?: string;

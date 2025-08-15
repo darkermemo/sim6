@@ -1,0 +1,81 @@
+/* Centralized UI tokens for light/dark themes and SIEM semantics */
+:root {
+  /* shadcn core (HSL) */
+  --background: 210 40% 98%;
+  --foreground: 222.2 47.4% 11.2%;
+  --card: 0 0% 100%;
+  --card-foreground: var(--foreground);
+  --popover: 0 0% 100%;
+  --popover-foreground: var(--foreground);
+  --muted: 210 40% 96.1%;
+  --muted-foreground: 215 16.3% 46.9%;
+  --border: 214.3 31.8% 91.4%;
+  --input: var(--border);
+  --ring: 224.3 76.3% 48%;        /* focus color */
+  --primary: 224.3 76.3% 48%;
+  --primary-foreground: 210 40% 98%;
+  --secondary: 210 40% 96.1%;
+  --secondary-foreground: 222.2 47.4% 11.2%;
+  --accent: 210 40% 96.1%;
+  --accent-foreground: 222.2 47.4% 11.2%;
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 210 40% 98%;
+
+  /* Global shape/size tokens */
+  --radius: 0.75rem;                 /* change this to round every component */
+  --control-h-sm: 2rem;
+  --control-h-md: 2.25rem;
+  --control-h-lg: 2.5rem;
+  --control-px-sm: 0.625rem;
+  --control-px-md: 0.75rem;
+  --control-px-lg: 1rem;
+  --control-fs-sm: 0.8125rem;
+  --control-fs-md: 0.875rem;
+  --control-fs-lg: 0.9375rem;
+
+  /* Tables */
+  --table-row-h: 2.25rem;
+  --table-radius: var(--radius);
+
+  /* Shadows */
+  --shadow-1: 0 1px 2px rgba(0,0,0,.06), 0 1px 1px rgba(0,0,0,.04);
+  --shadow-2: 0 6px 20px rgba(0,0,0,.10);
+
+  /* Motion */
+  --dur-fast: 120ms; 
+  --dur-base: 180ms;
+
+  /* SIEM semantic tokens */
+  --sev-critical: 0 84% 60%;
+  --sev-high: 20 90% 50%;
+  --sev-medium: 43 90% 45%;
+  --sev-low: 210 15% 50%;
+
+  --status-ok: 142 72% 29%;
+  --status-warn: 43 96% 40%;
+  --status-bad: 0 84% 60%;
+}
+
+:root.dark {
+  --background: 222.2 84% 4.9%;
+  --foreground: 210 40% 98%;
+  --card: 222.2 84% 5.9%;
+  --card-foreground: var(--foreground);
+  --popover: 222.2 84% 5.9%;
+  --popover-foreground: var(--foreground);
+  --muted: 217.2 32.6% 17.5%;
+  --muted-foreground: 215 20.2% 65.1%;
+  --border: 217.2 32.6% 17.5%;
+  --input: var(--border);
+  --ring: 224.3 76.3% 48%;
+  --primary: 224.3 76.3% 48%;
+  --primary-foreground: 222.2 47.4% 11.2%;
+  --secondary: 217.2 32.6% 17.5%;
+  --secondary-foreground: var(--foreground);
+  --accent: 217.2 32.6% 17.5%;
+  --accent-foreground: var(--foreground);
+  --destructive: 0 62.8% 30.6%;
+  --destructive-foreground: 0 85.7% 97.3%;
+}
+
+

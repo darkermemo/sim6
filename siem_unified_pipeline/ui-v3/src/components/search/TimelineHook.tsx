@@ -70,7 +70,7 @@ export function TimelineHook({
         <CardContent>
           <div className="flex items-end gap-1 h-20">
             {Array.from({ length: 24 }).map((_, i) => (
-              <div key={i} className="flex-1 h-full bg-slate-200 dark:bg-slate-700 rounded animate-pulse" />
+              <div key={i} className="flex-1 h-full bg-muted rounded animate-pulse" />
             ))}
           </div>
         </CardContent>
@@ -86,13 +86,13 @@ export function TimelineHook({
             <BarChart3 className="h-4 w-4" />
             Event Timeline
           </div>
-          <div className="flex items-center gap-4 text-xs text-slate-500">
+          <div className="flex items-center gap-4 text-xs text-muted-foreground">
             <span className="flex items-center gap-1">
               <Calendar className="h-3 w-3" />
               {stats.total.toLocaleString()} events
             </span>
             <span className="flex items-center gap-1">
-              <TrendingUp className={`h-3 w-3 ${stats.trend > 0 ? 'text-green-500' : 'text-red-500'}`} />
+              <TrendingUp className={`h-3 w-3 ${stats.trend > 0 ? 'status-ok' : 'status-bad'}`} />
               {stats.trend > 0 ? '+' : ''}{stats.trend.toFixed(0)}/bucket
             </span>
           </div>
@@ -102,7 +102,7 @@ export function TimelineHook({
         {data.length > 0 ? (
           <div className="space-y-2">
             {/* Timeline bars */}
-            <div className="flex items-end gap-1 h-20 bg-slate-50 dark:bg-slate-800 rounded p-2">
+            <div className="flex items-end gap-1 h-20 bg-muted/30 rounded p-2">
               {data.map((item: any, index: number) => {
                 const height = stats.max > 0 ? (item.count / stats.max) * 100 : 0;
                 
@@ -111,8 +111,8 @@ export function TimelineHook({
                     key={item.timestamp}
                     className={`flex-1 cursor-pointer transition-colors relative group ${
                       item.count > 0 
-                        ? 'bg-blue-300 hover:bg-blue-400' 
-                        : 'bg-slate-200 dark:bg-slate-700'
+                                               ? 'bg-primary/60 hover:bg-primary/80'
+                       : 'bg-muted'
                     }`}
                     style={{ height: `${Math.max(height, 2)}%` }}
                     onClick={() => handleBarClick(item, index)}
@@ -129,7 +129,7 @@ export function TimelineHook({
             </div>
 
             {/* Time labels */}
-            <div className="flex justify-between text-xs text-slate-500">
+            <div className="flex justify-between text-xs text-muted-foreground">
               {data.length > 0 && (
                 <>
                   <span>{data[0]?.datetime.toLocaleTimeString()}</span>
@@ -140,7 +140,7 @@ export function TimelineHook({
             </div>
 
             {/* Stats */}
-            <div className="flex justify-between text-xs text-slate-500 pt-2 border-t">
+            <div className="flex justify-between text-xs text-muted-foreground pt-2 border-t">
               <span>Avg: {stats.avg.toFixed(1)} events/bucket</span>
               <span>Peak: {stats.max} events</span>
               <span>Total: {stats.total.toLocaleString()} events</span>

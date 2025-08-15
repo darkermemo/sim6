@@ -13,6 +13,7 @@ import {
   EpsStatsResponse
 } from '@/types/api';
 import { http } from '@/lib/http';
+import { toRowObjects, mapToUiEvents } from '@/lib/event-map';
 
 // ============================================================================
 // Health API
@@ -27,15 +28,19 @@ export async function getHealth(): Promise<HealthResponse> {
 // ============================================================================
 
 export async function searchEvents(query: EventSearchQuery): Promise<EventSearchResponse> {
-  const body = {
-    tenant_id: query.tenant_id || "admin", // Default to admin tenant
+  const body: any = {
     time: {
-      last_seconds: query.time_range_seconds || 600 // Default to 10 minutes as per spec
+      last_seconds: query.time_range_seconds || 900 // Default to 15 minutes for more results
     },
-    q: query.search || "*", // Use "*" for initial load as per spec
+    q: query.search || "*", // Use "*" for initial load
     limit: query.limit || 100,
     offset: query.offset || 0
   };
+  
+  // Only include tenant_id if provided (avoid empty string)
+  if (query.tenant_id && query.tenant_id.trim()) {
+    body.tenant_id = query.tenant_id;
+  }
 
   const response = await http<any>('/search/execute', {
     method: 'POST',
@@ -43,40 +48,47 @@ export async function searchEvents(query: EventSearchQuery): Promise<EventSearch
     headers: { 'content-type': 'application/json' }
   });
 
-  // Match exact data contract: { total: number, data: { meta: Array<Record<string, any>> }, stats?: { elapsed_ms: number } }
-  const events = (response.data?.meta || []).map((item: any) => ({
-    id: item.event_id || item._id || 'unknown',
-    timestamp: item.event_timestamp || item.created_at,
-    event_type: item.event_type || 'unknown',
-    severity: item.severity || 'info',
-    message: item.message || 'No message',
-    source: item.source_type || item.vendor || 'unknown',
-    source_ip: item.source_ip,
-    destination_ip: item.destination_ip,
-    user: item.user,
-    host: item.host,
-    raw_message: item.raw_log,
-    // Additional fields
-    event_category: item.event_category,
-    event_action: item.event_action,
-    event_outcome: item.event_outcome,
-    protocol: item.protocol,
-    source_port: item.source_port,
-    destination_port: item.destination_port,
-    vendor: item.vendor,
-    product: item.product
+  // Convert ClickHouse response to normalized events
+  const rows = toRowObjects(response);
+  const uiEvents = mapToUiEvents(rows);
+  
+  // Convert UiEvents to EventSummary format for compatibility
+  const events = uiEvents.map(event => ({
+    id: event.id,
+    timestamp: event.tsIso || undefined,  // backward compatibility
+    tsIso: event.tsIso,                   // new normalized field
+    event_type: event.event_type || '',
+    source: event.source,
+    severity: event.severity,
+    message: event.message,
+    row: event.row,
+    // Extract common fields from the raw row
+    source_ip: event.row.source_ip,
+    destination_ip: event.row.destination_ip,
+    user: event.row.user,
+    host: event.row.host,
+    tenant_id: event.row.tenant_id,
+    raw_message: event.row.raw_log || event.row._raw,
+    event_category: event.row.event_category,
+    event_action: event.row.event_action,
+    event_outcome: event.row.event_outcome,
+    protocol: event.row.protocol,
+    source_port: event.row.source_port,
+    destination_port: event.row.destination_port,
+    vendor: event.row.vendor,
+    product: event.row.product
   }));
 
   return {
     events,
-    total_count: response.total || events.length,
-    elapsed_ms: response.stats?.elapsed_ms,
+    total_count: response.data?.rows || events.length,
+    elapsed_ms: response.statistics ? Math.round(response.statistics.elapsed * 1000) : undefined,
     page_info: {
       limit: body.limit,
       offset: body.offset,
       has_next: events.length >= body.limit,
       has_previous: body.offset > 0,
-      total_pages: Math.ceil((response.total || events.length) / body.limit),
+      total_pages: Math.ceil((response.data?.rows || events.length) / body.limit),
       current_page: Math.floor(body.offset / body.limit) + 1
     }
   };

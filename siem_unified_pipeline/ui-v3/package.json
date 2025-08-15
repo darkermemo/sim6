@@ -3,10 +3,16 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbopack -p 5183",
+    "dev": "next dev -p 5183",
     "build": "next build",
     "start": "next start -p 5183",
-    "lint": "next lint"
+    "lint": "next lint",
+    "audit:actions": "node scripts/audit-actions-simple.js",
+    "audit:grep": "scripts/grep-sweeps.sh",
+    "audit:full": "npm run audit:grep && npm run audit:actions",
+    "cypress:open": "cypress open",
+    "cypress:run": "cypress run",
+    "test:actions": "npm run audit:full && npm run cypress:run"
   },
   "dependencies": {
     "@radix-ui/react-accordion": "^1.2.12",
@@ -31,6 +37,7 @@
     "echarts-for-react": "^3.0.2",
     "framer-motion": "^12.23.12",
     "lucide-react": "^0.539.0",
+    "nanoid": "^5.1.5",
     "next": "15.4.6",
     "next-themes": "^0.4.6",
     "react": "19.1.0",
@@ -45,9 +52,15 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "cypress": "^14.5.4",
+    "cypress-real-events": "^1.14.0",
     "eslint": "^9",
     "eslint-config-next": "15.4.6",
+    "globby": "^14.1.0",
+    "picocolors": "^1.1.1",
     "tailwindcss": "^4",
+    "ts-morph": "^26.0.0",
+    "tsx": "^4.20.4",
     "typescript": "^5"
   }
 }

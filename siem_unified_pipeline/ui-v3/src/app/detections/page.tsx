@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import { DetectionsAPI } from "@/lib/detections";
 import type { DetectionRecord } from "@/types/detections";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
+import { ActionButton } from "@/components/ui/ActionButton";
 
 export default function DetectionsListPage() {
   const [items, setItems] = useState<DetectionRecord[]>([]);
@@ -34,7 +34,13 @@ export default function DetectionsListPage() {
     <div className="p-6 space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Detections</h1>
-        <Button asChild><Link href="/ui/v3/detections/new">New Detection</Link></Button>
+        <ActionButton 
+          asChild
+          data-action="detections:create:new"
+          data-intent="navigate"
+        >
+          <Link href="/ui/v3/detections/new">New Detection</Link>
+        </ActionButton>
       </div>
       {err && <div className="text-sm text-red-600">{err}</div>}
       <div className="overflow-auto rounded border">
@@ -57,8 +63,24 @@ export default function DetectionsListPage() {
                 <td className="p-2">{it.enabled ? 'Yes' : 'No'}</td>
                 <td className="p-2">{it.updated_at}</td>
                 <td className="p-2 text-right">
-                  <Button variant="secondary" className="mr-2" onClick={() => toggleEnable(it)}>{it.enabled ? 'Disable' : 'Enable'}</Button>
-                  <Button onClick={() => runOnce(it.id)}>Run Once</Button>
+                  <ActionButton 
+                    variant="secondary" 
+                    className="mr-2" 
+                    onClick={() => toggleEnable(it)}
+                    data-action="detections:item:toggle-enable"
+                    data-intent="api"
+                    data-endpoint="/api/v2/detections"
+                  >
+                    {it.enabled ? 'Disable' : 'Enable'}
+                  </ActionButton>
+                  <ActionButton 
+                    onClick={() => runOnce(it.id)}
+                    data-action="detections:item:run-once"
+                    data-intent="api"
+                    data-endpoint="/api/v2/detections/run"
+                  >
+                    Run Once
+                  </ActionButton>
                 </td>
               </tr>
             ))}

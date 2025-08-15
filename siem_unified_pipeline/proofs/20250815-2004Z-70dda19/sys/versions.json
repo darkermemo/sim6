@@ -1,0 +1,10 @@
+{
+  "node": "v24.4.1",
+  "npm": "11.4.2",
+  "rust": "rustc 1.86.0 (05f9846f8 2025-03-31)",
+  "cargo": "cargo 1.86.0 (adf9b6ad1 2025-02-28)",
+  "clickhouse": "ClickHouse local version 25.7.4.11 (official build).",
+  "git": "git version 2.39.5 (Apple Git-154)",
+  "jq": "jq-1.7.1-apple",
+  "curl": "curl 8.7.1 (x86_64-apple-darwin24.0) libcurl/8.7.1 (SecureTransport) LibreSSL/3.3.6 zlib/1.2.12 nghttp2/1.64.0"
+}

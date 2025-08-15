@@ -1,0 +1,9 @@
+{
+  "topics": [
+    {"name": "siem-events-raw", "partitions": 12, "replicas": 3, "status": "active"},
+    {"name": "siem-events-parsed", "partitions": 12, "replicas": 3, "status": "active"},
+    {"name": "siem-events-dlq", "partitions": 4, "replicas": 3, "status": "active"}
+  ],
+  "total_topics": 3,
+  "all_active": true
+}

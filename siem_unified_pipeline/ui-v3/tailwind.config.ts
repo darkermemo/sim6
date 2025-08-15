@@ -1,7 +1,7 @@
 import type { Config } from "tailwindcss";
 
 const config: Config = {
-  darkMode: "class",
+  darkMode: ["class", '[data-theme="dark"]'],
   content: [
     "./pages/**/*.{ts,tsx}",
     "./components/**/*.{ts,tsx}",
@@ -18,6 +18,8 @@ const config: Config = {
       },
     },
     extend: {
+      boxShadow: { elev1: "var(--elev-1)", elev2: "var(--elev-2)" },
+      transitionDuration: { fast: "var(--dur-fast)", base: "var(--dur-base)" },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
@@ -54,9 +56,15 @@ const config: Config = {
         },
       },
       borderRadius: {
-        lg: "var(--radius)",
-        md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
+        md: "var(--radius)",
+        lg: "calc(var(--radius) + 4px)",
+        xl: "calc(var(--radius) + 8px)",
+        "table": "var(--table-radius)",
+      },
+      boxShadow: {
+        sm: "var(--shadow-1)",
+        md: "var(--shadow-2)",
       },
       keyframes: {
         "accordion-down": {

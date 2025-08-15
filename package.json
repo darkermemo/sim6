@@ -10,9 +10,16 @@
     "ui:preview": "cd siem_unified_pipeline/ui-react && npm run preview"
   },
   "devDependencies": {
+    "@next/bundle-analyzer": "^15.4.6",
     "@typescript-eslint/eslint-plugin": "^6.21.0",
     "@typescript-eslint/parser": "^6.21.0",
+    "dependency-cruiser": "^17.0.1",
     "eslint": "^8.57.1",
-    "typescript": "^5.9.2"
+    "glob": "^11.0.3",
+    "knip": "^5.62.0",
+    "minimatch": "^10.0.3",
+    "ts-prune": "^0.10.3",
+    "typescript": "^5.9.2",
+    "unimported": "^1.31.0"
   }
 }

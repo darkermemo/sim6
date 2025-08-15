@@ -1,0 +1,177 @@
+name: SIEM Hard-Gate Proof Framework
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      run_full_suite:
+        description: 'Run full proof suite (including performance tests)'
+        required: false
+        default: 'false'
+        type: boolean
+
+env:
+  API_URL: http://127.0.0.1:9999
+  UI_URL: http://localhost:5183
+  CH_HOST: 127.0.0.1:9000
+  KAFKA_BROKERS: localhost:9092
+  REDIS_URL: redis://localhost:6379
+
+jobs:
+  proof-gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    
+    services:
+      clickhouse:
+        image: clickhouse/clickhouse-server:latest
+        ports:
+          - 9000:9000
+          - 8123:8123
+        options: >-
+          --health-cmd "clickhouse client --query 'SELECT 1'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 3
+      
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 3
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+        cache-dependency-path: 'ui-v3/package-lock.json'
+
+    - name: Setup Rust
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        components: rustfmt, clippy
+
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y jq bc curl
+        
+        # Install ClickHouse client
+        sudo apt-get install -y apt-transport-https ca-certificates dirmngr
+        sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 8919F6BD2B48D754
+        echo "deb https://packages.clickhouse.com/deb stable main" | sudo tee /etc/apt/sources.list.d/clickhouse.list
+        sudo apt-get update
+        sudo apt-get install -y clickhouse-client
+
+    - name: Cache Rust dependencies
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+          target/
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+    - name: Install UI dependencies
+      run: |
+        cd ui-v3
+        npm ci
+
+    - name: Build Rust backend
+      run: |
+        cargo build --release --bin siem-pipeline
+
+    - name: Build UI
+      run: |
+        cd ui-v3
+        npm run build
+
+    - name: Start backend services
+      run: |
+        # Start SIEM backend
+        cargo run --release --bin siem-pipeline &
+        BACKEND_PID=$!
+        echo "BACKEND_PID=$BACKEND_PID" >> $GITHUB_ENV
+        
+        # Wait for backend to start
+        timeout 60s bash -c 'until curl -f ${{ env.API_URL }}/api/v2/health; do sleep 2; done'
+
+    - name: Start UI service
+      run: |
+        cd ui-v3
+        npm run start &
+        UI_PID=$!
+        echo "UI_PID=$UI_PID" >> $GITHUB_ENV
+        
+        # Wait for UI to start
+        timeout 60s bash -c 'until curl -f ${{ env.UI_URL }}/ui/v3; do sleep 2; done'
+
+    - name: Run dependency check
+      run: make check-deps
+
+    - name: Execute proof framework
+      id: proofs
+      run: |
+        # Set CI operator
+        export CI_OPERATOR="github-actions"
+        
+        # Run proof framework
+        make proofs-ci
+        
+        # Capture proof directory for artifact upload
+        PROOF_DIR=$(ls -1t proofs/ | head -1)
+        echo "PROOF_DIR=proofs/$PROOF_DIR" >> $GITHUB_ENV
+        echo "proof_status=$(jq -r '.status' proofs/$PROOF_DIR/manifest.json)" >> $GITHUB_OUTPUT
+
+    - name: Upload proof artifacts
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: siem-proof-pack-${{ github.sha }}
+        path: ${{ env.PROOF_DIR }}
+        retention-days: 30
+
+    - name: Display proof summary
+      if: always()
+      run: |
+        echo "## SIEM Proof Pack Results" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        if [[ -f "${{ env.PROOF_DIR }}/ci-report.md" ]]; then
+          cat "${{ env.PROOF_DIR }}/ci-report.md" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "❌ Proof pack failed to generate report" >> $GITHUB_STEP_SUMMARY
+        fi
+
+    - name: Fail on proof failure
+      if: steps.proofs.outputs.proof_status != 'PASS'
+      run: |
+        echo "❌ PROOF FRAMEWORK FAILED"
+        echo "Status: ${{ steps.proofs.outputs.proof_status }}"
+        exit 1
+
+    - name: Cleanup processes
+      if: always()
+      run: |
+        # Kill background processes
+        [[ -n "${BACKEND_PID:-}" ]] && kill $BACKEND_PID || true
+        [[ -n "${UI_PID:-}" ]] && kill $UI_PID || true
+        
+        # Wait for graceful shutdown
+        sleep 5
+        
+        # Force kill if still running
+        pkill -f "siem-pipeline" || true
+        pkill -f "next" || true

@@ -3,11 +3,13 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { ActionButton } from "@/components/ui/ActionButton";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
+import { ActionMenuItem } from "@/components/ui/ActionMenuItem";
 import { 
   Home, 
   Search, 
@@ -29,7 +31,8 @@ import {
   ChevronLeft,
   PanelLeftOpen,
   PanelLeftClose,
-  Target
+  Target,
+  Palette
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -85,6 +88,13 @@ const navigation = [
     href: "/health", 
     icon: Activity,
     description: "System health and monitoring"
+  },
+  { 
+    name: "Theme", 
+    href: "/theme", 
+    icon: Palette,
+    description: "Live theme customization",
+    badge: "Live"
   },
   { 
     name: "Settings", 
@@ -254,9 +264,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       {/* Mobile Sidebar */}
       <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
         <SheetTrigger asChild>
-          <Button variant="outline" size="icon" className="lg:hidden fixed top-4 left-4 z-40 bg-white dark:bg-slate-800 shadow-lg">
+          <ActionButton 
+            variant="outline" 
+            size="icon" 
+            className="lg:hidden fixed top-4 left-4 z-40 bg-white dark:bg-slate-800 shadow-lg"
+            data-action="app:sidebar:open"
+            data-intent="open-modal"
+          >
             <Menu className="h-4 w-4" />
-          </Button>
+          </ActionButton>
         </SheetTrigger>
         <SheetContent side="left" className="w-72 p-0">
           <SidebarContent collapsed={false} />
@@ -268,26 +284,30 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         {/* Top Header */}
         <header className="flex h-16 items-center justify-between border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-6 shadow-sm">
           <div className="flex items-center gap-4">
-            <Button 
+            <ActionButton 
               variant="ghost" 
               size="icon" 
               className="lg:hidden"
               onClick={() => setSidebarOpen(true)}
+              data-action="app:sidebar:toggle"
+              data-intent="open-modal"
             >
               <Menu className="h-4 w-4" />
-            </Button>
-            <Button 
+            </ActionButton>
+            <ActionButton 
               variant="ghost" 
               size="icon" 
               className="hidden lg:flex"
               onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+              data-action="app:sidebar:collapse-toggle"
+              data-intent="open-modal"
             >
               {sidebarCollapsed ? (
                 <PanelLeftOpen className="h-4 w-4" />
               ) : (
                 <PanelLeftClose className="h-4 w-4" />
               )}
-            </Button>
+            </ActionButton>
             <div>
               <h1 className="text-lg font-semibold text-slate-900 dark:text-white">
                 {navigation.find(item => item.href === pathname)?.name || "Overview"}
@@ -306,23 +326,35 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </div>
 
             {/* Notifications */}
-            <Button variant="ghost" size="icon" className="relative">
+            <ActionButton 
+              variant="ghost" 
+              size="icon" 
+              className="relative"
+              onClick={() => {/* TODO: open notifications */}}
+              data-action="app:notifications:open"
+              data-intent="open-modal"
+            >
               <Bell className="h-4 w-4" />
               <Badge className="absolute -top-1 -right-1 h-5 w-5 p-0 text-xs bg-red-500 hover:bg-red-500">
                 3
               </Badge>
-            </Button>
+            </ActionButton>
 
             {/* User Menu */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="relative h-9 w-9 rounded-full">
+                <ActionButton 
+                  variant="ghost" 
+                  className="relative h-9 w-9 rounded-full"
+                  data-action="app:user-menu:open"
+                  data-intent="open-modal"
+                >
                   <Avatar className="h-9 w-9">
                     <AvatarFallback className="bg-gradient-to-br from-blue-600 to-blue-700 text-white font-medium">
                       AD
                     </AvatarFallback>
                   </Avatar>
-                </Button>
+                </ActionButton>
               </DropdownMenuTrigger>
               <DropdownMenuContent className="w-56" align="end" forceMount>
                 <div className="flex items-center justify-start gap-2 p-2">
@@ -334,28 +366,56 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   </div>
                 </div>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem>
+                <ActionMenuItem
+                  data-action="app:profile:view"
+                  data-intent="navigate"
+                  onSelect={() => window.location.href = '/profile'}
+                >
                   <Users className="mr-2 h-4 w-4" />
                   <span>Profile</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem>
+                </ActionMenuItem>
+                <ActionMenuItem
+                  data-action="app:settings:view"
+                  data-intent="navigate"
+                  onSelect={() => window.location.href = '/settings'}
+                >
                   <Settings className="mr-2 h-4 w-4" />
                   <span>Settings</span>
-                </DropdownMenuItem>
+                </ActionMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem>
+                <ActionMenuItem
+                  data-action="app:theme:light"
+                  data-intent="api"
+                  data-endpoint="/api/v2/user/theme"
+                  onSelect={() => document.documentElement.classList.remove('dark')}
+                >
                   <Sun className="mr-2 h-4 w-4" />
                   <span>Light Theme</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem>
+                </ActionMenuItem>
+                <ActionMenuItem
+                  data-action="app:theme:dark"
+                  data-intent="api"
+                  data-endpoint="/api/v2/user/theme"
+                  onSelect={() => document.documentElement.classList.add('dark')}
+                >
                   <Moon className="mr-2 h-4 w-4" />
                   <span>Dark Theme</span>
-                </DropdownMenuItem>
+                </ActionMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem className="text-red-600">
+                <ActionMenuItem 
+                  className="text-red-600"
+                  data-action="app:auth:logout"
+                  data-intent="api"
+                  data-endpoint="/api/v2/auth/logout"
+                  data-danger="true"
+                  onSelect={() => {
+                    // Handle logout
+                    window.location.href = '/login';
+                  }}
+                >
                   <LogOut className="mr-2 h-4 w-4" />
                   <span>Sign out</span>
-                </DropdownMenuItem>
+                </ActionMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>

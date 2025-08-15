@@ -1,0 +1,23 @@
+{
+  "consumer_groups": [
+    {
+      "group": "siem-parser-group",
+      "topic": "siem-events-raw", 
+      "partition": 0,
+      "current_offset": 150450,
+      "log_end_offset": 150650,
+      "lag": 200
+    },
+    {
+      "group": "siem-normalizer-group",
+      "topic": "siem-events-parsed",
+      "partition": 0, 
+      "current_offset": 150200,
+      "log_end_offset": 150400,
+      "lag": 200
+    }
+  ],
+  "max_lag": 200,
+  "lag_threshold": 500,
+  "lag_ok": true
+}

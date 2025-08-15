@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { ActionButton } from "@/components/ui/ActionButton";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -157,13 +157,13 @@ export default function AlertsPage() {
     return () => clearTimeout(timer);
   }, []);
 
-  const getSeverityColor = (severity: string) => {
-    switch (severity) {
-      case "Critical": return "bg-red-100 text-red-800 border-red-200 dark:bg-red-900/20 dark:text-red-300 dark:border-red-800";
-      case "High": return "bg-orange-100 text-orange-800 border-orange-200 dark:bg-orange-900/20 dark:text-orange-300 dark:border-orange-800";
-      case "Medium": return "bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900/20 dark:text-yellow-300 dark:border-yellow-800";
-      case "Low": return "bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800";
-      default: return "bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-900/20 dark:text-gray-300 dark:border-gray-800";
+  const getSeverityLevel = (severity: string) => {
+    switch (severity.toLowerCase()) {
+      case "critical": return "critical";
+      case "high": return "high";
+      case "medium": return "medium";
+      case "low": return "low";
+      default: return "low";
     }
   };
 
@@ -217,14 +217,28 @@ export default function AlertsPage() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" className="gap-2">
+          <ActionButton 
+            variant="outline" 
+            className="gap-2"
+            onClick={() => {/* TODO: implement refresh */}}
+            data-action="alerts:list:refresh"
+            data-intent="api"
+            data-endpoint="/api/v2/alerts"
+          >
             <RefreshCw className="h-4 w-4" />
             Refresh
-          </Button>
-          <Button variant="outline" className="gap-2">
+          </ActionButton>
+          <ActionButton 
+            variant="outline" 
+            className="gap-2"
+            onClick={() => {/* TODO: implement export */}}
+            data-action="alerts:list:export"
+            data-intent="api"
+            data-endpoint="/api/v2/alerts/export"
+          >
             <Download className="h-4 w-4" />
             Export
-          </Button>
+          </ActionButton>
         </div>
       </div>
 
@@ -379,7 +393,7 @@ export default function AlertsPage() {
                       <h3 className="text-lg font-semibold text-slate-900 dark:text-white truncate">
                         {alert.title}
                       </h3>
-                      <Badge className={getSeverityColor(alert.severity)}>
+                      <Badge className="severity" data-level={getSeverityLevel(alert.severity)}>
                         {alert.severity}
                       </Badge>
                       <Badge className={`${getStatusColor(alert.status)} flex items-center gap-1`}>
@@ -413,15 +427,28 @@ export default function AlertsPage() {
                     )}
                   </div>
                   <div className="flex items-center gap-2 ml-4">
-                    <Button variant="outline" size="sm" className="gap-2">
+                    <ActionButton 
+                      variant="outline" 
+                      size="sm" 
+                      className="gap-2"
+                      onClick={() => {/* TODO: open alert details */}}
+                      data-action="alerts:item:view-details"
+                      data-intent="open-modal"
+                    >
                       <Eye className="h-4 w-4" />
                       View Details
-                    </Button>
+                    </ActionButton>
                     {alert.status === "Open" && (
-                      <Button size="sm" className="gap-2">
+                      <ActionButton 
+                        size="sm" 
+                        className="gap-2"
+                        onClick={() => {/* TODO: start investigation */}}
+                        data-action="alerts:item:investigate"
+                        data-intent="navigate"
+                      >
                         <Clock className="h-4 w-4" />
                         Investigate
-                      </Button>
+                      </ActionButton>
                     )}
                   </div>
                 </div>
@@ -442,10 +469,17 @@ export default function AlertsPage() {
                     : "No security alerts at this time"
                   }
                 </p>
-                <Button variant="outline" className="gap-2">
+                <ActionButton 
+                  variant="outline" 
+                  className="gap-2"
+                  onClick={() => window.location.reload()}
+                  data-action="alerts:list:refresh-empty"
+                  data-intent="api"
+                  data-endpoint="/api/v2/alerts"
+                >
                   <RefreshCw className="h-4 w-4" />
                   Refresh Alerts
-                </Button>
+                </ActionButton>
               </CardContent>
             </Card>
           )}

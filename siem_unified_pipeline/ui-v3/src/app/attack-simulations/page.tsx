@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useCallback, useMemo, useState } from 'react'
-import { Button } from '@/components/ui/button'
+import { ActionButton } from '@/components/ui/ActionButton'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
@@ -107,7 +107,15 @@ export default function AttackSimulationsPage() {
       </Card>
 
       <div className="flex gap-3">
-        <Button onClick={run} disabled={!canRun}>{running ? 'Running…' : 'Generate Logs'}</Button>
+        <ActionButton 
+          onClick={run} 
+          disabled={!canRun}
+          data-action="attack-simulations:fixtures:generate"
+          data-intent="api"
+          data-endpoint="/api/fixtures/run"
+        >
+          {running ? 'Running…' : 'Generate Logs'}
+        </ActionButton>
         {result?.ok && (
           <Badge variant="secondary">OK • {result.scenarios.length || 'all'} scenario(s)</Badge>
         )}

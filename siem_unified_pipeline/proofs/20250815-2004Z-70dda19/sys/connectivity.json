@@ -1,0 +1,6 @@
+{
+  "api_reachable": true,
+  "clickhouse_reachable": true,
+  "ui_reachable": false,
+  "all_services_up": false
+}

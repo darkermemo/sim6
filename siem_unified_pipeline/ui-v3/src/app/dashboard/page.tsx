@@ -3,7 +3,7 @@
 import { useMemo, useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { ActionButton } from "@/components/ui/ActionButton";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getDashboard, getHealth, getEpsStats } from "@/lib/api";
 import { DashboardResponse, HealthResponse, EpsStatsResponse } from "@/types/api";
@@ -265,16 +265,19 @@ export default function DashboardPage() {
             <div className="text-sm text-slate-500 dark:text-slate-400">
               Last updated: {lastRefresh.toLocaleTimeString()}
             </div>
-            <Button 
+            <ActionButton 
               variant="outline" 
               size="sm" 
               onClick={fetchDashboardData}
               disabled={loading}
               className="gap-2"
+              data-action="dashboard:data:refresh"
+              data-intent="api"
+              data-endpoint="/api/v2/dashboard"
             >
               <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
               Refresh
-            </Button>
+            </ActionButton>
           </div>
         </div>
 
@@ -364,10 +367,17 @@ export default function DashboardPage() {
                   <AlertTriangle className="h-5 w-5 text-red-600" />
                   Recent Alerts
                 </CardTitle>
-                <Button variant="ghost" size="sm" className="gap-2">
+                <ActionButton 
+                  variant="ghost" 
+                  size="sm" 
+                  className="gap-2"
+                  onClick={() => window.location.href = '/alerts'}
+                  data-action="dashboard:alerts:view-all"
+                  data-intent="navigate"
+                >
                   <Eye className="h-4 w-4" />
                   View All
-                </Button>
+                </ActionButton>
               </div>
             </CardHeader>
             <CardContent>

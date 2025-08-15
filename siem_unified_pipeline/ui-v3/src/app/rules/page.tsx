@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { ActionButton } from "@/components/ui/ActionButton";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -142,13 +142,13 @@ export default function RulesPage() {
     return () => clearTimeout(timer);
   }, []);
 
-  const getSeverityColor = (severity: string) => {
-    switch (severity) {
-      case "Critical": return "bg-red-100 text-red-800 border-red-200 dark:bg-red-900/20 dark:text-red-300 dark:border-red-800";
-      case "High": return "bg-orange-100 text-orange-800 border-orange-200 dark:bg-orange-900/20 dark:text-orange-300 dark:border-orange-800";
-      case "Medium": return "bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900/20 dark:text-yellow-300 dark:border-yellow-800";
-      case "Low": return "bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800";
-      default: return "bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-900/20 dark:text-gray-300 dark:border-gray-800";
+  const getSeverityLevel = (severity: string) => {
+    switch (severity.toLowerCase()) {
+      case "critical": return "critical";
+      case "high": return "high";
+      case "medium": return "medium";
+      case "low": return "low";
+      default: return "low";
     }
   };
 
@@ -193,10 +193,15 @@ export default function RulesPage() {
             Manage and monitor your security detection rules
           </p>
         </div>
-        <Button className="gap-2">
+        <ActionButton 
+          className="gap-2"
+          onClick={() => {/* TODO: open create rule modal */}}
+          data-action="rules:create:new"
+          data-intent="open-modal"
+        >
           <Plus className="h-4 w-4" />
           Create Rule
-        </Button>
+        </ActionButton>
       </div>
 
       {/* Stats Cards */}
@@ -323,7 +328,7 @@ export default function RulesPage() {
                       <h3 className="text-lg font-semibold text-slate-900 dark:text-white truncate">
                         {rule.name}
                       </h3>
-                      <Badge className={getSeverityColor(rule.severity)}>
+                      <Badge className="severity" data-level={getSeverityLevel(rule.severity)}>
                         {rule.severity}
                       </Badge>
                       <Badge className={`${getStatusColor(rule.status)} flex items-center gap-1`}>
@@ -349,18 +354,42 @@ export default function RulesPage() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2 ml-4">
-                    <Button variant="ghost" size="sm" className="gap-2">
+                    <ActionButton 
+                      variant="ghost" 
+                      size="sm" 
+                      className="gap-2"
+                      onClick={() => {/* TODO: edit rule */}}
+                      data-action="rules:item:edit"
+                      data-intent="open-modal"
+                    >
                       <Edit className="h-4 w-4" />
                       Edit
-                    </Button>
-                    <Button variant="ghost" size="sm" className="gap-2">
+                    </ActionButton>
+                    <ActionButton 
+                      variant="ghost" 
+                      size="sm" 
+                      className="gap-2"
+                      onClick={() => {/* TODO: test rule */}}
+                      data-action="rules:item:test"
+                      data-intent="api"
+                      data-endpoint="/api/v2/rules/test"
+                    >
                       <PlayCircle className="h-4 w-4" />
                       Test
-                    </Button>
-                    <Button variant="ghost" size="sm" className="gap-2 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20">
+                    </ActionButton>
+                    <ActionButton 
+                      variant="ghost" 
+                      size="sm" 
+                      className="gap-2 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
+                      onClick={() => {/* TODO: delete rule */}}
+                      data-action="rules:item:delete"
+                      data-intent="api"
+                      data-endpoint="/api/v2/rules"
+                      data-danger="true"
+                    >
                       <Trash2 className="h-4 w-4" />
                       Delete
-                    </Button>
+                    </ActionButton>
                   </div>
                 </div>
               </CardContent>
@@ -380,7 +409,12 @@ export default function RulesPage() {
                     : "Create your first detection rule to get started"
                   }
                 </p>
-                <Button className="gap-2">
+                <ActionButton 
+                  className="gap-2"
+                  onClick={() => {/* TODO: create first rule */}}
+                  data-action="rules:create:first"
+                  data-intent="open-modal"
+                >
                   <Plus className="h-4 w-4" />
                   Create Rule
                 </Button>

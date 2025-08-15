@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';\nimport { ActionButton } from '@/components/ui/ActionButton';
 import { Skeleton } from '@/components/ui/skeleton';
 import { searchAggs } from '@/lib/api';
 import { BarChart3, TrendingUp, Calendar } from 'lucide-react';
@@ -147,12 +147,16 @@ export function Timeline({
               {stats.trend > 0 ? '+' : ''}{stats.trend.toFixed(0)}/bucket
             </span>
             {brushSelection && (
-              <button 
+              <ActionButton 
                 onClick={clearSelection}
-                className="text-blue-600 hover:underline"
+                variant="ghost"
+                size="sm"
+                className="text-blue-600 hover:underline h-auto p-0"
+                data-action="search:timeline:clear-selection"
+                data-intent="open-modal"
               >
                 Clear selection
-              </button>
+              </ActionButton>
             )}
           </div>
         </CardTitle>

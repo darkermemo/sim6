@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useMemo, useCallback } from 'react';
+import { ActionButton } from '@/components/ui/ActionButton';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { normalizeSeverity } from '@/lib/severity';
@@ -57,14 +58,24 @@ export function ResultTable({ events, loading, onRowClick, maxHeight = '600px' }
 
   // Memoize formatted events for performance
   const formattedEvents = useMemo(() => {
-    return events.map(event => ({
-      ...event,
-      formattedTime: new Date(event.timestamp).toLocaleString(),
-      normalizedSeverity: normalizeSeverity(event.severity),
-      truncatedMessage: event.message.length > 100 
-        ? event.message.substring(0, 100) + '...' 
-        : event.message
-    }));
+    return events.map(event => {
+      // Safe timestamp parsing - try new tsIso field first, then fallback to timestamp
+      const timestamp = event.tsIso || event.timestamp;
+      let formattedTime = '—';
+      if (timestamp) {
+        const date = new Date(timestamp);
+        formattedTime = isNaN(date.getTime()) ? 'Invalid Date' : date.toLocaleString();
+      }
+      
+      return {
+        ...event,
+        formattedTime,
+        normalizedSeverity: normalizeSeverity(event.severity),
+        truncatedMessage: (event.message || '').length > 100 
+          ? (event.message || '').substring(0, 100) + '...' 
+          : (event.message || '')
+      };
+    });
   }, [events]);
 
   const handleColumnToggle = useCallback((columnKey: string) => {
@@ -131,16 +142,28 @@ export function ResultTable({ events, loading, onRowClick, maxHeight = '600px' }
             </span>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm">
+            <ActionButton 
+              variant="outline" 
+              size="sm"
+              onClick={() => {/* TODO: implement export */}}
+              data-action="search:results:export"
+              data-intent="api"
+              data-endpoint="/api/v2/search/export"
+            >
               <Download className="h-4 w-4 mr-2" />
               Export
-            </Button>
+            </ActionButton>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm">
+                <ActionButton 
+                  variant="outline" 
+                  size="sm"
+                  data-action="search:results:columns"
+                  data-intent="open-modal"
+                >
                   <Columns className="h-4 w-4 mr-2" />
                   Columns
-                </Button>
+                </ActionButton>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
                 {ALL_COLUMNS.map(column => (

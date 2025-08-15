@@ -10,6 +10,15 @@ export type Filter =
   | { kind: 'rule'; field: string; op: FilterOp; value?: Scalar | Scalar[] | Range | null; negate?: boolean }
   | { kind: 'group'; logic: 'AND' | 'OR'; children: Filter[] };
 
+// UI-specific filter type with stable IDs for React keys
+export type UiFilter = {
+  id: string;                // stable unique ID for React keys
+  field?: string | null;
+  op?: string | null;
+  value?: unknown;
+  groupBy?: string[];
+};
+
 export interface FilterRequest {
   tenant_id: string;
   time: { last_seconds?: number; from?: string; to?: string };

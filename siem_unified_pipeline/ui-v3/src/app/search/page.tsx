@@ -16,6 +16,7 @@ import type { Filter } from "@/types/filters";
 import { compileFiltersToQ } from "@/lib/filters-compiler";
 import { useSchema } from "@/hooks/useSchema";
 import { FilterBuilderDialog } from "./FilterBuilderDialog";
+import { ActionButton } from "@/components/ui/ActionButton";
 
 function SearchPageContent() {
   // URL state management
@@ -180,7 +181,16 @@ function SearchPageContent() {
                 <div className="mt-2 text-xs text-muted-foreground">Compiled: <code>{compiledQ}</code></div>
               )}
               <div className="mt-2">
-                <button className="text-xs underline" onClick={()=>setBuilderOpen(true)}>Open full-screen builder</button>
+                <ActionButton 
+                  variant="ghost" 
+                  size="sm" 
+                  className="text-xs underline h-auto p-0" 
+                  onClick={()=>setBuilderOpen(true)}
+                  data-action="search:filter:open-builder"
+                  data-intent="open-modal"
+                >
+                  Open full-screen builder
+                </ActionButton>
               </div>
             </div>
             <FilterBuilderDialog tenantId={urlState.tenant_id} open={builderOpen} onOpenChange={setBuilderOpen} onApply={(q, time)=>{
@@ -199,7 +209,7 @@ function SearchPageContent() {
                 <div className="flex items-center justify-between text-sm text-muted-foreground">
                   <div className="flex items-center gap-4">
                     <span>
-                      Showing {searchQuery.results.events.events.length} of {searchQuery.results.events.total_count.toLocaleString()} events
+                      Showing {searchQuery.results.events?.events?.length || 0} of {(searchQuery.results.events?.total_count || 0).toLocaleString()} events
                     </span>
                     <span>Page {urlState.currentPage}</span>
                   </div>
@@ -208,20 +218,28 @@ function SearchPageContent() {
                       <span>Query time: {searchQuery.results.events.elapsed_ms}ms</span>
                     )}
                     <div className="flex gap-2">
-                      <button 
-                        className="px-3 py-1 text-xs border rounded disabled:opacity-50"
+                      <ActionButton 
+                        size="sm"
+                        variant="outline"
+                        className="px-3 py-1 text-xs"
                         disabled={!urlState.hasPrevious}
                         onClick={urlState.previousPage}
+                        data-action="search:pagination:previous"
+                        data-intent="navigate"
                       >
                         Previous
-                      </button>
-                      <button 
-                        className="px-3 py-1 text-xs border rounded disabled:opacity-50"
+                      </ActionButton>
+                      <ActionButton 
+                        size="sm"
+                        variant="outline"
+                        className="px-3 py-1 text-xs"
                         disabled={!urlState.hasNext}
                         onClick={urlState.nextPage}
+                        data-action="search:pagination:next"
+                        data-intent="navigate"
                       >
                         Next
-                      </button>
+                      </ActionButton>
                     </div>
                   </div>
                 </div>

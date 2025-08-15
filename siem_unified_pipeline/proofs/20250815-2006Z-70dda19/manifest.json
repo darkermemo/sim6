@@ -1,0 +1,35 @@
+{
+  "run_id": "20250815-2006Z-70dda19",
+  "commit": "70dda19",
+  "branch": "feat/visual-refresh-v2",
+  "operator": "local",
+  "started_at": "2025-08-15T20:06:00Z",
+  "ended_at": "TBD",
+  "status": "RUNNING",
+  "stages": {
+    "env_probe": {"status": "PENDING", "artifacts": ["sys/env.json", "sys/versions.json"]},
+    "ingest": {"status": "PENDING", "artifacts": ["ingest/kafka-topics.json", "ingest/consumer-lag.json", "ingest/dlq-metrics.json", "ingest/agent-heartbeats.json"]},
+    "clickhouse": {"status": "PENDING", "artifacts": ["ch/tables.sql", "ch/projections.txt", "ch/ttl_retention.txt", "ch/mv_status.json", "ch/perf_p95_ms.json"]},
+    "api": {"status": "PENDING", "artifacts": ["health/summary.json", "health/stream.ndjson", "health/diagnose_clickhouse.json", "ui/route-audit.json"]},
+    "detections": {"status": "PENDING", "artifacts": ["detections/compiler-golden/", "detections/run-previews.json"]},
+    "sims": {"status": "PENDING", "artifacts": ["sims/runs/"]},
+    "ui": {"status": "PENDING", "artifacts": ["ui/cypress-report.json", "ui/lighthouse-report.json"]},
+    "security": {"status": "PENDING", "artifacts": ["security/rbac-deny.json", "security/tenancy-isolation.json", "security/audit-log.ndjson"]},
+    "health": {"status": "PENDING", "artifacts": ["health/autofix_dryrun.json"]}
+  },
+  "thresholds": {
+    "parser_success_pct": 97,
+    "execute_p95_ms": 1200,
+    "aggs_p95_ms": 1500,
+    "kafka_lag_max": 500,
+    "sse_interval_max_s": 2,
+    "console_errors": 0
+  },
+  "environment": {
+    "pwd": "/Users/yasseralmohammed/sim6/siem_unified_pipeline",
+    "user": "yasseralmohammed",
+    "hostname": "Yassers-MacBook-Pro.local",
+    "os": "Darwin",
+    "arch": "arm64"
+  }
+}

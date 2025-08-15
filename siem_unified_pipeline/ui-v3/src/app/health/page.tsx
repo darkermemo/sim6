@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { getHealthSummary, openHealthStream, diagnoseComponent, executeAutoFix, getHealthErrors } from '@/lib/health-api';
 import type { HealthSummary, HealthDelta } from '@/types/health';
 import { PipelineFlow } from '@/components/health/PipelineFlow';
-import { Button } from '@/components/ui/button';
+import { ActionButton } from '@/components/ui/ActionButton';
 import { Badge } from '@/components/ui/badge';
 import { Card as UICard, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -127,10 +127,17 @@ export default function HealthPage() {
       <div className="p-6 space-y-6">
         <div className="flex items-center justify-between">
           <h1 className="text-xl font-semibold text-neutral-200">System Health</h1>
-          <Button onClick={refreshData} variant="outline" size="sm">
+          <ActionButton 
+            onClick={refreshData} 
+            variant="outline" 
+            size="sm"
+            data-action="health:status:refresh"
+            data-intent="api"
+            data-endpoint="/api/v2/health"
+          >
             <RefreshCw className="h-4 w-4 mr-2" />
             Retry
-          </Button>
+          </ActionButton>
         </div>
         <Alert className="border-red-200 bg-red-50">
           <AlertTriangle className="h-4 w-4" />
@@ -166,18 +173,27 @@ export default function HealthPage() {
           <div className={`px-3 py-1 rounded-full text-sm font-medium ${badge}`}>
             {overall.toUpperCase()}
           </div>
-          <Button 
+          <ActionButton 
             onClick={() => setLiveMode(!liveMode)} 
             variant={liveMode ? "default" : "outline"} 
             size="sm"
+            data-action="health:mode:toggle"
+            data-intent="open-modal"
           >
             <Zap className="h-4 w-4 mr-2" />
             {liveMode ? 'Live' : 'Static'}
-          </Button>
-          <Button onClick={refreshData} variant="outline" size="sm">
+          </ActionButton>
+          <ActionButton 
+            onClick={refreshData} 
+            variant="outline" 
+            size="sm"
+            data-action="health:status:refresh"
+            data-intent="api"
+            data-endpoint="/api/v2/health"
+          >
             <RefreshCw className="h-4 w-4 mr-2" />
             Refresh
-          </Button>
+          </ActionButton>
         </div>
       </header>
 
@@ -210,15 +226,18 @@ export default function HealthPage() {
               <Badge variant={data?.clickhouse?.ok ? 'default' : 'destructive'}>
                 {data?.clickhouse?.ok ? 'Healthy' : 'Down'}
               </Badge>
-              <Button 
+              <ActionButton 
                 size="sm" 
                 variant="ghost" 
                 onClick={() => handleDiagnose('clickhouse')}
                 disabled={diagnosing === 'clickhouse'}
                 className="h-6 w-6 p-0"
+                data-action="health:clickhouse:diagnose"
+                data-intent="api"
+                data-endpoint="/api/v2/health/diagnose"
               >
                 <Eye className="h-3 w-3" />
-              </Button>
+              </ActionButton>
             </div>
             <div className="text-xs text-muted-foreground">
               {Math.round(data?.clickhouse?.inserts_per_sec || 0)} IPS, {Math.round(data?.clickhouse?.ingest_delay_ms || 0)}ms delay
@@ -238,15 +257,18 @@ export default function HealthPage() {
               <Badge variant={data?.redis?.ok ? 'default' : 'destructive'}>
                 {data?.redis?.ok ? 'Healthy' : 'Down'}
               </Badge>
-              <Button 
+              <ActionButton 
                 size="sm" 
                 variant="ghost" 
                 onClick={() => handleDiagnose('redis')}
                 disabled={diagnosing === 'redis'}
                 className="h-6 w-6 p-0"
+                data-action="health:redis:diagnose"
+                data-intent="api"
+                data-endpoint="/api/v2/health/diagnose"
               >
                 <Eye className="h-3 w-3" />
-              </Button>
+              </ActionButton>
             </div>
             <div className="text-xs text-muted-foreground">
               {Math.round(data?.redis?.ops_per_sec || 0)} OPS, {Math.round(data?.redis?.used_memory_mb || 0)}MB used
@@ -266,15 +288,18 @@ export default function HealthPage() {
               <Badge variant={data?.kafka?.ok ? 'default' : 'destructive'}>
                 {data?.kafka?.ok ? 'Healthy' : 'Down'}
               </Badge>
-              <Button 
+              <ActionButton 
                 size="sm" 
                 variant="ghost" 
                 onClick={() => handleDiagnose('kafka')}
                 disabled={diagnosing === 'kafka'}
                 className="h-6 w-6 p-0"
+                data-action="health:kafka:diagnose"
+                data-intent="api"
+                data-endpoint="/api/v2/health/diagnose"
               >
                 <Eye className="h-3 w-3" />
-              </Button>
+              </ActionButton>
             </div>
             <div className="text-xs text-muted-foreground">
               {(data?.kafka?.brokers?.length || 0)} brokers, {Object.keys(data?.kafka?.topics || {}).length} topics
@@ -314,23 +339,30 @@ export default function HealthPage() {
                         {error.description || 'System issue detected'}
                       </p>
                       <div className="flex gap-2">
-                        <Button 
+                        <ActionButton 
                           size="sm" 
                           variant="outline"
                           onClick={() => handleAutoFix(error.id, undefined, true)}
                           disabled={fixing === error.id}
+                          data-action="health:error:dry-run"
+                          data-intent="api"
+                          data-endpoint="/api/v2/health/autofix"
                         >
                           <PlayCircle className="h-4 w-4 mr-1" />
                           Dry Run
-                        </Button>
-                        <Button 
+                        </ActionButton>
+                        <ActionButton 
                           size="sm"
                           onClick={() => handleAutoFix(error.id, undefined, false)}
                           disabled={fixing === error.id}
+                          data-action="health:error:autofix"
+                          data-intent="api"
+                          data-endpoint="/api/v2/health/autofix"
+                          data-danger="true"
                         >
                           <Wrench className="h-4 w-4 mr-1" />
                           Auto-Fix
-                        </Button>
+                        </ActionButton>
                       </div>
                     </div>
                   </AccordionContent>
@@ -381,38 +413,51 @@ export default function HealthPage() {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 gap-2">
-              <Button 
+              <ActionButton 
                 size="sm" 
                 variant="outline" 
                 onClick={() => handleDiagnose('pipeline')}
                 disabled={diagnosing === 'pipeline'}
+                data-action="health:pipeline:diagnose"
+                data-intent="api"
+                data-endpoint="/api/v2/health/diagnose"
               >
                 <Eye className="h-4 w-4 mr-1" />
                 Diagnose Pipeline
-              </Button>
-              <Button 
+              </ActionButton>
+              <ActionButton 
                 size="sm" 
                 variant="outline"
                 onClick={() => handleAutoFix(undefined, 'pipeline_restart', true)}
                 disabled={fixing === 'pipeline_restart'}
+                data-action="health:pipeline:test-restart"
+                data-intent="api"
+                data-endpoint="/api/v2/health/autofix"
               >
                 <PlayCircle className="h-4 w-4 mr-1" />
                 Test Restart
-              </Button>
-              <Button 
+              </ActionButton>
+              <ActionButton 
                 size="sm" 
                 variant="outline"
                 onClick={() => handleAutoFix(undefined, 'cache_clear', false)}
                 disabled={fixing === 'cache_clear'}
+                data-action="health:cache:clear"
+                data-intent="api"
+                data-endpoint="/api/v2/health/autofix"
+                data-danger="true"
               >
                 <Wrench className="h-4 w-4 mr-1" />
                 Clear Cache
-              </Button>
-              <Button 
+              </ActionButton>
+              <ActionButton 
                 size="sm" 
                 variant="outline"
                 onClick={() => handleAutoFix(undefined, 'optimize_performance', true)}
                 disabled={fixing === 'optimize_performance'}
+                data-action="health:performance:optimize"
+                data-intent="api"
+                data-endpoint="/api/v2/health/autofix"
               >
                 <TrendingUp className="h-4 w-4 mr-1" />
                 Optimize

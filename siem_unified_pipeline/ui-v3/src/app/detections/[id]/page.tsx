@@ -3,7 +3,7 @@ import React, { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { DetectionsAPI } from "@/lib/detections";
 import type { DetectionRecord } from "@/types/detections";
-import { Button } from "@/components/ui/button";
+import { ActionButton } from "@/components/ui/ActionButton";
 
 export default function DetectionDetailPage() {
   const params = useParams<{ id: string }>();
@@ -28,7 +28,14 @@ export default function DetectionDetailPage() {
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h1 className="text-2xl font-semibold">{det.name}</h1>
-            <Button onClick={runOnce}>Run Once</Button>
+            <ActionButton 
+              onClick={runOnce}
+              data-action="detections:detail:run-once"
+              data-intent="api"
+              data-endpoint="/api/v2/detections/run"
+            >
+              Run Once
+            </ActionButton>
           </div>
           <div className="grid md:grid-cols-2 gap-4">
             <div className="rounded border p-4">

@@ -3,7 +3,7 @@ import React, { useState, useMemo } from 'react'
 import * as Dialog from '@radix-ui/react-dialog'
 import * as VisuallyHidden from '@radix-ui/react-visually-hidden'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Button } from '@/components/ui/button'
+import { ActionButton } from '@/components/ui/ActionButton'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -12,6 +12,34 @@ import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { X, Plus, Copy, Play } from 'lucide-react'
 import { useSchema } from '@/hooks/useSchema'
+import { dedupeFieldOptions } from '@/lib/filter-utils'
+
+// API helper functions
+async function compileQuery(query: string, tenantId: string) {
+  const response = await fetch('/api/v2/search/compile', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      q: query,
+      tenant_id: tenantId
+    })
+  });
+  return response.json();
+}
+
+async function executeQuery(query: string, timeRange: number, tenantId: string) {
+  const response = await fetch('/api/v2/search/execute', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      q: query,
+      time: { last_seconds: timeRange },
+      tenant_id: tenantId,
+      limit: 100
+    })
+  });
+  return response.json();
+}
 
 interface TimeCtrl {
   last_seconds?: number;
@@ -118,10 +146,19 @@ export function FilterBuilderDialog({ open, onOpenChange, onApply, tenantId }: F
   const [timeRange, setTimeRange] = useState<number>(900); // 15 minutes default
   const [activeTab, setActiveTab] = useState("field");
   const [query, setQuery] = useState("");
+  
+  // Compilation and preview state
+  const [compiledSql, setCompiledSql] = useState<string>("");
+  const [compileLoading, setCompileLoading] = useState(false);
+  const [compileError, setCompileError] = useState<string>("");
+  const [showPreview, setShowPreview] = useState(false);
 
   // Dynamic schema fields for selects
   const schema = useSchema(tenantId)
-  const fieldOptions = useMemo(() => (schema.fields || []).map((f: any) => f.name), [schema.fields])
+  const fieldOptions = useMemo(() => {
+    const raw = (schema.fields || []).map((f: any) => ({ name: f.name, type: f.type }));
+    return dedupeFieldOptions(raw);
+  }, [schema.fields])
 
   // Field condition state
   const [fieldName, setFieldName] = useState("");
@@ -212,11 +249,44 @@ export function FilterBuilderDialog({ open, onOpenChange, onApply, tenantId }: F
     query
   ]);
 
-  const handleApply = () => {
+  const handlePreview = async () => {
+    const queryToCompile = currentQuery;
+    if (!queryToCompile) return;
+    
+    setCompileLoading(true);
+    setCompileError("");
+    setShowPreview(true);
+    
+    try {
+      const result = await compileQuery(queryToCompile, tenantId);
+      if (result.sql) {
+        setCompiledSql(result.sql);
+      } else if (result.error) {
+        setCompileError(result.error);
+      } else {
+        setCompileError("Failed to compile query");
+      }
+    } catch (error) {
+      setCompileError(`Compilation failed: ${error}`);
+    } finally {
+      setCompileLoading(false);
+    }
+  };
+
+  const handleApply = async () => {
     const finalQuery = currentQuery;
     if (finalQuery) {
-      onApply(finalQuery, { last_seconds: timeRange });
-      onOpenChange(false);
+      try {
+        // Execute the query and pass results to parent
+        const result = await executeQuery(finalQuery, timeRange, tenantId);
+        onApply(finalQuery, { last_seconds: timeRange });
+        onOpenChange(false);
+      } catch (error) {
+        console.error("Failed to execute query:", error);
+        // Still apply the query even if execution fails
+        onApply(finalQuery, { last_seconds: timeRange });
+        onOpenChange(false);
+      }
     }
   };
 
@@ -228,8 +298,8 @@ export function FilterBuilderDialog({ open, onOpenChange, onApply, tenantId }: F
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 z-50 bg-black/50 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
-        <Dialog.Content className="fixed left-[50%] top-[50%] z-50 w-full max-w-6xl max-h-[95vh] translate-x-[-50%] translate-y-[-50%] border bg-background p-0 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 rounded-lg overflow-hidden">
+        <Dialog.Overlay className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
+        <Dialog.Content className="fixed left-[50%] top-[50%] z-50 w-full max-w-6xl max-h-[95vh] translate-x-[-50%] translate-y-[-50%] border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-2xl duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 rounded-lg flex flex-col isolate">
           
           <VisuallyHidden.Root>
             <Dialog.Title>Advanced Filter Builder</Dialog.Title>
@@ -237,12 +307,12 @@ export function FilterBuilderDialog({ open, onOpenChange, onApply, tenantId }: F
           </VisuallyHidden.Root>
           
           {/* Header */}
-          <div className="flex items-center justify-between p-6 border-b bg-muted/50">
-            <div>
+          <div className="flex items-center justify-between p-6 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 shrink-0">
+            <div className="min-w-0 flex-1">
               <h2 className="text-xl font-semibold">Advanced Filter Builder</h2>
               <p className="text-sm text-muted-foreground">Create complex search filters using the v1.0 DSL specification</p>
             </div>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-4 shrink-0">
             <div className="flex items-center gap-2">
                 <Label className="text-sm font-medium">Time Range:</Label>
                 <Select value={timeRange.toString()} onValueChange={(value) => setTimeRange(parseInt(value))}>
@@ -251,7 +321,7 @@ export function FilterBuilderDialog({ open, onOpenChange, onApply, tenantId }: F
                   </SelectTrigger>
                   <SelectContent>
                     {TIME_RANGES.map(range => (
-                      <SelectItem key={range.value} value={range.value.toString()}>
+                      <SelectItem key={`time-${range.value}`} value={range.value.toString()}>
                         {range.label}
                       </SelectItem>
                     ))}
@@ -259,16 +329,22 @@ export function FilterBuilderDialog({ open, onOpenChange, onApply, tenantId }: F
                 </Select>
               </div>
               <Dialog.Close asChild>
-                <Button variant="ghost" size="icon">
+                <ActionButton 
+                  variant="ghost" 
+                  size="icon"
+                  data-action="search:filter-builder:close"
+                  data-intent="open-modal"
+                >
                   <X className="h-4 w-4" />
-                </Button>
+                </ActionButton>
               </Dialog.Close>
             </div>
           </div>
 
-          <div className="flex flex-1 overflow-hidden">
+          <div className="flex flex-1 min-h-0">
             {/* Main Content */}
-            <div className="flex-1 p-6 overflow-y-auto">
+            <div className="flex-1 min-w-0 overflow-y-auto bg-white dark:bg-slate-900">
+              <div className="p-6">
               <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
                 <TabsList className="grid w-full grid-cols-7">
                   <TabsTrigger value="field">Field</TabsTrigger>
@@ -288,7 +364,7 @@ export function FilterBuilderDialog({ open, onOpenChange, onApply, tenantId }: F
                     </CardHeader>
                     <CardContent className="space-y-4">
                       <div className="grid grid-cols-3 gap-4">
-                        <div>
+                        <div className="min-w-0">
                           <Label>Field Name</Label>
                           <Select value={fieldName} onValueChange={setFieldName}>
                             <SelectTrigger>
@@ -298,14 +374,16 @@ export function FilterBuilderDialog({ open, onOpenChange, onApply, tenantId }: F
                               {fieldOptions.length === 0 && !schema.loading ? (
                                 <SelectItem value="__no_fields__" disabled>No fields</SelectItem>
                               ) : (
-                                fieldOptions.map((field: string) => (
-                                  <SelectItem key={field} value={field}>{field}</SelectItem>
+                                fieldOptions.map((field) => (
+                                  <SelectItem key={`field-${field.name}`} value={field.name}>
+                                    {field.name.startsWith('__unnamed_') ? '(unnamed)' : field.name}
+                                  </SelectItem>
                                 ))
                               )}
                             </SelectContent>
                           </Select>
                         </div>
-                        <div>
+                        <div className="min-w-0">
                           <Label>Operator</Label>
                           <Select value={fieldOp} onValueChange={setFieldOp}>
                             <SelectTrigger>
@@ -313,12 +391,12 @@ export function FilterBuilderDialog({ open, onOpenChange, onApply, tenantId }: F
                             </SelectTrigger>
                             <SelectContent>
                               {FIELD_OPERATORS.map(op => (
-                                <SelectItem key={op.value} value={op.value}>{op.label}</SelectItem>
+                                <SelectItem key={`op-${op.value}`} value={op.value}>{op.label}</SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
                         </div>
-                        <div>
+                        <div className="min-w-0">
                           <Label>Value</Label>
                           <Input 
                             value={fieldValue} 
@@ -349,7 +427,7 @@ export function FilterBuilderDialog({ open, onOpenChange, onApply, tenantId }: F
                       <div>
                         <Label>Stages (A → B → C)</Label>
                         {seqStages.map((stage, idx) => (
-                          <div key={idx} className="flex gap-2 mt-2">
+                          <div key={`seq-stage-${idx}`} className="flex gap-2 mt-2">
                             <Input 
                               value={stage}
                               onChange={(e) => {
@@ -360,14 +438,16 @@ export function FilterBuilderDialog({ open, onOpenChange, onApply, tenantId }: F
                               placeholder={`Stage ${idx + 1} (e.g., fail[x50], success)`}
                             />
                             {idx === seqStages.length - 1 && (
-                              <Button 
+                              <ActionButton 
                                 type="button" 
                                 variant="outline" 
                                 size="icon"
                                 onClick={() => setSeqStages([...seqStages, ""])}
+                                data-action="search:filter:sequence:add-stage"
+                                data-intent="open-modal"
                               >
                                 <Plus className="h-4 w-4" />
-                              </Button>
+                              </ActionButton>
                             )}
                           </div>
                         ))}
@@ -591,17 +671,17 @@ export function FilterBuilderDialog({ open, onOpenChange, onApply, tenantId }: F
                 <TabsContent value="saved" className="space-y-4">
                   <div className="space-y-4">
                     {SAVED_SEARCHES.map(search => (
-                      <Card key={search.id} className="cursor-pointer hover:bg-muted/50" onClick={() => loadSavedSearch(search)}>
+                      <Card key={`saved-${search.id}`} className="cursor-pointer hover:bg-muted/50" onClick={() => loadSavedSearch(search)}>
                         <CardContent className="p-4">
                           <div className="flex items-start justify-between">
-                            <div className="space-y-2">
+              <div className="space-y-2">
                               <div className="flex items-center gap-2">
                                 <h3 className="font-semibold">{search.name}</h3>
                                 <Badge variant={search.severity === 'critical' ? 'destructive' : search.severity === 'high' ? 'secondary' : 'outline'}>
                                   {search.severity}
                                 </Badge>
-                                {search.tags.map(tag => (
-                                  <Badge key={tag} variant="outline" className="text-xs">
+                                {search.tags.map((tag, tagIdx) => (
+                                  <Badge key={`tag-${search.id}-${tagIdx}-${tag}`} variant="outline" className="text-xs">
                                     {tag}
                                   </Badge>
                                 ))}
@@ -609,12 +689,19 @@ export function FilterBuilderDialog({ open, onOpenChange, onApply, tenantId }: F
                               <p className="text-sm text-muted-foreground">{search.description}</p>
                               <code className="text-xs bg-muted p-1 rounded">{search.query}</code>
                             </div>
-                            <Button variant="ghost" size="icon" onClick={(e: React.MouseEvent) => {
-                              e.stopPropagation();
-                              navigator.clipboard.writeText(search.query);
-                            }}>
+                            <ActionButton 
+                              variant="ghost" 
+                              size="icon" 
+                              onClick={(e: React.MouseEvent) => {
+                                e.stopPropagation();
+                                navigator.clipboard.writeText(search.query);
+                              }}
+                              data-action="search:saved:copy-query"
+                              data-intent="api"
+                              data-endpoint="/api/v2/search/copy"
+                            >
                               <Copy className="h-4 w-4" />
-                            </Button>
+                            </ActionButton>
                           </div>
                         </CardContent>
                       </Card>
@@ -622,44 +709,83 @@ export function FilterBuilderDialog({ open, onOpenChange, onApply, tenantId }: F
                   </div>
                 </TabsContent>
               </Tabs>
+              </div>
             </div>
 
-            {/* Query Preview Sidebar */}
-            <div className="w-80 border-l bg-muted/30 p-6">
-              <div className="space-y-4">
-                <div>
-                  <Label className="text-sm font-medium">Generated Query</Label>
-                  <div className="mt-2 p-3 bg-background rounded border min-h-[100px]">
-                    <code className="text-sm font-mono whitespace-pre-wrap">
-                      {currentQuery || "Build a query using the tabs"}
-                    </code>
-                  </div>
+            {/* Query Preview Sidebar - Sticky */}
+            <div className="w-80 border-l border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 flex flex-col">
+              <div className="sticky top-0 p-6 bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
+                <Label className="text-sm font-medium">Generated Query</Label>
+                <div className="mt-2 p-3 bg-white dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-600 min-h-[100px] max-h-[200px] overflow-y-auto">
+                  <code className="text-sm font-mono whitespace-pre-wrap text-slate-900 dark:text-slate-100">
+                    {currentQuery || "Build a query using the tabs"}
+                  </code>
                 </div>
                 
-              <div className="space-y-2">
-                  <Button 
-                    onClick={handleApply} 
-                    disabled={!currentQuery}
-                    className="w-full"
-                  >
-                    <Play className="h-4 w-4 mr-2" />
-                    Apply Filter
-                  </Button>
-                  
-                  <Button 
-                    variant="outline" 
-                    onClick={() => navigator.clipboard.writeText(currentQuery)}
-                    disabled={!currentQuery}
-                    className="w-full"
-                  >
-                    <Copy className="h-4 w-4 mr-2" />
-                    Copy Query
-                  </Button>
-                </div>
+                {showPreview && (
+                  <div className="mt-4">
+                    <Label className="text-sm font-medium">Compiled SQL</Label>
+                    <div className="mt-2 p-3 bg-white dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-600 min-h-[100px] max-h-[200px] overflow-y-auto">
+                      {compileLoading ? (
+                        <div className="text-sm text-muted-foreground">Compiling...</div>
+                      ) : compileError ? (
+                        <div className="text-sm text-destructive">{compileError}</div>
+                      ) : (
+                        <code className="text-sm font-mono whitespace-pre-wrap text-slate-900 dark:text-slate-100">
+                          {compiledSql || "No SQL generated"}
+                        </code>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+              
+              <div className="flex-1 p-6">
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <ActionButton 
+                      onClick={handlePreview} 
+                      disabled={!currentQuery || compileLoading}
+                      variant="outline"
+                      className="w-full"
+                      data-action="search:filter-builder:preview-sql"
+                      data-intent="api"
+                      data-endpoint="/api/v2/search/compile"
+                    >
+                      <Play className="h-4 w-4 mr-2" />
+                      {compileLoading ? "Compiling..." : "Preview SQL"}
+                    </ActionButton>
+                    
+                    <ActionButton 
+                      onClick={handleApply} 
+                      disabled={!currentQuery}
+                      className="w-full"
+                      data-action="search:filter-builder:apply"
+                      data-intent="api"
+                      data-endpoint="/api/v2/search/execute"
+                    >
+                      <Play className="h-4 w-4 mr-2" />
+                      Apply Filter
+                    </ActionButton>
+                    
+                    <ActionButton 
+                      variant="outline" 
+                      onClick={() => navigator.clipboard.writeText(currentQuery)}
+                      disabled={!currentQuery}
+                      className="w-full"
+                      data-action="search:filter-builder:copy-query"
+                      data-intent="api"
+                      data-endpoint="/api/v2/search/copy"
+                    >
+                      <Copy className="h-4 w-4 mr-2" />
+                      Copy Query
+                    </ActionButton>
+                  </div>
 
-                <div className="text-xs text-muted-foreground space-y-1">
-                  <p><strong>Time Range:</strong> {TIME_RANGES.find(r => r.value === timeRange)?.label}</p>
-                  <p><strong>Active Tab:</strong> {activeTab}</p>
+                  <div className="text-xs text-muted-foreground space-y-1">
+                    <p><strong>Time Range:</strong> {TIME_RANGES.find(r => r.value === timeRange)?.label}</p>
+                    <p><strong>Active Tab:</strong> {activeTab}</p>
+                  </div>
                 </div>
               </div>
             </div>

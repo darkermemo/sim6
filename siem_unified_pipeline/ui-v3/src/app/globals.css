@@ -1,52 +1,14 @@
+@import url("../styles/tokens.css");
 @import "tailwindcss";
 
 @custom-variant dark (&:is(.dark *));
 
+/* Base layer uses tokens; variables come from tokens.css */
 @layer base {
-  :root {
-    --background: 0 0% 100%;
-    --foreground: 240 10% 3.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 240 10% 3.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 240 10% 3.9%;
-    --primary: 240 5.9% 10%;
-    --primary-foreground: 0 0% 98%;
-    --secondary: 240 4.8% 95.9%;
-    --secondary-foreground: 240 5.9% 10%;
-    --muted: 240 4.8% 95.9%;
-    --muted-foreground: 240 3.8% 46.1%;
-    --accent: 240 4.8% 95.9%;
-    --accent-foreground: 240 5.9% 10%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 240 5.9% 90%;
-    --input: 240 5.9% 90%;
-    --ring: 240 10% 3.9%;
-    --radius: 0.5rem;
-  }
-
-  .dark {
-    --background: 240 10% 3.9%;
-    --foreground: 0 0% 98%;
-    --card: 240 10% 3.9%;
-    --card-foreground: 0 0% 98%;
-    --popover: 240 10% 3.9%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 0 0% 98%;
-    --primary-foreground: 240 5.9% 10%;
-    --secondary: 240 3.7% 15.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 240 3.7% 15.9%;
-    --muted-foreground: 240 5% 64.9%;
-    --accent: 240 3.7% 15.9%;
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 240 3.7% 15.9%;
-    --input: 240 3.7% 15.9%;
-    --ring: 240 4.9% 83.9%;
-  }
+  * { border-color: hsl(var(--border)); }
+  html { color-scheme: light dark; }
+  body { background-color: hsl(var(--background)); color: hsl(var(--foreground)); font-family: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"; font-feature-settings: "rlig" 1, "calt" 1; line-height: 1.5; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+  :focus-visible { outline: none; box-shadow: 0 0 0 3px hsl(var(--ring) / .45); transition: box-shadow var(--dur-base); }
 }
 
 
@@ -84,17 +46,15 @@
   --color-sidebar-ring: var(--sidebar-ring);
 }
 
-@layer base {
-  * {
-    border-color: hsl(var(--border));
-  }
-  body {
-    background-color: hsl(var(--background));
-    color: hsl(var(--foreground));
-    font-family: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
-    font-feature-settings: "rlig" 1, "calt" 1;
-    line-height: 1.5;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-  }
+@layer utilities {
+  .elev-1 { box-shadow: var(--elev-1); }
+  .elev-2 { box-shadow: var(--elev-2); }
+  .severity { @apply inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium; }
+  .severity[data-level="critical"] { background-color: hsl(var(--sev-critical) / .15); color: hsl(var(--sev-critical)); }
+  .severity[data-level="high"]     { background-color: hsl(var(--sev-high) / .15);     color: hsl(var(--sev-high)); }
+  .severity[data-level="medium"]   { background-color: hsl(var(--sev-medium) / .18);   color: hsl(var(--sev-medium)); }
+  .severity[data-level="low"]      { background-color: hsl(var(--sev-low) / .18);      color: hsl(var(--sev-low)); }
+  .status-ok   { color: hsl(var(--status-ok)); }
+  .status-warn { color: hsl(var(--status-warn)); }
+  .status-bad  { color: hsl(var(--status-bad)); }
 }

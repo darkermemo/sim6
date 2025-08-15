@@ -1,0 +1,7 @@
+{
+  "active_agents": 0,
+  "last_heartbeat_age_s": 300,
+  "heartbeat_threshold_s": 60,
+  "agents_healthy": false,
+  "note": "Agent heartbeat data from health summary"
+}

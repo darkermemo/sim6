@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { ActionButton } from "@/components/ui/ActionButton";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
@@ -52,6 +52,43 @@ export default function SettingsPage() {
     caching: true
   });
 
+  const handleResetToDefaults = () => {
+    setNotifications({
+      emailAlerts: true,
+      browserNotifications: false,
+      slackIntegration: false,
+      smsAlerts: false
+    });
+    setSecurity({
+      twoFactorAuth: false,
+      sessionTimeout: 30,
+      passwordExpiry: 90,
+      loginAttempts: 5
+    });
+    setSystemSettings({
+      dataRetention: 365,
+      logLevel: "INFO",
+      autoBackup: true,
+      maintenanceMode: false
+    });
+    setApiSettings({
+      rateLimit: 1000,
+      timeout: 30,
+      retries: 3,
+      caching: true
+    });
+  };
+
+  const handleSaveChanges = async () => {
+    // TODO: Implement API call to save settings
+    console.log('Saving settings:', {
+      notifications,
+      security,
+      systemSettings,
+      apiSettings
+    });
+  };
+
   return (
     <div className="space-y-6">
       {/* Watermark */}
@@ -67,14 +104,27 @@ export default function SettingsPage() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" className="gap-2">
+          <ActionButton 
+            variant="outline" 
+            className="gap-2"
+            data-action="settings:config:reset"
+            data-intent="api"
+            data-endpoint="/api/v2/settings/reset"
+            onClick={handleResetToDefaults}
+          >
             <RefreshCw className="h-4 w-4" />
             Reset to Defaults
-          </Button>
-          <Button className="gap-2">
+          </ActionButton>
+          <ActionButton 
+            className="gap-2"
+            data-action="settings:config:save"
+            data-intent="api"
+            data-endpoint="/api/v2/settings"
+            onClick={handleSaveChanges}
+          >
             <Save className="h-4 w-4" />
             Save Changes
-          </Button>
+          </ActionButton>
         </div>
       </div>
 

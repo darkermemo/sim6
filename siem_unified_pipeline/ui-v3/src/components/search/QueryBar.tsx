@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { ActionButton } from '@/components/ui/ActionButton';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -115,12 +116,12 @@ export function QueryBar({
   const selectedTimeRange = TIME_RANGES.find(r => r.value === timeRange);
 
   return (
-    <div className="bg-white dark:bg-slate-800 border rounded-lg p-4 space-y-4">
+    <div className="bg-card border rounded-lg p-4 space-y-4">
       {/* Main Search Row */}
       <div className="flex items-center gap-3">
         {/* Search Input */}
         <div className="flex-1 relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search events... (e.g., source:auth severity:high user:alice)"
             value={query}
@@ -131,10 +132,13 @@ export function QueryBar({
         </div>
 
         {/* Run Button */}
-        <Button 
+        <ActionButton 
           onClick={onExecute} 
           disabled={isExecuting}
           className="gap-2 px-6"
+          data-action="search:query:execute"
+          data-intent="api"
+          data-endpoint="/api/v2/search/execute"
         >
           {isExecuting ? (
             <>
@@ -147,7 +151,7 @@ export function QueryBar({
               Run
             </>
           )}
-        </Button>
+        </ActionButton>
 
         {/* Streaming Toggle */}
         <Button
@@ -174,7 +178,7 @@ export function QueryBar({
       <div className="flex items-center gap-4">
         {/* Time Range */}
         <div className="flex items-center gap-2">
-          <Clock className="h-4 w-4 text-slate-500" />
+          <Clock className="h-4 w-4 text-muted-foreground" />
           <Select value={timeRange.toString()} onValueChange={(v) => onTimeRangeChange(parseInt(v))}>
             <SelectTrigger className="w-40">
               <SelectValue />
@@ -191,7 +195,7 @@ export function QueryBar({
 
         {/* Tenant Selector */}
         <div className="flex items-center gap-2">
-          <Users className="h-4 w-4 text-slate-500" />
+          <Users className="h-4 w-4 text-muted-foreground" />
           <Select value={tenantId} onValueChange={onTenantChange}>
             <SelectTrigger className="w-32">
               <SelectValue />

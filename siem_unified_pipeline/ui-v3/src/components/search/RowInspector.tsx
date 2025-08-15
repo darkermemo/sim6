@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Button } from '@/components/ui/button';
+import { ActionButton } from '@/components/ui/ActionButton';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -124,17 +124,37 @@ export function RowInspector({ event, isOpen, onClose }: RowInspectorProps) {
               </Badge>
             </div>
             <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={() => handleCopy(JSON.stringify(event, null, 2), 'event data')}>
+              <ActionButton 
+                variant="outline" 
+                size="sm" 
+                onClick={() => handleCopy(JSON.stringify(event, null, 2), 'event data')}
+                data-action="search:inspector:copy-json"
+                data-intent="api"
+                data-endpoint="/api/v2/search/copy"
+              >
                 <Copy className="h-4 w-4 mr-2" />
                 Copy JSON
-              </Button>
-              <Button variant="outline" size="sm" onClick={handleDownload}>
+              </ActionButton>
+              <ActionButton 
+                variant="outline" 
+                size="sm" 
+                onClick={handleDownload}
+                data-action="search:inspector:download"
+                data-intent="api"
+                data-endpoint="/api/v2/search/download"
+              >
                 <Download className="h-4 w-4 mr-2" />
                 Download
-              </Button>
-              <Button variant="ghost" size="icon" onClick={onClose}>
+              </ActionButton>
+              <ActionButton 
+                variant="ghost" 
+                size="icon" 
+                onClick={onClose}
+                data-action="search:inspector:close"
+                data-intent="open-modal"
+              >
                 <X className="h-4 w-4" />
-              </Button>
+              </ActionButton>
             </div>
           </div>
           <p className="text-sm text-muted-foreground mt-2">
