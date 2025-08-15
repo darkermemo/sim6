@@ -204,6 +204,10 @@ export default function AlertsPage() {
 
   return (
     <div className="space-y-6">
+      {/* Watermark */}
+      <div className="fixed bottom-3 right-4 z-50 pointer-events-none select-none opacity-40 text-xs font-semibold bg-muted text-muted-foreground px-2 py-1 rounded">
+        UI-V3 View (Alerts)
+      </div>
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

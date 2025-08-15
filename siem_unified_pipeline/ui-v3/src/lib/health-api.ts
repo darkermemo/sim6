@@ -1,67 +1,52 @@
+import type { HealthSummary, HealthDelta, DiagnoseRequest, DiagnoseResponse, AutoFixRequest, AutoFixResponse } from '@/types/health';
 import { http } from '@/lib/http';
-import type { 
-  HealthSummary, 
-  DiagnoseRequest, 
-  DiagnoseResponse, 
-  AutoFixRequest, 
-  AutoFixResponse 
-} from '@/types/health';
 
-export class HealthAPI {
-  /**
-   * Get comprehensive health summary snapshot
-   */
-  static async getSummary(): Promise<HealthSummary> {
-    return http<HealthSummary>('/health/summary');
-  }
+export async function getHealthSummary(signal?: AbortSignal): Promise<HealthSummary> {
+  return http<HealthSummary>('/health/summary', { signal });
+}
 
-  /**
-   * Run deep diagnostic check for a specific component
-   */
-  static async diagnose(request: DiagnoseRequest): Promise<DiagnoseResponse> {
-    return http<DiagnoseResponse>('/health/diagnose', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(request),
-    });
-  }
+export function openHealthStream(onMessage: (delta: HealthDelta) => void): () => void {
+  const BASE = process.env.NEXT_PUBLIC_BASEPATH || '';
+  const streamUrl = `${BASE}/api/v2/health/stream`;
+  const es = new EventSource(streamUrl);
+  es.onmessage = (ev) => {
+    try { 
+      onMessage(JSON.parse(ev.data)); 
+    } catch (e) {
+      console.warn('Failed to parse SSE message:', e);
+    }
+  };
+  es.onerror = (err) => { 
+    console.warn('SSE error:', err);
+    // Let the browser retry automatically
+  };
+  return () => es.close();
+}
 
-  /**
-   * Execute automated fix for known issues
-   */
-  static async autoFix(request: AutoFixRequest): Promise<AutoFixResponse> {
-    return http<AutoFixResponse>('/health/autofix', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(request),
-    });
-  }
+export async function diagnoseComponent(req: DiagnoseRequest): Promise<DiagnoseResponse> {
+  return http<DiagnoseResponse>('/health/diagnose', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(req)
+  });
+}
 
-  /**
-   * Create SSE connection for real-time health updates
-   */
-  static createStreamConnection(onMessage: (data: any) => void, onError?: (error: Event) => void): EventSource {
-    const BASE = process.env.NEXT_PUBLIC_BASEPATH || '';
-    const url = `${BASE}/api/v2/health/stream`;
-    
-    const eventSource = new EventSource(url);
-    
-    eventSource.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        onMessage(data);
-      } catch (error) {
-        console.error('Failed to parse SSE message:', error);
-      }
-    };
-    
-    eventSource.onerror = (error) => {
-      console.error('SSE connection error:', error);
-      if (onError) {
-        onError(error);
-      }
-    };
-    
-    return eventSource;
-  }
+export async function executeAutoFix(req: AutoFixRequest): Promise<AutoFixResponse> {
+  return http<AutoFixResponse>('/health/autofix', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(req)
+  });
+}
+
+export async function getHealthErrors() {
+  return http<any[]>('/health/errors');
+}
+
+export async function getHealthExecutions() {
+  return http<any[]>('/health/executions');
+}
+
+export async function getHealthExecution(id: string) {
+  return http<any>(`/health/executions/${id}`);
 }

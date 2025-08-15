@@ -14,7 +14,7 @@ pub struct HealthCollector {
     redis: redis_collector::RedisCollector,
     clickhouse: clickhouse_collector::ClickHouseCollector,
     services: service_collector::ServiceCollector,
-    
+    events_table: String,
     // Cache for performance
     last_summary: Arc<RwLock<Option<HealthSummary>>>,
 }
@@ -24,8 +24,22 @@ impl HealthCollector {
         Self {
             kafka: kafka_collector::KafkaCollector::new(),
             redis: redis_collector::RedisCollector::new(),
-            clickhouse: clickhouse_collector::ClickHouseCollector::new(),
+            clickhouse: clickhouse_collector::ClickHouseCollector::new(
+                std::env::var("EVENTS_TABLE").unwrap_or_else(|_| "dev.events".to_string()),
+            ),
             services: service_collector::ServiceCollector::new(),
+            events_table: std::env::var("EVENTS_TABLE").unwrap_or_else(|_| "dev.events".to_string()),
+            last_summary: Arc::new(RwLock::new(None)),
+        }
+    }
+
+    pub fn new_with_events_table(events_table: String) -> Self {
+        Self {
+            kafka: kafka_collector::KafkaCollector::new(),
+            redis: redis_collector::RedisCollector::new(),
+            clickhouse: clickhouse_collector::ClickHouseCollector::new(events_table.clone()),
+            services: service_collector::ServiceCollector::new(),
+            events_table,
             last_summary: Arc::new(RwLock::new(None)),
         }
     }

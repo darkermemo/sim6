@@ -1,138 +1,94 @@
-// Frontend health types matching backend Rust structs
+export type HealthStatus = "up" | "degraded" | "down";
 
-export type OverallStatus = 'up' | 'degraded' | 'down';
-
-export interface HealthSummary {
-  ts: string;
-  overall: OverallStatus;
-  errors: number;
-  pipeline: PipelineMetrics;
-  kafka: KafkaMetrics;
-  redis: RedisMetrics;
-  clickhouse: ClickHouseMetrics;
-  services: ServiceMetrics;
-  ui: UiMetrics;
-}
-
-export interface PipelineMetrics {
-  eps_raw: number;
-  eps_parsed: number;
-  parse_success_pct: number;
-  dlq_eps: number;
-  ingest_latency_ms_p50: number;
-  ingest_latency_ms_p95: number;
-}
-
-export interface KafkaMetrics {
-  ok: boolean;
-  brokers: string[];
-  topics: Record<string, TopicMetrics>;
-  consumer_groups: ConsumerGroupMetrics[];
-  bytes_in_sec: number;
-  bytes_out_sec: number;
-}
-
-export interface TopicMetrics {
-  ok: boolean;
-  partitions: number;
-}
-
-export interface ConsumerGroupMetrics {
-  group: string;
-  lag: number;
-  tps: number;
-  ok: boolean;
-}
-
-export interface RedisMetrics {
-  ok: boolean;
-  role: string;
-  connected_clients: number;
-  ops_per_sec: number;
-  used_memory_mb: number;
-  maxmemory_mb: number;
-  hit_ratio_pct: number;
-  evictions_per_min: number;
-}
-
-export interface ClickHouseMetrics {
-  ok: boolean;
-  version: string;
-  inserts_per_sec: number;
-  queries_per_sec: number;
-  last_event_ts: string | null;
-  ingest_delay_ms: number;
-  parts: number;
-  merges_in_progress: number;
-  replication_lag_s: number;
-}
-
-export interface ServiceMetrics {
-  ingestors: ServiceInfo[];
-  parsers: ServiceInfo[];
-  detectors: ServiceInfo[];
-  sinks: ServiceInfo[];
-}
-
-export interface ServiceInfo {
+export type KafkaTopicStat = {
   name: string;
-  ok: boolean;
-  rps?: number;
-  parse_eps?: number;
-  error_eps?: number;
-  alerts_per_min?: number;
-  rules_loaded?: number;
-  batch_ms?: number;
-  ok_batches_pct?: number;
-}
+  partitions: number;
+  lag_total: number;
+  bytes_in_per_sec: number;
+  bytes_out_per_sec: number;
+};
 
-export interface UiMetrics {
-  sse_clients: number;
-  ws_clients: number;
-}
+export type KafkaGroupStat = {
+  group: string;
+  state: string;
+  lag_total: number;
+  members: number;
+};
 
-// Diagnostic types
-export interface DiagnoseRequest {
+export type HealthSummary = {
+  overall: HealthStatus;
+  ts: string; // ISO time from backend
+  pipeline: {
+    eps_raw: number;
+    eps_parsed: number;
+    parse_success_pct: number;
+    dlq_eps: number;
+    ingest_latency_ms_p50: number;
+    ingest_latency_ms_p95: number;
+  };
+  kafka: {
+    ok: boolean;
+    brokers: string[];
+    topics: Record<string, KafkaTopicStat>;
+    consumer_groups: KafkaGroupStat[];
+  };
+  redis: {
+    ok: boolean;
+    role: "master" | "replica" | "unknown";
+    connected_clients: number;
+    ops_per_sec: number;
+    used_memory_mb: number;
+    maxmemory_mb?: number;
+    hit_ratio_pct?: number;
+    evictions_per_min?: number;
+  };
+  clickhouse: {
+    ok: boolean;
+    version: string;
+    inserts_per_sec: number;
+    queries_per_sec: number;
+    last_event_ts?: string;
+    ingest_delay_ms?: number;
+    parts?: number;
+    merges_in_progress?: number;
+    replication_lag_s?: number;
+  };
+  services: {
+    ingestors: { name: string; ok: boolean; eps?: number }[];
+    parsers: { name: string; ok: boolean; eps?: number; error_rate_pct?: number }[];
+    detectors: { name: string; ok: boolean; alerts_per_min?: number }[];
+    sinks: { name: string; ok: boolean }[];
+  };
+  ui?: { sse_clients?: number; ws_clients?: number };
+};
+
+export type HealthDelta = Partial<HealthSummary> & { ts?: string };
+
+export type DiagnoseRequest = {
+  component: "clickhouse" | "redis" | "kafka" | "pipeline";
+  details?: Record<string, any>;
+};
+
+export type DiagnoseResponse = {
   component: string;
-}
-
-export interface DiagnoseResponse {
-  component: string;
-  status: string;
-  details: any;
-  issues: HealthIssue[];
+  status: HealthStatus;
+  issues: string[];
   recommendations: string[];
-}
+  execution_id?: string;
+};
 
-export interface HealthIssue {
-  severity: string;
-  description: string;
-  playbook?: string;
-  auto_fixable: boolean;
-}
+export type AutoFixRequest = {
+  error_id?: string;
+  fix_kind?: string;
+  dry_run?: boolean;
+  details?: Record<string, any>;
+};
 
-// Auto-fix types
-export interface AutoFixRequest {
-  kind: string;
-  params: any;
-  confirm?: boolean;
-}
-
-export interface AutoFixResponse {
-  success: boolean;
-  message: string;
-  actions_taken: string[];
+export type AutoFixResponse = {
+  execution_id: string;
+  status: "queued" | "running" | "completed" | "failed";
+  actions: string[];
   dry_run: boolean;
-}
-
-// SSE delta updates
-export interface HealthDelta {
-  ts: string;
-  pipeline?: PipelineMetrics;
-  kafka?: KafkaMetrics;
-  redis?: RedisMetrics;
-  clickhouse?: ClickHouseMetrics;
-  services?: ServiceMetrics;
-  errors?: number;
-  overall?: OverallStatus;
-}
+  estimated_duration_ms?: number;
+  risk_level: "low" | "medium" | "high";
+};

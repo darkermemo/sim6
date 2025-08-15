@@ -34,6 +34,7 @@ pub mod types {
     pub mod health;
 }
 pub mod collectors;
+pub mod health;
 pub mod router;
 pub mod workers {
     pub mod kafka_consumer;

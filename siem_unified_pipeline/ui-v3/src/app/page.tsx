@@ -48,6 +48,10 @@ export default function Home() {
 
   return (
     <div className="p-6 space-y-6">
+      {/* Watermark */}
+      <div className="fixed bottom-3 right-4 z-50 pointer-events-none select-none opacity-40 text-xs font-semibold bg-muted text-muted-foreground px-2 py-1 rounded">
+        UI-V3 View (Home)
+      </div>
       {/* Welcome Header */}
       <div className="space-y-2">
         <h1 className="text-3xl font-bold tracking-tight">Welcome to SIEM v3</h1>

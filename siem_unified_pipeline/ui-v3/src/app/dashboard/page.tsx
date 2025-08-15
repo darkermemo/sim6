@@ -246,6 +246,10 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-full bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
+      {/* Watermark */}
+      <div className="fixed bottom-3 right-4 z-50 pointer-events-none select-none opacity-40 text-xs font-semibold bg-muted text-muted-foreground px-2 py-1 rounded">
+        UI-V3 View (Dashboard)
+      </div>
       <div className="p-6 space-y-6">
         {/* Header with Refresh */}
         <div className="flex items-center justify-between">

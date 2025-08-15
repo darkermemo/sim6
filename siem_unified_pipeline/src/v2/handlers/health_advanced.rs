@@ -14,29 +14,44 @@ use crate::v2::{
     state::AppState,
     types::health::*,
     collectors::HealthCollector,
+    health::{HealthManager, autofix_engine::AutoFixExecution},
 };
+use crate::v2::dal::ClickHouseRepo;
 
-// Shared health collector instance
+// Shared health collector and manager instances
 lazy_static::lazy_static! {
-    static ref HEALTH_COLLECTOR: HealthCollector = HealthCollector::new();
+    static ref HEALTH_COLLECTOR: HealthCollector = HealthCollector::new_with_events_table(
+        std::env::var("EVENTS_TABLE").unwrap_or_else(|_| "dev.events".to_string())
+    );
+    static ref HEALTH_MANAGER: HealthManager = HealthManager::default();
     static ref SSE_CLIENT_COUNT: Arc<RwLock<u32>> = Arc::new(RwLock::new(0));
 }
 
-/// GET /api/v2/health/summary - Comprehensive health snapshot
+/// GET /api/v2/health/summary - Comprehensive health snapshot (plain shape)
+/// Always returns 200 with best-effort data to keep UI alive.
 pub async fn health_summary(
     State(_state): State<Arc<AppState>>,
-) -> Result<Json<HealthSummary>, (StatusCode, Json<serde_json::Value>)> {
+) -> Result<Json<HealthSummaryWithErrors>, (StatusCode, Json<serde_json::Value>)> {
     match HEALTH_COLLECTOR.collect_summary().await {
-        Ok(summary) => Ok(Json(summary)),
+        Ok(summary) => {
+            let processing_result = HEALTH_MANAGER.process_health_update(&summary).await;
+            let response = HealthSummaryWithErrors {
+                health: summary,
+                active_errors: processing_result.new_errors,
+                total_active_errors: processing_result.total_active_errors,
+                auto_fixes_triggered: processing_result.auto_fixes_triggered.len() as u32,
+            };
+            Ok(Json(response))
+        },
         Err(e) => {
             tracing::error!("Failed to collect health summary: {}", e);
-            Err((
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({
-                    "error": "Failed to collect health metrics",
-                    "details": e.to_string()
-                }))
-            ))
+            // Fallback to a default healthy state if collectors fail
+            Ok(Json(HealthSummaryWithErrors {
+                health: HealthSummary::default(),
+                active_errors: vec![],
+                total_active_errors: 0,
+                auto_fixes_triggered: 0,
+            }))
         }
     }
 }
@@ -71,6 +86,38 @@ pub async fn health_stream(
     });
 
     Sse::new(stream).keep_alive(KeepAlive::default())
+}
+
+/// GET /api/v2/health/errors - List active health errors
+pub async fn health_errors(
+    State(_state): State<Arc<AppState>>,
+) -> Result<Json<Vec<DetectedError>>, (StatusCode, Json<serde_json::Value>)> {
+    let active_errors = HEALTH_MANAGER.get_active_errors().await;
+    Ok(Json(active_errors))
+}
+
+/// GET /api/v2/health/executions - List auto-fix executions  
+pub async fn health_executions(
+    State(_state): State<Arc<AppState>>,
+) -> Result<Json<Vec<AutoFixExecution>>, (StatusCode, Json<serde_json::Value>)> {
+    let executions = HEALTH_MANAGER.list_auto_fix_executions().await;
+    Ok(Json(executions))
+}
+
+/// GET /api/v2/health/executions/:id - Get specific auto-fix execution
+pub async fn health_execution_by_id(
+    State(_state): State<Arc<AppState>>,
+    axum::extract::Path(execution_id): axum::extract::Path<String>,
+) -> Result<Json<AutoFixExecution>, (StatusCode, Json<serde_json::Value>)> {
+    match HEALTH_MANAGER.get_auto_fix_execution(&execution_id).await {
+        Some(execution) => Ok(Json(execution)),
+        None => Err((
+            StatusCode::NOT_FOUND,
+            Json(json!({
+                "error": "Execution not found"
+            }))
+        ))
+    }
 }
 
 /// POST /api/v2/health/diagnose - Deep diagnostic check for specific components
@@ -118,6 +165,35 @@ pub async fn health_autofix(
         dry_run
     );
 
+    // Check if this is an error-based auto-fix
+    if let Some(error_id) = request.params.get("error_id").and_then(|v| v.as_str()) {
+        match HEALTH_MANAGER.execute_auto_fix(error_id, dry_run).await {
+            Ok(execution) => {
+                let response = AutoFixResponse {
+                    success: execution.result.as_ref().map(|r| r.success).unwrap_or(false),
+                    message: execution.result.as_ref()
+                        .map(|r| r.message.clone())
+                        .unwrap_or_else(|| "Auto-fix execution started".to_string()),
+                    actions_taken: execution.result.as_ref()
+                        .map(|r| r.actions_taken.clone())
+                        .unwrap_or_else(Vec::new),
+                    dry_run,
+                };
+                return Ok(Json(response));
+            },
+            Err(e) => {
+                return Err((
+                    StatusCode::BAD_REQUEST,
+                    Json(json!({
+                        "error": "Auto-fix execution failed",
+                        "details": e
+                    }))
+                ));
+            }
+        }
+    }
+
+    // Fallback to legacy auto-fix actions
     let (success, message, actions) = match request.kind.as_str() {
         "kafka_create_topic" => autofix_kafka_topic(&request.params, dry_run).await,
         "redis_tune" => autofix_redis_tune(&request.params, dry_run).await,

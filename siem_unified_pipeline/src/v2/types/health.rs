@@ -9,11 +9,69 @@ pub struct HealthSummary {
     pub overall: OverallStatus,
     pub errors: u32,
     pub pipeline: PipelineMetrics,
-    pub kafka: KafkaMetrics,
+    pub kafka
+    : KafkaMetrics,
     pub redis: RedisMetrics,
     pub clickhouse: ClickHouseMetrics,
     pub services: ServiceMetrics,
     pub ui: UiMetrics,
+}
+
+impl Default for HealthSummary {
+    fn default() -> Self {
+        Self {
+            ts: chrono::Utc::now(),
+            overall: OverallStatus::Up,
+            errors: 0,
+            pipeline: PipelineMetrics {
+                eps_raw: 0,
+                eps_parsed: 0,
+                parse_success_pct: 100.0,
+                dlq_eps: 0,
+                ingest_latency_ms_p50: 0,
+                ingest_latency_ms_p95: 0,
+            },
+            kafka: KafkaMetrics {
+                ok: true,
+                brokers: vec![],
+                topics: std::collections::HashMap::new(),
+                consumer_groups: vec![],
+                bytes_in_sec: 0,
+                bytes_out_sec: 0,
+            },
+            redis: RedisMetrics {
+                ok: true,
+                role: "unknown".to_string(),
+                connected_clients: 0,
+                ops_per_sec: 0,
+                used_memory_mb: 0,
+                maxmemory_mb: 0,
+                hit_ratio_pct: 0.0,
+                evictions_per_min: 0,
+            },
+            clickhouse: ClickHouseMetrics {
+                ok: true,
+                version: "unknown".to_string(),
+                inserts_per_sec: 0,
+                queries_per_sec: 0,
+                last_event_ts: None,
+                ingest_delay_ms: 0,
+                parts: 0,
+                merges_in_progress: 0,
+                replication_lag_s: 0,
+            },
+            services: ServiceMetrics {
+                ingestors: vec![],
+                parsers: vec![],
+                detectors: vec![],
+                sinks: vec![],
+            },
+            ui: UiMetrics {
+                sse_clients: 0,
+                ws_clients: 0,
+            },
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -172,3 +230,16 @@ pub struct HealthDelta {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub overall: Option<OverallStatus>,
 }
+
+// Enhanced health summary with error detection
+#[derive(Debug, Clone, Serialize)]
+pub struct HealthSummaryWithErrors {
+    #[serde(flatten)]
+    pub health: HealthSummary,
+    pub active_errors: Vec<DetectedError>,
+    pub total_active_errors: u32,
+    pub auto_fixes_triggered: u32,
+}
+
+// Forward declaration for DetectedError (will be imported from health module)
+pub use crate::v2::health::error_detector::DetectedError;

@@ -3,6 +3,7 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Providers } from "@/components/providers";
 import { AppShell } from "@/components/app-shell";
+import { Watermark } from "@/components/Watermark";
 
 export const metadata: Metadata = {
   title: "SIEM UI v3",
@@ -19,7 +20,10 @@ export default function RootLayout({
       <body className="min-h-screen bg-background font-sans antialiased">
         <ThemeProvider>
           <Providers>
-            <AppShell>{children}</AppShell>
+            <AppShell>
+              {children}
+              <Watermark />
+            </AppShell>
           </Providers>
         </ThemeProvider>
       </body>

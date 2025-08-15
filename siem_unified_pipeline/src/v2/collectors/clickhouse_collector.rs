@@ -5,23 +5,28 @@ use std::collections::HashMap;
 
 pub struct ClickHouseCollector {
     client: reqwest::Client,
+    events_table: String,
 }
 
 impl ClickHouseCollector {
-    pub fn new() -> Self {
+    pub fn new(events_table: String) -> Self {
         Self {
             client: reqwest::Client::new(),
+            events_table,
         }
     }
 
     pub async fn collect_metrics(&self) -> Result<ClickHouseMetrics, Box<dyn std::error::Error + Send + Sync>> {
         let base_url = std::env::var("CLICKHOUSE_URL").unwrap_or_else(|_| "http://127.0.0.1:8123".to_string());
         
+        tracing::debug!("ClickHouse collector using URL: {}, events_table: {}", base_url, self.events_table);
+        
         // Try to ping ClickHouse first
         let ping_result = self.ping_clickhouse(&base_url).await;
         let ok = ping_result.is_ok();
 
         if !ok {
+            tracing::warn!("ClickHouse ping failed: {:?}", ping_result);
             return Ok(self.default_metrics(false));
         }
 
@@ -65,16 +70,19 @@ impl ClickHouseCollector {
         let query = "SELECT version()";
         let response = self.execute_query(base_url, query).await?;
         
+        tracing::debug!("ClickHouse version response: {:?}", response);
+        
         let version = response
             .get("data")
             .and_then(|data| data.as_array())
             .and_then(|arr| arr.first())
-            .and_then(|row| row.as_array())
-            .and_then(|cols| cols.first())
+            .and_then(|row| row.as_object())
+            .and_then(|obj| obj.get("version()"))
             .and_then(|v| v.as_str())
             .unwrap_or("unknown")
             .to_string();
 
+        tracing::debug!("Extracted version: {}", version);
         Ok(version)
     }
 
@@ -98,10 +106,10 @@ impl ClickHouseCollector {
 
         if let Some(data) = response.get("data").and_then(|d| d.as_array()) {
             for row in data {
-                if let Some(row_array) = row.as_array() {
+                if let Some(row_obj) = row.as_object() {
                     if let (Some(metric), Some(value)) = (
-                        row_array.get(0).and_then(|v| v.as_str()),
-                        row_array.get(1).and_then(|v| v.as_u64())
+                        row_obj.get("metric").and_then(|v| v.as_str()),
+                        row_obj.get("v").and_then(|v| v.as_u64())
                     ) {
                         match metric {
                             "InsertedRows" | "InsertQuery" => {
@@ -121,19 +129,16 @@ impl ClickHouseCollector {
     }
 
     async fn get_last_event_time(&self, base_url: &str) -> Result<Option<DateTime<Utc>>, Box<dyn std::error::Error + Send + Sync>> {
-        let query = r#"
-            SELECT max(timestamp) as last_ts 
-            FROM events 
-            WHERE tenant_id = 'default' 
-            AND timestamp > now() - INTERVAL 1 DAY
-            FORMAT JSON
-        "#;
+        let query = format!(
+            "SELECT max(event_timestamp) as last_ts FROM {} WHERE tenant_id = 'default' AND event_timestamp > now() - INTERVAL 1 DAY",
+            self.events_table
+        );
 
-        let response = self.execute_query(base_url, query).await?;
+        let response = self.execute_query(base_url, &query).await?;
         
         if let Some(data) = response.get("data").and_then(|d| d.as_array()) {
-            if let Some(row) = data.first().and_then(|r| r.as_array()) {
-                if let Some(ts_str) = row.first().and_then(|v| v.as_str()) {
+            if let Some(row) = data.first().and_then(|r| r.as_object()) {
+                if let Some(ts_str) = row.get("last_ts").and_then(|v| v.as_str()) {
                     if let Ok(dt) = chrono::DateTime::parse_from_rfc3339(ts_str) {
                         return Ok(Some(dt.with_timezone(&Utc)));
                     }
@@ -145,20 +150,16 @@ impl ClickHouseCollector {
     }
 
     async fn calculate_ingest_delay(&self, base_url: &str) -> Result<u32, Box<dyn std::error::Error + Send + Sync>> {
-        let query = r#"
-            SELECT 
-                toUInt32((now() - max(timestamp)) * 1000) as delay_ms
-            FROM events 
-            WHERE tenant_id = 'default' 
-            AND timestamp > now() - INTERVAL 1 HOUR
-            FORMAT JSON
-        "#;
+        let query = format!(
+            "SELECT toUInt32((now() - max(event_timestamp)) * 1000) as delay_ms FROM {} WHERE tenant_id = 'default' AND event_timestamp > now() - INTERVAL 1 HOUR",
+            self.events_table
+        );
 
-        let response = self.execute_query(base_url, query).await?;
+        let response = self.execute_query(base_url, &query).await?;
         
         if let Some(data) = response.get("data").and_then(|d| d.as_array()) {
-            if let Some(row) = data.first().and_then(|r| r.as_array()) {
-                if let Some(delay) = row.first().and_then(|v| v.as_u64()) {
+            if let Some(row) = data.first().and_then(|r| r.as_object()) {
+                if let Some(delay) = row.get("delay_ms").and_then(|v| v.as_u64()) {
                     return Ok(delay as u32);
                 }
             }
@@ -180,10 +181,10 @@ impl ClickHouseCollector {
         let response = self.execute_query(base_url, query).await?;
         
         if let Some(data) = response.get("data").and_then(|d| d.as_array()) {
-            if let Some(row) = data.first().and_then(|r| r.as_array()) {
+            if let Some(row) = data.first().and_then(|r| r.as_object()) {
                 if let (Some(parts), Some(merges)) = (
-                    row.get(0).and_then(|v| v.as_u64()),
-                    row.get(1).and_then(|v| v.as_u64())
+                    row.get("total_parts").and_then(|v| v.as_u64()),
+                    row.get("merges_running").and_then(|v| v.as_u64())
                 ) {
                     return Ok((parts as u32, merges as u32));
                 }
