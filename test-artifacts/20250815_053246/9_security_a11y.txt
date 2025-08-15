@@ -1,0 +1,485 @@
+=== 9) SECURITY/A11Y PROOFS ===
+--- npm audit ---
+found 0 vulnerabilities
+--- cargo audit ---
+[0m[0m[1m[32m    Fetching[0m advisory database from `https://github.com/RustSec/advisory-db.git`
+[0m[0m[1m[32m      Loaded[0m 795 security advisories (from /Users/yasseralmohammed/.cargo/advisory-db)
+[0m[0m[1m[32m    Updating[0m crates.io index
+[0m[0m[1m[32m    Scanning[0m Cargo.lock for vulnerabilities (466 crate dependencies)
+[0m[0m[1m[31mCrate:    [0m h2
+[0m[0m[1m[31mVersion:  [0m 0.2.7
+[0m[0m[1m[31mTitle:    [0m Degradation of service in h2 servers with CONTINUATION Flood
+[0m[0m[1m[31mDate:     [0m 2024-04-03
+[0m[0m[1m[31mID:       [0m RUSTSEC-2024-0332
+[0m[0m[1m[31mURL:      [0m https://rustsec.org/advisories/RUSTSEC-2024-0332
+[0m[0m[1m[31mSolution: [0m Upgrade to ^0.3.26 OR >=0.4.4
+[0m[0m[1m[31mDependency tree:
+[0mh2 0.2.7
+└── actix-http 2.2.2
+    ├── awc 2.0.3
+    │   └── actix-web 3.3.3
+    │       ├── paperclip-core 0.4.1
+    │       │   ├── paperclip-actix 0.4.2
+    │       │   │   └── paperclip 0.6.1
+    │       │   │       └── siem_schema_validator 0.2.0
+    │       │   └── paperclip 0.6.1
+    │       └── paperclip-actix 0.4.2
+    └── actix-web 3.3.3
+
+[0m[0m[1m[31mCrate:    [0m h2
+[0m[0m[1m[31mVersion:  [0m 0.2.7
+[0m[0m[1m[31mTitle:    [0m Resource exhaustion vulnerability in h2 may lead to Denial of Service (DoS)
+[0m[0m[1m[31mDate:     [0m 2024-01-17
+[0m[0m[1m[31mID:       [0m RUSTSEC-2024-0003
+[0m[0m[1m[31mURL:      [0m https://rustsec.org/advisories/RUSTSEC-2024-0003
+[0m[0m[1m[31mSolution: [0m Upgrade to ^0.3.24 OR >=0.4.2
+
+[0m[0m[1m[31mCrate:    [0m h2
+[0m[0m[1m[31mVersion:  [0m 0.2.7
+[0m[0m[1m[31mTitle:    [0m Resource exhaustion vulnerability in h2 may lead to Denial of Service (DoS)
+[0m[0m[1m[31mDate:     [0m 2023-04-14
+[0m[0m[1m[31mID:       [0m RUSTSEC-2023-0034
+[0m[0m[1m[31mURL:      [0m https://rustsec.org/advisories/RUSTSEC-2023-0034
+[0m[0m[1m[31mSolution: [0m Upgrade to >=0.3.17
+
+[0m[0m[1m[31mCrate:    [0m idna
+[0m[0m[1m[31mVersion:  [0m 0.2.3
+[0m[0m[1m[31mTitle:    [0m `idna` accepts Punycode labels that do not produce any non-ASCII when decoded
+[0m[0m[1m[31mDate:     [0m 2024-12-09
+[0m[0m[1m[31mID:       [0m RUSTSEC-2024-0421
+[0m[0m[1m[31mURL:      [0m https://rustsec.org/advisories/RUSTSEC-2024-0421
+[0m[0m[1m[31mSolution: [0m Upgrade to >=1.0.0
+[0m[0m[1m[31mDependency tree:
+[0midna 0.2.3
+└── trust-dns-proto 0.19.7
+    ├── trust-dns-resolver 0.19.7
+    │   └── actix-connect 2.0.0
+    │       └── actix-http 2.2.2
+    │           ├── awc 2.0.3
+    │           │   └── actix-web 3.3.3
+    │           │       ├── paperclip-core 0.4.1
+    │           │       │   ├── paperclip-actix 0.4.2
+    │           │       │   │   └── paperclip 0.6.1
+    │           │       │   │       └── siem_schema_validator 0.2.0
+    │           │       │   └── paperclip 0.6.1
+    │           │       └── paperclip-actix 0.4.2
+    │           └── actix-web 3.3.3
+    └── actix-connect 2.0.0
+
+[0m[0m[1m[31mCrate:    [0m protobuf
+[0m[0m[1m[31mVersion:  [0m 2.28.0
+[0m[0m[1m[31mTitle:    [0m Crash due to uncontrolled recursion in protobuf crate
+[0m[0m[1m[31mDate:     [0m 2024-12-12
+[0m[0m[1m[31mID:       [0m RUSTSEC-2024-0437
+[0m[0m[1m[31mURL:      [0m https://rustsec.org/advisories/RUSTSEC-2024-0437
+[0m[0m[1m[31mSolution: [0m Upgrade to >=3.7.2
+[0m[0m[1m[31mDependency tree:
+[0mprotobuf 2.28.0
+└── prometheus 0.13.4
+    └── siem_schema_validator 0.2.0
+
+[0m[0m[1m[31mCrate:    [0m serde_yaml
+[0m[0m[1m[31mVersion:  [0m 0.7.5
+[0m[0m[1m[31mTitle:    [0m Uncontrolled recursion leads to abort in deserialization
+[0m[0m[1m[31mDate:     [0m 2018-09-17
+[0m[0m[1m[31mID:       [0m RUSTSEC-2018-0005
+[0m[0m[1m[31mURL:      [0m https://rustsec.org/advisories/RUSTSEC-2018-0005
+[0m[0m[1m[31mSolution: [0m Upgrade to >=0.8.4
+[0m[0m[1m[31mDependency tree:
+[0mserde_yaml 0.7.5
+└── openapi 0.1.5
+    └── siem_schema_validator 0.2.0
+
+[0m[0m[1m[31mCrate:    [0m slab
+[0m[0m[1m[31mVersion:  [0m 0.4.10
+[0m[0m[1m[31mTitle:    [0m Out-of-bounds access in `get_disjoint_mut` due to incorrect bounds check
+[0m[0m[1m[31mDate:     [0m 2025-08-12
+[0m[0m[1m[31mID:       [0m RUSTSEC-2025-0047
+[0m[0m[1m[31mURL:      [0m https://rustsec.org/advisories/RUSTSEC-2025-0047
+[0m[0m[1m[31mSolution: [0m Upgrade to >=0.4.11
+[0m[0m[1m[31mDependency tree:
+[0mslab 0.4.10
+├── tokio 1.47.0
+│   ├── tower-http 0.5.2
+│   │   └── siem_schema_validator 0.2.0
+│   ├── tower 0.5.2
+│   │   └── axum 0.7.9
+│   │       └── siem_schema_validator 0.2.0
+│   ├── tokio-util 0.7.15
+│   │   ├── tower-http 0.5.2
+│   │   ├── h2 0.4.11
+│   │   │   └── hyper 1.6.0
+│   │   │       ├── hyper-util 0.1.16
+│   │   │       │   └── axum 0.7.9
+│   │   │       └── axum 0.7.9
+│   │   └── h2 0.3.27
+│   │       ├── reqwest 0.11.27
+│   │       │   └── siem_schema_validator 0.2.0
+│   │       └── hyper 0.14.32
+│   │           ├── reqwest 0.11.27
+│   │           ├── hyper-tls 0.5.0
+│   │           │   ├── reqwest 0.11.27
+│   │           │   └── clickhouse 0.11.6
+│   │           │       └── siem_schema_validator 0.2.0
+│   │           └── clickhouse 0.11.6
+│   ├── tokio-test 0.4.4
+│   │   └── siem_schema_validator 0.2.0
+│   ├── tokio-stream 0.1.17
+│   │   └── tokio-test 0.4.4
+│   ├── tokio-native-tls 0.3.1
+│   │   ├── reqwest 0.11.27
+│   │   └── hyper-tls 0.5.0
+│   ├── siem_schema_validator 0.2.0
+│   ├── reqwest 0.11.27
+│   ├── hyper-util 0.1.16
+│   ├── hyper-tls 0.5.0
+│   ├── hyper 1.6.0
+│   ├── hyper 0.14.32
+│   ├── h2 0.4.11
+│   ├── h2 0.3.27
+│   ├── clickhouse 0.11.6
+│   ├── axum 0.7.9
+│   └── async-compression 0.4.27
+│       └── tower-http 0.5.2
+├── tokio 0.2.25
+│   ├── trust-dns-resolver 0.19.7
+│   │   └── actix-connect 2.0.0
+│   │       └── actix-http 2.2.2
+│   │           ├── awc 2.0.3
+│   │           │   └── actix-web 3.3.3
+│   │           │       ├── paperclip-core 0.4.1
+│   │           │       │   ├── paperclip-actix 0.4.2
+│   │           │       │   │   └── paperclip 0.6.1
+│   │           │       │   │       └── siem_schema_validator 0.2.0
+│   │           │       │   └── paperclip 0.6.1
+│   │           │       └── paperclip-actix 0.4.2
+│   │           └── actix-web 3.3.3
+│   ├── trust-dns-proto 0.19.7
+│   │   ├── trust-dns-resolver 0.19.7
+│   │   └── actix-connect 2.0.0
+│   ├── tokio-util 0.3.1
+│   │   ├── h2 0.2.7
+│   │   │   └── actix-http 2.2.2
+│   │   └── actix-codec 0.3.0
+│   │       ├── awc 2.0.3
+│   │       ├── actix-web 3.3.3
+│   │       ├── actix-utils 2.0.0
+│   │       │   ├── actix-web 3.3.3
+│   │       │   ├── actix-tls 2.0.0
+│   │       │   │   └── actix-web 3.3.3
+│   │       │   ├── actix-server 1.0.4
+│   │       │   │   ├── actix-web 3.3.3
+│   │       │   │   └── actix-testing 1.0.1
+│   │       │   │       └── actix-web 3.3.3
+│   │       │   ├── actix-http 2.2.2
+│   │       │   └── actix-connect 2.0.0
+│   │       ├── actix-tls 2.0.0
+│   │       ├── actix-server 1.0.4
+│   │       ├── actix-http 2.2.2
+│   │       └── actix-connect 2.0.0
+│   ├── h2 0.2.7
+│   ├── actix-rt 1.1.1
+│   │   ├── awc 2.0.3
+│   │   ├── actix-web 3.3.3
+│   │   ├── actix-utils 2.0.0
+│   │   ├── actix-testing 1.0.1
+│   │   ├── actix-server 1.0.4
+│   │   ├── actix-http 2.2.2
+│   │   └── actix-connect 2.0.0
+│   └── actix-codec 0.3.0
+├── mio 0.6.23
+│   ├── tokio 0.2.25
+│   ├── mio-uds 0.6.8
+│   │   ├── tokio 0.2.25
+│   │   └── actix-server 1.0.4
+│   └── actix-server 1.0.4
+├── h2 0.4.11
+├── h2 0.3.27
+├── h2 0.2.7
+├── futures-util 0.3.31
+│   ├── tower 0.5.2
+│   ├── reqwest 0.11.27
+│   ├── hyper 1.6.0
+│   ├── hyper 0.14.32
+│   ├── h2 0.3.27
+│   ├── h2 0.2.7
+│   ├── futures-executor 0.3.31
+│   │   └── futures 0.3.31
+│   │       ├── trust-dns-resolver 0.19.7
+│   │       ├── trust-dns-proto 0.19.7
+│   │       ├── paperclip-actix 0.4.2
+│   │       └── clickhouse 0.11.6
+│   ├── futures 0.3.31
+│   ├── axum-core 0.4.5
+│   │   └── axum 0.7.9
+│   ├── axum 0.7.9
+│   ├── actix-web 3.3.3
+│   ├── actix-utils 2.0.0
+│   ├── actix-tls 2.0.0
+│   ├── actix-service 1.0.6
+│   │   ├── paperclip-actix 0.4.2
+│   │   ├── awc 2.0.3
+│   │   ├── actix-web 3.3.3
+│   │   ├── actix-utils 2.0.0
+│   │   ├── actix-tls 2.0.0
+│   │   ├── actix-testing 1.0.1
+│   │   ├── actix-server 1.0.4
+│   │   ├── actix-http 2.2.2
+│   │   └── actix-connect 2.0.0
+│   ├── actix-server 1.0.4
+│   ├── actix-rt 1.1.1
+│   ├── actix-http 2.2.2
+│   └── actix-connect 2.0.0
+├── actix-utils 2.0.0
+├── actix-server 1.0.4
+└── actix-http 2.2.2
+
+[0m[0m[1m[31mCrate:    [0m tokio
+[0m[0m[1m[31mVersion:  [0m 0.2.25
+[0m[0m[1m[31mTitle:    [0m Data race when sending and receiving after closing a `oneshot` channel
+[0m[0m[1m[31mDate:     [0m 2021-11-16
+[0m[0m[1m[31mID:       [0m RUSTSEC-2021-0124
+[0m[0m[1m[31mURL:      [0m https://rustsec.org/advisories/RUSTSEC-2021-0124
+[0m[0m[1m[31mSolution: [0m Upgrade to >=1.8.4, <1.9.0 OR >=1.13.1
+[0m[0m[1m[31mDependency tree:
+[0mtokio 0.2.25
+├── trust-dns-resolver 0.19.7
+│   └── actix-connect 2.0.0
+│       └── actix-http 2.2.2
+│           ├── awc 2.0.3
+│           │   └── actix-web 3.3.3
+│           │       ├── paperclip-core 0.4.1
+│           │       │   ├── paperclip-actix 0.4.2
+│           │       │   │   └── paperclip 0.6.1
+│           │       │   │       └── siem_schema_validator 0.2.0
+│           │       │   └── paperclip 0.6.1
+│           │       └── paperclip-actix 0.4.2
+│           └── actix-web 3.3.3
+├── trust-dns-proto 0.19.7
+│   ├── trust-dns-resolver 0.19.7
+│   └── actix-connect 2.0.0
+├── tokio-util 0.3.1
+│   ├── h2 0.2.7
+│   │   └── actix-http 2.2.2
+│   └── actix-codec 0.3.0
+│       ├── awc 2.0.3
+│       ├── actix-web 3.3.3
+│       ├── actix-utils 2.0.0
+│       │   ├── actix-web 3.3.3
+│       │   ├── actix-tls 2.0.0
+│       │   │   └── actix-web 3.3.3
+│       │   ├── actix-server 1.0.4
+│       │   │   ├── actix-web 3.3.3
+│       │   │   └── actix-testing 1.0.1
+│       │   │       └── actix-web 3.3.3
+│       │   ├── actix-http 2.2.2
+│       │   └── actix-connect 2.0.0
+│       ├── actix-tls 2.0.0
+│       ├── actix-server 1.0.4
+│       ├── actix-http 2.2.2
+│       └── actix-connect 2.0.0
+├── h2 0.2.7
+├── actix-rt 1.1.1
+│   ├── awc 2.0.3
+│   ├── actix-web 3.3.3
+│   ├── actix-utils 2.0.0
+│   ├── actix-testing 1.0.1
+│   ├── actix-server 1.0.4
+│   ├── actix-http 2.2.2
+│   └── actix-connect 2.0.0
+└── actix-codec 0.3.0
+
+[0m[0m[1m[33mCrate:    [0m instant
+[0m[0m[1m[33mVersion:  [0m 0.1.13
+[0m[0m[1m[33mWarning:  [0m unmaintained
+[0m[0m[1m[33mTitle:    [0m `instant` is unmaintained
+[0m[0m[1m[33mDate:     [0m 2024-09-01
+[0m[0m[1m[33mID:       [0m RUSTSEC-2024-0384
+[0m[0m[1m[33mURL:      [0m https://rustsec.org/advisories/RUSTSEC-2024-0384
+[0m[0m[1m[33mDependency tree:
+[0minstant 0.1.13
+├── parking_lot_core 0.8.6
+│   └── parking_lot 0.11.2
+│       ├── paperclip-core 0.4.1
+│       │   ├── paperclip-actix 0.4.2
+│       │   │   └── paperclip 0.6.1
+│       │   │       └── siem_schema_validator 0.2.0
+│       │   └── paperclip 0.6.1
+│       ├── paperclip-actix 0.4.2
+│       ├── paperclip 0.6.1
+│       └── actix-threadpool 0.3.3
+│           ├── actix-web 3.3.3
+│           │   ├── paperclip-core 0.4.1
+│           │   └── paperclip-actix 0.4.2
+│           ├── actix-rt 1.1.1
+│           │   ├── awc 2.0.3
+│           │   │   └── actix-web 3.3.3
+│           │   ├── actix-web 3.3.3
+│           │   ├── actix-utils 2.0.0
+│           │   │   ├── actix-web 3.3.3
+│           │   │   ├── actix-tls 2.0.0
+│           │   │   │   └── actix-web 3.3.3
+│           │   │   ├── actix-server 1.0.4
+│           │   │   │   ├── actix-web 3.3.3
+│           │   │   │   └── actix-testing 1.0.1
+│           │   │   │       └── actix-web 3.3.3
+│           │   │   ├── actix-http 2.2.2
+│           │   │   │   ├── awc 2.0.3
+│           │   │   │   └── actix-web 3.3.3
+│           │   │   └── actix-connect 2.0.0
+│           │   │       └── actix-http 2.2.2
+│           │   ├── actix-testing 1.0.1
+│           │   ├── actix-server 1.0.4
+│           │   ├── actix-http 2.2.2
+│           │   └── actix-connect 2.0.0
+│           └── actix-http 2.2.2
+└── parking_lot 0.11.2
+
+[0m[0m[1m[33mCrate:    [0m net2
+[0m[0m[1m[33mVersion:  [0m 0.2.39
+[0m[0m[1m[33mWarning:  [0m unmaintained
+[0m[0m[1m[33mTitle:    [0m `net2` crate has been deprecated; use `socket2` instead
+[0m[0m[1m[33mDate:     [0m 2020-05-01
+[0m[0m[1m[33mID:       [0m RUSTSEC-2020-0016
+[0m[0m[1m[33mURL:      [0m https://rustsec.org/advisories/RUSTSEC-2020-0016
+[0m[0m[1m[33mDependency tree:
+[0mnet2 0.2.39
+├── miow 0.2.2
+│   └── mio 0.6.23
+│       ├── tokio 0.2.25
+│       │   ├── trust-dns-resolver 0.19.7
+│       │   │   └── actix-connect 2.0.0
+│       │   │       └── actix-http 2.2.2
+│       │   │           ├── awc 2.0.3
+│       │   │           │   └── actix-web 3.3.3
+│       │   │           │       ├── paperclip-core 0.4.1
+│       │   │           │       │   ├── paperclip-actix 0.4.2
+│       │   │           │       │   │   └── paperclip 0.6.1
+│       │   │           │       │   │       └── siem_schema_validator 0.2.0
+│       │   │           │       │   └── paperclip 0.6.1
+│       │   │           │       └── paperclip-actix 0.4.2
+│       │   │           └── actix-web 3.3.3
+│       │   ├── trust-dns-proto 0.19.7
+│       │   │   ├── trust-dns-resolver 0.19.7
+│       │   │   └── actix-connect 2.0.0
+│       │   ├── tokio-util 0.3.1
+│       │   │   ├── h2 0.2.7
+│       │   │   │   └── actix-http 2.2.2
+│       │   │   └── actix-codec 0.3.0
+│       │   │       ├── awc 2.0.3
+│       │   │       ├── actix-web 3.3.3
+│       │   │       ├── actix-utils 2.0.0
+│       │   │       │   ├── actix-web 3.3.3
+│       │   │       │   ├── actix-tls 2.0.0
+│       │   │       │   │   └── actix-web 3.3.3
+│       │   │       │   ├── actix-server 1.0.4
+│       │   │       │   │   ├── actix-web 3.3.3
+│       │   │       │   │   └── actix-testing 1.0.1
+│       │   │       │   │       └── actix-web 3.3.3
+│       │   │       │   ├── actix-http 2.2.2
+│       │   │       │   └── actix-connect 2.0.0
+│       │   │       ├── actix-tls 2.0.0
+│       │   │       ├── actix-server 1.0.4
+│       │   │       ├── actix-http 2.2.2
+│       │   │       └── actix-connect 2.0.0
+│       │   ├── h2 0.2.7
+│       │   ├── actix-rt 1.1.1
+│       │   │   ├── awc 2.0.3
+│       │   │   ├── actix-web 3.3.3
+│       │   │   ├── actix-utils 2.0.0
+│       │   │   ├── actix-testing 1.0.1
+│       │   │   ├── actix-server 1.0.4
+│       │   │   ├── actix-http 2.2.2
+│       │   │   └── actix-connect 2.0.0
+│       │   └── actix-codec 0.3.0
+│       ├── mio-uds 0.6.8
+│       │   ├── tokio 0.2.25
+│       │   └── actix-server 1.0.4
+│       └── actix-server 1.0.4
+└── mio 0.6.23
+
+[0m[0m[1m[33mCrate:    [0m proc-macro-error
+[0m[0m[1m[33mVersion:  [0m 1.0.4
+[0m[0m[1m[33mWarning:  [0m unmaintained
+[0m[0m[1m[33mTitle:    [0m proc-macro-error is unmaintained
+[0m[0m[1m[33mDate:     [0m 2024-09-01
+[0m[0m[1m[33mID:       [0m RUSTSEC-2024-0370
+[0m[0m[1m[33mURL:      [0m https://rustsec.org/advisories/RUSTSEC-2024-0370
+[0m[0m[1m[33mDependency tree:
+[0mproc-macro-error 1.0.4
+└── paperclip-macros 0.5.1
+    ├── paperclip-core 0.4.1
+    │   ├── paperclip-actix 0.4.2
+    │   │   └── paperclip 0.6.1
+    │   │       └── siem_schema_validator 0.2.0
+    │   └── paperclip 0.6.1
+    ├── paperclip-actix 0.4.2
+    └── paperclip 0.6.1
+
+[0m[0m[1m[33mCrate:    [0m stdweb
+[0m[0m[1m[33mVersion:  [0m 0.4.20
+[0m[0m[1m[33mWarning:  [0m unmaintained
+[0m[0m[1m[33mTitle:    [0m stdweb is unmaintained
+[0m[0m[1m[33mDate:     [0m 2020-05-04
+[0m[0m[1m[33mID:       [0m RUSTSEC-2020-0056
+[0m[0m[1m[33mURL:      [0m https://rustsec.org/advisories/RUSTSEC-2020-0056
+[0m[0m[1m[33mDependency tree:
+[0mstdweb 0.4.20
+└── time 0.2.27
+    ├── cookie 0.14.4
+    │   └── actix-http 2.2.2
+    │       ├── awc 2.0.3
+    │       │   └── actix-web 3.3.3
+    │       │       ├── paperclip-core 0.4.1
+    │       │       │   ├── paperclip-actix 0.4.2
+    │       │       │   │   └── paperclip 0.6.1
+    │       │       │   │       └── siem_schema_validator 0.2.0
+    │       │       │   └── paperclip 0.6.1
+    │       │       └── paperclip-actix 0.4.2
+    │       └── actix-web 3.3.3
+    ├── actix-web 3.3.3
+    └── actix-http 2.2.2
+
+[0m[0m[1m[33mCrate:    [0m yaml-rust
+[0m[0m[1m[33mVersion:  [0m 0.4.5
+[0m[0m[1m[33mWarning:  [0m unmaintained
+[0m[0m[1m[33mTitle:    [0m yaml-rust is unmaintained.
+[0m[0m[1m[33mDate:     [0m 2024-03-20
+[0m[0m[1m[33mID:       [0m RUSTSEC-2024-0320
+[0m[0m[1m[33mURL:      [0m https://rustsec.org/advisories/RUSTSEC-2024-0320
+[0m[0m[1m[33mDependency tree:
+[0myaml-rust 0.4.5
+├── serde_yaml 0.8.26
+│   ├── paperclip-core 0.4.1
+│   │   ├── paperclip-actix 0.4.2
+│   │   │   └── paperclip 0.6.1
+│   │   │       └── siem_schema_validator 0.2.0
+│   │   └── paperclip 0.6.1
+│   └── paperclip 0.6.1
+└── serde_yaml 0.7.5
+    └── openapi 0.1.5
+        └── siem_schema_validator 0.2.0
+
+[0m[0m[1m[33mCrate:    [0m tokio
+[0m[0m[1m[33mVersion:  [0m 0.2.25
+[0m[0m[1m[33mWarning:  [0m unsound
+[0m[0m[1m[33mTitle:    [0m Broadcast channel calls clone in parallel, but does not require `Sync`
+[0m[0m[1m[33mDate:     [0m 2025-04-07
+[0m[0m[1m[33mID:       [0m RUSTSEC-2025-0023
+[0m[0m[1m[33mURL:      [0m https://rustsec.org/advisories/RUSTSEC-2025-0023
+
+[0m[0m[1m[33mCrate:    [0m tokio
+[0m[0m[1m[33mVersion:  [0m 0.2.25
+[0m[0m[1m[33mWarning:  [0m unsound
+[0m[0m[1m[33mTitle:    [0m `tokio::io::ReadHalf<T>::unsplit` is Unsound
+[0m[0m[1m[33mDate:     [0m 2023-01-11
+[0m[0m[1m[33mID:       [0m RUSTSEC-2023-0005
+[0m[0m[1m[33mURL:      [0m https://rustsec.org/advisories/RUSTSEC-2023-0005
+
+[0m[0m[1m[33mCrate:    [0m slab
+[0m[0m[1m[33mVersion:  [0m 0.4.10
+[0m[0m[1m[33mWarning:  [0m yanked
+
+[0m[0m[1m[31merror:[0m 8 vulnerabilities found!
+[0m[0m[1m[33mwarning:[0m 8 allowed warnings found
+Security audit completed: npm clean, cargo has 8 vulnerabilities in dependencies
