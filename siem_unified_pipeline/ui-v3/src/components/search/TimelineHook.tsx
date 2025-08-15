@@ -103,7 +103,7 @@ export function TimelineHook({
           <div className="space-y-2">
             {/* Timeline bars */}
             <div className="flex items-end gap-1 h-20 bg-slate-50 dark:bg-slate-800 rounded p-2">
-              {data.map((item, index) => {
+              {data.map((item: any, index: number) => {
                 const height = stats.max > 0 ? (item.count / stats.max) * 100 : 0;
                 
                 return (

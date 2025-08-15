@@ -1,0 +1,1 @@
+Environment variables set: RUST_LOG=info, TENANT_ID=default

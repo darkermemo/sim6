@@ -114,7 +114,7 @@ export function FacetPanel({
             if (Array.isArray(buckets)) {
               facetsData.push({
                 field,
-                buckets: buckets.map(bucket => ({
+                buckets: buckets.map((bucket: any) => ({
                   key: bucket.key || bucket.value || '',
                   doc_count: bucket.count || bucket.doc_count || 0
                 }))

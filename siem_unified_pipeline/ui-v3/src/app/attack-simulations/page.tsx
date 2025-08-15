@@ -89,7 +89,7 @@ export default function AttackSimulationsPage() {
       <Card>
         <CardHeader>
           <CardTitle>Scenarios</CardTitle>
-          <CardDescription>Select subsets when "all" is disabled</CardDescription>
+          <CardDescription>Select subsets when &quot;all&quot; is disabled</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-wrap gap-2">
           {ALL_SCENARIOS.map((s) => (

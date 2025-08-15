@@ -1,0 +1,358 @@
+=== 1) INFRA HEALTH PROOFS ===
+--- ClickHouse Version Check ---
+25.7.2.54
+--- ClickHouse Table Statistics ---
+Received exception from server (version 25.7.2):
+Code: 47. DB::Exception: Received from localhost:9000. DB::Exception: Unknown expression identifier `rows` in scope SELECT database, `table`, rows, bytes, formatReadableSize(bytes) AS size_readable FROM system.tables WHERE database IN ('default', 'siem_v3') ORDER BY bytes DESC LIMIT 20. (UNKNOWN_IDENTIFIER)
+(query: SELECT database,table,rows,bytes,formatReadableSize(bytes) as size_readable FROM system.tables WHERE database IN ('default','siem_v3') ORDER BY bytes DESC LIMIT 20)
+default	idempotency_keys_old	0	0	0.00 B
+siem_v3	agg_auth_min	0	0	0.00 B
+siem_v3	agg_network_min	0	0	0.00 B
+siem_v3	events_norm	\N	\N	\N
+siem_v3	mv_agg_auth_min	\N	\N	\N
+--- ClickHouse Events Count ---
+51003	2025-08-13 00:22:20.054	2025-08-14 12:22:18.054
+--- API Health Check (Direct) ---
+{
+  "status": "ok",
+  "cidr_fn": "IPv4CIDRMatch",
+  "ingest_path": "api",
+  "redis": "ok"
+}
+--- Redis Health Check ---
+PONG
+--- Redis Info ---
+connected_clients:4
+used_memory_human:1.70M
+evicted_keys:0
+keyspace_hits:1700401
+keyspace_misses:49
+role:master
+--- Kafka Topics ---
+Topic: siem_events	TopicId: jRwV2LRESheFKFCocYI_RA	PartitionCount: 1	ReplicationFactor: 1	Configs: segment.bytes=1073741824
+	Topic: siem_events	Partition: 0	Leader: 1	Replicas: 1	Isr: 1	Elr: 	LastKnownElr: 
+Topic: siem-events	TopicId: 7CFOdzUDQKSwU0X9byCf9A	PartitionCount: 1	ReplicationFactor: 1	Configs: segment.bytes=1073741824
+	Topic: siem-events	Partition: 0	Leader: 1	Replicas: 1	Isr: 1	Elr: 	LastKnownElr: 
+Topic: ingest-events	TopicId: f6vgRS8xSo-3RyvVL7VnZw	PartitionCount: 1	ReplicationFactor: 1	Configs: segment.bytes=1073741824
+	Topic: ingest-events	Partition: 0	Leader: 1	Replicas: 1	Isr: 1	Elr: 	LastKnownElr: 
+Topic: __consumer_offsets	TopicId: uujeMpfOSciwVsX-Awkx_Q	PartitionCount: 50	ReplicationFactor: 1	Configs: compression.type=producer,cleanup.policy=compact,segment.bytes=104857600
+	Topic: __consumer_offsets	Partition: 0	Leader: 1	Replicas: 1	Isr: 1	Elr: 	LastKnownElr: 
+	Topic: __consumer_offsets	Partition: 1	Leader: 1	Replicas: 1	Isr: 1	Elr: 	LastKnownElr: 
+	Topic: __consumer_offsets	Partition: 2	Leader: 1	Replicas: 1	Isr: 1	Elr: 	LastKnownElr: 
+	Topic: __consumer_offsets	Partition: 3	Leader: 1	Replicas: 1	Isr: 1	Elr: 	LastKnownElr: 
+	Topic: __consumer_offsets	Partition: 4	Leader: 1	Replicas: 1	Isr: 1	Elr: 	LastKnownElr: 
+	Topic: __consumer_offsets	Partition: 5	Leader: 1	Replicas: 1	Isr: 1	Elr: 	LastKnownElr: 
+	Topic: __consumer_offsets	Partition: 6	Leader: 1	Replicas: 1	Isr: 1	Elr: 	LastKnownElr: 
+	Topic: __consumer_offsets	Partition: 7	Leader: 1	Replicas: 1	Isr: 1	Elr: 	LastKnownElr: 
+	Topic: __consumer_offsets	Partition: 8	Leader: 1	Replicas: 1	Isr: 1	Elr: 	LastKnownElr: 
+	Topic: __consumer_offsets	Partition: 9	Leader: 1	Replicas: 1	Isr: 1	Elr: 	LastKnownElr: 
+	Topic: __consumer_offsets	Partition: 10	Leader: 1	Replicas: 1	Isr: 1	Elr: 	LastKnownElr: 
+	Topic: __consumer_offsets	Partition: 11	Leader: 1	Replicas: 1	Isr: 1	Elr: 	LastKnownElr: 
+	Topic: __consumer_offsets	Partition: 12	Leader: 1	Replicas: 1	Isr: 1	Elr: 	LastKnownElr: 
+	Topic: __consumer_offsets	Partition: 13	Leader: 1	Replicas: 1	Isr: 1	Elr: 	LastKnownElr: 
+	Topic: __consumer_offsets	Partition: 14	Leader: 1	Replicas: 1	Isr: 1	Elr: 	LastKnownElr: 
+	Topic: __consumer_offsets	Partition: 15	Leader: 1	Replicas: 1	Isr: 1	Elr: 	LastKnownElr: 
+	Topic: __consumer_offsets	Partition: 16	Leader: 1	Replicas: 1	Isr: 1	Elr: 	LastKnownElr: 
+	Topic: __consumer_offsets	Partition: 17	Leader: 1	Replicas: 1	Isr: 1	Elr: 	LastKnownElr: 
+	Topic: __consumer_offsets	Partition: 18	Leader: 1	Replicas: 1	Isr: 1	Elr: 	LastKnownElr: 
+	Topic: __consumer_offsets	Partition: 19	Leader: 1	Replicas: 1	Isr: 1	Elr: 	LastKnownElr: 
+	Topic: __consumer_offsets	Partition: 20	Leader: 1	Replicas: 1	Isr: 1	Elr: 	LastKnownElr: 
+	Topic: __consumer_offsets	Partition: 21	Leader: 1	Replicas: 1	Isr: 1	Elr: 	LastKnownElr: 
+	Topic: __consumer_offsets	Partition: 22	Leader: 1	Replicas: 1	Isr: 1	Elr: 	LastKnownElr: 
+	Topic: __consumer_offsets	Partition: 23	Leader: 1	Replicas: 1	Isr: 1	Elr: 	LastKnownElr: 
+	Topic: __consumer_offsets	Partition: 24	Leader: 1	Replicas: 1	Isr: 1	Elr: 	LastKnownElr: 
+	Topic: __consumer_offsets	Partition: 25	Leader: 1	Replicas: 1	Isr: 1	Elr: 	LastKnownElr: 
+	Topic: __consumer_offsets	Partition: 26	Leader: 1	Replicas: 1	Isr: 1	Elr: 	LastKnownElr: 
+	Topic: __consumer_offsets	Partition: 27	Leader: 1	Replicas: 1	Isr: 1	Elr: 	LastKnownElr: 
+	Topic: __consumer_offsets	Partition: 28	Leader: 1	Replicas: 1	Isr: 1	Elr: 	LastKnownElr: 
+	Topic: __consumer_offsets	Partition: 29	Leader: 1	Replicas: 1	Isr: 1	Elr: 	LastKnownElr: 
+	Topic: __consumer_offsets	Partition: 30	Leader: 1	Replicas: 1	Isr: 1	Elr: 	LastKnownElr: 
+	Topic: __consumer_offsets	Partition: 31	Leader: 1	Replicas: 1	Isr: 1	Elr: 	LastKnownElr: 
+	Topic: __consumer_offsets	Partition: 32	Leader: 1	Replicas: 1	Isr: 1	Elr: 	LastKnownElr: 
+	Topic: __consumer_offsets	Partition: 33	Leader: 1	Replicas: 1	Isr: 1	Elr: 	LastKnownElr: 
+	Topic: __consumer_offsets	Partition: 34	Leader: 1	Replicas: 1	Isr: 1	Elr: 	LastKnownElr: 
+	Topic: __consumer_offsets	Partition: 35	Leader: 1	Replicas: 1	Isr: 1	Elr: 	LastKnownElr: 
+	Topic: __consumer_offsets	Partition: 36	Leader: 1	Replicas: 1	Isr: 1	Elr: 	LastKnownElr: 
+	Topic: __consumer_offsets	Partition: 37	Leader: 1	Replicas: 1	Isr: 1	Elr: 	LastKnownElr: 
+	Topic: __consumer_offsets	Partition: 38	Leader: 1	Replicas: 1	Isr: 1	Elr: 	LastKnownElr: 
+	Topic: __consumer_offsets	Partition: 39	Leader: 1	Replicas: 1	Isr: 1	Elr: 	LastKnownElr: 
+	Topic: __consumer_offsets	Partition: 40	Leader: 1	Replicas: 1	Isr: 1	Elr: 	LastKnownElr: 
+	Topic: __consumer_offsets	Partition: 41	Leader: 1	Replicas: 1	Isr: 1	Elr: 	LastKnownElr: 
+	Topic: __consumer_offsets	Partition: 42	Leader: 1	Replicas: 1	Isr: 1	Elr: 	LastKnownElr: 
+	Topic: __consumer_offsets	Partition: 43	Leader: 1	Replicas: 1	Isr: 1	Elr: 	LastKnownElr: 
+	Topic: __consumer_offsets	Partition: 44	Leader: 1	Replicas: 1	Isr: 1	Elr: 	LastKnownElr: 
+	Topic: __consumer_offsets	Partition: 45	Leader: 1	Replicas: 1	Isr: 1	Elr: 	LastKnownElr: 
+	Topic: __consumer_offsets	Partition: 46	Leader: 1	Replicas: 1	Isr: 1	Elr: 	LastKnownElr: 
+	Topic: __consumer_offsets	Partition: 47	Leader: 1	Replicas: 1	Isr: 1	Elr: 	LastKnownElr: 
+	Topic: __consumer_offsets	Partition: 48	Leader: 1	Replicas: 1	Isr: 1	Elr: 	LastKnownElr: 
+	Topic: __consumer_offsets	Partition: 49	Leader: 1	Replicas: 1	Isr: 1	Elr: 	LastKnownElr: 
+--- Kafka Consumer Groups ---
+
+GROUP                  TOPIC           PARTITION  CURRENT-OFFSET  LOG-END-OFFSET  LAG             CONSUMER-ID                                  HOST             CLIENT-ID
+siem_clickhouse_writer ingest-events   0          48104288        48104288        0               rdkafka-a28bd09b-9f84-4a9d-91fd-d341e56b96d3 /0:0:0:0:0:0:0:1 rdkafka
+--- UI v3 Build Check ---
+
+> ui-v3@0.1.0 build
+> next build
+
+ ⚠ Warning: Found multiple lockfiles. Selecting /Users/yasseralmohammed/sim6/package-lock.json.
+   Consider removing the lockfiles at:
+   * /Users/yasseralmohammed/sim6/siem_unified_pipeline/ui-v3/package-lock.json
+
+   ▲ Next.js 15.4.6
+   - Environments: .env.local
+
+   Creating an optimized production build ...
+Failed to compile.
+
+./src/app/attack-simulations/page.tsx
+Module not found: Can't resolve '@/components/ui/label'
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+> Build failed because of webpack errors
+
+> ui-v3@0.1.0 build
+> next build
+
+ ⚠ Warning: Found multiple lockfiles. Selecting /Users/yasseralmohammed/sim6/package-lock.json.
+   Consider removing the lockfiles at:
+   * /Users/yasseralmohammed/sim6/siem_unified_pipeline/ui-v3/package-lock.json
+
+   ▲ Next.js 15.4.6
+   - Environments: .env.local
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully in 1000ms
+   Linting and checking validity of types ...
+
+Failed to compile.
+
+./src/app/alerts/page.tsx
+4:29  Warning: 'CardHeader' is defined but never used.  @typescript-eslint/no-unused-vars
+4:41  Warning: 'CardTitle' is defined but never used.  @typescript-eslint/no-unused-vars
+12:3  Warning: 'Filter' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/attack-simulations/page.tsx
+92:48  Error: `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`.  react/no-unescaped-entities
+92:52  Error: `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`.  react/no-unescaped-entities
+
+./src/app/dashboard/page.tsx
+12:3  Warning: 'Activity' is defined but never used.  @typescript-eslint/no-unused-vars
+15:3  Warning: 'TrendingUp' is defined but never used.  @typescript-eslint/no-unused-vars
+17:3  Warning: 'Clock' is defined but never used.  @typescript-eslint/no-unused-vars
+18:3  Warning: 'Users' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/health/page.tsx
+2:21  Warning: 'useMemo' is defined but never used.  @typescript-eslint/no-unused-vars
+3:28  Warning: 'openHealthStream' is defined but never used.  @typescript-eslint/no-unused-vars
+4:30  Warning: 'HealthDelta' is defined but never used.  @typescript-eslint/no-unused-vars
+10:10  Warning: 'Separator' is defined but never used.  @typescript-eslint/no-unused-vars
+428:10  Warning: 'Card' is defined but never used.  @typescript-eslint/no-unused-vars
+437:10  Warning: 'stat' is defined but never used.  @typescript-eslint/no-unused-vars
+446:10  Warning: 'mergeSummary' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/reports/page.tsx
+4:29  Warning: 'CardHeader' is defined but never used.  @typescript-eslint/no-unused-vars
+4:41  Warning: 'CardTitle' is defined but never used.  @typescript-eslint/no-unused-vars
+24:3  Warning: 'Filter' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/rules/page.tsx
+4:29  Warning: 'CardHeader' is defined but never used.  @typescript-eslint/no-unused-vars
+4:41  Warning: 'CardTitle' is defined but never used.  @typescript-eslint/no-unused-vars
+13:3  Warning: 'Filter' is defined but never used.  @typescript-eslint/no-unused-vars
+14:3  Warning: 'Settings' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/search/page.tsx
+12:10  Warning: 'normalizeSeverity' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/settings/page.tsx
+7:10  Warning: 'Badge' is defined but never used.  @typescript-eslint/no-unused-vars
+10:3  Warning: 'Settings' is defined but never used.  @typescript-eslint/no-unused-vars
+17:3  Warning: 'Globe' is defined but never used.  @typescript-eslint/no-unused-vars
+18:3  Warning: 'Clock' is defined but never used.  @typescript-eslint/no-unused-vars
+23:3  Warning: 'Info' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/components/app-shell.tsx
+8:34  Warning: 'AvatarImage' is defined but never used.  @typescript-eslint/no-unused-vars
+18:3  Warning: 'Database' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/components/health/PipelineFlow.tsx
+15:9  Warning: 'node' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+23:9  Warning: 'arrow' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+
+./src/components/search/FacetPanel.tsx
+29:11  Warning: 'FacetResponse' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/components/search/FilterBar.tsx
+3:15  Warning: 'Filter' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/components/search/FilterGroup.tsx
+3:15  Warning: 'Filter' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/components/search/ResultTable.tsx
+24:3  Warning: 'Settings' is defined but never used.  @typescript-eslint/no-unused-vars
+192:43  Warning: 'index' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/components/search/RowInspector.tsx
+8:10  Warning: 'Separator' is defined but never used.  @typescript-eslint/no-unused-vars
+14:3  Warning: 'Eye' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/components/search/TimelineHook.tsx
+52:47  Warning: 'index' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/hooks/useHealth.ts
+62:10  Warning: 'error' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/hooks/useSearchQuery.ts
+5:10  Warning: 'EventSearchQuery' is defined but never used.  @typescript-eslint/no-unused-vars
+74:13  Warning: 'baseParams' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+
+./src/hooks/useStreaming.ts
+4:10  Warning: 'EventSearchResponse' is defined but never used.  @typescript-eslint/no-unused-vars
+32:5  Warning: 'maxBufferSize' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+120:6  Warning: React Hook useCallback has a missing dependency: 'startPolling'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+232:6  Warning: React Hook useEffect has missing dependencies: 'start', 'state.isStreaming', and 'stop'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+
+./src/lib/api.ts
+192:11  Warning: 'timelineData' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+257:36  Warning: 'id' is defined but never used.  @typescript-eslint/no-unused-vars
+
+info  - Need to disable some ESLint rules? Learn more here: https://nextjs.org/docs/app/api-reference/config/eslint#disabling-rules
+
+> ui-v3@0.1.0 build
+> next build
+
+ ⚠ Warning: Found multiple lockfiles. Selecting /Users/yasseralmohammed/sim6/package-lock.json.
+   Consider removing the lockfiles at:
+   * /Users/yasseralmohammed/sim6/siem_unified_pipeline/ui-v3/package-lock.json
+
+   ▲ Next.js 15.4.6
+   - Environments: .env.local
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully in 0ms
+   Linting and checking validity of types ...
+
+./src/app/alerts/page.tsx
+4:29  Warning: 'CardHeader' is defined but never used.  @typescript-eslint/no-unused-vars
+4:41  Warning: 'CardTitle' is defined but never used.  @typescript-eslint/no-unused-vars
+12:3  Warning: 'Filter' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/dashboard/page.tsx
+12:3  Warning: 'Activity' is defined but never used.  @typescript-eslint/no-unused-vars
+15:3  Warning: 'TrendingUp' is defined but never used.  @typescript-eslint/no-unused-vars
+17:3  Warning: 'Clock' is defined but never used.  @typescript-eslint/no-unused-vars
+18:3  Warning: 'Users' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/health/page.tsx
+2:21  Warning: 'useMemo' is defined but never used.  @typescript-eslint/no-unused-vars
+3:28  Warning: 'openHealthStream' is defined but never used.  @typescript-eslint/no-unused-vars
+4:30  Warning: 'HealthDelta' is defined but never used.  @typescript-eslint/no-unused-vars
+10:10  Warning: 'Separator' is defined but never used.  @typescript-eslint/no-unused-vars
+428:10  Warning: 'Card' is defined but never used.  @typescript-eslint/no-unused-vars
+437:10  Warning: 'stat' is defined but never used.  @typescript-eslint/no-unused-vars
+446:10  Warning: 'mergeSummary' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/reports/page.tsx
+4:29  Warning: 'CardHeader' is defined but never used.  @typescript-eslint/no-unused-vars
+4:41  Warning: 'CardTitle' is defined but never used.  @typescript-eslint/no-unused-vars
+24:3  Warning: 'Filter' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/rules/page.tsx
+4:29  Warning: 'CardHeader' is defined but never used.  @typescript-eslint/no-unused-vars
+4:41  Warning: 'CardTitle' is defined but never used.  @typescript-eslint/no-unused-vars
+13:3  Warning: 'Filter' is defined but never used.  @typescript-eslint/no-unused-vars
+14:3  Warning: 'Settings' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/search/page.tsx
+12:10  Warning: 'normalizeSeverity' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/settings/page.tsx
+7:10  Warning: 'Badge' is defined but never used.  @typescript-eslint/no-unused-vars
+10:3  Warning: 'Settings' is defined but never used.  @typescript-eslint/no-unused-vars
+17:3  Warning: 'Globe' is defined but never used.  @typescript-eslint/no-unused-vars
+18:3  Warning: 'Clock' is defined but never used.  @typescript-eslint/no-unused-vars
+23:3  Warning: 'Info' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/components/app-shell.tsx
+8:34  Warning: 'AvatarImage' is defined but never used.  @typescript-eslint/no-unused-vars
+18:3  Warning: 'Database' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/components/health/PipelineFlow.tsx
+15:9  Warning: 'node' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+23:9  Warning: 'arrow' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+
+./src/components/search/FacetPanel.tsx
+29:11  Warning: 'FacetResponse' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/components/search/FilterBar.tsx
+3:15  Warning: 'Filter' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/components/search/FilterGroup.tsx
+3:15  Warning: 'Filter' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/components/search/ResultTable.tsx
+24:3  Warning: 'Settings' is defined but never used.  @typescript-eslint/no-unused-vars
+192:43  Warning: 'index' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/components/search/RowInspector.tsx
+8:10  Warning: 'Separator' is defined but never used.  @typescript-eslint/no-unused-vars
+14:3  Warning: 'Eye' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/components/search/TimelineHook.tsx
+52:47  Warning: 'index' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/hooks/useHealth.ts
+62:10  Warning: 'error' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/hooks/useSearchQuery.ts
+5:10  Warning: 'EventSearchQuery' is defined but never used.  @typescript-eslint/no-unused-vars
+74:13  Warning: 'baseParams' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+
+./src/hooks/useStreaming.ts
+4:10  Warning: 'EventSearchResponse' is defined but never used.  @typescript-eslint/no-unused-vars
+32:5  Warning: 'maxBufferSize' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+120:6  Warning: React Hook useCallback has a missing dependency: 'startPolling'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+232:6  Warning: React Hook useEffect has missing dependencies: 'start', 'state.isStreaming', and 'stop'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+
+./src/lib/api.ts
+192:11  Warning: 'timelineData' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+257:36  Warning: 'id' is defined but never used.  @typescript-eslint/no-unused-vars
+
+info  - Need to disable some ESLint rules? Learn more here: https://nextjs.org/docs/app/api-reference/config/eslint#disabling-rules
+Failed to compile.
+
+./src/components/search/FacetPanel.tsx:118:45
+Type error: Property 'value' does not exist on type '{ key: any; count: any; }'.
+
+[0m [90m 116 |[39m                 field[33m,[39m
+ [90m 117 |[39m                 buckets[33m:[39m buckets[33m.[39mmap(bucket [33m=>[39m ({
+[31m[1m>[22m[39m[90m 118 |[39m                   key[33m:[39m bucket[33m.[39mkey [33m||[39m bucket[33m.[39mvalue [33m||[39m [32m''[39m[33m,[39m
+ [90m     |[39m                                             [31m[1m^[22m[39m
+ [90m 119 |[39m                   doc_count[33m:[39m bucket[33m.[39mcount [33m||[39m bucket[33m.[39mdoc_count [33m||[39m [35m0[39m
+ [90m 120 |[39m                 }))
+ [90m 121 |[39m               })[33m;[39m[0m
+Next.js build worker exited with code: 1 and signal: null
+232:6  Warning: React Hook useEffect has missing dependencies: 'start', 'state.isStreaming', and 'stop'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+
+./src/lib/api.ts
+192:11  Warning: 'timelineData' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+257:36  Warning: 'id' is defined but never used.  @typescript-eslint/no-unused-vars
+
+info  - Need to disable some ESLint rules? Learn more here: https://nextjs.org/docs/app/api-reference/config/eslint#disabling-rules
+Failed to compile.
+
+./src/components/search/TimelineHook.tsx:106:26
+Type error: Parameter 'item' implicitly has an 'any' type.
+
+[0m [90m 104 |[39m             {[90m/* Timeline bars */[39m}
+ [90m 105 |[39m             [33m<[39m[33mdiv[39m className[33m=[39m[32m"flex items-end gap-1 h-20 bg-slate-50 dark:bg-slate-800 rounded p-2"[39m[33m>[39m
+[31m[1m>[22m[39m[90m 106 |[39m               {data[33m.[39mmap((item[33m,[39m index) [33m=>[39m {
+ [90m     |[39m                          [31m[1m^[22m[39m
+ [90m 107 |[39m                 [36mconst[39m height [33m=[39m stats[33m.[39mmax [33m>[39m [35m0[39m [33m?[39m (item[33m.[39mcount [33m/[39m stats[33m.[39mmax) [33m*[39m [35m100[39m [33m:[39m [35m0[39m[33m;[39m
+ [90m 108 |[39m                 
+ [90m 109 |[39m                 [36mreturn[39m ([0m
+Next.js build worker exited with code: 1 and signal: null
+UI v3 build has type issues, will use dev mode for testing

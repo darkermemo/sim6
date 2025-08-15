@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { HealthAPI } from '@/lib/health-api';
+import { getHealthSummary, openHealthStream, diagnoseComponent, executeAutoFix } from '@/lib/health-api';
 import type { HealthSummary, HealthDelta, DiagnoseRequest, DiagnoseResponse, AutoFixRequest, AutoFixResponse } from '@/types/health';
 
 export function useHealthSummary(refreshInterval: number = 10000) {
@@ -11,7 +11,7 @@ export function useHealthSummary(refreshInterval: number = 10000) {
   const fetchSummary = useCallback(async () => {
     try {
       setError(null);
-      const summary = await HealthAPI.getSummary();
+      const summary = await getHealthSummary();
       setData(summary);
       setLastRefresh(new Date());
     } catch (err) {
@@ -43,43 +43,36 @@ export function useHealthStream() {
   const [delta, setDelta] = useState<HealthDelta | null>(null);
   const [connected, setConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const eventSourceRef = useRef<EventSource | null>(null);
+  const cleanupRef = useRef<(() => void) | null>(null);
 
   const connect = useCallback(() => {
-    if (eventSourceRef.current) {
-      eventSourceRef.current.close();
+    if (cleanupRef.current) {
+      cleanupRef.current();
     }
 
     setError(null);
     setConnected(false);
 
     try {
-      const eventSource = HealthAPI.createStreamConnection(
+      const cleanup = openHealthStream(
         (data: HealthDelta) => {
           setDelta(data);
           setConnected(true);
-        },
-        (error: Event) => {
-          setError('SSE connection lost');
-          setConnected(false);
+          setError(null);
         }
       );
 
-      eventSource.onopen = () => {
-        setConnected(true);
-        setError(null);
-      };
-
-      eventSourceRef.current = eventSource;
+      cleanupRef.current = cleanup;
+      setConnected(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to connect to health stream');
     }
   }, []);
 
   const disconnect = useCallback(() => {
-    if (eventSourceRef.current) {
-      eventSourceRef.current.close();
-      eventSourceRef.current = null;
+    if (cleanupRef.current) {
+      cleanupRef.current();
+      cleanupRef.current = null;
     }
     setConnected(false);
     setDelta(null);
@@ -109,7 +102,7 @@ export function useHealthDiagnose() {
     setError(null);
 
     try {
-      const response = await HealthAPI.diagnose(request);
+      const response = await diagnoseComponent(request);
       return response;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Diagnostic check failed';
@@ -136,7 +129,7 @@ export function useHealthAutoFix() {
     setError(null);
 
     try {
-      const response = await HealthAPI.autoFix(request);
+      const response = await executeAutoFix(request);
       return response;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Auto-fix failed';
@@ -184,7 +177,7 @@ export function useRealtimeHealth(options: {
     // Merge delta into snapshot
     const merged: HealthSummary = {
       ...snapshot,
-      ts: delta.ts,
+      ts: delta.ts ?? snapshot.ts,
       overall: delta.overall ?? snapshot.overall,
       errors: delta.errors ?? snapshot.errors,
       pipeline: delta.pipeline ?? snapshot.pipeline,
