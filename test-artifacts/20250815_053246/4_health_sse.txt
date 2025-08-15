@@ -1,0 +1,65 @@
+=== 4) HEALTH AGGREGATOR + SSE PROOFS ===
+--- Health Summary Test ---
+{
+  "ts": "2025-08-15T02:40:15.010199Z",
+  "overall": "up",
+  "errors": 0,
+  "pipeline": {
+    "eps_raw": 0,
+    "eps_parsed": 0,
+    "parse_success_pct": 100.0,
+    "dlq_eps": 0,
+    "ingest_latency_ms_p50": 0,
+    "ingest_latency_ms_p95": 0
+  },
+  "kafka": {
+    "ok": true,
+    "brokers": [],
+    "topics": {},
+    "consumer_groups": [],
+    "bytes_in_sec": 0,
+    "bytes_out_sec": 0
+  },
+  "redis": {
+    "ok": true,
+    "role": "unknown",
+    "connected_clients": 0,
+    "ops_per_sec": 0,
+    "used_memory_mb": 0,
+    "maxmemory_mb": 0,
+    "hit_ratio_pct": 0.0,
+    "evictions_per_min": 0
+  },
+  "clickhouse": {
+    "ok": true,
+    "version": "unknown",
+    "inserts_per_sec": 0,
+    "queries_per_sec": 0,
+    "last_event_ts": null,
+    "ingest_delay_ms": 0,
+    "parts": 0,
+    "merges_in_progress": 0,
+    "replication_lag_s": 0
+  },
+  "services": {
+    "ingestors": [],
+    "parsers": [],
+    "detectors": [],
+    "sinks": []
+  },
+  "ui": {
+    "sse_clients": 0,
+    "ws_clients": 0
+  },
+  "active_errors": [],
+  "total_active_errors": 0,
+  "auto_fixes_triggered": 0
+}
+--- Health SSE Stream Test (10 seconds) ---
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0  0     0    0     0    0     0      0      0 --:--:--  0:00:01 --:--:--     0  0     0    0     0    0     0      0      0 --:--:--  0:00:01 --:--:--     0
+curl: (18) transfer closed with outstanding read data remaining
+--- Test SSE Connection (basic) ---
+curl: (18) transfer closed with outstanding read data remaining
+Health summary working, SSE might need Accept headers or not streaming

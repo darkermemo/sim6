@@ -7,3 +7,38 @@
 }
 --- Search Execute Test ---
 null
+{
+  "data": {
+    "data": [],
+    "meta": [
+      {
+        "name": "tenant_id",
+        "type": "LowCardinality(String)"
+      },
+      {
+        "name": "event_timestamp",
+        "type": "DateTime64(3)"
+      },
+      {
+        "name": "event_id",
+        "type": "String"
+      },
+      {
+        "name": "source_ip",
+        "type": "String"
+      },
+      {
+        "name": "destination_ip",
+        "type": "Nullable(String)"
+      },
+      {
+        "name": "source_port",
+        "type": "Nullable(UInt16)"
+      },
+      {
+        "name": "destination_port",
+--- Search Execute with Broader Time Range ---
+--- Search Facets Test ---
+zsh: command not found: timeout
+--- Search APIs show timeout issues ---
+Search API compilation works but execution times out

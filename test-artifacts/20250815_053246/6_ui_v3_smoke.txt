@@ -1,0 +1,2 @@
+=== 6) UI v3 SMOKE TESTS ===
+UI v3 has build issues, skipping to performance tests

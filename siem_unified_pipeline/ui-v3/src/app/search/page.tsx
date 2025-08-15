@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { QueryBar } from "@/components/search/QueryBar";
 import { FacetPanel } from "@/components/search/FacetPanel";
 import { TimelineHook } from "@/components/search/TimelineHook";
@@ -10,6 +10,11 @@ import { useSearchQuery } from "@/hooks/useSearchQuery";
 import { useStreaming } from "@/hooks/useStreaming";
 import { useUrlState } from "@/hooks/useUrlState";
 import { normalizeSeverity } from "@/lib/severity";
+import { FilterBar } from "@/components/search/FilterBar";
+import { FilterGroup } from "@/components/search/FilterGroup";
+import type { Filter } from "@/types/filters";
+import { compileFiltersToQ } from "@/lib/filters-compiler";
+import { useSchema } from "@/hooks/useSchema";
 
 export default function SearchPage() {
   // URL state management
@@ -89,6 +94,15 @@ export default function SearchPage() {
     setSelectedEvent(null);
   }, []);
 
+  // Advanced Filters (rule-grade)
+  const [rootFilter, setRootFilter] = useState<Filter>({ kind: 'group', logic: 'AND', children: [] })
+  const schema = useSchema(urlState.tenant_id)
+  const compiledQ = useMemo(() => compileFiltersToQ(rootFilter, schema.map), [rootFilter, schema.map])
+  const applyFilters = useCallback(() => {
+    const finalQ = [urlState.q?.trim(), compiledQ !== '*' ? compiledQ : ''].filter(Boolean).join(' AND ')
+    searchQuery.execute(urlState.limit, urlState.offset, finalQ as any)
+  }, [compiledQ, urlState.q, urlState.limit, urlState.offset, searchQuery])
+
 
 
 
@@ -148,6 +162,22 @@ export default function SearchPage() {
 
           {/* Right: Results */}
           <div className="flex-1 space-y-4">
+            {/* Advanced Filter Builder */}
+            <div className="bg-card rounded-lg p-4 shadow-sm">
+              <div className="flex items-center justify-between mb-3">
+                <div className="text-sm text-muted-foreground">Rule-grade filters</div>
+                <FilterBar
+                  onAddRule={() => setRootFilter({ ...(rootFilter as any), kind: 'group', children: [...(rootFilter as any).children, { kind: 'rule', field: 'event_type', op: 'eq', value: 'auth' }] })}
+                  onAddGroup={() => setRootFilter({ ...(rootFilter as any), kind: 'group', children: [...(rootFilter as any).children, { kind: 'group', logic: 'AND', children: [] }] })}
+                  onClear={() => setRootFilter({ kind: 'group', logic: 'AND', children: [] })}
+                  onApply={applyFilters}
+                />
+              </div>
+              <FilterGroup />
+              {compiledQ && compiledQ !== '*' && (
+                <div className="mt-2 text-xs text-muted-foreground">Compiled: <code>{compiledQ}</code></div>
+              )}
+            </div>
             <ResultTable
               events={searchQuery.results.events?.events || []}
               loading={searchQuery.loading}

@@ -1,0 +1,41 @@
+=== 8) PERFORMANCE & SOAK PROOFS ===
+--- API Latency Test ---
+Request 1:
+curl -sS http://127.0.0.1:9999/api/v2/health > /dev/null  0.00s user 0.00s system 47% cpu 0.017 total
+Request 2:
+curl -sS http://127.0.0.1:9999/api/v2/health > /dev/null  0.00s user 0.01s system 53% cpu 0.017 total
+Request 3:
+curl -sS http://127.0.0.1:9999/api/v2/health > /dev/null  0.00s user 0.00s system 46% cpu 0.016 total
+Request 4:
+curl -sS http://127.0.0.1:9999/api/v2/health > /dev/null  0.00s user 0.00s system 55% cpu 0.013 total
+Request 5:
+curl -sS http://127.0.0.1:9999/api/v2/health > /dev/null  0.00s user 0.00s system 53% cpu 0.012 total
+--- ClickHouse Query Performance ---
+51003
+0.005
+--- ClickHouse Query Stats ---
+Received exception from server (version 25.7.2):
+Code: 60. DB::Exception: Received from localhost:9000. DB::Exception: Unknown table expression identifier 'system.query_log' in scope SELECT quantile(0.95)(query_duration_ms), quantile(0.5)(query_duration_ms) FROM system.query_log WHERE (type = 'QueryFinish') AND (event_time > (now() - toIntervalHour(1))). (UNKNOWN_TABLE)
+(query: SELECT quantile(0.95)(query_duration_ms), quantile(0.50)(query_duration_ms) FROM system.query_log WHERE type='QueryFinish' AND event_time > now()-interval 1 hour)
+--- System Resource Usage ---
+yasseralmohammed 67779   2.8  0.6 412893440 584992   ??  S    Tue02AM 165:00.10 clickhouse server
+yasseralmohammed 32701   0.0  0.0 411195168  16576   ??  S     5:07AM   0:00.61 /Users/yasseralmohammed/sim6/siem_unified_pipeline/target/release/siem-pipeline
+yasseralmohammed 50964   0.0  0.2 430978208 184128 s053  S+    3:30AM   0:00.48 node /Users/yasseralmohammed/sim6/siem_unified_pipeline/ui-v3/node_modules/.bin/next dev -p 5183
+yasseralmohammed 50085   0.0  0.0 410923136   8528   ??  S     3:29AM   0:03.10 /Users/yasseralmohammed/sim6/siem_unified_pipeline/target/release/siem-stream-runner
+yasseralmohammed 52433   0.0  0.0 410200128   1280 s091  S+    5:42AM   0:00.00 grep --color=auto --exclude-dir=.bzr --exclude-dir=CVS --exclude-dir=.git --exclude-dir=.hg --exclude-dir=.svn --exclude-dir=.idea --exclude-dir=.tox --exclude-dir=.venv --exclude-dir=venv -E (clickhouse|siem_unified)
+--- Memory and Load Summary ---
+Mach Virtual Memory Statistics: (page size of 16384 bytes)
+Pages free:                              101459.
+Pages active:                           2846794.
+Pages inactive:                         2745295.
+Pages speculative:                       101033.
+Pages throttled:                              0.
+Pages wired down:                        282195.
+Pages purgeable:                         252039.
+Pages copy-on-write:                  958847943.
+Pages zero filled:                   7192171852.
+Pages reactivated:                      8901952.
+Pages purged:                          20471711.
+Pages stored in compressor:              447326.
+Pages occupied by compressor:            158026.
+ 5:42  up 11 days, 19:07, 2 users, load averages: 6.46 5.17 4.95

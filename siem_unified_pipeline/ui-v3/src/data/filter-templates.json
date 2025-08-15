@@ -1,0 +1,4 @@
+[
+  {"id":"auth_fail_recent","name":"Auth failures recent","root":{"kind":"group","logic":"AND","children":[{"kind":"rule","field":"event_type","op":"eq","value":"auth"},{"kind":"rule","field":"outcome","op":"eq","value":0}]}}
+]
+
