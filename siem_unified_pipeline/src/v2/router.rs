@@ -2,7 +2,7 @@ use axum::{routing::get, Router, extract::State};
 use crate::v2::handlers::alert_rules::import_sigma_pack;
 use std::sync::Arc;
 use tower_http::{cors::CorsLayer, trace::TraceLayer, services::{ServeDir, ServeFile}};
-use crate::v2::{handlers::{health::health_check, health_advanced::{health_summary, health_stream, health_diagnose, health_autofix, health_errors, health_executions, health_execution_by_id}, events::{search_events, search_events_compact, insert_events}, sse::{stream_stub, tail_stream}, metrics::{get_eps_stats, get_quick_stats, get_ch_status, get_parsing_stats, get_system_config, get_kafka_status, get_redis_status, get_vector_status, get_ch_storage, get_kafka_partitions, get_redis_memory}, ingest::ingest_raw, alerts::{list_alerts, get_alert, patch_alert}, assets::favicon, alert_rules::{list_alert_rules, sigma_compile, sigma_create, rule_dry_run, rule_run_now, create_rule, get_rule, patch_rule, delete_rule}, search::{search_execute, search_estimate, search_facets}, schema::{get_fields, get_enums}, incidents::{list_incidents, get_incident, patch_incident, incident_alerts}}, state::AppState, compiler, dashboard_metrics};
+use crate::v2::{handlers::{health::health_check, health_advanced::{health_summary, health_stream, health_diagnose, health_autofix, health_errors, health_executions, health_execution_by_id}, events::{search_events, search_events_compact, insert_events}, sse::{stream_stub, tail_stream}, metrics::{get_eps_stats, get_quick_stats, get_ch_status, get_parsing_stats, get_system_config, get_kafka_status, get_redis_status, get_vector_status, get_ch_storage, get_kafka_partitions, get_redis_memory}, ingest::ingest_raw, alerts::{list_alerts, get_alert, patch_alert}, assets::favicon, alert_rules::{list_alert_rules, sigma_compile, sigma_create, rule_dry_run, rule_run_now, create_rule, get_rule, patch_rule, delete_rule}, search::{search_execute, search_estimate, search_facets}, schema::{get_fields, get_enums, get_search_fields, get_search_values}, incidents::{list_incidents, get_incident, patch_incident, incident_alerts}}, state::AppState, compiler, dashboard_metrics};
 use crate::v2::metrics as v2metrics;
 use crate::v2::search_api;
 
@@ -45,6 +45,9 @@ pub fn build(state: AppState) -> Router {
          // Saved searches CRUD provided by search_api routes; avoid duplicates here
         .route("/api/v2/schema/fields", get(get_fields))
         .route("/api/v2/schema/enums", get(get_enums))
+        // NEW: Field catalog endpoints for world-class filtering
+        .route("/api/v2/search/fields", get(get_search_fields))
+        .route("/api/v2/search/values", get(get_search_values))
         .route("/api/v2/system/config", get(get_system_config))
         .route("/metrics", get(|| async { v2metrics::metrics_text().await }))
          .route("/api/v2/admin/config", get(crate::v2::handlers::admin::get_config))

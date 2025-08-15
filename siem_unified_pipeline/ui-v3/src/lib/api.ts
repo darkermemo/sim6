@@ -141,6 +141,45 @@ export async function searchAggs(query: string, tenantId = "default", timeRangeS
 }
 
 // ============================================================================
+// Field Catalog API (for world-class filtering)
+// ============================================================================
+
+export interface FieldCatalogEntry {
+  field: string;
+  type: 'string' | 'int' | 'float' | 'bool' | 'datetime' | 'ip' | 'array' | 'map';
+  approx_cardinality: number;
+  top_values: TopValue[];
+}
+
+export interface TopValue {
+  value: string;
+  count: number;
+}
+
+export async function getSearchFields(tenantId = "default", prefix?: string): Promise<FieldCatalogEntry[]> {
+  const params = new URLSearchParams({ tenant_id: tenantId });
+  if (prefix) params.set('prefix', prefix);
+  
+  return http<FieldCatalogEntry[]>(`/search/fields?${params.toString()}`);
+}
+
+export async function getSearchValues(
+  field: string, 
+  tenantId = "default", 
+  prefix?: string, 
+  limit = 20
+): Promise<TopValue[]> {
+  const params = new URLSearchParams({ 
+    tenant_id: tenantId, 
+    field,
+    limit: limit.toString()
+  });
+  if (prefix) params.set('prefix', prefix);
+  
+  return http<TopValue[]>(`/search/values?${params.toString()}`);
+}
+
+// ============================================================================
 // Dashboard API (using real search endpoints)
 // ============================================================================
 
