@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, Suspense } from "react";
 import { QueryBar } from "@/components/search/QueryBar";
 import { FacetPanel } from "@/components/search/FacetPanel";
 import { TimelineHook } from "@/components/search/TimelineHook";
@@ -15,8 +15,9 @@ import { FilterGroup } from "@/components/search/FilterGroup";
 import type { Filter } from "@/types/filters";
 import { compileFiltersToQ } from "@/lib/filters-compiler";
 import { useSchema } from "@/hooks/useSchema";
+import { FilterBuilderDialog } from "./FilterBuilderDialog";
 
-export default function SearchPage() {
+function SearchPageContent() {
   // URL state management
   const urlState = useUrlState({
     defaultValues: {
@@ -102,6 +103,7 @@ export default function SearchPage() {
     const finalQ = [urlState.q?.trim(), compiledQ !== '*' ? compiledQ : ''].filter(Boolean).join(' AND ')
     searchQuery.execute(urlState.limit, urlState.offset, finalQ as any)
   }, [compiledQ, urlState.q, urlState.limit, urlState.offset, searchQuery])
+  const [builderOpen, setBuilderOpen] = useState(false)
 
 
 
@@ -177,7 +179,14 @@ export default function SearchPage() {
               {compiledQ && compiledQ !== '*' && (
                 <div className="mt-2 text-xs text-muted-foreground">Compiled: <code>{compiledQ}</code></div>
               )}
+              <div className="mt-2">
+                <button className="text-xs underline" onClick={()=>setBuilderOpen(true)}>Open full-screen builder</button>
+              </div>
             </div>
+            <FilterBuilderDialog open={builderOpen} onOpenChange={setBuilderOpen} onApply={(q, time)=>{
+              searchQuery.execute(urlState.limit, urlState.offset, q as any)
+              urlState.setTimeRange(time.last_seconds || urlState.last_seconds)
+            }} />
             <ResultTable
               events={searchQuery.results.events?.events || []}
               loading={searchQuery.loading}
@@ -262,5 +271,13 @@ export default function SearchPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function SearchPage() {
+  return (
+    <Suspense fallback={<div className="p-6">Loading search...</div>}>
+      <SearchPageContent />
+    </Suspense>
   );
 }

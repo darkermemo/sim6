@@ -106,7 +106,7 @@ export function FacetPanel({
           size: config.size
         }));
 
-        const result = await searchFacets(query || '', facetQueries, tenantId);
+        const result = await searchFacets(query || '', facetQueries, tenantId, timeRange);
         // Transform the facets object into an array
         const facetsData: FacetData[] = [];
         if (result.facets && typeof result.facets === 'object') {
@@ -240,7 +240,7 @@ export function FacetPanel({
                       
                       return (
                         <button
-                          key={bucket.key}
+                          key={`${config.field}-${bucket.key}-${bucket.doc_count}`}
                           onClick={() => handleFacetClick(config.field, bucket.key)}
                           className={`w-full flex items-center justify-between p-2 rounded text-xs hover:bg-slate-50 dark:hover:bg-slate-700 ${
                             isSelected ? 'bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700' : ''

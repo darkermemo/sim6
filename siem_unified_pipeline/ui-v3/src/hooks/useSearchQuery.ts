@@ -42,7 +42,7 @@ export function useSearchQuery(
     }
   });
 
-  const debounceTimerRef = useRef<NodeJS.Timeout>();
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Build final search query with facet filters
   const buildQuery = useCallback(() => {

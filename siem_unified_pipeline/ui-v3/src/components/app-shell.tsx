@@ -25,7 +25,10 @@ import {
   AlertTriangle,
   FileText,
   Zap,
-  ChevronRight
+  ChevronRight,
+  ChevronLeft,
+  PanelLeftOpen,
+  PanelLeftClose
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -85,25 +88,31 @@ const navigation = [
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const pathname = usePathname();
 
-  const SidebarContent = () => (
+  const SidebarContent = ({ collapsed = false }: { collapsed?: boolean }) => (
     <div className="flex h-full flex-col bg-slate-50 dark:bg-slate-900">
       {/* Logo */}
-      <div className="flex h-16 items-center border-b border-slate-200 dark:border-slate-700 px-6">
-        <div className="flex items-center gap-3">
+      <div className={cn(
+        "flex h-16 items-center border-b border-slate-200 dark:border-slate-700",
+        collapsed ? "px-4 justify-center" : "px-6"
+      )}>
+        <div className={cn("flex items-center gap-3", collapsed && "gap-0")}>
           <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-blue-600 to-blue-700 shadow-lg">
             <Shield className="h-6 w-6 text-white" />
           </div>
-          <div>
-            <span className="text-xl font-bold text-slate-900 dark:text-white">SIEM</span>
-            <div className="text-xs text-slate-500 dark:text-slate-400">Security Platform</div>
-          </div>
+          {!collapsed && (
+            <div>
+              <span className="text-xl font-bold text-slate-900 dark:text-white">SIEM</span>
+              <div className="text-xs text-slate-500 dark:text-slate-400">Security Platform</div>
+            </div>
+          )}
         </div>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 space-y-2 p-4">
+      <nav className={cn("flex-1 space-y-2", collapsed ? "p-2" : "p-4")}>
         {navigation.map((item) => {
           const isActive = pathname === item.href;
           return (
@@ -111,45 +120,52 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               key={item.name}
               href={item.href}
               className={cn(
-                "group flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium transition-all duration-200 hover:shadow-sm",
+                "group flex items-center rounded-xl text-sm font-medium transition-all duration-200 hover:shadow-sm",
+                collapsed ? "gap-0 px-3 py-3 justify-center" : "gap-3 px-3 py-3",
                 isActive
                   ? "bg-blue-600 text-white shadow-lg shadow-blue-600/25"
                   : "text-slate-700 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white"
               )}
               onClick={() => setSidebarOpen(false)}
+              title={collapsed ? item.name : undefined}
             >
               <item.icon className={cn(
                 "h-5 w-5 transition-colors",
+                collapsed ? "shrink-0" : "",
                 isActive ? "text-white" : "text-slate-500 dark:text-slate-400 group-hover:text-slate-700 dark:group-hover:text-slate-300"
               )} />
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between">
-                  <span className="truncate">{item.name}</span>
-                  {item.badge && (
-                    <Badge 
-                      variant={isActive ? "secondary" : "outline"} 
-                      className={cn(
-                        "ml-2 text-xs px-2 py-0.5",
-                        isActive 
-                          ? "bg-white/20 text-white border-white/30" 
-                          : "border-slate-300 dark:border-slate-600"
+              {!collapsed && (
+                <>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between">
+                      <span className="truncate">{item.name}</span>
+                      {item.badge && (
+                        <Badge 
+                          variant={isActive ? "secondary" : "outline"} 
+                          className={cn(
+                            "ml-2 text-xs px-2 py-0.5",
+                            isActive 
+                              ? "bg-white/20 text-white border-white/30" 
+                              : "border-slate-300 dark:border-slate-600"
+                          )}
+                        >
+                          {item.badge}
+                        </Badge>
                       )}
-                    >
-                      {item.badge}
-                    </Badge>
+                    </div>
+                    <div className={cn(
+                      "text-xs truncate mt-0.5",
+                      isActive 
+                        ? "text-blue-100" 
+                        : "text-slate-500 dark:text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300"
+                    )}>
+                      {item.description}
+                    </div>
+                  </div>
+                  {!isActive && (
+                    <ChevronRight className="h-4 w-4 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity" />
                   )}
-                </div>
-                <div className={cn(
-                  "text-xs truncate mt-0.5",
-                  isActive 
-                    ? "text-blue-100" 
-                    : "text-slate-500 dark:text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300"
-                )}>
-                  {item.description}
-                </div>
-              </div>
-              {!isActive && (
-                <ChevronRight className="h-4 w-4 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                </>
               )}
             </Link>
           );
@@ -157,24 +173,37 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </nav>
 
       {/* System Status */}
-      <div className="border-t border-slate-200 dark:border-slate-700 p-4 space-y-3">
-        <div className="flex items-center gap-3 text-sm">
+      <div className={cn(
+        "border-t border-slate-200 dark:border-slate-700 space-y-3",
+        collapsed ? "p-2" : "p-4"
+      )}>
+        <div className={cn(
+          "flex items-center text-sm",
+          collapsed ? "justify-center" : "gap-3"
+        )}>
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-green-100 dark:bg-green-900/30">
             <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
           </div>
-          <div>
-            <div className="font-medium text-slate-900 dark:text-white">System Online</div>
-            <div className="text-xs text-slate-500 dark:text-slate-400">ClickHouse connected</div>
-          </div>
+          {!collapsed && (
+            <div>
+              <div className="font-medium text-slate-900 dark:text-white">System Online</div>
+              <div className="text-xs text-slate-500 dark:text-slate-400">ClickHouse connected</div>
+            </div>
+          )}
         </div>
-        <div className="flex items-center gap-3 text-sm">
+        <div className={cn(
+          "flex items-center text-sm",
+          collapsed ? "justify-center" : "gap-3"
+        )}>
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-900/30">
             <Zap className="h-4 w-4 text-blue-600 dark:text-blue-400" />
           </div>
-          <div>
-            <div className="font-medium text-slate-900 dark:text-white">245.8k EPS</div>
-            <div className="text-xs text-slate-500 dark:text-slate-400">Events per second</div>
-          </div>
+          {!collapsed && (
+            <div>
+              <div className="font-medium text-slate-900 dark:text-white">245.8k EPS</div>
+              <div className="text-xs text-slate-500 dark:text-slate-400">Events per second</div>
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -183,8 +212,35 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex h-screen bg-slate-50 dark:bg-slate-900">
       {/* Desktop Sidebar */}
-      <div className="hidden w-72 flex-col border-r border-slate-200 dark:border-slate-700 lg:flex">
-        <SidebarContent />
+      <div className={cn(
+        "hidden flex-col border-r border-slate-200 dark:border-slate-700 lg:flex transition-all duration-300",
+        sidebarCollapsed ? "w-20" : "w-72"
+      )}>
+        <SidebarContent collapsed={sidebarCollapsed} />
+        {/* Collapse Toggle */}
+        <div className={cn(
+          "border-t border-slate-200 dark:border-slate-700",
+          sidebarCollapsed ? "p-2" : "p-4"
+        )}>
+          <Button
+            variant="ghost"
+            size={sidebarCollapsed ? "icon" : "sm"}
+            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+            className={cn(
+              "w-full transition-all duration-200",
+              sidebarCollapsed ? "justify-center" : "justify-start gap-2"
+            )}
+          >
+            {sidebarCollapsed ? (
+              <PanelLeftOpen className="h-4 w-4" />
+            ) : (
+              <>
+                <PanelLeftClose className="h-4 w-4" />
+                <span>Collapse</span>
+              </>
+            )}
+          </Button>
+        </div>
       </div>
 
       {/* Mobile Sidebar */}
@@ -195,7 +251,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </Button>
         </SheetTrigger>
         <SheetContent side="left" className="w-72 p-0">
-          <SidebarContent />
+          <SidebarContent collapsed={false} />
         </SheetContent>
       </Sheet>
 
@@ -211,6 +267,18 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               onClick={() => setSidebarOpen(true)}
             >
               <Menu className="h-4 w-4" />
+            </Button>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="hidden lg:flex"
+              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+            >
+              {sidebarCollapsed ? (
+                <PanelLeftOpen className="h-4 w-4" />
+              ) : (
+                <PanelLeftClose className="h-4 w-4" />
+              )}
             </Button>
             <div>
               <h1 className="text-lg font-semibold text-slate-900 dark:text-white">

@@ -479,7 +479,9 @@ pub async fn facets(
                             .iter()
                             .filter_map(|row| {
                                 let value = row.get("value").and_then(|v| v.as_str()).unwrap_or("").to_string();
-                                let count = row.get("c").and_then(|c| c.as_u64()).unwrap_or(0);
+                                let count = row.get("c")
+                                    .and_then(|c| c.as_u64().or_else(|| c.as_str().and_then(|s| s.parse().ok())))
+                                    .unwrap_or(0);
                                 if !value.is_empty() {
                                     Some(FacetValue { value, count })
                                 } else {

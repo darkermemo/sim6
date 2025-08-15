@@ -179,7 +179,6 @@ export function useRealtimeHealth(options: {
       ...snapshot,
       ts: delta.ts ?? snapshot.ts,
       overall: delta.overall ?? snapshot.overall,
-      errors: delta.errors ?? snapshot.errors,
       pipeline: delta.pipeline ?? snapshot.pipeline,
       kafka: delta.kafka ?? snapshot.kafka,
       redis: delta.redis ?? snapshot.redis,
