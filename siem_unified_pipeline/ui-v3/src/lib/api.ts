@@ -30,10 +30,10 @@ export async function searchEvents(query: EventSearchQuery): Promise<EventSearch
   const body = {
     tenant_id: query.tenant_id || "default",
     time: {
-      last_seconds: 3600 // Default to last hour
+      last_seconds: query.time_range_seconds || 600 // Default to 10 minutes as per spec
     },
-    q: query.search || "*",
-    limit: query.limit || 50,
+    q: query.search || "*", // Use "*" for initial load as per spec
+    limit: query.limit || 100,
     offset: query.offset || 0
   };
 
@@ -43,16 +43,40 @@ export async function searchEvents(query: EventSearchQuery): Promise<EventSearch
     headers: { 'content-type': 'application/json' }
   });
 
-  // Transform backend response to match UI types
+  // Match exact data contract: { total: number, data: { meta: Array<Record<string, any>> }, stats?: { elapsed_ms: number } }
+  const events = (response.data?.meta || []).map((item: any) => ({
+    id: item.event_id || item._id || 'unknown',
+    timestamp: item.event_timestamp || item.created_at,
+    event_type: item.event_type || 'unknown',
+    severity: item.severity || 'info',
+    message: item.message || 'No message',
+    source: item.source_type || item.vendor || 'unknown',
+    source_ip: item.source_ip,
+    destination_ip: item.destination_ip,
+    user: item.user,
+    host: item.host,
+    raw_message: item.raw_log,
+    // Additional fields
+    event_category: item.event_category,
+    event_action: item.event_action,
+    event_outcome: item.event_outcome,
+    protocol: item.protocol,
+    source_port: item.source_port,
+    destination_port: item.destination_port,
+    vendor: item.vendor,
+    product: item.product
+  }));
+
   return {
-    events: response.data?.meta || [],
-    total_count: response.total || 0,
+    events,
+    total_count: response.total || events.length,
+    elapsed_ms: response.stats?.elapsed_ms,
     page_info: {
       limit: body.limit,
       offset: body.offset,
-      has_next: (response.data?.meta?.length || 0) >= body.limit,
+      has_next: events.length >= body.limit,
       has_previous: body.offset > 0,
-      total_pages: Math.ceil((response.total || 0) / body.limit),
+      total_pages: Math.ceil((response.total || events.length) / body.limit),
       current_page: Math.floor(body.offset / body.limit) + 1
     }
   };
@@ -70,29 +94,50 @@ export async function compileSearch(query: string, tenantId = "default") {
   });
 }
 
-export async function searchFacets(query: string, facets: Array<{field: string, size?: number}>, tenantId = "default") {
-  return http<{ facets: any }>('/search/facets', {
+export async function searchFacets(query: string, facets: Array<{field: string, size?: number}>, tenantId = "default", timeRangeSeconds = 600) {
+  const response = await http<any>('/search/facets', {
     method: 'POST',
     body: JSON.stringify({
       tenant_id: tenantId,
-      time: { last_seconds: 3600 },
-      q: query,
+      time: { last_seconds: timeRangeSeconds },
+      q: query || "*",
       facets
     }),
     headers: { 'content-type': 'application/json' }
   });
+
+  // Match exact data contract: { facets: Record<string, Array<{ key: string, count: number }>> }
+  return {
+    facets: Object.fromEntries(
+      Object.entries(response.facets || {}).map(([field, buckets]: [string, any]) => [
+        field,
+        (Array.isArray(buckets) ? buckets : []).map((bucket: any) => ({
+          key: bucket.key || bucket.value || bucket.term,
+          count: typeof bucket.count === 'number' ? bucket.count : parseInt(bucket.doc_count) || 0
+        }))
+      ])
+    )
+  };
 }
 
-export async function searchAggs(query: string, tenantId = "default") {
-  return http<{ aggs: { timeline: any[] } }>('/search/aggs', {
+export async function searchAggs(query: string, tenantId = "default", timeRangeSeconds = 600) {
+  const response = await http<any>('/search/aggs', {
     method: 'POST',
     body: JSON.stringify({
       tenant_id: tenantId,
-      time: { last_seconds: 3600 },
-      q: query
+      time: { last_seconds: timeRangeSeconds },
+      q: query || "*"
     }),
     headers: { 'content-type': 'application/json' }
   });
+
+  // Match exact data contract: { aggs: { timeline: Array<{ ts: string|number, count: number }> } }
+  return {
+    timeline: (response.aggs?.timeline || []).map((item: any) => ({
+      ts: item.ts,
+      count: typeof item.count === 'number' ? item.count : parseInt(item.c) || 0
+    }))
+  };
 }
 
 // ============================================================================

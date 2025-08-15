@@ -1,536 +1,236 @@
 "use client";
 
-import { useMemo, useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { searchEvents, getEventById } from "@/lib/api";
-import { EventSearchQuery, EventSearchResponse, EventDetail } from "@/types/api";
-import { normalizeSeverity, type Severity } from "@/lib/severity";
-import { 
-  Search, 
-  Filter, 
-  Calendar, 
-  Download, 
-  RefreshCw, 
-  Settings,
-  ChevronDown,
-  Clock,
-  AlertTriangle,
-  Database,
-  User,
-  Globe,
-  Shield,
-  Eye,
-  ArrowUpDown,
-  ChevronLeft,
-  ChevronRight
-} from "lucide-react";
+import { useState, useCallback } from "react";
+import { QueryBar } from "@/components/search/QueryBar";
+import { FacetPanel } from "@/components/search/FacetPanel";
+import { TimelineHook } from "@/components/search/TimelineHook";
+import { ResultTable } from "@/components/search/ResultTable";
+import { RowInspector } from "@/components/search/RowInspector";
+import { useSearchQuery } from "@/hooks/useSearchQuery";
+import { useStreaming } from "@/hooks/useStreaming";
+import { useUrlState } from "@/hooks/useUrlState";
+import { normalizeSeverity } from "@/lib/severity";
 
 export default function SearchPage() {
-  // Search state
-  const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState<EventSearchResponse | null>(null);
-  const [selectedEvent, setSelectedEvent] = useState<EventDetail | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  // Filter state
-  const [filters, setFilters] = useState<EventSearchQuery>({
-    limit: 50,
-    offset: 0
+  // URL state management
+  const urlState = useUrlState({
+    defaultValues: {
+      limit: 100,
+      last_seconds: 86400
+    }
   });
 
+  // Facet state
+  const [selectedFacets, setSelectedFacets] = useState<Record<string, string[]>>({});
+  
+  // Search query hook with debounced execution
+  const searchQuery = useSearchQuery(
+    urlState.q,
+    urlState.tenant_id,
+    urlState.last_seconds,
+    selectedFacets,
+    { autoExecute: true }
+  );
+
+  // Streaming hook for real-time updates
+  const streaming = useStreaming(
+    urlState.q,
+    urlState.tenant_id,
+    urlState.last_seconds,
+    useCallback((newEvents: any[]) => {
+      // Handle new streaming events
+      console.log('New streaming events:', newEvents);
+    }, [])
+  );
+  
   // UI state
-  const [showFilters, setShowFilters] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [sortField, setSortField] = useState<string>("timestamp");
-  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+  const [sqlPreviewModal, setSqlPreviewModal] = useState<string | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<any>(null);
+  const [showRowInspector, setShowRowInspector] = useState(false);
 
-  // Search function
-  const performSearch = async () => {
-    if (!searchQuery.trim() && !Object.keys(filters).some(key => key !== 'limit' && key !== 'offset' && filters[key as keyof EventSearchQuery])) {
-      return;
-    }
+  // Event handlers using the new hooks
+  const handleExecuteSearch = useCallback(() => {
+    searchQuery.execute(urlState.limit, urlState.offset);
+  }, [searchQuery, urlState.limit, urlState.offset]);
 
-    setLoading(true);
-    setError(null);
-
-    try {
-      const searchParams: EventSearchQuery = {
-        ...filters,
-        search: searchQuery.trim() || undefined,
-      };
-
-      const results = await searchEvents(searchParams);
-      setSearchResults(results);
-      setCurrentPage(1);
-    } catch (err) {
-      console.error('Search error:', err);
-      setError('Search is temporarily unavailable. The backend search service is currently experiencing issues. Please try again later.');
-      // Show empty results instead of breaking the UI
-      setSearchResults({ 
-        events: [], 
-        total_count: 0, 
-        page_info: { 
-          limit: 50, 
-          offset: 0, 
-          has_next: false, 
-          has_previous: false,
-          total_pages: 0,
-          current_page: 1
-        }
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Auto-search when query changes (debounced)
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (searchQuery.trim()) {
-        performSearch();
-      }
-    }, 500);
-
-    return () => clearTimeout(timer);
-  }, [searchQuery]);
-
-  // Load some sample data on page load to show the interface
-  useEffect(() => {
-    // Don't auto-search on page load to avoid 500 errors
-    // Instead, show an empty state encouraging the user to search
+  // Event handlers
+  const handleFacetSelect = useCallback((field: string, value: string) => {
+    setSelectedFacets(prev => ({
+      ...prev,
+      [field]: [...(prev[field] || []), value]
+    }));
   }, []);
 
-  // Handle event selection
-  const handleEventClick = async (eventId: string) => {
-    try {
-      const eventDetail = await getEventById(eventId);
-      setSelectedEvent(eventDetail);
-    } catch (err) {
-      console.error('Failed to fetch event details:', err);
-    }
-  };
+  const handleFacetRemove = useCallback((field: string, value: string) => {
+    setSelectedFacets(prev => ({
+      ...prev,
+      [field]: (prev[field] || []).filter(v => v !== value)
+    }));
+  }, []);
 
-  // Safe severity color mapping
-  const getSeverityColor = (severity: unknown) => {
-    const sev = normalizeSeverity(severity);
-    switch (sev) {
-      case 'critical': return 'bg-red-100 text-red-800 border-red-200';
-      case 'high': return 'bg-orange-100 text-orange-800 border-orange-200';
-      case 'medium': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'low': return 'bg-blue-100 text-blue-800 border-blue-200';
-      case 'info': return 'bg-sky-100 text-sky-800 border-sky-200';
-      case 'unknown': return 'bg-gray-100 text-gray-800 border-gray-200';
-    }
-  };
+  const handleTimeWindowChange = useCallback((startTime: number, endTime: number) => {
+    const newTimeRange = endTime - startTime;
+    urlState.setTimeRange(newTimeRange);
+  }, [urlState]);
 
-  // Get source icon
-  const getSourceIcon = (source: string | undefined) => {
-    if (!source) return Database;
-    const lowerSource = source.toLowerCase();
-    if (lowerSource.includes('auth')) return User;
-    if (lowerSource.includes('web') || lowerSource.includes('http')) return Globe;
-    if (lowerSource.includes('firewall') || lowerSource.includes('security')) return Shield;
-    return Database;
-  };
+  const handleClear = useCallback(() => {
+    urlState.reset();
+    setSelectedFacets({});
+    searchQuery.clear();
+  }, [urlState, searchQuery]);
 
-  // Time range options
-  const timeRanges = [
-    { label: "Last 15 minutes", value: "15m" },
-    { label: "Last hour", value: "1h" },
-    { label: "Last 4 hours", value: "4h" },
-    { label: "Last 24 hours", value: "24h" },
-    { label: "Last 7 days", value: "7d" },
-    { label: "Custom", value: "custom" }
-  ];
+  const handleRowClick = useCallback((event: any) => {
+    setSelectedEvent(event);
+    setShowRowInspector(true);
+  }, []);
+
+  const handleCloseInspector = useCallback(() => {
+    setShowRowInspector(false);
+    setSelectedEvent(null);
+  }, []);
+
+
+
+
+
+
 
   return (
     <div className="min-h-full bg-slate-50 dark:bg-slate-900">
       <div className="p-6 space-y-6">
-        {/* Search Header */}
-        <div className="space-y-4">
-          <div>
-            <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Event Search</h1>
-            <p className="text-slate-600 dark:text-slate-400">
-              Search and analyze security events across your infrastructure
-            </p>
-          </div>
+        {/* Page Header */}
+        <div>
+          <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Log Activity / Search</h1>
+          <p className="text-slate-600 dark:text-slate-400">
+            Query, filter, and analyze security events with real-time facets and timeline visualization
+          </p>
+        </div>
 
-          {/* Search Bar */}
-          <Card className="border-0 shadow-lg bg-white dark:bg-slate-800">
-            <CardContent className="p-6">
-              <div className="flex items-center gap-4">
-                <div className="flex-1 relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
-                  <Input
-                    placeholder="Search events... (e.g., source:auth.service severity:high)"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10 h-12 text-base"
-                    onKeyDown={(e) => e.key === 'Enter' && performSearch()}
-                  />
-                </div>
-                <Button 
-                  onClick={() => setShowFilters(!showFilters)}
-                  variant="outline"
-                  className="gap-2"
-                >
-                  <Filter className="h-4 w-4" />
-                  Filters
-                  <ChevronDown className={`h-4 w-4 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
-                </Button>
-                <Button onClick={performSearch} disabled={loading} className="gap-2">
-                  {loading ? (
-                    <RefreshCw className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Search className="h-4 w-4" />
-                  )}
-                  Search
-                </Button>
-      </div>
-      
-              {/* Advanced Filters */}
-              {showFilters && (
-                <div className="mt-6 pt-6 border-t border-slate-200 dark:border-slate-700">
-                  <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                        Time Range
-                      </label>
-                      <Select value={filters.start_time ? "custom" : "24h"}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select range" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {timeRanges.map(range => (
-                            <SelectItem key={range.value} value={range.value}>
-                              {range.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                        Severity
-                      </label>
-                      <Select 
-                        value={filters.severity || ""} 
-                        onValueChange={(value) => setFilters({...filters, severity: value || undefined})}
+        {/* Query Bar */}
+        <QueryBar
+          query={urlState.q}
+          onQueryChange={urlState.setQuery}
+          onExecute={handleExecuteSearch}
+          isExecuting={searchQuery.loading}
+          isStreaming={urlState.stream}
+          onStreamingToggle={(enabled) => {
+            urlState.setStreaming(enabled);
+            if (enabled) streaming.start();
+            else streaming.stop();
+          }}
+          timeRange={urlState.last_seconds}
+          onTimeRangeChange={urlState.setTimeRange}
+          tenantId={urlState.tenant_id}
+          onTenantChange={urlState.setTenantId}
+          onClear={handleClear}
+          onShowSqlPreview={(sql) => setSqlPreviewModal(searchQuery.results.sql || sql)}
+        />
+
+        {/* Timeline */}
+        <TimelineHook
+          timelineData={searchQuery.results.timeline}
+          loading={searchQuery.loading}
+          onTimeWindowChange={handleTimeWindowChange}
+        />
+
+        {/* Main Content Layout */}
+        <div className="flex gap-6">
+          {/* Left: Facet Panel */}
+          <FacetPanel
+            query={urlState.q}
+            tenantId={urlState.tenant_id}
+            timeRange={urlState.last_seconds}
+            onFacetSelect={handleFacetSelect}
+            selectedFacets={selectedFacets}
+            onFacetRemove={handleFacetRemove}
+            facetsData={searchQuery.results.facets}
+          />
+
+          {/* Right: Results */}
+          <div className="flex-1 space-y-4">
+            <ResultTable
+              events={searchQuery.results.events?.events || []}
+              loading={searchQuery.loading}
+              onRowClick={handleRowClick}
+            />
+
+            {/* Pagination Status Bar */}
+            {searchQuery.results.events && (
+              <div className="bg-card rounded-lg p-4 shadow-sm">
+                <div className="flex items-center justify-between text-sm text-muted-foreground">
+                  <div className="flex items-center gap-4">
+                    <span>
+                      Showing {searchQuery.results.events.events.length} of {searchQuery.results.events.total_count.toLocaleString()} events
+                    </span>
+                    <span>Page {urlState.currentPage}</span>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    {searchQuery.results.events.elapsed_ms && (
+                      <span>Query time: {searchQuery.results.events.elapsed_ms}ms</span>
+                    )}
+                    <div className="flex gap-2">
+                      <button 
+                        className="px-3 py-1 text-xs border rounded disabled:opacity-50"
+                        disabled={!urlState.hasPrevious}
+                        onClick={urlState.previousPage}
                       >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Any severity" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="">Any severity</SelectItem>
-                          <SelectItem value="Critical">Critical</SelectItem>
-                          <SelectItem value="High">High</SelectItem>
-                          <SelectItem value="Medium">Medium</SelectItem>
-                          <SelectItem value="Low">Low</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                        Source
-                      </label>
-                      <Input
-                        placeholder="Filter by source"
-                        value={filters.source || ""}
-                        onChange={(e) => setFilters({...filters, source: e.target.value || undefined})}
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                        User
-                      </label>
-                      <Input
-                        placeholder="Filter by user"
-                        value={filters.user || ""}
-                        onChange={(e) => setFilters({...filters, user: e.target.value || undefined})}
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                        Source IP
-                      </label>
-                      <Input
-                        placeholder="Filter by IP"
-                        value={filters.source_ip || ""}
-                        onChange={(e) => setFilters({...filters, source_ip: e.target.value || undefined})}
-                      />
+                        Previous
+                      </button>
+                      <button 
+                        className="px-3 py-1 text-xs border rounded disabled:opacity-50"
+                        disabled={!urlState.hasNext}
+                        onClick={urlState.nextPage}
+                      >
+                        Next
+                      </button>
                     </div>
                   </div>
                 </div>
-              )}
-            </CardContent>
-          </Card>
+              </div>
+            )}
+          </div>
         </div>
+        {/* SQL Preview Modal */}
+        {sqlPreviewModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white dark:bg-slate-800 rounded-lg w-full max-w-4xl max-h-[80vh] overflow-auto">
+              <div className="p-4 border-b border-slate-200 dark:border-slate-700">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold">Compiled SQL Query</h3>
+                  <button
+                    onClick={() => setSqlPreviewModal(null)}
+                    className="text-slate-400 hover:text-slate-600"
+                  >
+                    ×
+                  </button>
+                </div>
+              </div>
+              <div className="p-4">
+                <pre className="bg-slate-100 dark:bg-slate-900 p-4 rounded-lg text-sm overflow-auto">
+                  {sqlPreviewModal}
+                </pre>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Row Inspector */}
+        <RowInspector
+          event={selectedEvent}
+          isOpen={showRowInspector}
+          onClose={handleCloseInspector}
+        />
 
         {/* Error Display */}
-        {error && (
-          <Card className="border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-900/20">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2 text-red-800 dark:text-red-200">
-                <AlertTriangle className="h-4 w-4" />
-                <span className="font-medium">Search Error</span>
-              </div>
-              <p className="text-sm text-red-600 dark:text-red-300 mt-1">{error}</p>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Results */}
-        {loading ? (
-          <SearchSkeleton />
-        ) : searchResults ? (
-          <Card className="border-0 shadow-lg bg-white dark:bg-slate-800">
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2 text-slate-900 dark:text-white">
-                  <Database className="h-5 w-5 text-blue-600" />
-                  Search Results
-                  <Badge variant="outline" className="ml-2">
-                    {searchResults.total_count.toLocaleString()} events
-                  </Badge>
-                </CardTitle>
-                <div className="flex items-center gap-2">
-                  <Button variant="outline" size="sm" className="gap-2">
-                    <Download className="h-4 w-4" />
-                    Export
-                  </Button>
-                  <Button variant="outline" size="sm" className="gap-2">
-                    <Settings className="h-4 w-4" />
-                    Columns
-                  </Button>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                {searchResults.events.map((event) => {
-                  const SourceIcon = getSourceIcon(event.source);
-                  return (
-                    <div
-                      key={event.id}
-                      className="p-4 rounded-lg border border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors cursor-pointer"
-                      onClick={() => handleEventClick(event.id)}
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-start gap-3 flex-1">
-                          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 dark:bg-slate-600">
-                            <SourceIcon className="h-4 w-4 text-slate-600 dark:text-slate-300" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1">
-                              <Badge className={`text-xs px-2 py-1 ${getSeverityColor(event.severity)}`}>
-                                {event.severity}
-                              </Badge>
-                              <span className="text-sm font-medium text-slate-900 dark:text-white">
-                                {event.event_type}
-                              </span>
-                              <span className="text-xs text-slate-500 dark:text-slate-400">
-                                {event.source}
-                              </span>
-                            </div>
-                            <p className="text-sm text-slate-600 dark:text-slate-400 line-clamp-2">
-                              {event.message}
-                            </p>
-                            <div className="flex items-center gap-4 mt-2 text-xs text-slate-500 dark:text-slate-400">
-                              <div className="flex items-center gap-1">
-                                <Clock className="h-3 w-3" />
-                                {new Date(event.timestamp).toLocaleString()}
-                              </div>
-                              {event.source_ip && (
-                                <div className="flex items-center gap-1">
-                                  <Globe className="h-3 w-3" />
-                                  {event.source_ip}
-                </div>
-              )}
-                              {event.user && (
-                                <div className="flex items-center gap-1">
-                                  <User className="h-3 w-3" />
-                                  {event.user}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                        <Button variant="ghost" size="sm" className="gap-1">
-                          <Eye className="h-3 w-3" />
-                          View
-                        </Button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* Pagination */}
-              {searchResults.page_info && (
-                <div className="flex items-center justify-between mt-6 pt-4 border-t border-slate-200 dark:border-slate-700">
-                  <div className="text-sm text-slate-600 dark:text-slate-400">
-                    Showing {((searchResults.page_info.current_page - 1) * searchResults.page_info.limit) + 1} to{' '}
-                    {Math.min(searchResults.page_info.current_page * searchResults.page_info.limit, searchResults.total_count)} of{' '}
-                    {searchResults.total_count.toLocaleString()} results
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={!searchResults.page_info.has_previous}
-                      className="gap-1"
-                    >
-                      <ChevronLeft className="h-4 w-4" />
-                      Previous
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={!searchResults.page_info.has_next}
-                      className="gap-1"
-                    >
-                      Next
-                      <ChevronRight className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        ) : (
-          <Card className="border-0 shadow-lg bg-white dark:bg-slate-800">
-            <CardContent className="p-12 text-center">
-              <Search className="h-12 w-12 text-slate-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-slate-900 dark:text-white mb-2">
-                Start searching
-              </h3>
-              <p className="text-slate-600 dark:text-slate-400">
-                Enter a search query above to find security events
-              </p>
-            </CardContent>
-          </Card>
+        {searchQuery.error && (
+          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+            <div className="flex items-center gap-2 text-red-800 dark:text-red-200">
+              <span className="font-medium">Search Error</span>
+            </div>
+            <p className="text-sm text-red-600 dark:text-red-300 mt-1">{searchQuery.error}</p>
+          </div>
         )}
       </div>
-
-      {/* Event Detail Modal */}
-      {selectedEvent && (
-        <EventDetailModal 
-          event={selectedEvent} 
-          onClose={() => setSelectedEvent(null)} 
-        />
-      )}
     </div>
   );
-}
-
-// Search loading skeleton
-function SearchSkeleton() {
-  return (
-    <Card className="border-0 shadow-lg bg-white dark:bg-slate-800">
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <Skeleton className="h-6 w-48" />
-          <div className="flex gap-2">
-            <Skeleton className="h-8 w-20" />
-            <Skeleton className="h-8 w-24" />
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-3">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="p-4 rounded-lg border border-slate-200 dark:border-slate-600">
-              <div className="flex items-start gap-3">
-                <Skeleton className="h-8 w-8 rounded-lg" />
-                <div className="flex-1 space-y-2">
-                  <div className="flex items-center gap-2">
-                    <Skeleton className="h-4 w-16" />
-                    <Skeleton className="h-4 w-24" />
-                    <Skeleton className="h-4 w-20" />
-                  </div>
-                  <Skeleton className="h-4 w-full" />
-                  <Skeleton className="h-3 w-3/4" />
-                  <div className="flex gap-4">
-                    <Skeleton className="h-3 w-24" />
-                    <Skeleton className="h-3 w-20" />
-                    <Skeleton className="h-3 w-16" />
-                  </div>
-                </div>
-                <Skeleton className="h-8 w-16" />
-              </div>
-            </div>
-          ))}
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
-// Event detail modal component (placeholder)
-function EventDetailModal({ event, onClose }: { event: EventDetail; onClose: () => void }) {
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <Card className="w-full max-w-4xl max-h-[90vh] overflow-auto">
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle>Event Details</CardTitle>
-            <Button variant="ghost" size="sm" onClick={onClose}>
-              ×
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-600 dark:text-slate-400">ID</label>
-                <p className="font-mono text-sm">{event.id}</p>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-600 dark:text-slate-400">Timestamp</label>
-                <p>{new Date(event.timestamp).toLocaleString()}</p>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-600 dark:text-slate-400">Severity</label>
-                <Badge className={getSeverityColorModal(event.severity)}>{event.severity}</Badge>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-600 dark:text-slate-400">Source</label>
-                <p>{event.source}</p>
-              </div>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-600 dark:text-slate-400">Message</label>
-              <p className="mt-1">{event.message}</p>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-600 dark:text-slate-400">Raw Message</label>
-              <pre className="mt-1 p-3 bg-slate-100 dark:bg-slate-700 rounded-lg text-sm overflow-auto">
-                {event.raw_message}
-              </pre>
-        </div>
-      </div>
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
-
-// Helper function to define getSeverityColor within modal scope
-function getSeverityColorModal(severity: unknown) {
-  const sev = normalizeSeverity(severity);
-  switch (sev) {
-    case 'critical': return 'bg-red-100 text-red-800 border-red-200';
-    case 'high': return 'bg-orange-100 text-orange-800 border-orange-200';
-    case 'medium': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-    case 'low': return 'bg-blue-100 text-blue-800 border-blue-200';
-    case 'info': return 'bg-sky-100 text-sky-800 border-sky-200';
-    case 'unknown': return 'bg-gray-100 text-gray-800 border-gray-200';
-  }
 }

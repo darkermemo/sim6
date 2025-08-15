@@ -46,11 +46,13 @@ export interface EventSearchQuery {
   user?: string;
   limit?: number;
   offset?: number;
+  time_range_seconds?: number;
 }
 
 export interface EventSearchResponse {
   events: EventSummary[];
   total_count: number;
+  elapsed_ms?: number; // Query execution time from backend
   page_info: PageInfo;
 }
 
@@ -62,9 +64,20 @@ export interface EventSummary {
   severity: string;
   message: string;
   source_ip?: string;
-  dest_ip?: string;
+  destination_ip?: string;
   user?: string;
+  host?: string;
   tenant_id?: string;
+  raw_message?: string;
+  // Additional fields from ClickHouse
+  event_category?: string;
+  event_action?: string;
+  event_outcome?: string;
+  protocol?: string;
+  source_port?: number;
+  destination_port?: number;
+  vendor?: string;
+  product?: string;
 }
 
 export interface EventDetail {
