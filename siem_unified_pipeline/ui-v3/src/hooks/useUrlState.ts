@@ -19,7 +19,7 @@ export interface UseUrlStateOptions {
 
 const DEFAULT_STATE: UrlSearchState = {
   q: '*', // Use "*" for initial load as per spec
-  tenant_id: 'admin',
+  tenant_id: 'admin', // Use admin tenant which has data
   last_seconds: 600, // 10 minutes as per spec
   limit: 100,
   offset: 0,
