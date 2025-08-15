@@ -1,0 +1,179 @@
+{
+  "brute_force_auth": {
+    "name": "Brute Force Authentication",
+    "description": "50+ authentication failures followed by 1 success within 3 minutes",
+    "severity": "high", 
+    "mitre_tactics": ["Credential Access"],
+    "mitre_techniques": ["T1110"],
+    "spec": {
+      "type": "sequence",
+      "tenant_id": "default",
+      "time": {"last_seconds": 1800},
+      "by": ["user", "src_ip"],
+      "window_sec": 180,
+      "strict": "strict_once",
+      "stages": [
+        {"cond": {"sql": "event_type='auth' AND outcome='fail'"}, "repeat_min": 50},
+        {"cond": {"sql": "event_type='auth' AND outcome='success'"}}
+      ],
+      "emit": {"limit": 1000}
+    }
+  },
+
+  "password_reset_no_mfa": {
+    "name": "Password Reset Without MFA",
+    "description": "Password reset with no subsequent MFA challenge within 10 minutes",
+    "severity": "medium",
+    "mitre_tactics": ["Defense Evasion"],
+    "mitre_techniques": ["T1556"],
+    "spec": {
+      "type": "sequence_absence",
+      "tenant_id": "default", 
+      "time": {"last_seconds": 3600},
+      "by": ["user"],
+      "window_sec": 600,
+      "a": {"sql": "event_type='idp' AND action='password_reset'"},
+      "b": {"sql": "event_type='idp' AND action='mfa_challenge' AND status='prompted'"}
+    }
+  },
+
+  "suspicious_oauth_chain": {
+    "name": "Suspicious OAuth Chain",
+    "description": "Login → OAuth consent → mailbox rule creation within 15 minutes",
+    "severity": "high",
+    "mitre_tactics": ["Initial Access", "Persistence"],
+    "mitre_techniques": ["T1566", "T1137"],
+    "spec": {
+      "type": "chain",
+      "tenant_id": "default",
+      "time": {"last_seconds": 86400},
+      "by": ["user"],
+      "window_sec": 900,
+      "stages": [
+        {"sql": "event_type='auth' AND outcome='success'"},
+        {"sql": "event_type='oauth' AND consent='granted'"},
+        {"sql": "event_type='mail' AND action='create_inbox_rule'"}
+      ]
+    }
+  },
+
+  "rolling_auth_failures": {
+    "name": "High Rolling Authentication Failures",
+    "description": "More than 100 authentication failures in any 5-minute rolling window",
+    "severity": "medium",
+    "mitre_tactics": ["Credential Access"],
+    "mitre_techniques": ["T1110"],
+    "spec": {
+      "type": "rolling_threshold",
+      "tenant_id": "default",
+      "time": {"last_seconds": 7200},
+      "by": ["user", "src_ip"],
+      "window_sec": 300,
+      "expr": "rolling > 100"
+    }
+  },
+
+  "auth_failure_success_ratio": {
+    "name": "High Authentication Failure Ratio",
+    "description": "Authentication failure:success ratio > 20:1 per IP in 10-minute buckets",
+    "severity": "medium",
+    "mitre_tactics": ["Credential Access"],
+    "mitre_techniques": ["T1110"],
+    "spec": {
+      "type": "ratio",
+      "tenant_id": "default",
+      "time": {"last_seconds": 7200},
+      "by": ["src_ip"],
+      "bucket_sec": 600,
+      "numerator": {"sql": "event_type='auth' AND outcome='fail'"},
+      "denominator": {"sql": "event_type='auth' AND outcome='success'"},
+      "ratio_gt": 20
+    }
+  },
+
+  "first_seen_country": {
+    "name": "First Seen Country Login",
+    "description": "User login from never-before-seen country in past 180 days",
+    "severity": "low",
+    "mitre_tactics": ["Initial Access"],
+    "mitre_techniques": ["T1078"],
+    "spec": {
+      "type": "first_seen",
+      "tenant_id": "default",
+      "time": {"last_seconds": 604800},
+      "by": ["user"],
+      "entity": "src_geo",
+      "horizon_days": 180,
+      "within": {"sql": "event_type='auth' AND outcome='success'"}
+    }
+  },
+
+  "c2_beaconing": {
+    "name": "C2 Beaconing Detection",
+    "description": "Periodic network communication with low timing variance (RSD < 0.2)",
+    "severity": "critical",
+    "mitre_tactics": ["Command and Control"],
+    "mitre_techniques": ["T1071", "T1573"],
+    "spec": {
+      "type": "beaconing",
+      "tenant_id": "default",
+      "time": {"last_seconds": 86400},
+      "by": [],
+      "partition": ["src_ip", "dest_ip"],
+      "min_events": 20,
+      "rsd_lt": 0.2,
+      "where": {"sql": "bytes_out>0 AND event_type='net' AND direction='out'"}
+    }
+  },
+
+  "lateral_movement": {
+    "name": "Lateral Movement Detection",
+    "description": "Successful authentication from multiple source IPs within 1 hour",
+    "severity": "high",
+    "mitre_tactics": ["Lateral Movement"],
+    "mitre_techniques": ["T1021"],
+    "spec": {
+      "type": "rolling_threshold",
+      "tenant_id": "default",
+      "time": {"last_seconds": 3600},
+      "by": ["user"],
+      "window_sec": 3600,
+      "expr": "uniq(src_ip) >= 3"
+    }
+  },
+
+  "privilege_escalation_sequence": {
+    "name": "Privilege Escalation Sequence", 
+    "description": "Standard user login followed by admin action within 30 minutes",
+    "severity": "high",
+    "mitre_tactics": ["Privilege Escalation"],
+    "mitre_techniques": ["T1078"],
+    "spec": {
+      "type": "sequence",
+      "tenant_id": "default",
+      "time": {"last_seconds": 7200},
+      "by": ["user"],
+      "window_sec": 1800,
+      "stages": [
+        {"cond": {"sql": "event_type='auth' AND outcome='success' AND user_role='user'"}},
+        {"cond": {"sql": "event_type='admin' AND action IN ('user_create', 'role_modify', 'permission_grant')"}}
+      ]
+    }
+  },
+
+  "data_exfiltration": {
+    "name": "Large Data Transfer",
+    "description": "Unusually large data transfer volumes (>1GB) in short timeframe",
+    "severity": "medium",
+    "mitre_tactics": ["Exfiltration"],
+    "mitre_techniques": ["T1041"],
+    "spec": {
+      "type": "rolling_threshold",
+      "tenant_id": "default",
+      "time": {"last_seconds": 3600},
+      "by": ["src_ip", "user"],
+      "window_sec": 900,
+      "expr": "sum(bytes_out) > 1073741824"
+    }
+  }
+}

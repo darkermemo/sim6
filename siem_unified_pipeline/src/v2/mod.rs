@@ -14,6 +14,7 @@ pub mod handlers {
     pub mod assets;
     pub mod search;
     pub mod schema;
+    pub mod detections;
     pub mod incidents;
     pub mod investigate;
     pub mod admin;

@@ -166,7 +166,7 @@ pub async fn get_search_fields(
     
     let client = reqwest::Client::new();
     
-    // Step 1: Get schema from system.columns
+    // Step 1: Get schema from system.columns (using SIEM v3 compatibility view)
     let filter_clause = if prefix.is_empty() {
         " ".to_string()
     } else {
@@ -174,7 +174,7 @@ pub async fn get_search_fields(
     };
     
     let schema_sql = format!(
-        "SELECT name, type FROM system.columns WHERE database = 'dev' AND table = 'events'{}ORDER BY position FORMAT JSON",
+        "SELECT name, type FROM system.columns WHERE database = 'siem_v3' AND table = 'events_norm'{}ORDER BY position FORMAT JSON",
         filter_clause
     );
     
@@ -249,10 +249,10 @@ pub async fn get_search_values(
     
     // Build query with optional prefix filtering
     let where_clause = if prefix.is_empty() {
-        format!("tenant_id IN ('{}') AND event_timestamp >= now() - INTERVAL 7 DAY", tenant)
+        format!("tenant_id IN ('{}') AND ts >= now() - INTERVAL 7 DAY", tenant)
     } else {
         format!(
-            "tenant_id IN ('{}') AND event_timestamp >= now() - INTERVAL 7 DAY AND {} LIKE '{}%'",
+            "tenant_id IN ('{}') AND ts >= now() - INTERVAL 7 DAY AND {} LIKE '{}%'",
             tenant,
             field,
             prefix.replace("'", "''")
@@ -260,7 +260,7 @@ pub async fn get_search_values(
     };
     
     let sql = format!(
-        "SELECT {} AS value, count() AS count FROM dev.events WHERE {} AND {} != '' GROUP BY {} ORDER BY count DESC, value ASC LIMIT {} FORMAT JSON",
+        "SELECT {} AS value, count() AS count FROM siem_v3.events_norm WHERE {} AND {} != '' GROUP BY {} ORDER BY count DESC, value ASC LIMIT {} FORMAT JSON",
         field, where_clause, field, field, limit
     );
     
@@ -313,9 +313,9 @@ fn normalize_clickhouse_type(ch_type: &str) -> String {
 }
 
 async fn get_field_stats(client: &reqwest::Client, field: &str, tenant: &str) -> (u64, Vec<TopValue>) {
-    // Get approximate cardinality
+    // Get approximate cardinality (using SIEM v3 compatibility view)
     let cardinality_sql = format!(
-        "SELECT uniq({}) AS cardinality FROM dev.events WHERE tenant_id IN ('{}') AND event_timestamp >= now() - INTERVAL 7 DAY FORMAT JSON",
+        "SELECT uniq({}) AS cardinality FROM siem_v3.events_norm WHERE tenant_id IN ('{}') AND ts >= now() - INTERVAL 7 DAY FORMAT JSON",
         field, tenant
     );
     
@@ -332,9 +332,9 @@ async fn get_field_stats(client: &reqwest::Client, field: &str, tenant: &str) ->
         } else { 0 }
     } else { 0 };
     
-    // Get top 5 values
+    // Get top 5 values (using SIEM v3 compatibility view)
     let top_values_sql = format!(
-        "SELECT {} AS value, count() AS count FROM dev.events WHERE tenant_id IN ('{}') AND event_timestamp >= now() - INTERVAL 7 DAY AND {} != '' GROUP BY {} ORDER BY count DESC LIMIT 5 FORMAT JSON",
+        "SELECT {} AS value, count() AS count FROM siem_v3.events_norm WHERE tenant_id IN ('{}') AND ts >= now() - INTERVAL 7 DAY AND {} != '' GROUP BY {} ORDER BY count DESC LIMIT 5 FORMAT JSON",
         field, tenant, field, field
     );
     
