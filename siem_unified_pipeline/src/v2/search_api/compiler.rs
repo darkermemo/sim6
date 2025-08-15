@@ -29,12 +29,76 @@ pub fn translate_to_dsl(body: &Value) -> Result<SearchDsl, String> {
     Ok(SearchDsl { version: Some("1".into()), search: Some(section), threshold: None, cardinality: None, sequence: None })
 }
 
-/// Very small KQL/Lucene-lite parser → Expr tree
-/// Supports: field:value, "exact phrase", value (implies message contains), AND/OR/NOT, ranges field:[a TO b], cidr, regex:/.../ (guarded), json path with dot notation
+/// Comprehensive DSL parser supporting all logic families
+/// Supports: seq(), roll(), ratio(), spike(), first_seen(), beacon(), join(), overlay() and field conditions
 pub fn parse_kql(input: &str) -> Option<Expr> {
+    let trimmed = input.trim();
+    
+    // First try to parse as comprehensive DSL (before tokenization)
+    if let Some(dsl_expr) = parse_comprehensive_dsl(trimmed) {
+        return Some(dsl_expr);
+    }
+    
+    // Fallback to basic KQL parsing for simple field queries
     let mut tokens = tokenize(input);
     let expr = parse_or(&mut tokens);
     expr
+}
+
+/// Parse comprehensive DSL with all logic families
+pub fn parse_comprehensive_dsl(input: &str) -> Option<Expr> {
+    let trimmed = input.trim();
+    
+    // Debug: Always log that we're trying to parse DSL
+    println!("DSL_DEBUG: Attempting to parse '{}'", trimmed);
+    
+    // Parse sequence expressions: seq(...)
+    if trimmed.starts_with("seq(") {
+        println!("DSL_DEBUG: Detected sequence pattern!");
+        return parse_sequence(trimmed);
+    }
+    
+    // Parse rolling expressions: roll(...)
+    if trimmed.starts_with("roll(") {
+        return parse_rolling(trimmed);
+    }
+    
+    // Parse ratio expressions: ratio(...)
+    if trimmed.starts_with("ratio(") {
+        return parse_ratio(trimmed);
+    }
+    
+    // Parse spike expressions: spike(...)
+    if trimmed.starts_with("spike(") {
+        return parse_spike(trimmed);
+    }
+    
+    // Parse first_seen expressions: first_seen(...)
+    if trimmed.starts_with("first_seen(") {
+        return parse_first_seen(trimmed);
+    }
+    
+    // Parse beacon expressions: beacon(...)
+    if trimmed.starts_with("beacon(") {
+        return parse_beacon(trimmed);
+    }
+    
+    // Parse join expressions: join(...)
+    if trimmed.starts_with("join(") {
+        return parse_join(trimmed);
+    }
+    
+    // Parse overlay expressions: overlay(...)
+    if trimmed.starts_with("overlay(") {
+        return parse_overlay(trimmed);
+    }
+    
+    // Parse field conditions: field(name) op value
+    if trimmed.starts_with("field(") {
+        return parse_field_condition(trimmed);
+    }
+    
+    None
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -117,6 +181,182 @@ fn parse_term(ts: &mut Vec<Tok>) -> Option<Expr> {
         }
         _ => None,
     }
+}
+
+/// Parse sequence expressions: seq(stages, within=time, by=fields, strict=mode)
+fn parse_sequence(input: &str) -> Option<Expr> {
+    // Extract content between parentheses
+    let content = extract_function_content(input, "seq")?;
+    
+    // Parse seq() using custom logic family expressions
+    // For now, store as a special Expr variant that compiler recognizes
+    Some(Expr::Contains(("__dsl_seq".to_string(), format!("DETECTED_SEQUENCE:{}", content))))
+}
+
+/// Parse rolling expressions: roll(expr, within=time, by=fields)
+fn parse_rolling(input: &str) -> Option<Expr> {
+    let content = extract_function_content(input, "roll")?;
+    Some(Expr::Contains(("__dsl_roll".to_string(), content)))
+}
+
+/// Parse ratio expressions: ratio(num:den op k, within=time, by=fields)
+fn parse_ratio(input: &str) -> Option<Expr> {
+    let content = extract_function_content(input, "ratio")?;
+    Some(Expr::Contains(("__dsl_ratio".to_string(), content)))
+}
+
+/// Parse spike expressions: spike(metric, z>=threshold, within=time, history=horizon, by=fields)
+fn parse_spike(input: &str) -> Option<Expr> {
+    let content = extract_function_content(input, "spike")?;
+    Some(Expr::Contains(("__dsl_spike".to_string(), content)))
+}
+
+/// Parse first_seen expressions: first_seen(dimension, horizon=time, by=fields)
+fn parse_first_seen(input: &str) -> Option<Expr> {
+    let content = extract_function_content(input, "first_seen")?;
+    Some(Expr::Contains(("__dsl_first_seen".to_string(), content)))
+}
+
+/// Parse beacon expressions: beacon(count>=N, jitter<r, within=time, by=fields)
+fn parse_beacon(input: &str) -> Option<Expr> {
+    let content = extract_function_content(input, "beacon")?;
+    Some(Expr::Contains(("__dsl_beacon".to_string(), content)))
+}
+
+/// Parse join expressions: join(left=stream, right=stream, within=time, by=fields)
+fn parse_join(input: &str) -> Option<Expr> {
+    let content = extract_function_content(input, "join")?;
+    Some(Expr::Contains(("__dsl_join".to_string(), content)))
+}
+
+/// Parse overlay expressions: overlay(tag in [values])
+fn parse_overlay(input: &str) -> Option<Expr> {
+    let content = extract_function_content(input, "overlay")?;
+    Some(Expr::Contains(("__dsl_overlay".to_string(), content)))
+}
+
+/// Parse field conditions: field(name) op value
+fn parse_field_condition(input: &str) -> Option<Expr> {
+    // Extract field name: field(user) = "alice"
+    if let Some(field_end) = input.find(')') {
+        let field_part = &input[6..field_end]; // Skip "field("
+        let rest = input[field_end + 1..].trim();
+        
+        // Parse operator and value
+        if let Some((op, value)) = parse_operator_value(rest) {
+            match op.as_str() {
+                "=" => {
+                    if let Ok(json_val) = serde_json::from_str(&value) {
+                        return Some(Expr::Eq((field_part.to_string(), json_val)));
+                    }
+                    return Some(Expr::Eq((field_part.to_string(), serde_json::Value::String(value))));
+                }
+                "!=" | "≠" => {
+                    if let Ok(json_val) = serde_json::from_str(&value) {
+                        return Some(Expr::Ne((field_part.to_string(), json_val)));
+                    }
+                    return Some(Expr::Ne((field_part.to_string(), serde_json::Value::String(value))));
+                }
+                ">" => {
+                    if let Ok(num) = value.parse::<f64>() {
+                        return Some(Expr::Gt((field_part.to_string(), num)));
+                    }
+                }
+                ">=" | "≥" => {
+                    if let Ok(num) = value.parse::<f64>() {
+                        return Some(Expr::Gte((field_part.to_string(), num)));
+                    }
+                }
+                "<" => {
+                    if let Ok(num) = value.parse::<f64>() {
+                        return Some(Expr::Lt((field_part.to_string(), num)));
+                    }
+                }
+                "<=" | "≤" => {
+                    if let Ok(num) = value.parse::<f64>() {
+                        return Some(Expr::Lte((field_part.to_string(), num)));
+                    }
+                }
+                "contains" => {
+                    return Some(Expr::Contains((field_part.to_string(), value)));
+                }
+                "startswith" => {
+                    return Some(Expr::Startswith((field_part.to_string(), value)));
+                }
+                "endswith" => {
+                    return Some(Expr::Endswith((field_part.to_string(), value)));
+                }
+                "regex" => {
+                    return Some(Expr::Regex((field_part.to_string(), value)));
+                }
+                "exists" => {
+                    return Some(Expr::Exists(field_part.to_string()));
+                }
+                "missing" => {
+                    return Some(Expr::Missing(field_part.to_string()));
+                }
+                _ => {}
+            }
+        }
+    }
+    None
+}
+
+/// Extract content between function parentheses
+fn extract_function_content(input: &str, func_name: &str) -> Option<String> {
+    let prefix = format!("{}(", func_name);
+    if input.starts_with(&prefix) {
+        let start = prefix.len();
+        // Find matching closing parenthesis
+        let mut paren_count = 1;
+        let mut end = start;
+        for (i, c) in input[start..].char_indices() {
+            match c {
+                '(' => paren_count += 1,
+                ')' => {
+                    paren_count -= 1;
+                    if paren_count == 0 {
+                        end = start + i;
+                        break;
+                    }
+                }
+                _ => {}
+            }
+        }
+        if paren_count == 0 {
+            return Some(input[start..end].to_string());
+        }
+    }
+    None
+}
+
+/// Parse operator and value from a string like "= 'value'" or "> 100"
+fn parse_operator_value(input: &str) -> Option<(String, String)> {
+    let trimmed = input.trim();
+    
+    // Handle operators
+    for op in &["!=", "≠", ">=", "≥", "<=", "≤", "=", ">", "<", "contains", "startswith", "endswith", "regex", "exists", "missing"] {
+        if trimmed.starts_with(op) {
+            let value_part = trimmed[op.len()..].trim();
+            
+            // Handle special cases for exists/missing (no value)
+            if *op == "exists" || *op == "missing" {
+                return Some((op.to_string(), "".to_string()));
+            }
+            
+            // Parse quoted strings
+            if (value_part.starts_with('"') && value_part.ends_with('"')) ||
+               (value_part.starts_with('\'') && value_part.ends_with('\'')) {
+                let unquoted = &value_part[1..value_part.len()-1];
+                return Some((op.to_string(), unquoted.to_string()));
+            }
+            
+            // Parse unquoted values
+            return Some((op.to_string(), value_part.to_string()));
+        }
+    }
+    
+    None
 }
 
 

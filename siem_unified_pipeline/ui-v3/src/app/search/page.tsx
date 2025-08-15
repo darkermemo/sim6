@@ -183,7 +183,7 @@ function SearchPageContent() {
                 <button className="text-xs underline" onClick={()=>setBuilderOpen(true)}>Open full-screen builder</button>
               </div>
             </div>
-            <FilterBuilderDialog open={builderOpen} onOpenChange={setBuilderOpen} onApply={(q, time)=>{
+            <FilterBuilderDialog tenantId={urlState.tenant_id} open={builderOpen} onOpenChange={setBuilderOpen} onApply={(q, time)=>{
               searchQuery.execute(urlState.limit, urlState.offset, q as any)
               urlState.setTimeRange(time.last_seconds || urlState.last_seconds)
             }} />

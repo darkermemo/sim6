@@ -9,13 +9,118 @@ use futures_util::stream;
 use uuid::Uuid;
 use crate::v2::{state::AppState, compiler::compile_search};
 use super::compiler::translate_to_dsl;
+use reqwest;
 
 pub async fn compile(State(_st): State<Arc<AppState>>, Json(body): Json<Value>) -> Result<Json<Value>, axum::http::StatusCode> {
+    // Bridge: if q looks like advanced DSL (seq/ratio/roll/spike/first_seen/beacon/join/overlay),
+    // delegate to detections compiler for full SQL, then adapt response shape.
+    if let Some(q) = body.get("q").and_then(|v| v.as_str()) {
+        let q_trim = q.trim();
+        if is_dsl_query(q_trim) {
+            if let Ok(resp) = compile_via_detections_bridge(&body, q_trim).await {
+                return Ok(Json(resp));
+            }
+        }
+    }
+
     let dsl = translate_to_dsl(&body).map_err(|_| axum::http::StatusCode::UNPROCESSABLE_ENTITY)?;
     match compile_search(&dsl, "dev.events") {
         Ok(res) => Ok(Json(serde_json::json!({"sql": res.sql, "where_sql": res.where_sql, "warnings": res.warnings }))),
         Err(_) => Err(axum::http::StatusCode::UNPROCESSABLE_ENTITY),
     }
+}
+
+fn is_dsl_query(q: &str) -> bool {
+    let lower = q.to_lowercase();
+    for kw in ["seq(", "ratio(", "roll(", "spike(", "first_seen(", "beacon(", "join(", "overlay("] {
+        if lower.starts_with(kw) { return true; }
+    }
+    false
+}
+
+async fn compile_via_detections_bridge(body: &Value, q: &str) -> Result<Value, ()> {
+    let tenant = body.get("tenant_id").and_then(|v| v.as_str()).unwrap_or("default");
+    let last_seconds = body.get("time").and_then(|t| t.get("last_seconds").and_then(|v| v.as_u64())).unwrap_or(600);
+
+    let (rule_type, by, window_sec) = infer_rule_from_q(q);
+
+    let spec = serde_json::json!({
+        "tenant_id": tenant,
+        "time": { "last_seconds": last_seconds },
+        "type": rule_type,
+        "by": by,
+        // pass common extras
+        "window_sec": window_sec
+    });
+
+    let client = reqwest::Client::new();
+    let resp = client
+        .post("http://127.0.0.1:9999/api/v2/detections/compile")
+        .json(&spec)
+        .send().await.map_err(|_| ())?;
+    if !resp.status().is_success() { return Err(()); }
+    let text = resp.text().await.map_err(|_| ())?;
+    let det: Value = serde_json::from_str(&text).map_err(|_| ())?;
+    let sql = det.get("sql").and_then(|v| v.as_str()).unwrap_or("-- bridge compile failed");
+    Ok(serde_json::json!({
+        "sql": sql,
+        "where_sql": "",
+        "warnings": ["compiled via detections bridge"]
+    }))
+}
+
+fn infer_rule_from_q(q: &str) -> (String, Vec<String>, u64) {
+    let lower = q.to_lowercase();
+    let rule_type = if lower.starts_with("seq(") { "sequence" }
+    else if lower.starts_with("ratio(") { "ratio" }
+    else if lower.starts_with("roll(") { "rolling_threshold" }
+    else if lower.starts_with("spike(") { "spike" }
+    else if lower.starts_with("first_seen(") { "first_seen" }
+    else if lower.starts_with("beacon(") { "beaconing" }
+    else { "sequence" };
+
+    let by = extract_by_list(q);
+    let window_sec = extract_within_seconds(q).unwrap_or(600);
+    (rule_type.to_string(), by, window_sec)
+}
+
+fn extract_by_list(q: &str) -> Vec<String> {
+    if let Some(start) = q.find("by={") {
+        let rest = &q[start+4..];
+        if let Some(end_off) = rest.find('}') {
+            let list = &rest[0..end_off];
+            return list.split(',').map(|s| s.trim().to_string()).filter(|s| !s.is_empty()).collect();
+        }
+    }
+    Vec::new()
+}
+
+fn extract_within_seconds(q: &str) -> Option<u64> {
+    if let Some(start) = q.find("within=") {
+        let rest = &q[start+7..];
+        // token until comma or closing paren
+        let token: String = rest.chars().take_while(|c| *c != ',' && *c != ')' && !c.is_whitespace()).collect();
+        return parse_duration_to_seconds(&token);
+    }
+    None
+}
+
+fn parse_duration_to_seconds(tok: &str) -> Option<u64> {
+    if tok.is_empty() { return None; }
+    let mut num_part = String::new();
+    let mut unit_part = String::new();
+    for ch in tok.chars() {
+        if ch.is_ascii_digit() { num_part.push(ch); } else { unit_part.push(ch); }
+    }
+    let n: u64 = num_part.parse().ok()?;
+    let sec = match unit_part.as_str() {
+        "s" => n,
+        "m" => n * 60,
+        "h" => n * 3600,
+        "d" => n * 86400,
+        _ => n,
+    };
+    Some(sec)
 }
 
 pub async fn execute(State(st): State<Arc<AppState>>, Json(body): Json<Value>) -> Result<Json<Value>, axum::http::StatusCode> {

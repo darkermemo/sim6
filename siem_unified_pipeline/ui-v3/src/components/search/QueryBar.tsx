@@ -35,12 +35,21 @@ export interface QueryBarProps {
 }
 
 const TIME_RANGES = [
+  { label: 'Last 5 min', value: 300 },
+  { label: 'Last 10 min', value: 600 },
   { label: 'Last 15 min', value: 900 },
+  { label: 'Last 30 min', value: 1800 },
   { label: 'Last 1 hour', value: 3600 },
   { label: 'Last 4 hours', value: 14400 },
+  { label: 'Last 6 hours', value: 21600 },
+  { label: 'Last 12 hours', value: 43200 },
   { label: 'Last 24 hours', value: 86400 },
+  { label: 'Last 3 days', value: 259200 },
   { label: 'Last 7 days', value: 604800 },
   { label: 'Last 30 days', value: 2592000 },
+  { label: 'Last 90 days', value: 7776000 },
+  { label: 'Last 6 months', value: 15552000 },
+  { label: 'Last 1 year', value: 31536000 },
 ];
 
 const TENANTS = [

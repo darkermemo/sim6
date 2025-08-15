@@ -28,7 +28,8 @@ import {
   ChevronRight,
   ChevronLeft,
   PanelLeftOpen,
-  PanelLeftClose
+  PanelLeftClose,
+  Target
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -71,6 +72,13 @@ const navigation = [
     href: "/reports", 
     icon: FileText,
     description: "Security reports and analysis"
+  },
+  { 
+    name: "Attack Simulations", 
+    href: "/attack-simulations", 
+    icon: Target,
+    description: "Generate attack scenarios for testing",
+    badge: "Dev"
   },
   { 
     name: "Health", 

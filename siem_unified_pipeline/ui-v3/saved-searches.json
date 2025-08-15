@@ -1,0 +1,81 @@
+[
+  {"id":"id_bruteforce_success","name":"Bruteforce → Success","severity":"high","tags":["identity","sequence"],"last_seconds":180,"query":"seq(fail[x50] -> success, within=3m, by={user,src_ip}, strict=strict_once)","description":"≥50 failed logins followed by a success from same user+IP in 3m","enabled":true},
+
+  {"id":"id_password_spray","name":"Password Spray","severity":"high","tags":["identity","ratio"],"last_seconds":600,"query":"ratio(fail:success > 20, within=10m, by={src_ip}) AND spread(uniq(user) ≥ 10, within=10m, by={src_ip})","description":"High fail:success and many users per source IP","enabled":true},
+
+  {"id":"id_mfa_fatigue","name":"MFA Fatigue → Approval","severity":"high","tags":["identity","sequence"],"last_seconds":1800,"query":"seq(mfa_denied[x5] -> mfa_approved, within=30m, by={user})","description":"Repeated MFA denials then approval","enabled":true},
+
+  {"id":"id_impossible_travel","name":"Impossible Travel","severity":"medium","tags":["identity","velocity"],"last_seconds":3600,"query":"travel(country_flip,<1h,by={user})","description":"Success logins from different countries within 1h","enabled":true},
+
+  {"id":"id_dormant_reactivation","name":"Dormant Account Reactivation","severity":"high","tags":["identity","baseline"],"last_seconds":3600,"query":"dormant(>90d, by={user}) AND spike(downloads,z≥3,within=1h,history=30d,by={user})","description":"Account idle >90d then activity spike","enabled":true},
+
+  {"id":"id_token_multi_ip","name":"Token Reuse Across IPs","severity":"high","tags":["identity","token"],"last_seconds":900,"query":"spread(uniq(src_ip) ≥ 2, within=15m, by={token_id})","description":"Same refresh token from multiple IPs","enabled":true},
+
+  {"id":"id_oauth_scope_escalation","name":"OAuth Scope Escalation + API Surge","severity":"high","tags":["saas","api"],"last_seconds":900,"query":"seq(oauth_scope_add('*ReadWrite*') -> api_calls, within=15m, by={app_id,user}) AND spike(api_calls,z≥3,within=15m,history=30d,by={app_id})","description":"Scope adds then abnormal API volume","enabled":true},
+
+  {"id":"id_forwarding_rule_blast","name":"Mailbox Forwarding Blast","severity":"high","tags":["saas","exfil"],"last_seconds":900,"query":"seq(mail_rule_forward_created -> mail_forward_hits[x50], within=15m, by={user})","description":"New forward rule then bulk forwards","enabled":true},
+
+  {"id":"ad_kerberoast_rc4","name":"Kerberoast RC4 Burst","severity":"high","tags":["ad","cred"],"last_seconds":300,"query":"roll(count(event_id=4769 AND ticket_enc='rc4') > 10, within=5m, by={user})","description":"Frequent RC4 TGS requests","enabled":true},
+
+  {"id":"ad_asrep_roast","name":"AS-REP Roastable User","severity":"high","tags":["ad","cred"],"last_seconds":600,"query":"roll(count(event_id=4768 AND preauth_type=0) > 0, within=10m, by={user})","description":"AS-REQ without preauth","enabled":true},
+
+  {"id":"ad_dcsync","name":"DCSync Behavior","severity":"critical","tags":["ad","lsa"],"last_seconds":600,"query":"roll(count(event_id=4662 AND ds_rights HAS 'DS-Replication-Get-Changes*') > 0, within=10m, by={src_ip})","description":"Replication rights usage against DC objects","enabled":true},
+
+  {"id":"ad_da_group_change_then_admin","name":"DA Membership → Admin Action","severity":"high","tags":["ad","privilege","sequence"],"last_seconds":900,"query":"seq(group_add('Domain Admins') -> admin_action, within=15m, by={user})","description":"Priv grant quickly followed by admin activity","enabled":true},
+
+  {"id":"ad_golden_ticket_anom","name":"Golden Ticket Anomaly","severity":"critical","tags":["ad","kerberos"],"last_seconds":3600,"query":"roll(count(tgt_lifetime_anom=1) > 0, within=1h, by={user})","description":"Abnormal TGT lifetime or SID mismatch","enabled":true},
+
+  {"id":"ad_silver_ticket","name":"Silver Ticket Pattern","severity":"high","tags":["ad","kerberos"],"last_seconds":600,"query":"where event_id=4624 AND logon_type=3 AND NOT exists(prev_4768_4769_with_kdc, within=10m, by={src_ip,host})","description":"Service logon without KDC evidence","enabled":true},
+
+  {"id":"lat_psexec","name":"PsExec Service Execution","severity":"high","tags":["lateral","exec"],"last_seconds":300,"query":"seq(service_install(name='PSEXESVC') -> process_spawn(parent='services.exe'), within=5m, by={host})","description":"PsExec service then process","enabled":true},
+
+  {"id":"lat_wmi","name":"Remote WMI Exec","severity":"high","tags":["lateral","exec"],"last_seconds":180,"query":"join(left=proc(parent='WmiPrvSE.exe'), right=net(dest_role='internal'), within=3m, by={host})","description":"WMI provider spawning tools with network","enabled":true},
+
+  {"id":"lat_rdp_then_schtask","name":"RDP Success → Scheduled Task","severity":"high","tags":["lateral","persistence"],"last_seconds":600,"query":"seq(login_rdp_success -> task_created, within=10m, by={user,host})","description":"Interactive RDP followed by task creation","enabled":true},
+
+  {"id":"lat_admin_fanout","name":"ADMIN$ Fan-out","severity":"high","tags":["lateral","spread"],"last_seconds":900,"query":"spread(uniq(host) ≥ 10, within=15m, by={user}) AND where admin_share_used=true","description":"Same user touches many hosts over ADMIN$","enabled":true},
+
+  {"id":"ev_log_clear_then_admin","name":"Event Log Clear → Admin Action","severity":"high","tags":["defense_evasion","sequence"],"last_seconds":600,"query":"seq(wevtutil_clear -> admin_action, within=10m, by={host})","description":"Clearing logs then sensitive ops","enabled":true},
+
+  {"id":"ev_shadow_del_mass_write","name":"Shadow Delete → Mass Write","severity":"critical","tags":["ransomware","sequence"],"last_seconds":600,"query":"seq(shadow_delete -> file_write_burst, within=10m, by={host})","description":"VSS removal followed by writes","enabled":true},
+
+  {"id":"net_tls_fp_mismatch","name":"TLS JA3/SNI Mismatch","severity":"medium","tags":["c2","tls"],"last_seconds":900,"query":"tls(ja3∉allow AND sni∉corp)","description":"Unknown JA3 and non-corp SNI","enabled":true},
+
+  {"id":"c2_beacon_low_jitter","name":"Low-Jitter Beacon","severity":"high","tags":["c2","beacon"],"last_seconds":3600,"query":"beacon(count≥20, jitter<0.2, within=1h, by={src_ip,dest_ip})","description":"Periodic connections with low jitter","enabled":true},
+
+  {"id":"dns_txt_exfil","name":"DNS TXT Exfil","severity":"high","tags":["exfil","dns"],"last_seconds":600,"query":"dns(txt_rate,>200/m,by={src_ip}) OR where rrtype NOT IN {A,AAAA,CNAME,NS,MX,SOA} AND roll(count()>50,within=5m,by={src_ip})","description":"High TXT or rare RRtypes volume","enabled":true},
+
+  {"id":"http_big_upload_new_domain","name":"1GB Upload to New Domain","severity":"high","tags":["exfil","http"],"last_seconds":600,"query":"overlay(new_domain=true) AND roll(sum(bytes_out) > 1000000000, within=10m, by={host}) AND where file_ext in {\"7z\",\"zip\",\"rar\"}","description":"Large archive upload to newly seen domain","enabled":true},
+
+  {"id":"auth_fail_spike","name":"Auth Failure Spike (z≥3)","severity":"medium","tags":["identity","spike"],"last_seconds":300,"query":"spike(auth_fail,z≥3,within=5m,history=30d,by={user})","description":"Failures exceed baseline","enabled":true},
+
+  {"id":"peer_out_downloads","name":"Peer Outlier Downloads","severity":"medium","tags":["collection","peer"],"last_seconds":3600,"query":"peer_out(downloads,>p95,1h,peer=department)","description":"User higher than peer p95","enabled":true},
+
+  {"id":"first_seen_country","name":"First-Seen Country","severity":"low","tags":["identity","first_seen"],"last_seconds":0,"query":"first_seen(country, horizon=180d, by={user})","description":"New login country in 180d","enabled":true},
+
+  {"id":"distinct_hosts_drift","name":"Distinct Hosts Drift","severity":"medium","tags":["lateral","drift"],"last_seconds":3600,"query":"dcount(hosts,z≥3,1h,by={user})","description":"Hosts touched >> baseline","enabled":true},
+
+  {"id":"aws_stoplog_then_policy","name":"AWS StopLogging → Policy Attach","severity":"critical","tags":["cloud","defense_evasion"],"last_seconds":600,"query":"seq(cloudtrail_stop_logging -> iam_attach_policy, within=10m, by={principal_arn})","description":"Stop logs then grant power","enabled":true},
+
+  {"id":"aws_key_create_use_new_asn","name":"AWS Key Create → Used From New ASN","severity":"high","tags":["cloud","keys"],"last_seconds":900,"query":"seq(iam_create_access_key -> api_use_new_asn, within=15m, by={access_key_id})","description":"Fresh key used from unfamiliar ASN","enabled":true},
+
+  {"id":"k8s_rbac_escalation","name":"K8s ClusterRoleBinding → Use","severity":"high","tags":["k8s","rbac"],"last_seconds":1800,"query":"seq(k8s_create_clusterrolebinding -> k8s_priv_action, within=30m, by={sa,namespace})","description":"RBAC elevation then privileged action","enabled":true},
+
+  {"id":"waf_crs_ratio","name":"WAF CRS High-Severity Ratio","severity":"medium","tags":["waf","web"],"last_seconds":600,"query":"ratio(waf_high:all > 0.3, within=10m, by={src_ip}) AND spread(uniq(uri) ≥ 5, within=10m, by={src_ip})","description":"Lots of distinct URIs with high-sev hits","enabled":true},
+
+  {"id":"service_start_without_install","name":"Service Start Without Install","severity":"medium","tags":["evasion","causality"],"last_seconds":1800,"query":"where service_start=true AND NOT exists(service_install within=30m, by={host,service_name})","description":"Start event with no recent install","enabled":true},
+
+  {"id":"posture_gap_login","name":"Login on Non-Compliant Device","severity":"high","tags":["posture","identity"],"last_seconds":0,"query":"posture(login_success AND !mdm_ok, by={device_id})","description":"IdP success on device failing posture","enabled":true},
+
+  {"id":"rare_admin_tool","name":"Rare Admin Tool Use","severity":"medium","tags":["lateral","rare"],"last_seconds":0,"query":"rare(tool, org_freq < 0.1%, within=30d, by={user}) AND where tool in {\"psexec\",\"wmic\",\"at.exe\"}","description":"First/rare use of admin tool","enabled":true},
+
+  {"id":"asn_flipflop","name":"ASN Flip-Flop","severity":"medium","tags":["identity","net"],"last_seconds":1800,"query":"asn_flips(≥3,30m,by={user})","description":"User origin ASN changes multiple times","enabled":true},
+
+  {"id":"long_lived_session_priv","name":"Long-Lived Session With Priv Ops","severity":"high","tags":["session","priv"],"last_seconds":0,"query":"session(age>policy_max AND priv_ops>0, by={session_id})","description":"Aged session performing privileged actions","enabled":true},
+
+  {"id":"tls_unknown_ja3_new_domain","name":"Unknown JA3 to New Domain","severity":"high","tags":["tls","c2"],"last_seconds":3600,"query":"tls(ja3∉allow) AND overlay(new_domain=true) AND spread(uniq(dest_ip) ≥ 1, within=1h, by={src_ip})","description":"Unseen TLS fingerprint targeting new domain","enabled":true},
+
+  {"id":"dns_rare_rrtype","name":"Rare DNS RRtype Volume","severity":"medium","tags":["dns","anomaly"],"last_seconds":900,"query":"where rrtype NOT IN {A,AAAA,CNAME,NS,MX,SOA,TXT} AND roll(count()>100,within=15m,by={src_ip})","description":"Nonstandard RRtypes in volume","enabled":true},
+
+  {"id":"multi_host_beacon_shape","name":"Same Beacon Shape On Many Hosts","severity":"high","tags":["c2","beacon"],"last_seconds":3600,"query":"beacon(count≥15, jitter<0.25, within=1h, by={host,dest_ip}) AND spread(uniq(host) ≥ 5, within=1h, by={dest_ip})","description":"Shared beacon profile across hosts","enabled":true}
+]
