@@ -188,12 +188,7 @@ function SearchPageContent() {
               urlState.setTimeRange(time.last_seconds || urlState.last_seconds)
             }} />
             <ResultTable
-              events={(() => {
-                console.log('Search results:', searchQuery.results);
-                console.log('Events object:', searchQuery.results.events);
-                console.log('Events array:', searchQuery.results.events?.events);
-                return searchQuery.results.events?.events || [];
-              })()}
+              events={searchQuery.results.events?.events || []}
               loading={searchQuery.loading}
               onRowClick={handleRowClick}
             />
