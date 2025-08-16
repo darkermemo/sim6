@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useCallback, useMemo, Suspense } from 'react';
+import React, { useState, useCallback, useMemo, useRef, Suspense } from 'react';
 import { Search, Calendar, ChevronDown, ChevronRight, Play, X, Clock, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -106,6 +106,9 @@ function SearchPageContent() {
   // Advanced Filters (rule-grade)
   const [rootFilter, setRootFilter] = useState<Filter>({ kind: 'group', logic: 'AND', children: [] });
   const compiledQ = useMemo(() => compileFiltersToQ(rootFilter, schema.map), [rootFilter, schema.map]);
+  // Click-to-filter chips (from cell/context menu actions)
+  const [activeActions, setActiveActions] = useState<FilterAction[]>([]);
+  const baseQueryRef = useRef<string>('');
 
   // Persist columns across refreshes (localStorage)
   React.useEffect(() => {
@@ -238,6 +241,66 @@ function SearchPageContent() {
     });
     setDragColIndex(null);
   }, [dragColIndex]);
+ 
+  // Helpers for chips
+  const actionToDsl = useCallback((action: FilterAction): string | null => {
+    switch (action.type) {
+      case 'include':
+        return `${action.field}:${quoteValue(action.value)}`;
+      case 'exclude':
+        return `NOT ${action.field}:${quoteValue(action.value)}`;
+      case 'in':
+        return `${action.field} IN (${(action.values || []).map(quoteValue).join(',')})`;
+      case 'exists':
+        return `${action.negate ? 'NOT ' : ''}exists(${action.field})`;
+      case 'op': {
+        const v = quoteValue(action.value);
+        if (action.op === 'regex') return `${action.field} ~ ${v}`;
+        if (action.op === 'contains') return `contains(${action.field}, ${v})`;
+        if (action.op === 'startsWith') return `startsWith(${action.field}, ${v})`;
+        if (action.op === 'endsWith') return `endsWith(${action.field}, ${v})`;
+        return `${action.field} ${action.op} ${v}`;
+      }
+      case 'sequence_add':
+        return `stage_${action.stage}(${action.field}:${quoteValue(action.value)})`;
+      case 'time_range':
+        return null;
+      default:
+        return null;
+    }
+  }, []);
+
+  const actionLabel = useCallback((action: FilterAction): string => {
+    switch (action.type) {
+      case 'include': return `${action.field} = ${String(action.value)}`;
+      case 'exclude': return `NOT ${action.field} = ${String(action.value)}`;
+      case 'in': return `${action.field} IN (${(action.values || []).slice(0,3).map(String).join(',')}${(action.values||[]).length>3?'…':''})`;
+      case 'exists': return action.negate ? `NOT exists(${action.field})` : `exists(${action.field})`;
+      case 'op': return `${action.field} ${action.op} ${String(action.value)}`;
+      case 'sequence_add': return `seq.${action.stage}:${action.field}=${String(action.value)}`;
+      case 'time_range': return `time range set`;
+      default: return '';
+    }
+  }, []);
+
+  const recomputeAndRun = useCallback((actions: FilterAction[]) => {
+    const base = baseQueryRef.current && baseQueryRef.current !== '*' ? baseQueryRef.current : '';
+    const parts: string[] = [];
+    if (base) parts.push(base);
+    for (const a of actions) {
+      const frag = actionToDsl(a);
+      if (frag) parts.push(frag);
+      if (a.type === 'time_range') {
+        const tr = a as any;
+        const seconds = Math.max(1, Math.floor((tr.to - tr.from) / 1000));
+        urlState.setTimeRange(seconds);
+      }
+    }
+    const finalQ = parts.join(' AND ');
+    urlState.setQuery(finalQ);
+    // defer execute to after definition
+    // will be redefined below after handleExecuteSearch
+  }, [actionToDsl, urlState]);
 
   
 
@@ -332,6 +395,32 @@ function SearchPageContent() {
     }
   }, [urlState.q, urlState.tenant_id, urlState.last_seconds, urlState.limit, urlState.offset, selectedFacets, buildQuery]);
 
+  // Hook up recomputeAndRun to execute after handleExecuteSearch exists
+  const executeRef = useRef<((q: string) => void) | null>(null);
+  React.useEffect(() => {
+    executeRef.current = (q: string) => handleExecuteSearch(q);
+  }, [handleExecuteSearch]);
+  const recomputeAndRunExec = useCallback((actions: FilterAction[]) => {
+    const base = baseQueryRef.current && baseQueryRef.current !== '*' ? baseQueryRef.current : '';
+    const parts: string[] = [];
+    if (base) parts.push(base);
+    for (const a of actions) {
+      const frag = actionToDsl(a);
+      if (frag) parts.push(frag);
+      if (a.type === 'time_range') {
+        const tr = a as any;
+        const seconds = Math.max(1, Math.floor((tr.to - tr.from) / 1000));
+        urlState.setTimeRange(seconds);
+      }
+    }
+    const finalQ = parts.join(' AND ');
+    urlState.setQuery(finalQ);
+    executeRef.current?.(finalQ);
+  }, [actionToDsl, urlState]);
+  
+  // Replace usages
+  const recomputeAndRun_ref = recomputeAndRunExec;
+
   const handleClear = useCallback(() => {
     urlState.reset();
     setSelectedFacets({});
@@ -357,6 +446,8 @@ function SearchPageContent() {
   }, [urlState]);
 
   const handleQueryChange = useCallback((query: string) => {
+    baseQueryRef.current = (query || '').trim();
+    setActiveActions([]);
     urlState.setQuery(query);
   }, [urlState]);
 
@@ -412,50 +503,16 @@ function SearchPageContent() {
   // Unified filter dispatcher wiring (after handleExecuteSearch is defined)
   React.useEffect(() => {
     setFilterExecutor((action: FilterAction) => {
-      const base = (urlState.q || '').trim();
-      const parts: string[] = [];
-      if (base && base !== '*') parts.push(base);
-
-      switch (action.type) {
-        case 'include':
-          parts.push(`${action.field}:${quoteValue(action.value)}`);
-          break;
-        case 'exclude':
-          parts.push(`NOT ${action.field}:${quoteValue(action.value)}`);
-          break;
-        case 'in': {
-          const vals = (action.values || []).map(quoteValue).join(',');
-          parts.push(`${action.field} IN (${vals})`);
-          break;
-        }
-        case 'exists':
-          parts.push(`${action.negate ? 'NOT ' : ''}exists(${action.field})`);
-          break;
-        case 'op': {
-          const v = quoteValue(action.value);
-          if (action.op === 'regex') parts.push(`${action.field} ~ ${v}`);
-          else if (action.op === 'contains') parts.push(`contains(${action.field}, ${v})`);
-          else if (action.op === 'startsWith') parts.push(`startsWith(${action.field}, ${v})`);
-          else if (action.op === 'endsWith') parts.push(`endsWith(${action.field}, ${v})`);
-          else parts.push(`${action.field} ${action.op} ${v}`);
-          break;
-        }
-        case 'sequence_add': {
-          parts.push(`stage_${action.stage}(${action.field}:${quoteValue(action.value)})`);
-          break;
-        }
-        case 'time_range': {
-          const seconds = Math.max(1, Math.floor((action.to - action.from) / 1000));
-          urlState.setTimeRange(seconds);
-          break;
-        }
+      if (activeActions.length === 0) {
+        baseQueryRef.current = (urlState.q || '').trim();
       }
-
-      const finalQ = parts.join(' AND ');
-      urlState.setQuery(finalQ);
-      handleExecuteSearch(finalQ);
+      setActiveActions(prev => {
+        const next = [...prev, action];
+        recomputeAndRun_ref(next);
+        return next;
+      });
     });
-  }, [urlState, handleExecuteSearch]);
+  }, [urlState, activeActions.length, recomputeAndRun_ref]);
 
   const toggleRowExpansion = useCallback((rowId: string) => {
     const newExpanded = new Set(expandedRows);
@@ -706,6 +763,31 @@ function SearchPageContent() {
             
             {/* Results Table */}
             <div className="flex-1 bg-white border border-gray-200 rounded overflow-hidden flex flex-col">
+              {activeActions.length > 0 && (
+                <div className="px-3 pt-3">
+                  <div className="flex flex-wrap gap-2">
+                    {activeActions.map((a, idx) => (
+                      <span key={idx} className="inline-flex items-center gap-2 bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-100 border border-slate-200 dark:border-slate-700 rounded px-2 py-1 text-xs">
+                        {actionLabel(a)}
+                        <button
+                          className="rounded px-1 hover:bg-slate-200 dark:hover:bg-slate-700"
+                          aria-label="Remove filter"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setActiveActions(prev => {
+                              const next = prev.filter((_, i) => i !== idx);
+                              recomputeAndRun_ref(next);
+                              return next;
+                            });
+                          }}
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
               {searchResults.loading ? (
                 <div className="p-8 text-center">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
