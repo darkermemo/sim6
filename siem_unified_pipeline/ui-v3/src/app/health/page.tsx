@@ -114,7 +114,7 @@ export default function HealthPage() {
   };
 
   const overall = data?.overall ?? 'down';
-  const badge = overall === 'up' ? 'bg-emerald-500/10 text-emerald-300 ring-1 ring-emerald-500/30' : overall === 'degraded' ? 'bg-amber-500/10 text-amber-300 ring-1 ring-amber-500/30' : 'bg-rose-500/10 text-rose-300 ring-1 ring-rose-500/30';
+  const badge = overall === 'up' ? 'bg-emerald-500 text-emerald-300 ring-1 ring-emerald-500/30' : overall === 'degraded' ? 'bg-amber-500 text-amber-300 ring-1 ring-amber-500/30' : 'bg-rose-500 text-rose-300 ring-1 ring-rose-500/30';
 
   // Calculate enhanced metrics
   const totalEvents = 244540; // From our test query
@@ -151,7 +151,7 @@ export default function HealthPage() {
     <div className="p-6 space-y-6">
       {/* Test marker */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-        <div className="text-9xl font-bold text-gray-300 opacity-20">123</div>
+        <div className="text-9xl font-bold text-muted-foreground">123</div>
       </div>
 
       {/* Enhanced Header with Controls */}
@@ -313,13 +313,13 @@ export default function HealthPage() {
 
       {/* Error Management & Auto-Fix Panel */}
       {totalErrors > 0 && (
-        <UICard className="border-red-800 bg-red-950/30">
+        <UICard className="border-red-800 bg-red-950">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-red-300">
               <AlertTriangle className="h-5 w-5" />
               Active Issues & Remediation ({totalErrors})
             </CardTitle>
-            <CardDescription className="text-red-200/70">
+            <CardDescription className="text-red-200">
               Automated error detection and one-click fixes
             </CardDescription>
           </CardHeader>
@@ -461,7 +461,7 @@ export default function HealthPage() {
               >
                 <TrendingUp className="h-4 w-4 mr-1" />
                 Optimize
-              </Button>
+              </ActionButton>
             </div>
           </CardContent>
         </UICard>

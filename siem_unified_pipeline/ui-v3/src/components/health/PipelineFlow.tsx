@@ -109,7 +109,7 @@ export function PipelineFlow({ h }: { h: HealthSummary | null }) {
   const parseSuccessRate = h?.pipeline?.parse_success_pct ?? 0;
 
   return (
-    <div className="w-full overflow-x-auto rounded-xl bg-card border p-6">
+    <div className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-700">
       <div className="mb-4 flex items-center justify-between">
         <h3 className="text-lg font-semibold">Live Pipeline Flow</h3>
         <div className="flex items-center gap-4 text-sm text-muted-foreground">

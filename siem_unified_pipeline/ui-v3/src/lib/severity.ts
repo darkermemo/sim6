@@ -11,12 +11,12 @@ export function normalizeSeverity(input: unknown): Severity {
   return 'unknown';
 }
 
-// Safe badge/color mapping
+// Safe badge/color mapping - SOLID ONLY
 export const severityColors: Record<Severity, string> = {
-  critical: 'bg-red-600/15 text-red-400 border-red-600/30',
-  high: 'bg-orange-600/15 text-orange-400 border-orange-600/30',
-  medium: 'bg-amber-600/15 text-amber-400 border-amber-600/30',
-  low: 'bg-yellow-600/15 text-yellow-400 border-yellow-600/30',
-  info: 'bg-sky-600/15 text-sky-400 border-sky-600/30',
-  unknown: 'bg-zinc-600/15 text-zinc-400 border-zinc-600/30',
+  critical: 'bg-red-600 text-red-100 border-red-600',
+  high: 'bg-orange-600 text-orange-100 border-orange-600',
+  medium: 'bg-amber-600 text-amber-100 border-amber-600',
+  low: 'bg-yellow-600 text-yellow-100 border-yellow-600',
+  info: 'bg-sky-600 text-sky-100 border-sky-600',
+  unknown: 'bg-zinc-600 text-zinc-100 border-zinc-600',
 };

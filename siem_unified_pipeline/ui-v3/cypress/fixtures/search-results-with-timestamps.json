@@ -1,0 +1,50 @@
+{
+  "total": 5,
+  "data": {
+    "data": [
+      {
+        "event_id": "evt-1",
+        "event_timestamp": "2024-08-15T20:30:00.123Z",
+        "severity": "high",
+        "message": "Security alert: Suspicious login attempt",
+        "source_ip": "192.168.1.100"
+      },
+      {
+        "event_id": "evt-2", 
+        "event_timestamp": 1692129000,
+        "severity": "medium",
+        "message": "Network traffic anomaly detected",
+        "source_ip": "10.0.0.50"
+      },
+      {
+        "event_id": "evt-3",
+        "event_timestamp": 1692129000000,
+        "severity": "low", 
+        "message": "System backup completed",
+        "source_ip": "172.16.0.10"
+      },
+      {
+        "event_id": "evt-4",
+        "event_timestamp": "2024-08-15T20:25:00Z",
+        "severity": "critical",
+        "message": "Malware detected on endpoint",
+        "source_ip": "192.168.1.200"
+      },
+      {
+        "event_id": "evt-5",
+        "event_timestamp": null,
+        "severity": null,
+        "message": null,
+        "source_ip": "10.0.0.1"
+      }
+    ],
+    "meta": [
+      {"name": "event_id", "type": "String"},
+      {"name": "event_timestamp", "type": "DateTime64(3)"},
+      {"name": "severity", "type": "LowCardinality(String)"},
+      {"name": "message", "type": "String"},
+      {"name": "source_ip", "type": "String"}
+    ],
+    "rows": 5
+  }
+}

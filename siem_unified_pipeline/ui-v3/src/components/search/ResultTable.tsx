@@ -4,7 +4,27 @@ import React, { useState, useMemo, useCallback } from 'react';
 import { ActionButton } from '@/components/ui/ActionButton';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { normalizeSeverity } from '@/lib/severity';
+import { toDate, formatTimestamp } from '@/lib/api';
+import { normalizeSeverity, severityColors } from '@/lib/severity';
+
+/**
+ * Generate stable row key from event data
+ * Priority: event.id > event.event_id > event._id > hash(ts, src_ip, user)
+ */
+function getStableRowKey(event: any, index: number): string {
+  if (event.id) return String(event.id);
+  if (event.event_id) return String(event.event_id);
+  if (event._id) return String(event._id);
+  
+  // Fallback: create stable hash from deterministic fields + index
+  const parts = [
+    event.timestamp || event.event_timestamp || '',
+    event.source_ip || '',
+    event.user || '',
+    index
+  ];
+  return `event-${parts.join('-').replace(/[^a-zA-Z0-9-]/g, '_')}`;
+}
 import {
   Table,
   TableBody,
@@ -63,17 +83,18 @@ export function ResultTable({ events, loading, onRowClick, maxHeight = '600px' }
       const timestamp = event.tsIso || event.timestamp;
       let formattedTime = '—';
       if (timestamp) {
-        const date = new Date(timestamp);
-        formattedTime = isNaN(date.getTime()) ? 'Invalid Date' : date.toLocaleString();
+        formattedTime = formatTimestamp(timestamp, 'Invalid Date');
       }
       
       return {
         ...event,
         formattedTime,
-        normalizedSeverity: normalizeSeverity(event.severity),
-        truncatedMessage: (event.message || '').length > 100 
-          ? (event.message || '').substring(0, 100) + '...' 
-          : (event.message || '')
+        normalizedSeverity: normalizeSeverity(event.severity || 'unknown'),
+        message: event.message ?? (event as any).msg ?? (event as any).event ?? '(no message)',
+        truncatedMessage: (() => {
+          const msg = event.message ?? (event as any).msg ?? (event as any).event ?? '(no message)';
+          return msg.length > 100 ? msg.substring(0, 100) + '...' : msg;
+        })()
       };
     });
   }, [events]);
@@ -91,14 +112,8 @@ export function ResultTable({ events, loading, onRowClick, maxHeight = '600px' }
   }, []);
 
   const getSeverityBadgeClass = (severity: string) => {
-    switch (normalizeSeverity(severity)) {
-      case 'critical': return 'bg-red-100 text-red-800 border-red-200';
-      case 'high': return 'bg-orange-100 text-orange-800 border-orange-200';
-      case 'medium': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'low': return 'bg-blue-100 text-blue-800 border-blue-200';
-      case 'info': return 'bg-sky-100 text-sky-800 border-sky-200';
-      default: return 'bg-gray-100 text-gray-800 border-gray-200';
-    }
+    const normalizedSeverity = normalizeSeverity(severity);
+    return severityColors[normalizedSeverity] || severityColors.unknown;
   };
 
   const getSourceIcon = (source: string) => {
@@ -113,86 +128,32 @@ export function ResultTable({ events, loading, onRowClick, maxHeight = '600px' }
 
   if (loading) {
     return (
-      <div className="bg-card rounded-lg p-6">
-        <div className="space-y-4">
-          {Array.from({ length: 8 }).map((_, i) => (
-            <div key={i} className="flex items-center gap-4">
-              <div className="w-8 h-8 bg-muted rounded"></div>
-              <div className="flex-1 space-y-2">
-                <div className="h-4 bg-muted rounded w-3/4"></div>
-                <div className="h-3 bg-muted rounded w-1/2"></div>
-              </div>
+      <div className="space-y-4">
+        {Array.from({ length: 8 }).map((_, i) => (
+          <div key={i} className="flex items-center gap-4">
+            <div className="w-8 h-8 bg-slate-100 dark:bg-slate-800 rounded"></div>
+            <div className="flex-1 space-y-2">
+              <div className="h-4 bg-slate-100 dark:bg-slate-800 rounded w-3/4"></div>
+              <div className="h-3 bg-slate-100 dark:bg-slate-800 rounded w-1/2"></div>
             </div>
-          ))}
-        </div>
+          </div>
+        ))}
       </div>
     );
   }
 
   return (
-    <div className="bg-card rounded-lg shadow-lg overflow-hidden">
-      {/* Table Header Controls */}
-      <div className="p-4 border-b border-border">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Database className="h-5 w-5 text-primary" />
-            <h3 className="font-semibold">Events</h3>
-            <span className="text-sm text-muted-foreground">
-              {events.length.toLocaleString()} results
-            </span>
-          </div>
-          <div className="flex items-center gap-2">
-            <ActionButton 
-              variant="outline" 
-              size="sm"
-              onClick={() => {/* TODO: implement export */}}
-              data-action="search:results:export"
-              data-intent="api"
-              data-endpoint="/api/v2/search/export"
-            >
-              <Download className="h-4 w-4 mr-2" />
-              Export
-            </ActionButton>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <ActionButton 
-                  variant="outline" 
-                  size="sm"
-                  data-action="search:results:columns"
-                  data-intent="open-modal"
-                >
-                  <Columns className="h-4 w-4 mr-2" />
-                  Columns
-                </ActionButton>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
-                {ALL_COLUMNS.map(column => (
-                  <DropdownMenuCheckboxItem
-                    key={column.key}
-                    checked={visibleColumns.has(column.key)}
-                    onCheckedChange={() => handleColumnToggle(column.key)}
-                    disabled={column.essential && visibleColumns.has(column.key) && visibleColumns.size === 1}
-                  >
-                    {column.label}
-                    {column.essential && <span className="ml-2 text-xs text-muted-foreground">(required)</span>}
-                  </DropdownMenuCheckboxItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </div>
-      </div>
-
-      {/* Virtualized Table */}
-      <div className="overflow-auto" style={{ maxHeight }}>
+    <div>
+      {/* Table */}
+      <div className="overflow-auto max-h-[var(--table-max-h)]">
         <Table>
-          <TableHeader className="sticky top-0 bg-card z-10">
+          <TableHeader className="bg-card text-card-foreground border-b border-border sticky top-0 z-10">
             <TableRow>
               {visibleColumnList.map(column => (
                 <TableHead 
                   key={column.key} 
-                  style={{ width: column.width }}
-                  className="font-medium"
+                  className="font-medium h-10"
+                  data-width={column.width}
                 >
                   {column.label}
                 </TableHead>
@@ -207,7 +168,7 @@ export function ResultTable({ events, loading, onRowClick, maxHeight = '600px' }
                   colSpan={visibleColumnList.length + 1} 
                   className="text-center py-8 text-muted-foreground"
                 >
-                  <Database className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                  <Database className="h-8 w-8 mx-auto mb-2 " />
                   <p>No events found</p>
                 </TableCell>
               </TableRow>
@@ -217,8 +178,8 @@ export function ResultTable({ events, loading, onRowClick, maxHeight = '600px' }
                 
                 return (
                   <TableRow 
-                    key={event.id}
-                    className="cursor-pointer hover:bg-muted/50 transition-colors"
+                    key={getStableRowKey(event, index)}
+                    className="cursor-pointer hover:bg-muted transition-colors h-9"
                     onClick={() => onRowClick(event)}
                   >
                     {visibleColumns.has('timestamp') && (
@@ -298,17 +259,6 @@ export function ResultTable({ events, loading, onRowClick, maxHeight = '600px' }
         </Table>
       </div>
 
-      {/* Table Footer with stats */}
-      <div className="p-4 border-t border-border bg-muted/30">
-        <div className="flex justify-between items-center text-sm text-muted-foreground">
-          <span>
-            Showing {formattedEvents.length} events
-          </span>
-          <span>
-            Click any row to inspect details
-          </span>
-        </div>
-      </div>
     </div>
   );
 }

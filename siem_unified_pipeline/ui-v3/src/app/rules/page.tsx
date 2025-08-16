@@ -154,10 +154,10 @@ export default function RulesPage() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "Active": return "bg-green-100 text-green-800 border-green-200 dark:bg-green-900/20 dark:text-green-300 dark:border-green-800";
-      case "Testing": return "bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800";
-      case "Inactive": return "bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-900/20 dark:text-gray-300 dark:border-gray-800";
-      default: return "bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-900/20 dark:text-gray-300 dark:border-gray-800";
+      case "Active": return "bg-green-100 text-green-800 border-green-200 dark:bg-green-900 dark:text-green-300 dark:border-green-800";
+      case "Testing": return "bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900 dark:text-blue-300 dark:border-blue-800";
+      case "Inactive": return "bg-muted text-muted-foreground border-slate-200 dark:border-slate-700";
+      default: return "bg-muted text-muted-foreground border-slate-200 dark:border-slate-700";
     }
   };
 
@@ -188,8 +188,8 @@ export default function RulesPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Detection Rules</h1>
-          <p className="text-slate-600 dark:text-slate-400 mt-1">
+          <h1 className="text-3xl font-bold text-foreground">Detection Rules</h1>
+          <p className="text-muted-foreground mt-1">
             Manage and monitor your security detection rules
           </p>
         </div>
@@ -209,14 +209,14 @@ export default function RulesPage() {
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-green-100 dark:bg-green-900/20">
+              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-muted">
                 <CheckCircle className="h-6 w-6 text-green-600 dark:text-green-400" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-slate-900 dark:text-white">
+                <p className="text-2xl font-bold text-foreground">
                   {rules.filter(r => r.status === "Active").length}
                 </p>
-                <p className="text-sm text-slate-600 dark:text-slate-400">Active Rules</p>
+                <p className="text-sm text-muted-foreground">Active Rules</p>
               </div>
             </div>
           </CardContent>
@@ -225,14 +225,14 @@ export default function RulesPage() {
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-900/20">
+              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-muted">
                 <Clock className="h-6 w-6 text-blue-600 dark:text-blue-400" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-slate-900 dark:text-white">
+                <p className="text-2xl font-bold text-foreground">
                   {rules.filter(r => r.status === "Testing").length}
                 </p>
-                <p className="text-sm text-slate-600 dark:text-slate-400">Testing</p>
+                <p className="text-sm text-muted-foreground">Testing</p>
               </div>
             </div>
           </CardContent>
@@ -241,14 +241,14 @@ export default function RulesPage() {
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-red-100 dark:bg-red-900/20">
+              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-red-100 dark:bg-red-900">
                 <AlertTriangle className="h-6 w-6 text-red-600 dark:text-red-400" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-slate-900 dark:text-white">
+                <p className="text-2xl font-bold text-foreground">
                   {rules.filter(r => r.severity === "Critical" || r.severity === "High").length}
                 </p>
-                <p className="text-sm text-slate-600 dark:text-slate-400">High Priority</p>
+                <p className="text-sm text-muted-foreground">High Priority</p>
               </div>
             </div>
           </CardContent>
@@ -257,14 +257,14 @@ export default function RulesPage() {
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-orange-100 dark:bg-orange-900/20">
+              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-orange-100 dark:bg-orange-900">
                 <PlayCircle className="h-6 w-6 text-orange-600 dark:text-orange-400" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-slate-900 dark:text-white">
+                <p className="text-2xl font-bold text-foreground">
                   {rules.reduce((sum, r) => sum + r.triggerCount, 0)}
                 </p>
-                <p className="text-sm text-slate-600 dark:text-slate-400">Total Triggers</p>
+                <p className="text-sm text-muted-foreground">Total Triggers</p>
               </div>
             </div>
           </CardContent>
@@ -277,7 +277,7 @@ export default function RulesPage() {
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="flex-1">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Search rules..."
                   value={searchQuery}
@@ -290,7 +290,7 @@ export default function RulesPage() {
               <select
                 value={selectedCategory}
                 onChange={(e) => setSelectedCategory(e.target.value)}
-                className="px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-md bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+                className="px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-md bg-card text-foreground"
               >
                 {categories.map(category => (
                   <option key={category} value={category}>
@@ -301,7 +301,7 @@ export default function RulesPage() {
               <select
                 value={selectedStatus}
                 onChange={(e) => setSelectedStatus(e.target.value)}
-                className="px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-md bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+                className="px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-md bg-card text-foreground"
               >
                 {statuses.map(status => (
                   <option key={status} value={status}>
@@ -325,7 +325,7 @@ export default function RulesPage() {
                 <div className="flex items-center justify-between">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-3 mb-2">
-                      <h3 className="text-lg font-semibold text-slate-900 dark:text-white truncate">
+                      <h3 className="text-lg font-semibold text-foreground truncate">
                         {rule.name}
                       </h3>
                       <Badge className="severity" data-level={getSeverityLevel(rule.severity)}>
@@ -336,10 +336,10 @@ export default function RulesPage() {
                         {rule.status}
                       </Badge>
                     </div>
-                    <p className="text-slate-600 dark:text-slate-400 mb-3">
+                    <p className="text-muted-foreground mb-3">
                       {rule.description}
                     </p>
-                    <div className="flex items-center gap-6 text-sm text-slate-500 dark:text-slate-400">
+                    <div className="flex items-center gap-6 text-sm text-muted-foreground">
                       <span className="flex items-center gap-1">
                         <Shield className="h-4 w-4" />
                         {rule.category}
@@ -380,7 +380,7 @@ export default function RulesPage() {
                     <ActionButton 
                       variant="ghost" 
                       size="sm" 
-                      className="gap-2 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
+                      className="gap-2 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900"
                       onClick={() => {/* TODO: delete rule */}}
                       data-action="rules:item:delete"
                       data-intent="api"
@@ -399,11 +399,11 @@ export default function RulesPage() {
           {filteredRules.length === 0 && !loading && (
             <Card>
               <CardContent className="p-12 text-center">
-                <Shield className="h-12 w-12 text-slate-400 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">
+                <Shield className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-foreground mb-2">
                   No rules found
                 </h3>
-                <p className="text-slate-600 dark:text-slate-400 mb-6">
+                <p className="text-muted-foreground mb-6">
                   {searchQuery || selectedCategory !== "all" || selectedStatus !== "all"
                     ? "Try adjusting your search criteria"
                     : "Create your first detection rule to get started"
@@ -417,7 +417,7 @@ export default function RulesPage() {
                 >
                   <Plus className="h-4 w-4" />
                   Create Rule
-                </Button>
+                </ActionButton>
               </CardContent>
             </Card>
           )}

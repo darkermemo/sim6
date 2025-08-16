@@ -17,6 +17,8 @@ pub fn routes(state: Arc<AppState>) -> Router<Arc<AppState>> {
         .route("/api/v2/search/facets", post(handlers::facets))
         .route("/api/v2/search/saved", get(handlers::saved_searches))
         .route("/api/v2/search/saved", post(handlers::save_search))
+        .route("/api/v2/search/columns", get(handlers::get_columns))
+        .route("/api/v2/search/columns", post(handlers::put_columns))
         .route("/api/v2/search/saved/:id", delete(handlers::delete_search))
         // Field catalog endpoints for world-class filtering
         .route("/api/v2/search/fields", get(get_search_fields))

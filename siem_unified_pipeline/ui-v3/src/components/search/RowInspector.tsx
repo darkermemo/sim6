@@ -3,10 +3,12 @@
 import React, { useState } from 'react';
 import { ActionButton } from '@/components/ui/ActionButton';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
-import { normalizeSeverity } from '@/lib/severity';
+import { Modal, ModalContent } from '@/components/ui/modal';
+import { normalizeSeverity, severityColors } from '@/lib/severity';
 import {
   X,
   Copy,
@@ -37,14 +39,8 @@ export function RowInspector({ event, isOpen, onClose }: RowInspectorProps) {
   if (!isOpen || !event) return null;
 
   const getSeverityBadgeClass = (severity: string) => {
-    switch (normalizeSeverity(severity)) {
-      case 'critical': return 'bg-red-100 text-red-800 border-red-200';
-      case 'high': return 'bg-orange-100 text-orange-800 border-orange-200';
-      case 'medium': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'low': return 'bg-blue-100 text-blue-800 border-blue-200';
-      case 'info': return 'bg-sky-100 text-sky-800 border-sky-200';
-      default: return 'bg-gray-100 text-gray-800 border-gray-200';
-    }
+    const normalizedSeverity = normalizeSeverity(severity);
+    return severityColors[normalizedSeverity] || severityColors.unknown;
   };
 
   const getSourceIcon = (source: string) => {
@@ -80,7 +76,7 @@ export function RowInspector({ event, isOpen, onClose }: RowInspectorProps) {
   const eventFields = [
     { label: 'Event ID', value: event.id, icon: Tag },
     { label: 'Event Type', value: event.event_type, icon: Activity },
-    { label: 'Timestamp', value: new Date(event.timestamp).toLocaleString(), icon: Clock },
+    { label: 'Timestamp', value: event.timestamp ? new Date(event.timestamp).toLocaleString() : '—', icon: Clock },
     { label: 'Severity', value: event.severity, icon: Shield, badge: true },
     { label: 'Source', value: event.source, icon: SourceIcon },
     { label: 'Message', value: event.message, icon: FileText },
@@ -109,61 +105,64 @@ export function RowInspector({ event, isOpen, onClose }: RowInspectorProps) {
   ].filter(field => field.value);
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-      <div className="bg-card rounded-lg w-full max-w-4xl max-h-[90vh] overflow-hidden shadow-2xl">
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      size="xl"
+      showCloseButton={false}
+    >
+      <ModalContent>
         {/* Header */}
-        <div className="p-6 border-b border-border">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2">
-                <SourceIcon className="h-6 w-6 text-primary" />
-                <h2 className="text-xl font-semibold">Event Inspector</h2>
-              </div>
-              <Badge className={getSeverityBadgeClass(event.severity)}>
-                {normalizeSeverity(event.severity)}
-              </Badge>
-            </div>
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
             <div className="flex items-center gap-2">
-              <ActionButton 
-                variant="outline" 
-                size="sm" 
-                onClick={() => handleCopy(JSON.stringify(event, null, 2), 'event data')}
-                data-action="search:inspector:copy-json"
-                data-intent="api"
-                data-endpoint="/api/v2/search/copy"
-              >
-                <Copy className="h-4 w-4 mr-2" />
-                Copy JSON
-              </ActionButton>
-              <ActionButton 
-                variant="outline" 
-                size="sm" 
-                onClick={handleDownload}
-                data-action="search:inspector:download"
-                data-intent="api"
-                data-endpoint="/api/v2/search/download"
-              >
-                <Download className="h-4 w-4 mr-2" />
-                Download
-              </ActionButton>
-              <ActionButton 
-                variant="ghost" 
-                size="icon" 
-                onClick={onClose}
-                data-action="search:inspector:close"
-                data-intent="open-modal"
-              >
-                <X className="h-4 w-4" />
-              </ActionButton>
+              <SourceIcon className="h-6 w-6 text-primary" />
+              <h2 className="text-xl font-semibold">Event Inspector</h2>
             </div>
+            <Badge className={getSeverityBadgeClass(event.severity)}>
+              {normalizeSeverity(event.severity)}
+            </Badge>
           </div>
-          <p className="text-sm text-muted-foreground mt-2">
-            {event.event_type} • {new Date(event.timestamp).toLocaleString()}
-          </p>
+          <div className="flex items-center gap-2">
+            <ActionButton 
+              variant="outline" 
+              size="sm" 
+              onClick={() => handleCopy(JSON.stringify(event, null, 2), 'event data')}
+              data-action="search:inspector:copy-json"
+              data-intent="api"
+              data-endpoint="/api/v2/search/copy"
+            >
+              <Copy className="h-4 w-4 mr-2" />
+              Copy JSON
+            </ActionButton>
+            <ActionButton 
+              variant="outline" 
+              size="sm" 
+              onClick={handleDownload}
+              data-action="search:inspector:download"
+              data-intent="api"
+              data-endpoint="/api/v2/search/download"
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Download
+            </ActionButton>
+            <ActionButton 
+              variant="outline" 
+              size="icon" 
+              onClick={onClose}
+              data-action="search:inspector:close"
+              data-intent="open-modal"
+            >
+              <X className="h-4 w-4" />
+            </ActionButton>
+          </div>
         </div>
+        <p className="text-sm text-muted-foreground mb-6">
+          {event.event_type} • {event.timestamp ? new Date(event.timestamp).toLocaleString() : '—'}
+        </p>
 
         {/* Content */}
-        <div className="p-6 overflow-auto max-h-[calc(90vh-140px)]">
+        <div>
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="overview">Overview</TabsTrigger>
@@ -174,7 +173,7 @@ export function RowInspector({ event, isOpen, onClose }: RowInspectorProps) {
 
             <TabsContent value="overview" className="space-y-6 mt-6">
               {/* Event Details */}
-              <Card>
+              <Card className="bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700">
                 <CardHeader>
                   <CardTitle className="text-lg flex items-center gap-2">
                     <Activity className="h-5 w-5" />
@@ -205,7 +204,7 @@ export function RowInspector({ event, isOpen, onClose }: RowInspectorProps) {
 
               {/* Identity Information */}
               {identityFields.length > 0 && (
-                <Card>
+                <Card className="bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700">
                   <CardHeader>
                     <CardTitle className="text-lg flex items-center gap-2">
                       <User className="h-5 w-5" />
@@ -228,7 +227,7 @@ export function RowInspector({ event, isOpen, onClose }: RowInspectorProps) {
             </TabsContent>
 
             <TabsContent value="network" className="space-y-6 mt-6">
-              <Card>
+              <Card className="bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700">
                 <CardHeader>
                   <CardTitle className="text-lg flex items-center gap-2">
                     <Network className="h-5 w-5" />
@@ -245,7 +244,7 @@ export function RowInspector({ event, isOpen, onClose }: RowInspectorProps) {
                           <span className="font-medium">{field.label}</span>
                         </div>
                         <Button
-                          variant="ghost"
+                          variant="outline"
                           size="sm"
                           className="font-mono text-sm"
                           onClick={() => handleCopy(field.value?.toString() || '', field.label)}
@@ -266,7 +265,7 @@ export function RowInspector({ event, isOpen, onClose }: RowInspectorProps) {
 
             <TabsContent value="raw" className="space-y-6 mt-6">
               {/* Formatted JSON */}
-              <Card>
+              <Card className="bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700">
                 <CardHeader>
                   <CardTitle className="text-lg flex items-center gap-2">
                     <Code className="h-5 w-5" />
@@ -284,7 +283,7 @@ export function RowInspector({ event, isOpen, onClose }: RowInspectorProps) {
                     >
                       <Copy className="h-4 w-4" />
                     </Button>
-                    <pre className="bg-muted p-4 rounded-lg text-sm overflow-auto max-h-96 font-mono">
+                    <pre className="bg-slate-100 dark:bg-slate-800 p-4 rounded-lg text-sm overflow-auto max-h-96 font-mono text-foreground">
                       {JSON.stringify(event, null, 2)}
                     </pre>
                   </div>
@@ -293,7 +292,7 @@ export function RowInspector({ event, isOpen, onClose }: RowInspectorProps) {
 
               {/* Raw Log */}
               {event.raw_message && (
-                <Card>
+                <Card className="bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700">
                   <CardHeader>
                     <CardTitle className="text-lg flex items-center gap-2">
                       <FileText className="h-5 w-5" />
@@ -311,7 +310,7 @@ export function RowInspector({ event, isOpen, onClose }: RowInspectorProps) {
                       >
                         <Copy className="h-4 w-4" />
                       </Button>
-                      <pre className="bg-muted p-4 rounded-lg text-sm overflow-auto max-h-32 font-mono whitespace-pre-wrap">
+                      <pre className="bg-slate-100 dark:bg-slate-800 p-4 rounded-lg text-sm overflow-auto max-h-32 font-mono whitespace-pre-wrap text-foreground">
                         {event.raw_message}
                       </pre>
                     </div>
@@ -321,7 +320,7 @@ export function RowInspector({ event, isOpen, onClose }: RowInspectorProps) {
             </TabsContent>
 
             <TabsContent value="metadata" className="space-y-6 mt-6">
-              <Card>
+              <Card className="bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700">
                 <CardHeader>
                   <CardTitle className="text-lg flex items-center gap-2">
                     <Tag className="h-5 w-5" />
@@ -350,7 +349,7 @@ export function RowInspector({ event, isOpen, onClose }: RowInspectorProps) {
             </TabsContent>
           </Tabs>
         </div>
-      </div>
-    </div>
+      </ModalContent>
+    </Modal>
   );
 }

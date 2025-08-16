@@ -228,7 +228,7 @@ export default function DashboardPage() {
     switch (trend) {
       case 'up': return <ArrowUpRight className="h-3 w-3 text-green-500" />;
       case 'down': return <ArrowDownRight className="h-3 w-3 text-red-500" />;
-      default: return <Minus className="h-3 w-3 text-slate-500" />;
+      default: return <Minus className="h-3 w-3 text-muted-foreground" />;
     }
   };
 
@@ -236,7 +236,7 @@ export default function DashboardPage() {
     switch (trend) {
       case 'up': return 'text-green-600';
       case 'down': return 'text-red-600';
-      default: return 'text-slate-600';
+      default: return 'text-muted-foreground';
     }
   };
 
@@ -247,22 +247,22 @@ export default function DashboardPage() {
   return (
     <div className="min-h-full bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
       {/* Watermark */}
-      <div className="fixed bottom-3 right-4 z-50 pointer-events-none select-none opacity-40 text-xs font-semibold bg-muted text-muted-foreground px-2 py-1 rounded">
+      <div className="fixed bottom-3 right-4 z-50 pointer-events-none select-none  text-xs font-semibold bg-muted text-muted-foreground px-2 py-1 rounded">
         UI-V3 View (Dashboard)
       </div>
       <div className="p-6 space-y-6">
         {/* Header with Refresh */}
         <div className="flex items-center justify-between">
           <div className="space-y-1">
-            <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
+            <h1 className="text-3xl font-bold tracking-tight text-foreground">
               Security Dashboard
             </h1>
-            <p className="text-slate-600 dark:text-slate-400">
+            <p className="text-muted-foreground">
               Real-time security monitoring and threat intelligence
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <div className="text-sm text-slate-500 dark:text-slate-400">
+            <div className="text-sm text-muted-foreground">
               Last updated: {lastRefresh.toLocaleTimeString()}
             </div>
             <ActionButton 
@@ -282,7 +282,7 @@ export default function DashboardPage() {
         </div>
 
         {error && (
-          <Card className="border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-900/20">
+          <Card className="border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-900">
             <CardContent className="p-4">
               <div className="flex items-center gap-2 text-red-800 dark:text-red-200">
                 <AlertTriangle className="h-4 w-4" />
@@ -296,14 +296,14 @@ export default function DashboardPage() {
         {/* Key Metrics */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {mockMetrics.map((metric, index) => (
-            <Card key={index} className="relative overflow-hidden border-0 shadow-lg bg-white dark:bg-slate-800">
+            <Card key={index} className="relative overflow-hidden border-0 shadow-lg bg-card">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div className="space-y-2">
-                    <p className="text-sm font-medium text-slate-600 dark:text-slate-400">
+                    <p className="text-sm font-medium text-muted-foreground">
                       {metric.title}
                     </p>
-                    <p className="text-3xl font-bold text-slate-900 dark:text-white">
+                    <p className="text-3xl font-bold text-foreground">
                       {metric.value}
                     </p>
                     <div className="flex items-center gap-2">
@@ -318,7 +318,7 @@ export default function DashboardPage() {
                   </div>
                 </div>
                 <div className="mt-4">
-                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                  <p className="text-xs text-muted-foreground">
                     {metric.description}
                   </p>
                 </div>
@@ -328,9 +328,9 @@ export default function DashboardPage() {
         </div>
 
         {/* System Health Overview */}
-        <Card className="border-0 shadow-lg bg-white dark:bg-slate-800">
+        <Card className="border-0 shadow-lg bg-card">
           <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-slate-900 dark:text-white">
+            <CardTitle className="flex items-center gap-2 text-foreground">
               <Server className="h-5 w-5 text-green-600" />
               System Health
             </CardTitle>
@@ -338,15 +338,15 @@ export default function DashboardPage() {
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               {healthComponents.map((component, index) => (
-                <div key={index} className="p-4 rounded-lg bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600">
+                <div key={index} className="p-4 rounded-lg bg-muted border border-slate-200 dark:border-slate-700">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="font-medium text-slate-900 dark:text-white">{component.name}</span>
+                    <span className="font-medium text-foreground">{component.name}</span>
                     <div className={`h-2 w-2 rounded-full ${
                       component.status === 'healthy' ? 'bg-green-500' : 
                       component.status === 'warning' ? 'bg-yellow-500' : 'bg-red-500'
                     }`} />
                   </div>
-                  <div className="space-y-1 text-sm text-slate-600 dark:text-slate-400">
+                  <div className="space-y-1 text-sm text-muted-foreground">
                     <div>Response: {component.responseTime}ms</div>
                     <div>Errors: {component.errorCount}</div>
                     <div className="text-xs">Last check: {component.lastCheck}</div>
@@ -360,10 +360,10 @@ export default function DashboardPage() {
         {/* Main Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Recent Alerts */}
-          <Card className="border-0 shadow-lg bg-white dark:bg-slate-800">
+          <Card className="border-0 shadow-lg bg-card">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2 text-slate-900 dark:text-white">
+                <CardTitle className="flex items-center gap-2 text-foreground">
                   <AlertTriangle className="h-5 w-5 text-red-600" />
                   Recent Alerts
                 </CardTitle>
@@ -383,7 +383,7 @@ export default function DashboardPage() {
             <CardContent>
               <div className="space-y-3">
                 {alerts.slice(0, 5).map((alert) => (
-                  <div key={alert.id} className="p-4 rounded-lg border border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors cursor-pointer">
+                  <div key={alert.id} className="p-4 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-muted transition-colors cursor-pointer">
                     <div className="flex items-start justify-between">
                       <div className="flex items-start gap-3 flex-1">
                         <Badge 
@@ -397,19 +397,19 @@ export default function DashboardPage() {
                           {alert.severity}
                         </Badge>
                         <div className="flex-1 min-w-0">
-                          <p className="font-medium text-sm text-slate-900 dark:text-white truncate">
+                          <p className="font-medium text-sm text-foreground truncate">
                             {alert.title}
                           </p>
-                          <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
+                          <p className="text-xs text-muted-foreground mt-1">
                             {alert.description}
                           </p>
-                          <p className="text-xs text-slate-500 dark:text-slate-500 mt-1">
+                          <p className="text-xs text-muted-foreground dark:text-muted-foreground mt-1">
                             {alert.source}
                           </p>
                         </div>
                       </div>
                       <div className="text-right">
-                        <span className="text-xs text-slate-500 dark:text-slate-400">
+                        <span className="text-xs text-muted-foreground">
                           {alert.time}
                         </span>
                         <Badge variant="outline" className="block mt-1 text-xs">
@@ -424,9 +424,9 @@ export default function DashboardPage() {
           </Card>
 
           {/* Top Event Sources */}
-          <Card className="border-0 shadow-lg bg-white dark:bg-slate-800">
+          <Card className="border-0 shadow-lg bg-card">
             <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-slate-900 dark:text-white">
+              <CardTitle className="flex items-center gap-2 text-foreground">
                 <Network className="h-5 w-5 text-blue-600" />
                 Top Event Sources
               </CardTitle>
@@ -437,31 +437,31 @@ export default function DashboardPage() {
                   <div key={index} className="space-y-3">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <div className="h-8 w-8 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                        <div className="h-8 w-8 rounded-lg bg-muted flex items-center justify-center">
                           <Database className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                         </div>
                         <div>
-                          <span className="font-medium text-slate-900 dark:text-white">
+                          <span className="font-medium text-foreground">
                             {source.name}
                           </span>
-                          <div className="text-xs text-slate-500 dark:text-slate-400">
+                          <div className="text-xs text-muted-foreground">
                             {source.eps} EPS • Last seen: {source.lastSeen}
                           </div>
                         </div>
                       </div>
                       <div className="text-right">
-                        <span className="font-medium text-slate-900 dark:text-white">
+                        <span className="font-medium text-foreground">
                           {source.events.toLocaleString()}
                         </span>
-                        <div className="text-xs text-slate-500 dark:text-slate-400">
+                        <div className="text-xs text-muted-foreground">
                           events
                         </div>
                       </div>
                     </div>
-                    <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2">
+                    <div className="w-full bg-muted rounded-full h-2">
                       <div 
                         className="bg-gradient-to-r from-blue-500 to-blue-600 h-2 rounded-full transition-all duration-500 shadow-sm"
-                        style={{ width: `${source.percentage}%` }}
+                        style={{ '--progress-width': `${source.percentage}%` } as React.CSSProperties}
                       />
                     </div>
                   </div>
@@ -472,9 +472,9 @@ export default function DashboardPage() {
         </div>
 
         {/* Security Overview */}
-        <Card className="border-0 shadow-lg bg-white dark:bg-slate-800">
+        <Card className="border-0 shadow-lg bg-card">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-slate-900 dark:text-white">
+            <CardTitle className="flex items-center gap-2 text-foreground">
               <Lock className="h-5 w-5 text-purple-600" />
               Security Overview
             </CardTitle>
@@ -483,15 +483,15 @@ export default function DashboardPage() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="text-center">
                 <div className="text-3xl font-bold text-green-600 mb-2">99.9%</div>
-                <div className="text-sm text-slate-600 dark:text-slate-400">Security Score</div>
+                <div className="text-sm text-muted-foreground">Security Score</div>
               </div>
               <div className="text-center">
                 <div className="text-3xl font-bold text-blue-600 mb-2">156</div>
-                <div className="text-sm text-slate-600 dark:text-slate-400">Active Rules</div>
+                <div className="text-sm text-muted-foreground">Active Rules</div>
               </div>
               <div className="text-center">
                 <div className="text-3xl font-bold text-orange-600 mb-2">2.3ms</div>
-                <div className="text-sm text-slate-600 dark:text-slate-400">Avg Response Time</div>
+                <div className="text-sm text-muted-foreground">Avg Response Time</div>
               </div>
             </div>
           </CardContent>

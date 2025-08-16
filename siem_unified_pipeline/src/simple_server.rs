@@ -10,7 +10,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::RwLock;
-use tokio_stream::{wrappers::BroadcastStream, StreamExt};
+use tokio_stream::StreamExt;
 use tower_http::cors::CorsLayer;
 use tracing::{info, error};
 use chrono::{DateTime, Utc};
@@ -56,7 +56,9 @@ impl SiemAppState {
         
         // Keep only last 1000 events
         if events.len() > 1000 {
-            events.drain(0..events.len() - 1000);
+            let keep_from = events.len() - 1000;
+            let mut new_vec = events.split_off(keep_from);
+            *events = new_vec;
         }
         
         // Send event to SSE subscribers
@@ -120,17 +122,22 @@ pub async fn ingest_event(
 pub async fn events_stream(State(state): State<SiemAppState>) -> impl IntoResponse {
     info!("New SSE client connected");
     
-    let rx = state.event_sender.subscribe();
-    let stream = BroadcastStream::new(rx)
-        .filter_map(|result| async move {
-            match result {
+    let mut rx = state.event_sender.subscribe();
+    let stream = async_stream::stream! {
+        loop {
+            match rx.recv().await {
                 Ok(event) => {
-                    let json_data = serde_json::to_string(&event).ok()?;
-                    Some(Event::default().data(json_data))
-                },
-                Err(_) => None,
+                    if let Ok(json_data) = serde_json::to_string(&event) {
+                        yield Event::default().data(json_data);
+                    }
+                }
+                Err(tokio::sync::broadcast::error::RecvError::Lagged(_)) => {
+                    continue;
+                }
+                Err(_) => break,
             }
-        });
+        }
+    };
 
     Sse::new(stream)
         .keep_alive(

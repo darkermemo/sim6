@@ -8,6 +8,7 @@ export interface TimelineHookProps {
   timelineData: any;
   loading: boolean;
   onTimeWindowChange: (startTime: number, endTime: number) => void;
+  bare?: boolean;
 }
 
 interface TimelineItem {
@@ -19,7 +20,8 @@ interface TimelineItem {
 export function TimelineHook({
   timelineData,
   loading,
-  onTimeWindowChange
+  onTimeWindowChange,
+  bare = false,
 }: TimelineHookProps) {
   // Transform timeline data
   const data = useMemo(() => {
@@ -59,7 +61,19 @@ export function TimelineHook({
   };
 
   if (loading) {
-    return (
+    return bare ? (
+      <div className="space-y-2">
+        <div className="text-xs font-medium text-muted-foreground flex items-center gap-2">
+          <BarChart3 className="h-4 w-4" />
+          Event timeline
+        </div>
+        <div className="flex items-end gap-1 h-20">
+          {Array.from({ length: 24 }).map((_, i) => (
+            <div key={i} className="flex-1 h-full bg-muted rounded animate-pulse" />
+          ))}
+        </div>
+      </div>
+    ) : (
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-sm flex items-center gap-2">
@@ -70,7 +84,7 @@ export function TimelineHook({
         <CardContent>
           <div className="flex items-end gap-1 h-20">
             {Array.from({ length: 24 }).map((_, i) => (
-              <div key={i} className="flex-1 h-full bg-muted rounded animate-pulse" />
+              <div key={i} className="flex-1 h-full bg-slate-100 dark:bg-slate-800 rounded animate-pulse" />
             ))}
           </div>
         </CardContent>
@@ -78,7 +92,47 @@ export function TimelineHook({
     );
   }
 
-  return (
+  return bare ? (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between text-xs">
+        <div className="font-medium text-muted-foreground flex items-center gap-2">
+          <BarChart3 className="h-4 w-4" />
+          Event timeline
+        </div>
+        <div className="flex items-center gap-4 text-muted-foreground">
+          <span className="flex items-center gap-1"><Calendar className="h-3 w-3" />{stats.total.toLocaleString()} events</span>
+          <span className="flex items-center gap-1"><TrendingUp className="h-3 w-3" />{stats.trend > 0 ? '+' : ''}{stats.trend.toFixed(0)}/bucket</span>
+        </div>
+      </div>
+      {data.length > 0 ? (
+        <div className="space-y-2">
+          <div className="flex items-end gap-1 h-20 bg-muted rounded p-2">
+            {data.map((item: any, index: number) => {
+              const height = stats.max > 0 ? (item.count / stats.max) * 100 : 0;
+              return (
+                <div
+                  key={item.timestamp}
+                  className={`flex-1 cursor-pointer transition-colors ${item.count > 0 ? 'bg-primary hover:bg-primary' : 'bg-muted'}`}
+                  style={{ height: `${Math.max(height, 2)}%` }}
+                  onClick={() => handleBarClick(item, index)}
+                  title={`${item.datetime.toLocaleString()}: ${item.count} events`}
+                />
+              );
+            })}
+          </div>
+          <div className="flex justify-between text-xs text-muted-foreground">
+            {data.length > 0 && (<>
+              <span>{data[0]?.datetime.toLocaleTimeString()}</span>
+              <span>{data[Math.floor(data.length / 2)]?.datetime.toLocaleTimeString()}</span>
+              <span>{data[data.length - 1]?.datetime.toLocaleTimeString()}</span>
+            </>)}
+          </div>
+        </div>
+      ) : (
+        <div className="text-center py-6 text-muted-foreground text-xs">No timeline data</div>
+      )}
+    </div>
+  ) : (
     <Card>
       <CardHeader className="pb-3">
         <CardTitle className="text-sm flex items-center justify-between">
@@ -102,7 +156,7 @@ export function TimelineHook({
         {data.length > 0 ? (
           <div className="space-y-2">
             {/* Timeline bars */}
-            <div className="flex items-end gap-1 h-20 bg-muted/30 rounded p-2">
+            <div className="flex items-end gap-1 h-20 bg-slate-100 dark:bg-slate-800 rounded p-2">
               {data.map((item: any, index: number) => {
                 const height = stats.max > 0 ? (item.count / stats.max) * 100 : 0;
                 
@@ -111,15 +165,15 @@ export function TimelineHook({
                     key={item.timestamp}
                     className={`flex-1 cursor-pointer transition-colors relative group ${
                       item.count > 0 
-                                               ? 'bg-primary/60 hover:bg-primary/80'
-                       : 'bg-muted'
+                                               ? 'bg-primary hover:bg-primary'
+                       : 'bg-slate-100 dark:bg-slate-800'
                     }`}
                     style={{ height: `${Math.max(height, 2)}%` }}
                     onClick={() => handleBarClick(item, index)}
                     title={`${item.datetime.toLocaleString()}: ${item.count} events`}
                   >
                     {/* Tooltip */}
-                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-1 px-2 py-1 bg-black text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10">
+                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-1 px-2 py-1 bg-popover text-popover-foreground border border-slate-200 dark:border-slate-700 text-xs rounded group-hover:block hidden pointer-events-none whitespace-nowrap z-10 shadow-md">
                       {item.datetime.toLocaleTimeString()}<br/>
                       {item.count} events
                     </div>
@@ -147,8 +201,8 @@ export function TimelineHook({
             </div>
           </div>
         ) : (
-          <div className="text-center py-8 text-slate-500">
-            <BarChart3 className="h-8 w-8 mx-auto mb-2 opacity-50" />
+          <div className="text-center py-8 text-muted-foreground">
+            <BarChart3 className="h-8 w-8 mx-auto mb-2 " />
             <p className="text-sm">No timeline data available</p>
           </div>
         )}

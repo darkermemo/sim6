@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';\nimport { ActionButton } from '@/components/ui/ActionButton';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ActionButton } from '@/components/ui/ActionButton';
 import { Skeleton } from '@/components/ui/skeleton';
 import { searchAggs } from '@/lib/api';
 import { BarChart3, TrendingUp, Calendar } from 'lucide-react';
@@ -137,7 +138,7 @@ export function Timeline({
             <BarChart3 className="h-4 w-4" />
             Event Timeline
           </div>
-          <div className="flex items-center gap-4 text-xs text-slate-500">
+          <div className="flex items-center gap-4 text-xs text-muted-foreground">
             <span className="flex items-center gap-1">
               <Calendar className="h-3 w-3" />
               {stats.total.toLocaleString()} events
@@ -165,7 +166,7 @@ export function Timeline({
         {data.length > 0 ? (
           <div className="space-y-2">
             {/* Timeline bars */}
-            <div className="flex items-end gap-1 h-20 bg-slate-50 dark:bg-slate-800 rounded p-2">
+            <div className="flex items-end gap-1 h-20 bg-slate-100 dark:bg-slate-800 rounded p-2">
               {data.map((item, index) => {
                 const height = stats.max > 0 ? (item.count / stats.max) * 100 : 0;
                 const isSelected = brushSelection && index >= brushSelection.start && index < brushSelection.end;
@@ -175,17 +176,17 @@ export function Timeline({
                     key={item.timestamp}
                     className={`flex-1 cursor-pointer transition-colors relative group ${
                       isSelected 
-                        ? 'bg-blue-500' 
+                        ? 'bg-primary' 
                         : item.count > 0 
-                          ? 'bg-blue-300 hover:bg-blue-400' 
-                          : 'bg-slate-200 dark:bg-slate-700'
+                          ? 'bg-primary hover:bg-primary' 
+                          : 'bg-border hover:bg-border'
                     }`}
                     style={{ height: `${Math.max(height, 2)}%` }}
                     onClick={() => handleBarClick(item, index)}
                     title={`${item.datetime.toLocaleString()}: ${item.count} events`}
                   >
                     {/* Tooltip */}
-                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-1 px-2 py-1 bg-black text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10">
+                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-1 px-2 py-1 bg-popover text-popover-foreground border border-slate-200 dark:border-slate-700 text-xs rounded group-hover:block hidden pointer-events-none whitespace-nowrap z-10 shadow-md">
                       {item.datetime.toLocaleTimeString()}<br/>
                       {item.count} events
                     </div>
@@ -195,7 +196,7 @@ export function Timeline({
             </div>
 
             {/* Time labels */}
-            <div className="flex justify-between text-xs text-slate-500">
+            <div className="flex justify-between text-xs text-muted-foreground">
               {data.length > 0 && (
                 <>
                   <span>{data[0]?.datetime.toLocaleTimeString()}</span>
@@ -206,15 +207,15 @@ export function Timeline({
             </div>
 
             {/* Stats */}
-            <div className="flex justify-between text-xs text-slate-500 pt-2 border-t">
+            <div className="flex justify-between text-xs text-muted-foreground pt-2 border-t">
               <span>Avg: {stats.avg.toFixed(1)} events/bucket</span>
               <span>Peak: {stats.max} events</span>
               <span>Total: {stats.total.toLocaleString()} events</span>
             </div>
           </div>
         ) : (
-          <div className="text-center py-8 text-slate-500">
-            <BarChart3 className="h-8 w-8 mx-auto mb-2 opacity-50" />
+          <div className="text-center py-8 text-muted-foreground">
+            <BarChart3 className="h-8 w-8 mx-auto mb-2 " />
             <p className="text-sm">No timeline data available</p>
           </div>
         )}

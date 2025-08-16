@@ -1,11 +1,9 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ActionButton } from "@/components/ui/ActionButton";
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
@@ -28,9 +26,6 @@ import {
   FileText,
   Zap,
   ChevronRight,
-  ChevronLeft,
-  PanelLeftOpen,
-  PanelLeftClose,
   Target,
   Palette
 } from "lucide-react";
@@ -105,324 +100,99 @@ const navigation = [
 ];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const pathname = usePathname();
 
-  const SidebarContent = ({ collapsed = false }: { collapsed?: boolean }) => (
-    <div className="flex h-full flex-col bg-slate-50 dark:bg-slate-900">
-      {/* Logo */}
-      <div className={cn(
-        "flex h-16 items-center border-b border-slate-200 dark:border-slate-700",
-        collapsed ? "px-4 justify-center" : "px-6"
-      )}>
-        <div className={cn("flex items-center gap-3", collapsed && "gap-0")}>
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-blue-600 to-blue-700 shadow-lg">
-            <Shield className="h-6 w-6 text-white" />
-          </div>
-          {!collapsed && (
-            <div>
-              <span className="text-xl font-bold text-slate-900 dark:text-white">SIEM</span>
-              <div className="text-xs text-slate-500 dark:text-slate-400">Security Platform</div>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Navigation */}
-      <nav className={cn("flex-1 space-y-2", collapsed ? "p-2" : "p-4")}>
-        {navigation.map((item) => {
-          const isActive = pathname === item.href;
-          return (
-            <Link
-              key={item.name}
-              href={item.href}
-              className={cn(
-                "group flex items-center rounded-xl text-sm font-medium transition-all duration-200 hover:shadow-sm",
-                collapsed ? "gap-0 px-3 py-3 justify-center" : "gap-3 px-3 py-3",
-                isActive
-                  ? "bg-blue-600 text-white shadow-lg shadow-blue-600/25"
-                  : "text-slate-700 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white"
-              )}
-              onClick={() => setSidebarOpen(false)}
-              title={collapsed ? item.name : undefined}
-            >
-              <item.icon className={cn(
-                "h-5 w-5 transition-colors",
-                collapsed ? "shrink-0" : "",
-                isActive ? "text-white" : "text-slate-500 dark:text-slate-400 group-hover:text-slate-700 dark:group-hover:text-slate-300"
-              )} />
-              {!collapsed && (
-                <>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between">
-                      <span className="truncate">{item.name}</span>
-                      {item.badge && (
-                        <Badge 
-                          variant={isActive ? "secondary" : "outline"} 
-                          className={cn(
-                            "ml-2 text-xs px-2 py-0.5",
-                            isActive 
-                              ? "bg-white/20 text-white border-white/30" 
-                              : "border-slate-300 dark:border-slate-600"
-                          )}
-                        >
-                          {item.badge}
-                        </Badge>
-                      )}
-                    </div>
-                    <div className={cn(
-                      "text-xs truncate mt-0.5",
-                      isActive 
-                        ? "text-blue-100" 
-                        : "text-slate-500 dark:text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300"
-                    )}>
-                      {item.description}
-                    </div>
-                  </div>
-                  {!isActive && (
-                    <ChevronRight className="h-4 w-4 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity" />
-                  )}
-                </>
-              )}
-            </Link>
-          );
-        })}
-      </nav>
-
-      {/* System Status */}
-      <div className={cn(
-        "border-t border-slate-200 dark:border-slate-700 space-y-3",
-        collapsed ? "p-2" : "p-4"
-      )}>
-        <div className={cn(
-          "flex items-center text-sm",
-          collapsed ? "justify-center" : "gap-3"
-        )}>
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-green-100 dark:bg-green-900/30">
-            <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-          </div>
-          {!collapsed && (
-            <div>
-              <div className="font-medium text-slate-900 dark:text-white">System Online</div>
-              <div className="text-xs text-slate-500 dark:text-slate-400">ClickHouse connected</div>
-            </div>
-          )}
-        </div>
-        <div className={cn(
-          "flex items-center text-sm",
-          collapsed ? "justify-center" : "gap-3"
-        )}>
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-900/30">
-            <Zap className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-          </div>
-          {!collapsed && (
-            <div>
-              <div className="font-medium text-slate-900 dark:text-white">245.8k EPS</div>
-              <div className="text-xs text-slate-500 dark:text-slate-400">Events per second</div>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
+  // Note: Search page now uses full AppShell like other pages
 
   return (
-    <div className="flex h-screen bg-slate-50 dark:bg-slate-900">
-      {/* Desktop Sidebar */}
-      <div className={cn(
-        "hidden flex-col border-r border-slate-200 dark:border-slate-700 lg:flex transition-all duration-300",
-        sidebarCollapsed ? "w-20" : "w-72"
-      )}>
-        <SidebarContent collapsed={sidebarCollapsed} />
-        {/* Collapse Toggle */}
-        <div className={cn(
-          "border-t border-slate-200 dark:border-slate-700",
-          sidebarCollapsed ? "p-2" : "p-4"
-        )}>
-          <Button
-            variant="ghost"
-            size={sidebarCollapsed ? "icon" : "sm"}
-            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-            className={cn(
-              "w-full transition-all duration-200",
-              sidebarCollapsed ? "justify-center" : "justify-start gap-2"
-            )}
-          >
-            {sidebarCollapsed ? (
-              <PanelLeftOpen className="h-4 w-4" />
-            ) : (
-              <>
-                <PanelLeftClose className="h-4 w-4" />
-                <span>Collapse</span>
-              </>
-            )}
-          </Button>
+    <div className="flex h-screen bg-background">
+      {/* Icon Rail Sidebar - Kibana style */}
+      <div className="w-16 bg-[hsl(var(--k-rail-bg))] flex flex-col items-center py-4 space-y-6">
+        <div className="w-8 h-8 bg-[hsl(var(--primary))] rounded flex items-center justify-center">
+          <span className="text-white font-bold text-sm">k</span>
+        </div>
+        <nav className="flex flex-col space-y-4">
+          {navigation.map((item) => {
+            const isActive = pathname === item.href;
+            return (
+              <Link key={item.name} href={item.href} title={item.name} className={cn(
+                "w-10 h-10 p-0 rounded flex items-center justify-center",
+                "text-[hsl(var(--k-rail-icon))] hover:text-white",
+                "hover:bg-[hsl(var(--k-rail-hover))]",
+                isActive && "bg-[hsl(var(--k-rail-hover))] text-white"
+              )}>
+                <item.icon className="w-5 h-5" />
+              </Link>
+            );
+          })}
+        </nav>
+        <div className="flex-1" />
+        <div className="flex flex-col space-y-4">
+          <button className="w-10 h-10 p-0 rounded text-[hsl(var(--k-rail-icon))] hover:text-white hover:bg-[hsl(var(--k-rail-hover))] flex items-center justify-center">
+            <Bell className="w-5 h-5" />
+          </button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="w-10 h-10 p-0 rounded text-[hsl(var(--k-rail-icon))] hover:text-white hover:bg-[hsl(var(--k-rail-hover))] flex items-center justify-center">
+                <Users className="w-5 h-5" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-56" align="end" forceMount>
+              <div className="flex items-center justify-start gap-2 p-2">
+                <div className="flex flex-col space-y-1 leading-none">
+                  <p className="font-medium">Admin User</p>
+                  <p className="w-[200px] truncate text-sm text-muted-foreground">admin@security.local</p>
+                </div>
+              </div>
+              <DropdownMenuSeparator />
+              <ActionMenuItem data-action="app:profile:view" data-intent="navigate" onSelect={() => window.location.href = '/profile'}>
+                <Users className="mr-2 h-4 w-4" />
+                <span>Profile</span>
+              </ActionMenuItem>
+              <ActionMenuItem data-action="app:settings:view" data-intent="navigate" onSelect={() => window.location.href = '/settings'}>
+                <Settings className="mr-2 h-4 w-4" />
+                <span>Settings</span>
+              </ActionMenuItem>
+              <DropdownMenuSeparator />
+              <ActionMenuItem data-action="app:theme:light" data-intent="api" data-endpoint="/api/v2/user/theme" onSelect={() => document.documentElement.classList.remove('dark')}>
+                <Sun className="mr-2 h-4 w-4" />
+                <span>Light Theme</span>
+              </ActionMenuItem>
+              <ActionMenuItem data-action="app:theme:dark" data-intent="api" data-endpoint="/api/v2/user/theme" onSelect={() => document.documentElement.classList.add('dark')}>
+                <Moon className="mr-2 h-4 w-4" />
+                <span>Dark Theme</span>
+              </ActionMenuItem>
+              <DropdownMenuSeparator />
+              <ActionMenuItem className="text-red-600" data-action="app:auth:logout" data-intent="api" data-endpoint="/api/v2/auth/logout" data-danger="true" onSelect={() => { window.location.href = '/login'; }}>
+                <LogOut className="mr-2 h-4 w-4" />
+                <span>Sign out</span>
+              </ActionMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
-
-      {/* Mobile Sidebar */}
-      <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
-        <SheetTrigger asChild>
-          <ActionButton 
-            variant="outline" 
-            size="icon" 
-            className="lg:hidden fixed top-4 left-4 z-40 bg-white dark:bg-slate-800 shadow-lg"
-            data-action="app:sidebar:open"
-            data-intent="open-modal"
-          >
-            <Menu className="h-4 w-4" />
-          </ActionButton>
-        </SheetTrigger>
-        <SheetContent side="left" className="w-72 p-0">
-          <SidebarContent collapsed={false} />
-        </SheetContent>
-      </Sheet>
 
       {/* Main Content */}
       <div className="flex flex-1 flex-col overflow-hidden">
-        {/* Top Header */}
-        <header className="flex h-16 items-center justify-between border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-6 shadow-sm">
-          <div className="flex items-center gap-4">
-            <ActionButton 
-              variant="ghost" 
-              size="icon" 
-              className="lg:hidden"
-              onClick={() => setSidebarOpen(true)}
-              data-action="app:sidebar:toggle"
-              data-intent="open-modal"
-            >
-              <Menu className="h-4 w-4" />
-            </ActionButton>
-            <ActionButton 
-              variant="ghost" 
-              size="icon" 
-              className="hidden lg:flex"
-              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-              data-action="app:sidebar:collapse-toggle"
-              data-intent="open-modal"
-            >
-              {sidebarCollapsed ? (
-                <PanelLeftOpen className="h-4 w-4" />
-              ) : (
-                <PanelLeftClose className="h-4 w-4" />
-              )}
-            </ActionButton>
+        {/* Top Header - hide on /search to match Kibana Discover focus */}
+        {!(pathname.startsWith('/search')) && (
+          <header className="h-12 bg-[hsl(var(--k-topbar-bg))] border-b border-[hsl(var(--k-border-light))] flex items-center px-4">
             <div>
-              <h1 className="text-lg font-semibold text-slate-900 dark:text-white">
+              <h1 className="text-sm text-gray-600">
                 {navigation.find(item => item.href === pathname)?.name || "Overview"}
               </h1>
-              <p className="text-sm text-slate-500 dark:text-slate-400">
-                {navigation.find(item => item.href === pathname)?.description || "SIEM Security Platform"}
-              </p>
             </div>
-          </div>
-
-          <div className="flex items-center gap-3">
-            {/* Real-time Status */}
-            <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800">
-              <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-              <span className="text-sm font-medium text-green-700 dark:text-green-300">Live</span>
+            <div className="ml-auto flex items-center gap-3">
+              <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white border border-[hsl(var(--k-border-light))]">
+                <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
+                <span className="text-sm font-medium text-green-700">Live</span>
+              </div>
             </div>
-
-            {/* Notifications */}
-            <ActionButton 
-              variant="ghost" 
-              size="icon" 
-              className="relative"
-              onClick={() => {/* TODO: open notifications */}}
-              data-action="app:notifications:open"
-              data-intent="open-modal"
-            >
-              <Bell className="h-4 w-4" />
-              <Badge className="absolute -top-1 -right-1 h-5 w-5 p-0 text-xs bg-red-500 hover:bg-red-500">
-                3
-              </Badge>
-            </ActionButton>
-
-            {/* User Menu */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <ActionButton 
-                  variant="ghost" 
-                  className="relative h-9 w-9 rounded-full"
-                  data-action="app:user-menu:open"
-                  data-intent="open-modal"
-                >
-                  <Avatar className="h-9 w-9">
-                    <AvatarFallback className="bg-gradient-to-br from-blue-600 to-blue-700 text-white font-medium">
-                      AD
-                    </AvatarFallback>
-                  </Avatar>
-                </ActionButton>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-56" align="end" forceMount>
-                <div className="flex items-center justify-start gap-2 p-2">
-                  <div className="flex flex-col space-y-1 leading-none">
-                    <p className="font-medium">Admin User</p>
-                    <p className="w-[200px] truncate text-sm text-muted-foreground">
-                      admin@security.local
-                    </p>
-                  </div>
-                </div>
-                <DropdownMenuSeparator />
-                <ActionMenuItem
-                  data-action="app:profile:view"
-                  data-intent="navigate"
-                  onSelect={() => window.location.href = '/profile'}
-                >
-                  <Users className="mr-2 h-4 w-4" />
-                  <span>Profile</span>
-                </ActionMenuItem>
-                <ActionMenuItem
-                  data-action="app:settings:view"
-                  data-intent="navigate"
-                  onSelect={() => window.location.href = '/settings'}
-                >
-                  <Settings className="mr-2 h-4 w-4" />
-                  <span>Settings</span>
-                </ActionMenuItem>
-                <DropdownMenuSeparator />
-                <ActionMenuItem
-                  data-action="app:theme:light"
-                  data-intent="api"
-                  data-endpoint="/api/v2/user/theme"
-                  onSelect={() => document.documentElement.classList.remove('dark')}
-                >
-                  <Sun className="mr-2 h-4 w-4" />
-                  <span>Light Theme</span>
-                </ActionMenuItem>
-                <ActionMenuItem
-                  data-action="app:theme:dark"
-                  data-intent="api"
-                  data-endpoint="/api/v2/user/theme"
-                  onSelect={() => document.documentElement.classList.add('dark')}
-                >
-                  <Moon className="mr-2 h-4 w-4" />
-                  <span>Dark Theme</span>
-                </ActionMenuItem>
-                <DropdownMenuSeparator />
-                <ActionMenuItem 
-                  className="text-red-600"
-                  data-action="app:auth:logout"
-                  data-intent="api"
-                  data-endpoint="/api/v2/auth/logout"
-                  data-danger="true"
-                  onSelect={() => {
-                    // Handle logout
-                    window.location.href = '/login';
-                  }}
-                >
-                  <LogOut className="mr-2 h-4 w-4" />
-                  <span>Sign out</span>
-                </ActionMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </header>
+          </header>
+        )}
 
         {/* Page Content */}
-        <main className="flex-1 overflow-auto bg-slate-50 dark:bg-slate-900">
+        <main className="flex-1 overflow-auto bg-white">
           {children}
         </main>
       </div>

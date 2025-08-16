@@ -111,18 +111,17 @@ pub struct CompileResult {
 pub fn compile_search(dsl: &SearchDsl, events_table: &str) -> Result<CompileResult, String> {
     // Guardrails
     let _max_rows: u64 = 10_000;
-    let max_range_sec: u64 = 7 * 24 * 3600;
+    // Allow very long ranges (up to ~10 years) per multi-tenant Discover UX
+    let max_range_sec: u64 = 10 * 365 * 24 * 3600;
 
     // Normalize legacy shapes if provided (compat layer)
     let search = dsl.search.as_ref();
     let mut where_clauses: Vec<String> = Vec::new();
     if let Some(search) = search {
-        // Tenants (required)
+        // Tenants optional: if empty → no tenant filter (all tenants)
         if !search.tenant_ids.is_empty() {
             let list = search.tenant_ids.iter().map(|t| format!("'{}'", escape_sql(t))).collect::<Vec<_>>().join(",");
             where_clauses.push(format!("tenant_id IN ({})", list));
-        } else {
-            return Err("tenant_ids are required".to_string());
         }
         // Time clamp
         if let Some(tr) = &search.time_range {
@@ -131,21 +130,17 @@ pub fn compile_search(dsl: &SearchDsl, events_table: &str) -> Result<CompileResu
                     if *last_seconds > max_range_sec {
                         return Err("time_range too large".to_string());
                     }
-                    where_clauses.push(format!("event_timestamp >= toUInt32(now()) - {}", last_seconds));
+                    // Use DateTime64-aware clock for millisecond precision
+                    where_clauses.push(format!("event_timestamp >= now64(3) - INTERVAL {} SECOND", last_seconds));
                 }
                 TimeRange::Between { between: (t0, t1) } => where_clauses.push(format!("event_timestamp BETWEEN {} AND {}", t0, t1)),
             }
-        } else {
-            // default last 15m
-            where_clauses.push("event_timestamp >= toUInt32(now()) - 900".to_string());
         }
 
         // WHERE expression compilation (subset of operators)
         if let Some(expr) = &search.where_ {
-            // Preflight validation against catalog
-            if let Err(ve) = validate_expr(expr) {
-                return Err(format!("{}: field={:?} suggestions={:?}", ve.code, ve.field, ve.suggestions));
-            }
+            // Soft-validate only; do not block compilation on unknown fields
+            let _ = validate_expr(expr);
             let mut buf = String::new();
             compile_expr(expr, &mut buf)?;
             if !buf.is_empty() { where_clauses.push(buf); }
@@ -204,7 +199,7 @@ pub fn compile_search(dsl: &SearchDsl, events_table: &str) -> Result<CompileResu
 
     if let Some(th) = &dsl.threshold {
         let gb = if th.group_by.is_empty() { return Err("threshold: group_by required".into()); } else { th.group_by.iter().map(|f| map_field(f)).collect::<Vec<_>>().join(", ") };
-        let extra_time = th.window_sec.map(|w| format!(" AND event_timestamp >= toUInt32(now()) - {}", w)).unwrap_or_default();
+        let extra_time = th.window_sec.map(|w| format!(" AND event_timestamp >= now64(3) - INTERVAL {} SECOND", w)).unwrap_or_default();
         let sql = format!(
             "SELECT {gb}, count() AS c FROM {tbl} WHERE ({where}){extra} GROUP BY {gb} HAVING c >= {n} ORDER BY c DESC LIMIT 10000 SETTINGS max_execution_time=8",
             gb=gb, tbl=events_table, where=where_sql, extra=extra_time, n=th.having.count_gte
@@ -222,7 +217,8 @@ pub fn compile_search(dsl: &SearchDsl, events_table: &str) -> Result<CompileResu
         return Ok(CompileResult { sql, where_sql, warnings: vec![] });
     }
 
-    // Default: plain filter search
+    // Default: plain filter search. Avoid referencing columns that may not exist in some tenants/tables.
+    // The UI derives canonical fields (time/source/message/severity) client-side from available columns.
     let sql = format!(
         "SELECT * FROM {} WHERE {} ORDER BY event_timestamp DESC LIMIT 10000 SETTINGS max_execution_time=8",
         events_table, where_sql
@@ -263,16 +259,32 @@ fn compile_expr(expr: &Expr, out: &mut String) -> Result<(), String> {
             if f.starts_with("__dsl_") {
                 return compile_dsl_logic_family(f, s, out);
             }
-            // Regular contains expression
-            write!(out, "positionCaseInsensitive({}, '{}') > 0", map_field(f), escape_sql(s)).unwrap();
+            // Handle "*" wildcard - if term is "*", omit the predicate (match anything)
+            if s == "*" {
+                write!(out, "1").unwrap(); // Always true - matches everything
+            } else {
+                // Regular contains expression
+                write!(out, "positionCaseInsensitiveUTF8({}, '{}') > 0", map_field(f), escape_sql(s)).unwrap();
+            }
         },
         Expr::ContainsAny((f, tokens)) => {
             if tokens.is_empty() { write!(out, "0").unwrap(); }
             else if tokens.len() == 1 {
-                write!(out, "positionCaseInsensitive({}, '{}') > 0", map_field(f), escape_sql(&tokens[0])).unwrap();
+                // Fix: Handle "*" wildcard in single token case
+                if tokens[0] == "*" {
+                    write!(out, "1").unwrap(); // Always true - matches everything
+                } else {
+                    write!(out, "positionCaseInsensitiveUTF8({}, '{}') > 0", map_field(f), escape_sql(&tokens[0])).unwrap();
+                }
             } else {
-                let arr = tokens.iter().map(|t| format!("'{}'", escape_sql(t))).collect::<Vec<_>>().join(",");
-                write!(out, "multiSearchAnyCaseInsensitive({}, [{}])", map_field(f), arr).unwrap();
+                // Fix: Filter out "*" wildcards from multi-token search
+                let filtered_tokens: Vec<&String> = tokens.iter().filter(|t| *t != "*").collect();
+                if filtered_tokens.is_empty() {
+                    write!(out, "1").unwrap(); // All wildcards - match everything
+                } else {
+                    let arr = filtered_tokens.iter().map(|t| format!("'{}'", escape_sql(t))).collect::<Vec<_>>().join(",");
+                    write!(out, "multiSearchAnyCaseInsensitiveUTF8({}, [{}])", map_field(f), arr).unwrap();
+                }
             }
         }
         Expr::Startswith((f,s)) => write!(out, "startsWith({}, '{}')", map_field(f), escape_sql(s)).unwrap(),
@@ -325,7 +337,30 @@ fn split_json_path(path: &str) -> (&str, String) {
     else { ("metadata", path.to_string()) }
 }
 
-fn map_field(f: &str) -> String { escape_sql(f) }
+fn map_field(f: &str) -> String {
+    match f {
+        // Canonical projections for UI/DSL field names
+        // Time
+        "time" | "ts" | "@timestamp" | "event_timestamp" => "event_timestamp".to_string(),
+        // Severity
+        "severity" | "level" | "log_level" => "coalesce(severity, level, log_level)".to_string(),
+        // Source (logger/app/host)
+        "source" | "service" | "program" | "logger" | "facility" =>
+            "coalesce(source, service, program, logger, facility, host)".to_string(),
+        // Message/log
+        "message" | "msg" | "log" | "event_message" | "raw_message" | "raw_log" =>
+            "coalesce(message, msg, log, event_message, raw_message, raw_log)".to_string(),
+        // Host
+        "host" | "host_name" => "coalesce(host, host_name)".to_string(),
+        // Vendor/Product
+        "vendor" | "product" => "coalesce(vendor, product)".to_string(),
+        // Event type/category/action
+        "event_type" | "event_category" | "event_action" =>
+            "coalesce(event_type, event_category, event_action)".to_string(),
+        // Pass-through by default
+        other => escape_sql(other),
+    }
+}
 
 /// Compile DSL logic family expressions by delegating to detection family compilers
 fn compile_dsl_logic_family(family: &str, content: &str, out: &mut String) -> Result<(), String> {

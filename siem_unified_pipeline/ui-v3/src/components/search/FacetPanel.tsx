@@ -42,6 +42,7 @@ export interface FacetPanelProps {
   selectedFacets: Record<string, string[]>;
   onFacetRemove: (field: string, value: string) => void;
   facetsData?: any; // Optional pre-loaded facets data
+  kibanaList?: boolean; // render like Kibana: simple list items (no cards)
 }
 
 const FACET_CONFIGS = [
@@ -88,7 +89,8 @@ export function FacetPanel({
   timeRange,
   onFacetSelect,
   selectedFacets,
-  onFacetRemove
+  onFacetRemove,
+  kibanaList = true
 }: FacetPanelProps) {
   const [facets, setFacets] = useState<FacetData[]>([]);
   const [loading, setLoading] = useState(false);
@@ -162,10 +164,10 @@ export function FacetPanel({
   const hasSelectedFacets = Object.keys(selectedFacets).some(field => selectedFacets[field].length > 0);
 
   return (
-    <div className="w-64 space-y-4">
+    <div className="w-[300px] space-y-3">
       {/* Selected Facets */}
       {hasSelectedFacets && (
-        <Card>
+        <Card className="shadow-none border-none bg-white dark:bg-slate-900">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm flex items-center gap-2">
               <Filter className="h-4 w-4" />
@@ -182,10 +184,10 @@ export function FacetPanel({
                 >
                   <span className="truncate">{field}:{value}</span>
                   <Button
-                    variant="ghost"
+                    variant="default"
                     size="sm"
                     onClick={() => onFacetRemove(field, value)}
-                    className="h-4 w-4 p-0 hover:bg-transparent"
+                    className="h-4 w-4 p-0"
                   >
                     <X className="h-3 w-3" />
                   </Button>
@@ -203,74 +205,58 @@ export function FacetPanel({
         const isExpanded = expandedFacets.has(config.field);
 
         return (
-          <Card key={config.field}>
-            <CardHeader 
-              className="pb-2 cursor-pointer"
+          <div key={config.field} className="shadow-none">
+            <div 
+              className="py-2 cursor-pointer flex items-center justify-between text-sm font-medium"
               onClick={() => toggleFacetExpansion(config.field)}
             >
-              <CardTitle className="text-sm flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <IconComponent className={`h-4 w-4 ${config.color}`} />
-                  {config.label}
-                </div>
-                {isExpanded ? (
-                  <ChevronDown className="h-4 w-4" />
-                ) : (
-                  <ChevronRight className="h-4 w-4" />
-                )}
-              </CardTitle>
-            </CardHeader>
-            
+              <div className="flex items-center gap-2">
+                <IconComponent className={`h-4 w-4 ${config.color}`} />
+                {config.label}
+              </div>
+              {isExpanded ? (
+                <ChevronDown className="h-4 w-4" />
+              ) : (
+                <ChevronRight className="h-4 w-4" />
+              )}
+            </div>
             {isExpanded && (
-              <CardContent>
+              <div className="py-1">
                 {loading ? (
                   <div className="space-y-2">
-                    {Array.from({ length: 3 }).map((_, i) => (
+                    {Array.from({ length: 6 }).map((_, i) => (
                       <div key={i} className="flex items-center justify-between">
-                        <Skeleton className="h-4 w-20" />
-                        <Skeleton className="h-4 w-8" />
+                        <Skeleton className="h-4 w-28" />
+                        <Skeleton className="h-4 w-10" />
                       </div>
                     ))}
                   </div>
                 ) : error ? (
                   <p className="text-xs text-red-600">{error}</p>
                 ) : facetData?.buckets?.length ? (
-                  <div className="space-y-1">
+                  <ul className="space-y-1">
                     {facetData.buckets.map((bucket, index) => {
                       const isSelected = selectedFacets[config.field]?.includes(bucket.key);
-                      // Create a truly unique key using the utility function
                       const stableKey = generateStableKey(config.field, bucket.key, index, bucket.doc_count.toString());
-                      
                       return (
-                        <button
-                          key={stableKey}
-                          onClick={() => handleFacetClick(config.field, bucket.key)}
-                          className={`w-full flex items-center justify-between p-2 rounded text-xs hover:bg-accent/50 ${
-                            isSelected ? 'bg-accent/20 border border-primary/20' : ''
-                          }`}
-                        >
-                          {config.field === 'severity' ? (
-                            <span className="severity" data-level={getSeverityLevel(bucket.key)}>
-                              {bucket.key || 'Unknown'}
-                            </span>
-                          ) : (
-                            <span className="truncate">
-                              {bucket.key || 'Unknown'}
-                            </span>
-                          )}
-                          <Badge variant="outline" className="text-xs">
-                            {bucket.doc_count.toLocaleString()}
-                          </Badge>
-                        </button>
+                        <li key={stableKey}>
+                          <button
+                            onClick={() => handleFacetClick(config.field, bucket.key)}
+                            className={`w-full flex items-center justify-between px-2 py-1 rounded text-xs hover:bg-accent ${isSelected ? 'bg-accent border border-primary' : ''}`}
+                          >
+                            <span className="truncate">{bucket.key || 'Unknown'}</span>
+                            <Badge variant="outline" className="text-xs">{bucket.doc_count.toLocaleString()}</Badge>
+                          </button>
+                        </li>
                       );
                     })}
-                  </div>
+                  </ul>
                 ) : (
                   <p className="text-xs text-muted-foreground">No data</p>
                 )}
-              </CardContent>
+              </div>
             )}
-          </Card>
+          </div>
         );
       })}
     </div>

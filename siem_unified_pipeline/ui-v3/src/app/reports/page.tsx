@@ -155,22 +155,22 @@ export default function ReportsPage() {
 
   const getTypeColor = (type: string) => {
     switch (type) {
-      case "Security Overview": return "bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800";
-      case "Threat Analysis": return "bg-red-100 text-red-800 border-red-200 dark:bg-red-900/20 dark:text-red-300 dark:border-red-800";
-      case "Compliance": return "bg-green-100 text-green-800 border-green-200 dark:bg-green-900/20 dark:text-green-300 dark:border-green-800";
-      case "Performance": return "bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-900/20 dark:text-purple-300 dark:border-purple-800";
-      case "Custom": return "bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-900/20 dark:text-gray-300 dark:border-gray-800";
-      default: return "bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-900/20 dark:text-gray-300 dark:border-gray-800";
+      case "Security Overview": return "bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900 dark:text-blue-300 dark:border-blue-800";
+      case "Threat Analysis": return "bg-red-100 text-red-800 border-red-200 dark:bg-red-900 dark:text-red-300 dark:border-red-800";
+      case "Compliance": return "bg-green-100 text-green-800 border-green-200 dark:bg-green-900 dark:text-green-300 dark:border-green-800";
+      case "Performance": return "bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-900 dark:text-purple-300 dark:border-purple-800";
+      case "Custom": return "bg-muted text-muted-foreground border-slate-200 dark:border-slate-700";
+      default: return "bg-muted text-muted-foreground border-slate-200 dark:border-slate-700";
     }
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "Generated": return "bg-green-100 text-green-800 border-green-200 dark:bg-green-900/20 dark:text-green-300 dark:border-green-800";
-      case "Generating": return "bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800";
-      case "Scheduled": return "bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900/20 dark:text-yellow-300 dark:border-yellow-800";
-      case "Failed": return "bg-red-100 text-red-800 border-red-200 dark:bg-red-900/20 dark:text-red-300 dark:border-red-800";
-      default: return "bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-900/20 dark:text-gray-300 dark:border-gray-800";
+      case "Generated": return "bg-green-100 text-green-800 border-green-200 dark:bg-green-900 dark:text-green-300 dark:border-green-800";
+      case "Generating": return "bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900 dark:text-blue-300 dark:border-blue-800";
+      case "Scheduled": return "bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900 dark:text-yellow-300 dark:border-yellow-800";
+      case "Failed": return "bg-red-100 text-red-800 border-red-200 dark:bg-red-900 dark:text-red-300 dark:border-red-800";
+      default: return "bg-muted text-muted-foreground border-slate-200 dark:border-slate-700";
     }
   };
 
@@ -211,14 +211,14 @@ export default function ReportsPage() {
   return (
     <div className="space-y-6">
       {/* Watermark */}
-      <div className="fixed bottom-3 right-4 z-50 pointer-events-none select-none opacity-40 text-xs font-semibold bg-muted text-muted-foreground px-2 py-1 rounded">
+      <div className="fixed bottom-3 right-4 z-50 pointer-events-none select-none  text-xs font-semibold bg-muted text-muted-foreground px-2 py-1 rounded">
         UI-V3 View (Reports)
       </div>
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Security Reports</h1>
-          <p className="text-slate-600 dark:text-slate-400 mt-1">
+          <h1 className="text-3xl font-bold text-foreground">Security Reports</h1>
+          <p className="text-muted-foreground mt-1">
             Generate and manage security and compliance reports
           </p>
         </div>
@@ -238,14 +238,14 @@ export default function ReportsPage() {
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-green-100 dark:bg-green-900/20">
+              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-muted">
                 <CheckCircle className="h-6 w-6 text-green-600 dark:text-green-400" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-slate-900 dark:text-white">
+                <p className="text-2xl font-bold text-foreground">
                   {reports.filter(r => r.status === "Generated").length}
                 </p>
-                <p className="text-sm text-slate-600 dark:text-slate-400">Generated</p>
+                <p className="text-sm text-muted-foreground">Generated</p>
               </div>
             </div>
           </CardContent>
@@ -254,14 +254,14 @@ export default function ReportsPage() {
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-900/20">
+              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-muted">
                 <Clock className="h-6 w-6 text-blue-600 dark:text-blue-400" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-slate-900 dark:text-white">
+                <p className="text-2xl font-bold text-foreground">
                   {reports.filter(r => r.status === "Generating").length}
                 </p>
-                <p className="text-sm text-slate-600 dark:text-slate-400">In Progress</p>
+                <p className="text-sm text-muted-foreground">In Progress</p>
               </div>
             </div>
           </CardContent>
@@ -270,14 +270,14 @@ export default function ReportsPage() {
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-yellow-100 dark:bg-yellow-900/20">
+              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-yellow-100 dark:bg-yellow-900">
                 <Calendar className="h-6 w-6 text-yellow-600 dark:text-yellow-400" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-slate-900 dark:text-white">
+                <p className="text-2xl font-bold text-foreground">
                   {reports.filter(r => r.schedule && r.schedule !== "On-Demand").length}
                 </p>
-                <p className="text-sm text-slate-600 dark:text-slate-400">Scheduled</p>
+                <p className="text-sm text-muted-foreground">Scheduled</p>
               </div>
             </div>
           </CardContent>
@@ -286,14 +286,14 @@ export default function ReportsPage() {
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-purple-100 dark:bg-purple-900/20">
+              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-purple-100 dark:bg-purple-900">
                 <FileText className="h-6 w-6 text-purple-600 dark:text-purple-400" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-slate-900 dark:text-white">
+                <p className="text-2xl font-bold text-foreground">
                   {reports.length}
                 </p>
-                <p className="text-sm text-slate-600 dark:text-slate-400">Total Reports</p>
+                <p className="text-sm text-muted-foreground">Total Reports</p>
               </div>
             </div>
           </CardContent>
@@ -306,7 +306,7 @@ export default function ReportsPage() {
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="flex-1">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Search reports..."
                   value={searchQuery}
@@ -319,7 +319,7 @@ export default function ReportsPage() {
               <select
                 value={selectedType}
                 onChange={(e) => setSelectedType(e.target.value)}
-                className="px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-md bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+                className="px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-md bg-card text-foreground"
               >
                 {types.map(type => (
                   <option key={type} value={type}>
@@ -330,7 +330,7 @@ export default function ReportsPage() {
               <select
                 value={selectedStatus}
                 onChange={(e) => setSelectedStatus(e.target.value)}
-                className="px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-md bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+                className="px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-md bg-card text-foreground"
               >
                 {statuses.map(status => (
                   <option key={status} value={status}>
@@ -355,7 +355,7 @@ export default function ReportsPage() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-3 mb-2">
                       {getTypeIcon(report.type)}
-                      <h3 className="text-lg font-semibold text-slate-900 dark:text-white truncate">
+                      <h3 className="text-lg font-semibold text-foreground truncate">
                         {report.name}
                       </h3>
                       <Badge className={getTypeColor(report.type)}>
@@ -366,10 +366,10 @@ export default function ReportsPage() {
                         {report.status}
                       </Badge>
                     </div>
-                    <p className="text-slate-600 dark:text-slate-400 mb-3">
+                    <p className="text-muted-foreground mb-3">
                       {report.description}
                     </p>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-slate-500 dark:text-slate-400">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-muted-foreground">
                       <div>
                         <span className="font-medium">Format:</span> {report.format}
                       </div>
@@ -390,7 +390,7 @@ export default function ReportsPage() {
                       )}
                     </div>
                     {report.nextScheduled && (
-                      <div className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+                      <div className="mt-2 text-sm text-muted-foreground">
                         <span className="font-medium">Next Scheduled:</span> {new Date(report.nextScheduled).toLocaleString()}
                       </div>
                     )}
@@ -470,11 +470,11 @@ export default function ReportsPage() {
           {filteredReports.length === 0 && !loading && (
             <Card>
               <CardContent className="p-12 text-center">
-                <FileText className="h-12 w-12 text-slate-400 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">
+                <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-foreground mb-2">
                   No reports found
                 </h3>
-                <p className="text-slate-600 dark:text-slate-400 mb-6">
+                <p className="text-muted-foreground mb-6">
                   {searchQuery || selectedType !== "all" || selectedStatus !== "all"
                     ? "Try adjusting your search criteria"
                     : "Create your first security report to get started"

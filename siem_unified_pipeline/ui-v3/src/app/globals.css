@@ -9,30 +9,81 @@
   html { color-scheme: light dark; }
   body { background-color: hsl(var(--background)); color: hsl(var(--foreground)); font-family: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"; font-feature-settings: "rlig" 1, "calt" 1; line-height: 1.5; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
   :focus-visible { outline: none; box-shadow: 0 0 0 3px hsl(var(--ring) / .45); transition: box-shadow var(--dur-base); }
+  /* Global anti-ghosting */
+  html * { backdrop-filter: none !important; }
+  
+  /* Timeline bar heights - using direct inline styles now */
+  
+  /* Progress bar widths */
+  [style*="--progress-width"] { width: var(--progress-width, 0%); }
+  
+  /* Progress transforms */
+  [style*="--progress-transform"] { transform: var(--progress-transform, translateX(0)); }
+
+  /* Global Solid UI Controller */
+  :root {
+    /* Overlay and surface tokens to control ALL overlays/menus globally */
+    --overlay-bg: rgba(0,0,0,0.60);
+    --surface-bg: hsl(var(--card));
+    --surface-fg: hsl(var(--card-foreground));
+    --surface-border: hsl(var(--border));
+    --surface-focus: hsl(var(--muted));
+  }
+  .dark {
+    --overlay-bg: rgba(0,0,0,0.60);
+  }
+
+  /* Apply solid surfaces to all Radix/shadcn portal contents via data-slot */
+  [data-slot$="-content"],
+  [data-slot$="-sub-content"],
+  [data-slot$="-viewport"] {
+    background-color: var(--surface-bg) !important;
+    color: var(--surface-fg) !important;
+    border: 1px solid var(--surface-border) !important;
+    box-shadow: var(--elev-2);
+  }
+
+  /* Universal overlay color */
+  [data-slot$="-overlay"] {
+    background-color: var(--overlay-bg) !important;
+  }
+
+  /* Menu item focus/active */
+  [data-slot$="-item"]:focus,
+  [data-slot$="-sub-trigger"]:focus,
+  [data-slot$="-item"][data-state="open"] {
+    background-color: var(--surface-focus) !important;
+    color: var(--surface-fg) !important;
+  }
+
+  /* Separators */
+  [data-slot$="-separator"] {
+    background-color: var(--surface-border) !important;
+  }
 }
 
 
 
 :root {
-  --sidebar: hsl(0 0% 98%);
-  --sidebar-foreground: hsl(240 5.3% 26.1%);
-  --sidebar-primary: hsl(240 5.9% 10%);
-  --sidebar-primary-foreground: hsl(0 0% 98%);
-  --sidebar-accent: hsl(240 4.8% 95.9%);
-  --sidebar-accent-foreground: hsl(240 5.9% 10%);
-  --sidebar-border: hsl(220 13% 91%);
-  --sidebar-ring: hsl(217.2 91.2% 59.8%);
+  --sidebar: hsl(var(--k-rail-bg));
+  --sidebar-foreground: hsl(var(--k-rail-icon));
+  --sidebar-primary: hsl(var(--primary));
+  --sidebar-primary-foreground: hsl(var(--primary-foreground));
+  --sidebar-accent: hsl(var(--k-rail-hover));
+  --sidebar-accent-foreground: hsl(0 0% 100%);
+  --sidebar-border: hsl(var(--k-border-light));
+  --sidebar-ring: hsl(var(--ring));
 }
 
 .dark {
-  --sidebar: hsl(240 5.9% 10%);
-  --sidebar-foreground: hsl(240 4.8% 95.9%);
-  --sidebar-primary: hsl(224.3 76.3% 48%);
-  --sidebar-primary-foreground: hsl(0 0% 100%);
-  --sidebar-accent: hsl(240 3.7% 15.9%);
-  --sidebar-accent-foreground: hsl(240 4.8% 95.9%);
-  --sidebar-border: hsl(240 3.7% 15.9%);
-  --sidebar-ring: hsl(217.2 91.2% 59.8%);
+  --sidebar: hsl(var(--k-rail-bg));
+  --sidebar-foreground: hsl(var(--k-rail-icon));
+  --sidebar-primary: hsl(var(--primary));
+  --sidebar-primary-foreground: hsl(var(--primary-foreground));
+  --sidebar-accent: hsl(var(--k-rail-hover));
+  --sidebar-accent-foreground: hsl(0 0% 100%);
+  --sidebar-border: hsl(var(--k-border-light));
+  --sidebar-ring: hsl(var(--ring));
 }
 
 @theme inline {

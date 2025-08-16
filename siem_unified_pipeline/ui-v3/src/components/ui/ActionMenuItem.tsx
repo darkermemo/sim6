@@ -1,11 +1,11 @@
 "use client";
 import { 
-  DropdownMenuItem, 
-  type DropdownMenuItemProps 
+  DropdownMenuItem
 } from "@/components/ui/dropdown-menu";
+import * as React from "react";
 
 export interface ActionMenuItemProps extends 
-  Omit<DropdownMenuItemProps, 'onSelect'> {
+  Omit<React.ComponentProps<typeof DropdownMenuItem>, 'onSelect'> {
   "data-action": string;
   "data-intent"?: "api"|"navigate"|"open-modal"|"submit";
   "data-endpoint"?: string;

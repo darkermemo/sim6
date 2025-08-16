@@ -27,17 +27,20 @@ pub fn validate_expr(expr: &Expr) -> Result<(), ValidationError> {
         Expr::In((f,_)) | Expr::Nin((f,_)) => validate_field_basic(f),
         Expr::Contains((f,_)) | Expr::ContainsAny((f,_)) | Expr::Startswith((f,_)) | Expr::Endswith((f,_)) | Expr::Regex((f,_)) => {
             let (canon, kind) = canonicalize_field(f);
-            let Some(k) = kind else { return Err(unknown_field_err(f)); };
-            if !is_string_like(k) {
-                return Err(ValidationError{ code: "INVALID_OPERATOR_TYPE", field: Some(canon.to_string()), message: "string operator on non-string field".into(), suggestions: vec![] });
+            // Soft-allow unknown fields to avoid blocking UI; ClickHouse will fail if truly invalid
+            if let Some(k) = kind {
+                if !is_string_like(k) {
+                    return Err(ValidationError{ code: "INVALID_OPERATOR_TYPE", field: Some(canon.to_string()), message: "string operator on non-string field".into(), suggestions: vec![] });
+                }
             }
             Ok(())
         }
         Expr::Gt((f,_)) | Expr::Gte((f,_)) | Expr::Lt((f,_)) | Expr::Lte((f,_)) | Expr::Between((f,_,_)) => {
             let (canon, kind) = canonicalize_field(f);
-            let Some(k) = kind else { return Err(unknown_field_err(f)); };
-            if !is_numeric(k) {
-                return Err(ValidationError{ code: "INVALID_OPERATOR_TYPE", field: Some(canon.to_string()), message: "numeric operator on non-numeric field".into(), suggestions: vec![] });
+            if let Some(k) = kind {
+                if !is_numeric(k) {
+                    return Err(ValidationError{ code: "INVALID_OPERATOR_TYPE", field: Some(canon.to_string()), message: "numeric operator on non-numeric field".into(), suggestions: vec![] });
+                }
             }
             Ok(())
         }
@@ -50,20 +53,15 @@ pub fn validate_expr(expr: &Expr) -> Result<(), ValidationError> {
             Ok(())
         }
         Expr::Exists(f) | Expr::Missing(f) | Expr::IsNull(f) | Expr::NotNull(f) => {
-            let (canon, kind) = canonicalize_field(f);
-            let Some(_) = kind else { return Err(unknown_field_err(f)); };
-            let _ = canon; // just existence check
+            let (_canon, _kind) = canonicalize_field(f);
+            // Soft-allow unknown fields; existence checks will be resolved by CH at runtime
             Ok(())
         }
     }
 }
 
-fn validate_field_basic(f: &str) -> Result<(), ValidationError> {
-    let (canon, kind) = canonicalize_field(f);
-    if kind.is_none() {
-        return Err(unknown_field_err(f));
-    }
-    let _ = canon;
+fn validate_field_basic(_f: &str) -> Result<(), ValidationError> {
+    // Soft-allow unknown fields to avoid blocking UI queries; downstream CH will enforce correctness
     Ok(())
 }
 

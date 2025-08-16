@@ -124,8 +124,27 @@ fn parse_duration_to_seconds(tok: &str) -> Option<u64> {
 }
 
 pub async fn execute(State(st): State<Arc<AppState>>, Json(body): Json<Value>) -> Result<Json<Value>, axum::http::StatusCode> {
-    let dsl = translate_to_dsl(&body).map_err(|_| axum::http::StatusCode::UNPROCESSABLE_ENTITY)?;
-    let compiled = compile_search(&dsl, &st.events_table).map_err(|_| axum::http::StatusCode::UNPROCESSABLE_ENTITY)?;
+    // Gracefully handle translate/compile errors by returning JSON envelope instead of 422
+    let dsl = match translate_to_dsl(&body) {
+        Ok(d) => d,
+        Err(e) => {
+            return Ok(Json(serde_json::json!({
+                "sql": "",
+                "data": { "error": format!("translate error: {}", e) },
+                "took_ms": 0u64
+            })));
+        }
+    };
+    let compiled = match compile_search(&dsl, &st.events_table) {
+        Ok(c) => c,
+        Err(e) => {
+            return Ok(Json(serde_json::json!({
+                "sql": "",
+                "data": { "error": format!("compile error: {}", e) },
+                "took_ms": 0u64
+            })));
+        }
+    };
 
     // Apply requested limit with a safe cap
     let requested_limit = body
@@ -152,14 +171,17 @@ pub async fn execute(State(st): State<Arc<AppState>>, Json(body): Json<Value>) -
         .send()
         .await
         .map_err(|_| axum::http::StatusCode::BAD_GATEWAY)?;
-    if !resp.status().is_success() {
-        // Include ClickHouse error mapping if available in crate::error
-        let status = resp.status();
-        let txt = resp.text().await.unwrap_or_default();
-        tracing::error!(target = "search_execute", %status, ch_error = %txt, "ClickHouse error in search_execute");
-        return Err(crate::error::map_clickhouse_http_error(status, &txt, Some(&sql)).into_response().status());
-    }
+    let status = resp.status();
     let text = resp.text().await.unwrap_or("{}".to_string());
+    if !status.is_success() {
+        // Map ClickHouse errors into a JSON envelope with 200 so UI can display them instead of hard failing
+        tracing::error!(target = "search_execute", status = %status, ch_error = %text, "ClickHouse error in search_execute");
+        return Ok(Json(serde_json::json!({
+            "sql": sql_limited,
+            "data": { "error": text },
+            "took_ms": t0.elapsed().as_millis() as u64
+        })));
+    }
     let data: Value = serde_json::from_str(&text).unwrap_or(serde_json::json!({"raw": text}));
     let took_ms = t0.elapsed().as_millis() as u64;
     Ok(Json(serde_json::json!({"sql": sql_limited, "data": data, "took_ms": took_ms })))
@@ -538,7 +560,10 @@ pub async fn facets(
                     Ok(compiled) => compiled.where_sql,
                     Err(_) => {
                         // Fallback to simple message search
-                        if req.q.contains(":") {
+                        // Fix: Handle "*" wildcard properly
+                        if req.q.trim() == "*" {
+                            "1 = 1".to_string()
+                        } else if req.q.contains(":") {
                             format!("positionCaseInsensitive(message, '{}') > 0", req.q.replace("'", "''"))
                         } else {
                             format!("positionCaseInsensitive(message, '{}') > 0", req.q.replace("'", "''"))
@@ -547,7 +572,12 @@ pub async fn facets(
                 }
             },
             Err(_) => {
-                format!("positionCaseInsensitive(message, '{}') > 0", req.q.replace("'", "''"))
+                // Fix: Handle "*" wildcard properly in final fallback
+                if req.q.trim() == "*" {
+                    "1 = 1".to_string()
+                } else {
+                    format!("positionCaseInsensitive(message, '{}') > 0", req.q.replace("'", "''"))
+                }
             }
         }
     };
@@ -607,6 +637,59 @@ pub async fn facets(
     }
     
     Ok(Json(FacetsResponse { facets: result_facets }))
+}
+
+// === UI Columns Preferences (server-side persistence) ===
+
+#[derive(serde::Deserialize)]
+pub struct ColumnsGetQuery {
+    pub tenant_id: Option<String>,
+}
+
+#[derive(serde::Deserialize)]
+pub struct ColumnsPutBody {
+    pub tenant_id: Option<String>,
+    pub columns: Vec<String>,
+}
+
+/// GET /api/v2/search/columns?tenant_id=all
+/// Returns { columns: string[] } if stored; 404 if not found or persistence unavailable
+pub async fn get_columns(
+    State(app): State<Arc<AppState>>,
+    axum::extract::Query(q): axum::extract::Query<ColumnsGetQuery>
+) -> Result<Json<serde_json::Value>, axum::http::StatusCode> {
+    let tenant = q.tenant_id.unwrap_or_else(|| "all".to_string());
+    let key = format!("ui:columns:{}", tenant);
+    if let Some(mut redis) = app.redis.clone() {
+        match redis::cmd("GET").arg(&key).query_async::<_, Option<String>>(&mut redis).await {
+            Ok(Some(s)) => {
+                if let Ok(v) = serde_json::from_str::<Vec<String>>(&s) {
+                    return Ok(Json(serde_json::json!({ "columns": v })));
+                }
+                return Ok(Json(serde_json::json!({ "columns": [] })));
+            }
+            Ok(None) => return Err(axum::http::StatusCode::NOT_FOUND),
+            Err(_) => return Err(axum::http::StatusCode::BAD_GATEWAY),
+        }
+    }
+    Err(axum::http::StatusCode::NOT_FOUND)
+}
+
+/// PUT /api/v2/search/columns { tenant_id?, columns: [] }
+pub async fn put_columns(
+    State(app): State<Arc<AppState>>,
+    Json(body): Json<ColumnsPutBody>
+) -> Result<Json<serde_json::Value>, axum::http::StatusCode> {
+    let tenant = body.tenant_id.unwrap_or_else(|| "all".to_string());
+    let key = format!("ui:columns:{}", tenant);
+    if let Some(mut redis) = app.redis.clone() {
+        let payload = serde_json::to_string(&body.columns).unwrap_or_else(|_| "[]".to_string());
+        match redis::cmd("SET").arg(&key).arg(payload).query_async::<_, ()>(&mut redis).await {
+            Ok(()) => return Ok(Json(serde_json::json!({ "ok": true }))),
+            Err(_) => return Err(axum::http::StatusCode::BAD_GATEWAY),
+        }
+    }
+    Err(axum::http::StatusCode::SERVICE_UNAVAILABLE)
 }
 
 

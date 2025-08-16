@@ -19,7 +19,11 @@ path = "src/lib.rs"
 
 [[bin]]
 name = "siem-pipeline"
-path = "src/main.rs"
+path = "src/v2_main.rs"
+
+[[bin]]
+name = "siem-simple"
+path = "src/simple_main.rs"
 
 [[bin]]
 name = "test_client"

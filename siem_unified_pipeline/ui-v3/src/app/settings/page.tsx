@@ -92,14 +92,14 @@ export default function SettingsPage() {
   return (
     <div className="space-y-6">
       {/* Watermark */}
-      <div className="fixed bottom-3 right-4 z-50 pointer-events-none select-none opacity-40 text-xs font-semibold bg-muted text-muted-foreground px-2 py-1 rounded">
+      <div className="fixed bottom-3 right-4 z-50 pointer-events-none select-none  text-xs font-semibold bg-muted text-muted-foreground px-2 py-1 rounded">
         UI-V3 View (Settings)
       </div>
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Settings</h1>
-          <p className="text-slate-600 dark:text-slate-400 mt-1">
+          <h1 className="text-3xl font-bold text-foreground">Settings</h1>
+          <p className="text-muted-foreground mt-1">
             Configure your SIEM platform preferences and system settings
           </p>
         </div>
@@ -139,28 +139,28 @@ export default function SettingsPage() {
         <CardContent className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-900 dark:text-white">
+              <label className="text-sm font-medium text-foreground">
                 Full Name
               </label>
               <Input defaultValue="Security Admin" />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-900 dark:text-white">
+              <label className="text-sm font-medium text-foreground">
                 Email Address
               </label>
               <Input defaultValue="admin@company.com" type="email" />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-900 dark:text-white">
+              <label className="text-sm font-medium text-foreground">
                 Department
               </label>
               <Input defaultValue="Information Security" />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-900 dark:text-white">
+              <label className="text-sm font-medium text-foreground">
                 Timezone
               </label>
-              <select className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-md bg-white dark:bg-slate-800 text-slate-900 dark:text-white">
+              <select className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-md bg-card text-foreground">
                 <option value="UTC">UTC (GMT+0)</option>
                 <option value="EST">Eastern Time (GMT-5)</option>
                 <option value="PST">Pacific Time (GMT-8)</option>
@@ -183,8 +183,8 @@ export default function SettingsPage() {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <h4 className="font-medium text-slate-900 dark:text-white">Email Alerts</h4>
-                <p className="text-sm text-slate-600 dark:text-slate-400">
+                <h4 className="font-medium text-foreground">Email Alerts</h4>
+                <p className="text-sm text-muted-foreground">
                   Receive security alerts via email
                 </p>
               </div>
@@ -197,8 +197,8 @@ export default function SettingsPage() {
             </div>
             <div className="flex items-center justify-between">
               <div>
-                <h4 className="font-medium text-slate-900 dark:text-white">Browser Notifications</h4>
-                <p className="text-sm text-slate-600 dark:text-slate-400">
+                <h4 className="font-medium text-foreground">Browser Notifications</h4>
+                <p className="text-sm text-muted-foreground">
                   Show real-time notifications in browser
                 </p>
               </div>
@@ -211,8 +211,8 @@ export default function SettingsPage() {
             </div>
             <div className="flex items-center justify-between">
               <div>
-                <h4 className="font-medium text-slate-900 dark:text-white">Slack Integration</h4>
-                <p className="text-sm text-slate-600 dark:text-slate-400">
+                <h4 className="font-medium text-foreground">Slack Integration</h4>
+                <p className="text-sm text-muted-foreground">
                   Send alerts to Slack channels
                 </p>
               </div>
@@ -225,8 +225,8 @@ export default function SettingsPage() {
             </div>
             <div className="flex items-center justify-between">
               <div>
-                <h4 className="font-medium text-slate-900 dark:text-white">SMS Alerts</h4>
-                <p className="text-sm text-slate-600 dark:text-slate-400">
+                <h4 className="font-medium text-foreground">SMS Alerts</h4>
+                <p className="text-sm text-muted-foreground">
                   Critical alerts via SMS
                 </p>
               </div>
@@ -254,8 +254,8 @@ export default function SettingsPage() {
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <h4 className="font-medium text-slate-900 dark:text-white">Two-Factor Authentication</h4>
-                  <p className="text-sm text-slate-600 dark:text-slate-400">
+                  <h4 className="font-medium text-foreground">Two-Factor Authentication</h4>
+                  <p className="text-sm text-muted-foreground">
                     Add extra security to your account
                   </p>
                 </div>
@@ -267,7 +267,7 @@ export default function SettingsPage() {
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-900 dark:text-white">
+                <label className="text-sm font-medium text-foreground">
                   Session Timeout (minutes)
                 </label>
                 <Input
@@ -281,7 +281,7 @@ export default function SettingsPage() {
             </div>
             <div className="space-y-4">
               <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-900 dark:text-white">
+                <label className="text-sm font-medium text-foreground">
                   Password Expiry (days)
                 </label>
                 <Input
@@ -293,7 +293,7 @@ export default function SettingsPage() {
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-900 dark:text-white">
+                <label className="text-sm font-medium text-foreground">
                   Max Login Attempts
                 </label>
                 <Input
@@ -321,7 +321,7 @@ export default function SettingsPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-4">
               <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-900 dark:text-white">
+                <label className="text-sm font-medium text-foreground">
                   Data Retention (days)
                 </label>
                 <Input
@@ -333,11 +333,11 @@ export default function SettingsPage() {
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-900 dark:text-white">
+                <label className="text-sm font-medium text-foreground">
                   Log Level
                 </label>
                 <select 
-                  className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-md bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+                  className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-md bg-card text-foreground"
                   value={systemSettings.logLevel}
                   onChange={(e) => 
                     setSystemSettings(prev => ({ ...prev, logLevel: e.target.value }))
@@ -353,8 +353,8 @@ export default function SettingsPage() {
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <h4 className="font-medium text-slate-900 dark:text-white">Automatic Backup</h4>
-                  <p className="text-sm text-slate-600 dark:text-slate-400">
+                  <h4 className="font-medium text-foreground">Automatic Backup</h4>
+                  <p className="text-sm text-muted-foreground">
                     Enable daily system backups
                   </p>
                 </div>
@@ -367,8 +367,8 @@ export default function SettingsPage() {
               </div>
               <div className="flex items-center justify-between">
                 <div>
-                  <h4 className="font-medium text-slate-900 dark:text-white">Maintenance Mode</h4>
-                  <p className="text-sm text-slate-600 dark:text-slate-400">
+                  <h4 className="font-medium text-foreground">Maintenance Mode</h4>
+                  <p className="text-sm text-muted-foreground">
                     Temporarily disable system access
                   </p>
                 </div>
@@ -396,7 +396,7 @@ export default function SettingsPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-4">
               <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-900 dark:text-white">
+                <label className="text-sm font-medium text-foreground">
                   Rate Limit (requests/hour)
                 </label>
                 <Input
@@ -408,7 +408,7 @@ export default function SettingsPage() {
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-900 dark:text-white">
+                <label className="text-sm font-medium text-foreground">
                   Request Timeout (seconds)
                 </label>
                 <Input
@@ -422,7 +422,7 @@ export default function SettingsPage() {
             </div>
             <div className="space-y-4">
               <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-900 dark:text-white">
+                <label className="text-sm font-medium text-foreground">
                   Max Retries
                 </label>
                 <Input
@@ -435,8 +435,8 @@ export default function SettingsPage() {
               </div>
               <div className="flex items-center justify-between">
                 <div>
-                  <h4 className="font-medium text-slate-900 dark:text-white">Response Caching</h4>
-                  <p className="text-sm text-slate-600 dark:text-slate-400">
+                  <h4 className="font-medium text-foreground">Response Caching</h4>
+                  <p className="text-sm text-muted-foreground">
                     Cache API responses for better performance
                   </p>
                 </div>
@@ -462,7 +462,7 @@ export default function SettingsPage() {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="flex items-center gap-3 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+            <div className="flex items-center gap-3 p-4 bg-muted rounded-lg border border-slate-200 dark:border-slate-700">
               <CheckCircle className="h-8 w-8 text-green-600 dark:text-green-400" />
               <div>
                 <h4 className="font-medium text-green-900 dark:text-green-100">Database</h4>
@@ -470,7 +470,7 @@ export default function SettingsPage() {
               </div>
             </div>
             
-            <div className="flex items-center gap-3 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+            <div className="flex items-center gap-3 p-4 bg-muted rounded-lg border border-slate-200 dark:border-slate-700">
               <CheckCircle className="h-8 w-8 text-green-600 dark:text-green-400" />
               <div>
                 <h4 className="font-medium text-green-900 dark:text-green-100">API Service</h4>
@@ -478,7 +478,7 @@ export default function SettingsPage() {
               </div>
             </div>
             
-            <div className="flex items-center gap-3 p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
+            <div className="flex items-center gap-3 p-4 bg-yellow-50 dark:bg-yellow-900 rounded-lg border border-yellow-200 dark:border-yellow-800">
               <AlertTriangle className="h-8 w-8 text-yellow-600 dark:text-yellow-400" />
               <div>
                 <h4 className="font-medium text-yellow-900 dark:text-yellow-100">Search Service</h4>

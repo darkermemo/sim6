@@ -5,10 +5,9 @@ use crate::v2::compiler::Expr;
 /// Translates the new search body shape into existing SearchDsl
 /// Supports a minimal subset: tenant_id, time (last_seconds|from/to), optional q ignored (for now)
 pub fn translate_to_dsl(body: &Value) -> Result<SearchDsl, String> {
-    if body.get("tenant_id").and_then(|v| v.as_str()).is_none() {
-        return Err("tenant_id is required".into());
-    }
-    let tenant = body.get("tenant_id").and_then(|v| v.as_str()).unwrap().to_string();
+    // tenant_id is optional; when omitted or set to "all", compile without a tenant filter
+    let tenant_opt = body.get("tenant_id").and_then(|v| v.as_str());
+    let tenant = tenant_opt.unwrap_or("all").to_string();
     let mut tr: Option<TimeRange> = None;
     if let Some(t) = body.get("time") {
         if let Some(ls) = t.get("last_seconds").and_then(|v| v.as_u64()) {
@@ -20,11 +19,21 @@ pub fn translate_to_dsl(body: &Value) -> Result<SearchDsl, String> {
         tr = Some(TimeRange::Last { last_seconds: 900 });
     }
     // Optional KQL/Lucene-lite query string
-    let where_ = if let Some(q) = body.get("q").and_then(|v| v.as_str()) { parse_kql(q) } else { None };
+    let where_ = if let Some(q) = body.get("q").and_then(|v| v.as_str()) { 
+        // Fix: Handle "*" wildcard - if query is "*", return None (no filter)
+        if q.trim() == "*" {
+            None
+        } else {
+            parse_kql(q)
+        }
+    } else { 
+        None 
+    };
     let section = SearchSection {
         time_range: tr,
         where_: where_,
-        tenant_ids: vec![tenant],
+        // If tenant is "all", leave empty to signal no tenant filter
+        tenant_ids: if tenant == "all" { vec![] } else { vec![tenant] },
     };
     Ok(SearchDsl { version: Some("1".into()), search: Some(section), threshold: None, cardinality: None, sequence: None })
 }
@@ -173,9 +182,14 @@ fn parse_term(ts: &mut Vec<Tok>) -> Option<Expr> {
                 else if f.starts_with("metadata.") || f.starts_with("raw_event.") {
                     return Some(Expr::JsonEq((f.to_string(), Value::String(v.to_string()))));
                 } else if v.contains('*') || v.contains('?') { // wildcard → simple regex or starts/ends
+                    // Special case: literal "*" means match-all; omit predicate
+                    if v.trim() == "*" { return Some(Expr::And(vec![])); }
                     let re = v.replace('.', "\\.").replace('*', ".*").replace('?', ".");
                     return Some(Expr::Regex((f.to_string(), re)));
-                } else { return Some(Expr::Eq((f.to_string(), Value::String(v.to_string())))); }
+                } else {
+                    // Pass field/value as Eq even if field is unknown; validator is relaxed for unknowns
+                    return Some(Expr::Eq((f.to_string(), Value::String(v.to_string()))));
+                }
             }
             None
         }

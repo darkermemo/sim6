@@ -34,7 +34,7 @@ const project = new Project({
       if (!ACTION_TAGS.has(tag)) return;
 
       const attrs = new Map<string, JsxAttribute>();
-      el.getAttributes().forEach(a => {
+      el.getAttributes().forEach((a: any) => {
         if (a.getKind() === SyntaxKind.JsxAttribute) {
           const at = a.asKind(SyntaxKind.JsxAttribute)!;
           attrs.set(at.getName(), at);

@@ -235,7 +235,7 @@ export default function ThemePage() {
                       type="file"
                       accept=".json"
                       onChange={importTokens}
-                      className="absolute inset-0 opacity-0 cursor-pointer"
+                      className="absolute inset-0  cursor-pointer"
                     />
                     <ActionButton 
                       size="sm" 
@@ -568,7 +568,6 @@ export default function ThemePage() {
                       size="sm"
                       disabled
                       data-action="theme:demo:button-small"
-                      data-intent="disabled"
                     >
                       Small
                     </ActionButton>
@@ -576,7 +575,7 @@ export default function ThemePage() {
                       size="md"
                       disabled
                       data-action="theme:demo:button-medium"
-                      data-intent="disabled"
+
                     >
                       Medium
                     </ActionButton>
@@ -584,7 +583,7 @@ export default function ThemePage() {
                       size="lg"
                       disabled
                       data-action="theme:demo:button-large"
-                      data-intent="disabled"
+
                     >
                       Large
                     </ActionButton>
@@ -594,7 +593,7 @@ export default function ThemePage() {
                       variant="secondary"
                       disabled
                       data-action="theme:demo:button-secondary"
-                      data-intent="disabled"
+
                     >
                       Secondary
                     </ActionButton>
@@ -602,7 +601,7 @@ export default function ThemePage() {
                       variant="outline"
                       disabled
                       data-action="theme:demo:button-outline"
-                      data-intent="disabled"
+
                     >
                       Outline
                     </ActionButton>
@@ -610,7 +609,7 @@ export default function ThemePage() {
                       variant="destructive"
                       disabled
                       data-action="theme:demo:button-destructive"
-                      data-intent="disabled"
+
                     >
                       Destructive
                     </ActionButton>
@@ -701,7 +700,7 @@ export default function ThemePage() {
         <div
           data-testid="ui-v3-watermark"
           aria-hidden="true"
-          className="fixed bottom-3 right-4 z-[9999] pointer-events-none select-none opacity-80 text-[11px] font-semibold px-2 py-1 rounded border border-black/20 bg-black/70 text-white shadow-md dark:bg-white/20 dark:text-white"
+          className="fixed bottom-3 right-4 z-[9999] pointer-events-none select-none text-[11px] font-semibold px-2 py-1 rounded border border-black bg-black text-white shadow-md dark:bg-white dark:text-black"
           title="/theme"
         >
           UI-V3 View (Theme Customizer) • /theme

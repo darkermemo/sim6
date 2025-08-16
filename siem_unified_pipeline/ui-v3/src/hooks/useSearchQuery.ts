@@ -20,6 +20,7 @@ export interface SearchState {
 export interface UseSearchQueryOptions {
   debounceMs?: number;
   autoExecute?: boolean;
+  allowAutoWiden?: boolean;
 }
 
 export function useSearchQuery(
@@ -29,7 +30,7 @@ export function useSearchQuery(
   facetFilters: Record<string, string[]> = {},
   options: UseSearchQueryOptions = {}
 ) {
-  const { debounceMs = 400, autoExecute = true } = options; // 400ms as per spec
+  const { debounceMs = 250, autoExecute = true, allowAutoWiden = true } = options; // auto-widen enabled by default
   
   const [state, setState] = useState<SearchState>({
     loading: false,
@@ -44,6 +45,9 @@ export function useSearchQuery(
 
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Notice to inform users when we expanded time automatically
+  const widenedNoticeRef = useRef<{ from: number; to: number } | null>(null);
+
   // Build final search query with facet filters
   const buildQuery = useCallback(() => {
     let finalQuery = query;
@@ -56,62 +60,91 @@ export function useSearchQuery(
   }, [query, facetFilters]);
 
   // Execute all search operations in parallel
+  const executeOnce = useCallback(async (
+    effectiveTimeRange: number,
+    finalQuery: string,
+    limit: number,
+    offset: number
+  ) => {
+    const [eventsResult, facetsResult, timelineResult, sqlResult] = await Promise.allSettled([
+      searchEvents({
+        search: finalQuery || '',
+        tenant_id: tenantId,
+        time_range_seconds: effectiveTimeRange,
+        limit,
+        offset
+      }),
+      searchFacets(finalQuery || '', [
+        { field: 'severity', size: 8 },
+        { field: 'source_type', size: 10 },
+        { field: 'host', size: 8 },
+        { field: 'vendor', size: 6 },
+        { field: 'event_type', size: 8 }
+      ], tenantId, effectiveTimeRange),
+      searchAggs(finalQuery || '', tenantId, effectiveTimeRange),
+      finalQuery ? compileSearch(finalQuery, tenantId) : Promise.resolve({ sql: '' })
+    ]);
+
+    return { eventsResult, facetsResult, timelineResult, sqlResult } as const;
+  }, [tenantId]);
+
   const executeSearch = useCallback(async (
     searchQuery?: string,
     limit: number = 100,
     offset: number = 0
   ) => {
     const finalQuery = searchQuery ?? buildQuery();
-    
-    setState(prev => ({ 
-      ...prev, 
-      loading: true, 
-      error: null 
+
+    setState(prev => ({
+      ...prev,
+      loading: true,
+      error: null
     }));
 
     try {
-      // Prepare common request parameters
-      const baseParams = {
-        tenant_id: tenantId,
-        time: { last_seconds: timeRangeSeconds },
-        q: finalQuery || ''
+      // Attempt with current time window; widen progressively if empty and allowed
+      const widenSteps = [timeRangeSeconds, 604800, 2592000] // 48h, 7d, 30d
+        .filter((v, i, a) => a.indexOf(v) === i);
+
+      let usedTime = timeRangeSeconds;
+      let resultBundle = await executeOnce(usedTime, finalQuery, limit, offset);
+
+      const getCount = () => {
+        if (resultBundle.eventsResult.status !== 'fulfilled' || !resultBundle.eventsResult.value) return 0;
+        const ev = resultBundle.eventsResult.value;
+        return ev.total_count || ev.events?.length || 0;
       };
 
-      // Execute all requests in parallel (as per spec: execute + aggs + facets)
-      const [eventsResult, facetsResult, timelineResult, sqlResult] = await Promise.allSettled([
-        // Events search
-        searchEvents({
-          search: finalQuery || "*", // Use "*" for initial load as per spec
-          tenant_id: tenantId,
-          time_range_seconds: timeRangeSeconds,
-          limit,
-          offset
-        }),
-        
-        // Facets - always execute in parallel
-        searchFacets(finalQuery || "*", [
-          { field: 'severity', size: 8 },
-          { field: 'source_type', size: 10 },
-          { field: 'host', size: 8 },
-          { field: 'vendor', size: 6 },
-          { field: 'event_type', size: 8 }
-        ], tenantId, timeRangeSeconds),
-        
-        // Timeline aggregations - always execute in parallel
-        searchAggs(finalQuery || "*", tenantId, timeRangeSeconds),
-        
-        // SQL compilation (optional)
-        finalQuery ? compileSearch(finalQuery, tenantId) : Promise.resolve({ sql: '' })
-      ]);
+      let count = getCount();
+      if (count === 0 && allowAutoWiden) {
+        for (const candidate of widenSteps) {
+          if (candidate <= usedTime) continue;
+          const widened = await executeOnce(candidate, finalQuery, limit, offset);
+          // if wider returns something, adopt it
+          const prevBundle = resultBundle;
+          resultBundle = widened;
+          usedTime = candidate;
+          count = getCount();
+          if (count > 0) {
+            widenedNoticeRef.current = { from: timeRangeSeconds, to: candidate };
+            break;
+          } else {
+            // keep notice only if we actually changed, but no results yet
+            widenedNoticeRef.current = { from: timeRangeSeconds, to: candidate };
+          }
+        }
+      } else {
+        widenedNoticeRef.current = null;
+      }
 
       setState(prev => ({
         ...prev,
         loading: false,
         results: {
-          events: eventsResult.status === 'fulfilled' ? eventsResult.value : null,
-          facets: facetsResult.status === 'fulfilled' ? facetsResult.value : null,
-          timeline: timelineResult.status === 'fulfilled' ? timelineResult.value : null,
-          sql: sqlResult.status === 'fulfilled' ? sqlResult.value.sql : null
+          events: resultBundle.eventsResult.status === 'fulfilled' ? resultBundle.eventsResult.value : null,
+          facets: resultBundle.facetsResult.status === 'fulfilled' ? resultBundle.facetsResult.value : null,
+          timeline: resultBundle.timelineResult.status === 'fulfilled' ? resultBundle.timelineResult.value : null,
+          sql: resultBundle.sqlResult.status === 'fulfilled' ? resultBundle.sqlResult.value.sql : null
         }
       }));
 
@@ -123,7 +156,7 @@ export function useSearchQuery(
         error: error instanceof Error ? error.message : 'Search failed'
       }));
     }
-  }, [buildQuery, tenantId, timeRangeSeconds]);
+  }, [buildQuery, tenantId, timeRangeSeconds, allowAutoWiden, executeOnce]);
 
   // Debounced search execution
   const debouncedExecute = useCallback((
@@ -180,6 +213,7 @@ export function useSearchQuery(
     ...state,
     execute,
     clear,
-    isIdle: !state.loading && !state.results.events
+    isIdle: !state.loading && !state.results.events,
+    widenedNotice: widenedNoticeRef.current
   };
 }

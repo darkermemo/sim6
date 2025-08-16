@@ -4,10 +4,18 @@ import { normalizeSeverity } from "@/lib/severity";
 export function toRowObjects(payload: any): Record<string, any>[] {
   // ClickHouse meta+data arrays → objects
   if (payload?.data?.meta && payload?.data?.data) {
-    const cols = payload.data.meta.map((c: any) => c.name);
-    return payload.data.data.map((row: any[]) =>
-      Object.fromEntries(cols.map((name: string, i: number) => [name, row[i]]))
-    );
+    const rows = payload.data.data;
+    // If rows are arrays, map by meta order; if rows are already objects, return as-is
+    if (Array.isArray(rows) && rows.length > 0 && Array.isArray(rows[0])) {
+      const cols = payload.data.meta.map((c: any) => c.name);
+      return rows.map((row: any[]) =>
+        Object.fromEntries(cols.map((name: string, i: number) => [name, row[i]]))
+      );
+    }
+    if (Array.isArray(rows) && rows.length > 0 && typeof rows[0] === 'object') {
+      return rows as Record<string, any>[];
+    }
+    return Array.isArray(rows) ? rows : [];
   }
   
   // Already objects in rows array
@@ -35,6 +43,13 @@ export function parseTs(raw: unknown): string | null {
   if (typeof raw === "string") {
     // Handle "YYYY-MM-DD HH:mm:ss[.ms]" (add Z if missing) and ISO strings
     let s = raw.trim();
+    // Handle ClickHouse DateTime64 returned as number-like string
+    if (/^\d{10,}$/.test(s)) {
+      const num = parseInt(s, 10);
+      const ms = s.length > 10 ? num : num * 1000;
+      const d = new Date(ms);
+      return isNaN(d.getTime()) ? null : d.toISOString();
+    }
     if (s.includes(" ") && !s.includes("T")) {
       s = s.replace(" ", "T") + "Z";
     }
@@ -53,12 +68,16 @@ export function deriveSource(r: Record<string, any>): string {
     r.source ||
     r.event_source ||
     r.service ||
+    r.logger ||
+    r.program ||
     r.product ||
     r.vendor ||
+    r.facility ||
     r.host ||
     r.host_name ||
     r.source_type ||
     r.log_source_id ||
+    r._table ||
     "unknown"
   );
 }
@@ -73,6 +92,7 @@ export function deriveMessage(r: Record<string, any>): string {
     r.event_message ||
     r.original_message ||
     r.raw_log ||
+    r.raw_message ||
     r._raw ||
     ""
   );
@@ -87,6 +107,7 @@ export function deriveEventType(r: Record<string, any>): string {
     r.event_category ||
     r.action ||
     r.event_action ||
+    r.source_type ||
     ""
   );
 }

@@ -169,11 +169,11 @@ export default function AlertsPage() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "Open": return "bg-red-100 text-red-800 border-red-200 dark:bg-red-900/20 dark:text-red-300 dark:border-red-800";
-      case "Investigating": return "bg-orange-100 text-orange-800 border-orange-200 dark:bg-orange-900/20 dark:text-orange-300 dark:border-orange-800";
-      case "Resolved": return "bg-green-100 text-green-800 border-green-200 dark:bg-green-900/20 dark:text-green-300 dark:border-green-800";
-      case "False Positive": return "bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-900/20 dark:text-gray-300 dark:border-gray-800";
-      default: return "bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-900/20 dark:text-gray-300 dark:border-gray-800";
+      case "Open": return "bg-red-100 text-red-800 border-red-200 dark:bg-red-900 dark:text-red-300 dark:border-red-800";
+      case "Investigating": return "bg-orange-100 text-orange-800 border-orange-200 dark:bg-orange-900 dark:text-orange-300 dark:border-orange-800";
+      case "Resolved": return "bg-green-100 text-green-800 border-green-200 dark:bg-green-900 dark:text-green-300 dark:border-green-800";
+      case "False Positive": return "bg-muted text-muted-foreground border-slate-200 dark:border-slate-700";
+      default: return "bg-muted text-muted-foreground border-slate-200 dark:border-slate-700";
     }
   };
 
@@ -205,14 +205,14 @@ export default function AlertsPage() {
   return (
     <div className="space-y-6">
       {/* Watermark */}
-      <div className="fixed bottom-3 right-4 z-50 pointer-events-none select-none opacity-40 text-xs font-semibold bg-muted text-muted-foreground px-2 py-1 rounded">
+      <div className="fixed bottom-3 right-4 z-50 pointer-events-none select-none  text-xs font-semibold bg-muted text-muted-foreground px-2 py-1 rounded">
         UI-V3 View (Alerts)
       </div>
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Security Alerts</h1>
-          <p className="text-slate-600 dark:text-slate-400 mt-1">
+          <h1 className="text-3xl font-bold text-foreground">Security Alerts</h1>
+          <p className="text-muted-foreground mt-1">
             Monitor and investigate security incidents
           </p>
         </div>
@@ -247,14 +247,14 @@ export default function AlertsPage() {
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-red-100 dark:bg-red-900/20">
+              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-red-100 dark:bg-red-900">
                 <AlertCircle className="h-6 w-6 text-red-600 dark:text-red-400" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-slate-900 dark:text-white">
+                <p className="text-2xl font-bold text-foreground">
                   {alerts.filter(a => a.status === "Open").length}
                 </p>
-                <p className="text-sm text-slate-600 dark:text-slate-400">Open</p>
+                <p className="text-sm text-muted-foreground">Open</p>
               </div>
             </div>
           </CardContent>
@@ -263,14 +263,14 @@ export default function AlertsPage() {
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-orange-100 dark:bg-orange-900/20">
+              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-orange-100 dark:bg-orange-900">
                 <Clock className="h-6 w-6 text-orange-600 dark:text-orange-400" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-slate-900 dark:text-white">
+                <p className="text-2xl font-bold text-foreground">
                   {alerts.filter(a => a.status === "Investigating").length}
                 </p>
-                <p className="text-sm text-slate-600 dark:text-slate-400">Investigating</p>
+                <p className="text-sm text-muted-foreground">Investigating</p>
               </div>
             </div>
           </CardContent>
@@ -279,14 +279,14 @@ export default function AlertsPage() {
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-red-100 dark:bg-red-900/20">
+              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-red-100 dark:bg-red-900">
                 <AlertTriangle className="h-6 w-6 text-red-600 dark:text-red-400" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-slate-900 dark:text-white">
+                <p className="text-2xl font-bold text-foreground">
                   {alerts.filter(a => a.severity === "Critical" || a.severity === "High").length}
                 </p>
-                <p className="text-sm text-slate-600 dark:text-slate-400">High Priority</p>
+                <p className="text-sm text-muted-foreground">High Priority</p>
               </div>
             </div>
           </CardContent>
@@ -295,14 +295,14 @@ export default function AlertsPage() {
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-green-100 dark:bg-green-900/20">
+              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-muted">
                 <CheckCircle className="h-6 w-6 text-green-600 dark:text-green-400" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-slate-900 dark:text-white">
+                <p className="text-2xl font-bold text-foreground">
                   {alerts.filter(a => a.status === "Resolved").length}
                 </p>
-                <p className="text-sm text-slate-600 dark:text-slate-400">Resolved</p>
+                <p className="text-sm text-muted-foreground">Resolved</p>
               </div>
             </div>
           </CardContent>
@@ -311,14 +311,14 @@ export default function AlertsPage() {
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-900/20">
+              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-muted">
                 <TrendingUp className="h-6 w-6 text-blue-600 dark:text-blue-400" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-slate-900 dark:text-white">
+                <p className="text-2xl font-bold text-foreground">
                   {alerts.reduce((sum, a) => sum + a.eventCount, 0)}
                 </p>
-                <p className="text-sm text-slate-600 dark:text-slate-400">Total Events</p>
+                <p className="text-sm text-muted-foreground">Total Events</p>
               </div>
             </div>
           </CardContent>
@@ -331,7 +331,7 @@ export default function AlertsPage() {
           <div className="flex flex-col lg:flex-row gap-4">
             <div className="flex-1">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Search alerts..."
                   value={searchQuery}
@@ -344,7 +344,7 @@ export default function AlertsPage() {
               <select
                 value={selectedSeverity}
                 onChange={(e) => setSelectedSeverity(e.target.value)}
-                className="px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-md bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+                className="px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-md bg-card text-foreground"
               >
                 {severities.map(severity => (
                   <option key={severity} value={severity}>
@@ -355,7 +355,7 @@ export default function AlertsPage() {
               <select
                 value={selectedStatus}
                 onChange={(e) => setSelectedStatus(e.target.value)}
-                className="px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-md bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+                className="px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-md bg-card text-foreground"
               >
                 {statuses.map(status => (
                   <option key={status} value={status}>
@@ -366,7 +366,7 @@ export default function AlertsPage() {
               <select
                 value={selectedCategory}
                 onChange={(e) => setSelectedCategory(e.target.value)}
-                className="px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-md bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+                className="px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-md bg-card text-foreground"
               >
                 {categories.map(category => (
                   <option key={category} value={category}>
@@ -390,7 +390,7 @@ export default function AlertsPage() {
                 <div className="flex items-start justify-between">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-3 mb-2">
-                      <h3 className="text-lg font-semibold text-slate-900 dark:text-white truncate">
+                      <h3 className="text-lg font-semibold text-foreground truncate">
                         {alert.title}
                       </h3>
                       <Badge className="severity" data-level={getSeverityLevel(alert.severity)}>
@@ -401,10 +401,10 @@ export default function AlertsPage() {
                         {alert.status}
                       </Badge>
                     </div>
-                    <p className="text-slate-600 dark:text-slate-400 mb-3">
+                    <p className="text-muted-foreground mb-3">
                       {alert.description}
                     </p>
-                    <div className="flex items-center gap-6 text-sm text-slate-500 dark:text-slate-400 mb-2">
+                    <div className="flex items-center gap-6 text-sm text-muted-foreground mb-2">
                       <span className="flex items-center gap-1">
                         <Globe className="h-4 w-4" />
                         {alert.source}
@@ -420,7 +420,7 @@ export default function AlertsPage() {
                       <span>Events: {alert.eventCount}</span>
                     </div>
                     {alert.assignee && (
-                      <div className="flex items-center gap-1 text-sm text-slate-500 dark:text-slate-400">
+                      <div className="flex items-center gap-1 text-sm text-muted-foreground">
                         <User className="h-4 w-4" />
                         Assigned to: {alert.assignee}
                       </div>
@@ -459,11 +459,11 @@ export default function AlertsPage() {
           {filteredAlerts.length === 0 && !loading && (
             <Card>
               <CardContent className="p-12 text-center">
-                <AlertTriangle className="h-12 w-12 text-slate-400 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">
+                <AlertTriangle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-foreground mb-2">
                   No alerts found
                 </h3>
-                <p className="text-slate-600 dark:text-slate-400 mb-6">
+                <p className="text-muted-foreground mb-6">
                   {searchQuery || selectedSeverity !== "all" || selectedStatus !== "all" || selectedCategory !== "all"
                     ? "Try adjusting your search criteria"
                     : "No security alerts at this time"

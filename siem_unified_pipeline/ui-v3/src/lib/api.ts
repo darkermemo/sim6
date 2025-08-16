@@ -16,6 +16,39 @@ import { http } from '@/lib/http';
 import { toRowObjects, mapToUiEvents } from '@/lib/event-map';
 
 // ============================================================================
+// Timestamp Utilities (robust date parsing)
+// ============================================================================
+
+/**
+ * Robust timestamp to Date conversion for ClickHouse data
+ * Handles: RFC3339 strings, Unix seconds, Unix milliseconds, null/undefined
+ */
+export function toDate(v: unknown): Date | null {
+  if (v == null) return null;
+  
+  if (typeof v === 'number') {
+    // Handle Unix timestamps - if < 2 billion, assume seconds, else milliseconds
+    return new Date(v < 2_000_000_000 ? v * 1000 : v);
+  }
+  
+  if (typeof v === 'string') {
+    // ClickHouse formats often ISO8601 w/ or w/o Z; rely on Date parse
+    const d = new Date(v);
+    return isNaN(+d) ? null : d;
+  }
+  
+  return null;
+}
+
+/**
+ * Safe date formatting with fallback
+ */
+export function formatTimestamp(v: unknown, fallback = '—'): string {
+  const date = toDate(v);
+  return date ? date.toLocaleString() : fallback;
+}
+
+// ============================================================================
 // Health API
 // ============================================================================
 
@@ -29,24 +62,28 @@ export async function getHealth(): Promise<HealthResponse> {
 
 export async function searchEvents(query: EventSearchQuery): Promise<EventSearchResponse> {
   const body: any = {
-    time: {
-      last_seconds: query.time_range_seconds || 900 // Default to 15 minutes for more results
-    },
-    q: query.search || "*", // Use "*" for initial load
+    tenant_id: query.tenant_id || "all", // default to all tenants
+    time: query.time_range_seconds ? { last_seconds: query.time_range_seconds } : { mode: "all" },
+    // Empty string means no text filter; avoids generating SQL with positionCaseInsensitive('*')
+    q: typeof query.search === 'string' ? query.search : "",
     limit: query.limit || 100,
-    offset: query.offset || 0
+    offset: query.offset || 0,
+    order: [{ field: "ts", dir: "desc" }] // Required for ClickHouse optimization
   };
-  
-  // Only include tenant_id if provided (avoid empty string)
-  if (query.tenant_id && query.tenant_id.trim()) {
-    body.tenant_id = query.tenant_id;
-  }
 
   const response = await http<any>('/search/execute', {
     method: 'POST',
     body: JSON.stringify(body),
     headers: { 'content-type': 'application/json' }
   });
+
+  // If backend returned a JSON error envelope, surface it as an exception so UI can display it
+  if (response && response.data && typeof response.data.error === 'string') {
+    const backendError: string = response.data.error as string;
+    const sqlSnippet: string | undefined = typeof response.sql === 'string' ? response.sql : undefined;
+    const errMsg = sqlSnippet ? `Search backend error: ${backendError} (sql: ${sqlSnippet})` : `Search backend error: ${backendError}`;
+    throw new Error(errMsg);
+  }
 
   // Convert ClickHouse response to normalized events
   const rows = toRowObjects(response);
@@ -94,13 +131,15 @@ export async function searchEvents(query: EventSearchQuery): Promise<EventSearch
   };
 }
 
-export async function compileSearch(query: string, tenantId = "default") {
+export async function compileSearch(query: string, tenantId = "default", timeRangeSeconds: number = 172800) {
   return http<{ sql: string }>('/search/compile', {
     method: 'POST',
     body: JSON.stringify({
-      tenant_id: tenantId,
-      time: { last_seconds: 3600 },
-      q: query
+      tenant_id: tenantId || 'all',
+      // Use the exact time window from the UI or allow "all"
+      time: timeRangeSeconds ? { last_seconds: timeRangeSeconds } : { mode: 'all' },
+      // Empty string means no text filter – avoids positionCaseInsensitive('*')
+      q: query || ""
     }),
     headers: { 'content-type': 'application/json' }
   });
@@ -112,7 +151,8 @@ export async function searchFacets(query: string, facets: Array<{field: string, 
     body: JSON.stringify({
       tenant_id: tenantId,
       time: { last_seconds: timeRangeSeconds },
-      q: query || "*",
+      // Empty string means no text filter; avoids wildcard compiling to a literal
+      q: query || "",
       facets
     }),
     headers: { 'content-type': 'application/json' }
@@ -138,7 +178,7 @@ export async function searchAggs(query: string, tenantId = "default", timeRangeS
     body: JSON.stringify({
       tenant_id: tenantId,
       time: { last_seconds: timeRangeSeconds },
-      q: query || "*"
+      q: query || ""
     }),
     headers: { 'content-type': 'application/json' }
   });
@@ -268,4 +308,29 @@ export async function getEpsStats(windowSeconds?: number): Promise<EpsStatsRespo
 
 export async function getEventById(id: string): Promise<EventDetail> {
   throw new Error('Event detail endpoint not implemented');
+}
+
+export async function getServerColumns(tenantId = 'all'): Promise<string[] | null> {
+  try {
+    const params = new URLSearchParams();
+    params.set('tenant_id', tenantId);
+    const res = await http<any>(`/search/columns?${params.toString()}`);
+    if (Array.isArray(res?.columns)) return res.columns as string[];
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+export async function putServerColumns(tenantId = 'all', columns: string[]): Promise<boolean> {
+  try {
+    const res = await http<any>(`/search/columns`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ tenant_id: tenantId, columns })
+    });
+    return !!res?.ok;
+  } catch {
+    return false;
+  }
 }

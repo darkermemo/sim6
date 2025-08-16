@@ -75,6 +75,7 @@ export function QueryBar({
 }: QueryBarProps) {
   const [sqlPreview, setSqlPreview] = useState<string>('');
   const [previewLoading, setPreviewLoading] = useState(false);
+  const [savedView, setSavedView] = useState<string>('Default');
 
   // Auto-compile SQL for preview when query changes
   useEffect(() => {
@@ -87,7 +88,7 @@ export function QueryBar({
       if (onShowSqlPreview) {
         setPreviewLoading(true);
         try {
-          const result = await compileSearch(query, tenantId);
+          const result = await compileSearch(query, tenantId, timeRange);
           setSqlPreview(result.sql);
         } catch (error) {
           console.warn('SQL preview failed:', error);
@@ -116,14 +117,13 @@ export function QueryBar({
   const selectedTimeRange = TIME_RANGES.find(r => r.value === timeRange);
 
   return (
-    <div className="bg-card border rounded-lg p-4 space-y-4">
-      {/* Main Search Row */}
-      <div className="flex items-center gap-3">
+    <div className="bg-card text-card-foreground border border-border rounded-md">
+      <div className="flex items-center gap-3 p-2">
         {/* Search Input */}
         <div className="flex-1 relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Search events... (e.g., source:auth severity:high user:alice)"
+            placeholder="Search for log entries… (e.g. host.name:host-1)"
             value={query}
             onChange={(e) => onQueryChange(e.target.value)}
             onKeyDown={handleKeyDown}
@@ -131,51 +131,17 @@ export function QueryBar({
           />
         </div>
 
-        {/* Run Button */}
-        <ActionButton 
-          onClick={onExecute} 
-          disabled={isExecuting}
-          className="gap-2 px-6"
-          data-action="search:query:execute"
-          data-intent="api"
-          data-endpoint="/api/v2/search/execute"
-        >
-          {isExecuting ? (
-            <>
-              <Square className="h-4 w-4" />
-              Stop
-            </>
-          ) : (
-            <>
-              <Play className="h-4 w-4" />
-              Run
-            </>
-          )}
-        </ActionButton>
+        {/* Saved view */}
+        <Select value={savedView} onValueChange={setSavedView}>
+          <SelectTrigger className="w-28">
+            <SelectValue placeholder="Default" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="Default">Default</SelectItem>
+          </SelectContent>
+        </Select>
+        <Button variant="link" className="px-1" onClick={handleSqlPreview}>Customize</Button>
 
-        {/* Streaming Toggle */}
-        <Button
-          variant={isStreaming ? "default" : "outline"}
-          onClick={() => onStreamingToggle(!isStreaming)}
-          className="gap-2"
-        >
-          <Zap className="h-4 w-4" />
-          {isStreaming ? 'Live' : 'Static'}
-        </Button>
-
-        {/* Clear Button */}
-        <Button
-          variant="ghost"
-          onClick={onClear}
-          className="gap-2"
-        >
-          <X className="h-4 w-4" />
-          Clear
-        </Button>
-      </div>
-
-      {/* Controls Row */}
-      <div className="flex items-center gap-4">
         {/* Time Range */}
         <div className="flex items-center gap-2">
           <Clock className="h-4 w-4 text-muted-foreground" />
@@ -193,46 +159,41 @@ export function QueryBar({
           </Select>
         </div>
 
-        {/* Tenant Selector */}
-        <div className="flex items-center gap-2">
-          <Users className="h-4 w-4 text-muted-foreground" />
-          <Select value={tenantId} onValueChange={onTenantChange}>
-            <SelectTrigger className="w-32">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {TENANTS.map(tenant => (
-                <SelectItem key={tenant.value} value={tenant.value}>
-                  {tenant.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        {/* Stream live */}
+        <Button
+          variant={isStreaming ? 'default' : 'outline'}
+          onClick={() => onStreamingToggle(!isStreaming)}
+          className="gap-2"
+        >
+          <Zap className="h-4 w-4" />
+          Stream live
+        </Button>
+
+        {/* Run/Clear controls */}
+        <div className="hidden md:flex items-center gap-2 ml-2">
+          <ActionButton 
+            onClick={onExecute} 
+            disabled={isExecuting}
+            className="gap-2 px-3"
+            data-action="search:query:execute"
+            data-intent="api"
+            data-endpoint="/api/v2/search/execute"
+          >
+            {isExecuting ? (<><Square className="h-4 w-4" />Stop</>) : (<><Play className="h-4 w-4" />Run</>)}
+          </ActionButton>
+          <Button variant="ghost" onClick={onClear} className="gap-2"><X className="h-4 w-4" />Clear</Button>
         </div>
 
-        {/* Time Range Badge */}
-        {selectedTimeRange && (
-          <Badge variant="secondary" className="gap-1">
-            <Clock className="h-3 w-3" />
-            {selectedTimeRange.label}
-          </Badge>
-        )}
-
-        {/* SQL Preview Button */}
         {onShowSqlPreview && query.trim() && (
           <Button
             variant="outline"
             size="sm"
             onClick={handleSqlPreview}
             disabled={previewLoading || !sqlPreview}
-            className="gap-2 ml-auto"
+            className="gap-2"
           >
-            {previewLoading ? (
-              <Loader2 className="h-3 w-3 animate-spin" />
-            ) : (
-              <Eye className="h-3 w-3" />
-            )}
-            SQL Preview
+            {previewLoading ? (<Loader2 className="h-3 w-3 animate-spin" />) : (<Eye className="h-3 w-3" />)}
+            SQL
           </Button>
         )}
       </div>

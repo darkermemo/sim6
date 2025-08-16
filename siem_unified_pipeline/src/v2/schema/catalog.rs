@@ -16,19 +16,39 @@ pub static CANONICAL_FIELDS: Lazy<HashMap<&'static str, FieldKind>> = Lazy::new(
         ("event_timestamp", UInt32),
         ("created_at", UInt32),
         ("tenant_id", String),
+        // User-related
         ("user_name", NullableString),
         ("user_id", NullableString),
+        // Network-related
         ("source_ip", NullableString),
         ("destination_ip", NullableString),
         ("source_port", UInt16),
         ("dest_port", UInt16),
         ("protocol", NullableString),
+        // Source/log origin variants commonly used by the UI and compiler
+        ("source", NullableString),
+        ("service", NullableString),
+        ("program", NullableString),
+        ("logger", NullableString),
+        ("facility", NullableString),
+        ("host", NullableString),
+        // Vendor/Product taxonomy
+        ("vendor", NullableString),
+        ("product", NullableString),
+        // Event classification
         ("source_type", NullableString),
+        ("event_type", NullableString),
         ("event_category", String),
         ("event_action", String),
         ("event_outcome", NullableString),
+        // Severity/log level
         ("severity", NullableString),
+        ("level", NullableString),
+        ("log_level", NullableString),
+        // Message/log body
         ("message", NullableString),
+        ("raw_message", NullableString),
+        ("raw_log", NullableString),
         ("raw_event", String),
         ("metadata", JsonText),
         ("event_id", String),

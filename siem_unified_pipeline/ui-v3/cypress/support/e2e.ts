@@ -48,5 +48,4 @@ declare global {
 // Custom logging helper
 Cypress.Commands.add('logInfo', (message: string, data?: any) => {
   console.log('Cypress Info:', message, data);
-  return cy.wrap(null);
 });

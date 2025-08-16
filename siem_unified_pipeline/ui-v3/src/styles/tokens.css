@@ -11,13 +11,13 @@
   --muted-foreground: 215 16.3% 46.9%;
   --border: 214.3 31.8% 91.4%;
   --input: var(--border);
-  --ring: 224.3 76.3% 48%;        /* focus color */
-  --primary: 224.3 76.3% 48%;
+  --ring: 176 100% 37.5%;        /* set to teal to match search2 */
+  --primary: 176 100% 37.5%;     /* teal accent like search2 (#00bfb3) */
   --primary-foreground: 210 40% 98%;
   --secondary: 210 40% 96.1%;
   --secondary-foreground: 222.2 47.4% 11.2%;
-  --accent: 210 40% 96.1%;
-  --accent-foreground: 222.2 47.4% 11.2%;
+  --accent: 176 100% 37.5%;      /* align accent with primary teal */
+  --accent-foreground: 210 40% 98%;
   --destructive: 0 84.2% 60.2%;
   --destructive-foreground: 210 40% 98%;
 
@@ -36,6 +36,7 @@
   /* Tables */
   --table-row-h: 2.25rem;
   --table-radius: var(--radius);
+  --table-max-h: 70vh;
 
   /* Shadows */
   --shadow-1: 0 1px 2px rgba(0,0,0,.06), 0 1px 1px rgba(0,0,0,.04);
@@ -67,15 +68,25 @@
   --muted-foreground: 215 20.2% 65.1%;
   --border: 217.2 32.6% 17.5%;
   --input: var(--border);
-  --ring: 224.3 76.3% 48%;
-  --primary: 224.3 76.3% 48%;
+  --ring: 176 100% 37.5%;
+  --primary: 176 100% 37.5%;
   --primary-foreground: 222.2 47.4% 11.2%;
   --secondary: 217.2 32.6% 17.5%;
   --secondary-foreground: var(--foreground);
-  --accent: 217.2 32.6% 17.5%;
-  --accent-foreground: var(--foreground);
+  --accent: 176 100% 37.5%;
+  --accent-foreground: 210 40% 98%;
   --destructive: 0 62.8% 30.6%;
   --destructive-foreground: 0 85.7% 97.3%;
+}
+
+
+/* Kibana-like rail/topbar variables to mirror search2 styling */
+:root {
+  --k-rail-bg: 220 9% 11%;          /* #1a1c20 */
+  --k-rail-icon: 220 14% 65%;       /* #98a2b3-ish */
+  --k-rail-hover: 220 10% 18%;      /* #2a2d33 */
+  --k-topbar-bg: 210 33% 97%;       /* #f5f7fa */
+  --k-border-light: 214.3 31.8% 91.4%;
 }
 
 
