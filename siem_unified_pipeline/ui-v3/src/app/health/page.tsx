@@ -20,6 +20,8 @@ export default function HealthPage() {
   const [fixing, setFixing] = useState<string | null>(null);
   const [liveMode, setLiveMode] = useState(true);
 
+  const isAbortError = (e: unknown) => typeof e === 'object' && e !== null && (e as any).name === 'AbortError';
+
   useEffect(() => {
     const ctrl = new AbortController();
     
@@ -31,7 +33,10 @@ export default function HealthPage() {
       setData(healthData);
       setErrors(errorsData);
       setSince(new Date().toLocaleTimeString());
-    }).catch((e) => setErr(String(e)));
+    }).catch((e) => {
+      if (isAbortError(e)) return; // ignore expected aborts (e.g., React StrictMode cleanup)
+      setErr(String(e));
+    });
 
     // Temporarily disable SSE stream due to backend socket issues
     // TODO: Re-enable when backend SSE is stable
@@ -48,7 +53,9 @@ export default function HealthPage() {
         setErrors(errorsData);
         setSince(new Date().toLocaleTimeString());
       } catch (error) {
-        console.warn('Periodic refresh failed:', error);
+        if (!isAbortError(error)) {
+          console.warn('Periodic refresh failed:', error);
+        }
       }
     }, 5000) : null; // Refresh every 5 seconds in live mode
 
@@ -109,6 +116,7 @@ export default function HealthPage() {
       setErrors(errorsData);
       setSince(new Date().toLocaleTimeString());
     } catch (error) {
+      if (isAbortError(error)) return;
       setErr(String(error));
     }
   };
@@ -149,10 +157,7 @@ export default function HealthPage() {
 
   return (
     <div className="p-6 space-y-6">
-      {/* Test marker */}
-      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-        <div className="text-9xl font-bold text-muted-foreground">123</div>
-      </div>
+      {/* Removed test watermark */}
 
       {/* Enhanced Header with Controls */}
       <header className="flex items-center justify-between">

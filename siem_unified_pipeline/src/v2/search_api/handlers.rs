@@ -9,9 +9,15 @@ use futures_util::stream;
 use uuid::Uuid;
 use crate::v2::{state::AppState, compiler::compile_search};
 use super::compiler::translate_to_dsl;
+use crate::v2::compiler::set_current_schema;
+use std::time::{Duration, Instant};
+use std::sync::RwLock;
+use once_cell::sync::Lazy;
 use reqwest;
 
 pub async fn compile(State(_st): State<Arc<AppState>>, Json(body): Json<Value>) -> Result<Json<Value>, axum::http::StatusCode> {
+    // Ensure schema cache is fresh
+    ensure_schema_loaded().await;
     // Bridge: if q looks like advanced DSL (seq/ratio/roll/spike/first_seen/beacon/join/overlay),
     // delegate to detections compiler for full SQL, then adapt response shape.
     if let Some(q) = body.get("q").and_then(|v| v.as_str()) {
@@ -124,6 +130,8 @@ fn parse_duration_to_seconds(tok: &str) -> Option<u64> {
 }
 
 pub async fn execute(State(st): State<Arc<AppState>>, Json(body): Json<Value>) -> Result<Json<Value>, axum::http::StatusCode> {
+    // Ensure schema cache is fresh
+    ensure_schema_loaded().await;
     // Gracefully handle translate/compile errors by returning JSON envelope instead of 422
     let dsl = match translate_to_dsl(&body) {
         Ok(d) => d,
@@ -185,6 +193,41 @@ pub async fn execute(State(st): State<Arc<AppState>>, Json(body): Json<Value>) -
     let data: Value = serde_json::from_str(&text).unwrap_or(serde_json::json!({"raw": text}));
     let took_ms = t0.elapsed().as_millis() as u64;
     Ok(Json(serde_json::json!({"sql": sql_limited, "data": data, "took_ms": took_ms })))
+}
+
+// ================= Schema cache loader =================
+static SCHEMA_META: Lazy<RwLock<(Instant, Vec<(String,String)>)>> = Lazy::new(|| RwLock::new((Instant::now()-Duration::from_secs(3600), Vec::new())));
+
+async fn ensure_schema_loaded() {
+    let now = Instant::now();
+    {
+        let g = SCHEMA_META.read().unwrap();
+        if now.duration_since(g.0) < Duration::from_secs(60) && !g.1.is_empty() {
+            // already fresh
+            return;
+        }
+    }
+    // fetch from ClickHouse system.columns
+    let sql = "SELECT name, type FROM system.columns WHERE database='dev' AND table='events' ORDER BY name FORMAT JSON";
+    let client = reqwest::Client::new();
+    if let Ok(resp) = client.get("http://localhost:8123/").query(&[("query", sql)]).send().await {
+        if resp.status().is_success() {
+            if let Ok(text) = resp.text().await {
+                if let Ok(v) = serde_json::from_str::<Value>(&text) {
+                    if let Some(arr) = v.get("data").and_then(|d| d.as_array()) {
+                        let cols: Vec<(String,String)> = arr.iter().filter_map(|row| {
+                            let n = row.get("name").and_then(|x| x.as_str())?;
+                            let t = row.get("type").and_then(|x| x.as_str())?;
+                            Some((n.to_string(), t.to_string()))
+                        }).collect();
+                        set_current_schema(&cols);
+                        let mut w = SCHEMA_META.write().unwrap();
+                        *w = (now, cols);
+                    }
+                }
+            }
+        }
+    }
 }
 
 pub async fn aggs(State(st): State<Arc<AppState>>, Json(body): Json<Value>) -> Result<Json<Value>, axum::http::StatusCode> {
@@ -399,7 +442,7 @@ pub struct SaveSearchResponse {
 pub async fn save_search(
     State(_app): State<Arc<AppState>>,
     Json(req): Json<SaveSearchRequest>
-) -> Result<Json<SaveSearchResponse>, axum::http::StatusCode> {
+) -> Result<Json<Value>, axum::http::StatusCode> {
     let time_seconds = req.time_last_seconds.unwrap_or(3600);
     let pinned = req.pinned.unwrap_or(0);
     let new_id = Uuid::new_v4().to_string();
@@ -414,13 +457,18 @@ pub async fn save_search(
     );
     let client = reqwest::Client::new();
     let resp = client
-        .get("http://localhost:8123/")
+        .post("http://localhost:8123/")
         .query(&[("query", &sql)])
+        .header("Content-Length", "0")
         .send()
         .await
         .map_err(|_| axum::http::StatusCode::BAD_GATEWAY)?;
-    if !resp.status().is_success() { return Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR); }
-    Ok(Json(SaveSearchResponse { id: new_id }))
+    if !resp.status().is_success() {
+        let status = resp.status().as_u16();
+        let text = resp.text().await.unwrap_or_default();
+        return Ok(Json(serde_json::json!({ "error": text, "status": status, "sql": sql })));
+    }
+    Ok(Json(serde_json::json!({ "id": new_id })))
 }
 
 /// DELETE /api/v2/search/saved/:id

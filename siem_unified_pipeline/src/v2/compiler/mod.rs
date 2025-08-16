@@ -6,6 +6,9 @@ use serde::{Deserialize, Serialize};
 pub mod validate;
 use crate::v2::compiler::validate::validate_expr;
 use std::fmt::Write as _;
+use std::collections::{HashMap, HashSet};
+use std::sync::RwLock;
+use once_cell::sync::Lazy;
 
 /// Top-level search request DSL
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -105,6 +108,108 @@ pub struct CompileResult {
     pub sql: String,
     pub where_sql: String,
     pub warnings: Vec<String>,
+}
+
+// ================= Schema-aware resolution cache ======================
+static SCHEMA_COLS_LOWER: Lazy<RwLock<HashSet<String>>> = Lazy::new(|| RwLock::new(HashSet::new()));
+static SCHEMA_TYPES: Lazy<RwLock<HashMap<String, String>>> = Lazy::new(|| RwLock::new(HashMap::new()));
+
+/// Set the current table columns (lowercased)
+pub fn set_current_schema(columns: &[(String, String)]) {
+    let mut set = HashSet::new();
+    let mut tmap = HashMap::new();
+    for (name, _ty) in columns.iter() {
+        set.insert(name.to_lowercase());
+        tmap.insert(name.to_lowercase(), _ty.clone());
+    }
+    let mut w = SCHEMA_COLS_LOWER.write().unwrap();
+    *w = set;
+    let mut wt = SCHEMA_TYPES.write().unwrap();
+    *wt = tmap;
+}
+
+fn has_col(name: &str) -> bool {
+    SCHEMA_COLS_LOWER
+        .read()
+        .unwrap()
+        .contains(&name.to_lowercase())
+}
+
+static CANDIDATES: Lazy<HashMap<&'static str, Vec<&'static str>>> = Lazy::new(|| {
+    HashMap::from([
+        ("ts", vec!["event_timestamp","@timestamp","ts","time","datetime"]),
+        ("user", vec!["user","user_name","username","account","subject_user","samaccountname"]),
+        ("src_ip", vec!["src_ip","source_ip","client_ip","src","srcaddress"]),
+        ("dest_ip", vec!["dest_ip","destination_ip","server_ip","dst","dstaddress"]),
+        ("host", vec!["host","computer","hostname","host_name"]),
+        ("event_type", vec!["event_type","type","category","program","syslog_program"]),
+        ("message", vec!["message","msg","log","event_message","raw_message","raw_log","_raw"]),
+        ("event_id", vec!["event_id","eid","win_event_id","id"]),
+        ("status", vec!["Status","status","result","outcome","auth_result","event_outcome"]),
+        ("extra", vec!["extra","json","payload","_json"]),
+    ])
+});
+
+fn resolve_canonical(canon: &str) -> Option<String> {
+    if let Some(list) = CANDIDATES.get(canon) {
+        for candidate in list {
+            if has_col(candidate) {
+                return Some(candidate.to_string());
+            }
+        }
+    }
+    if has_col(canon) { return Some(canon.to_string()); }
+    None
+}
+
+fn ip_stringify_if_needed(col_ident: &str) -> String {
+    // Only apply if the identifier is a bare column name
+    if !col_ident.chars().all(|c| c.is_ascii_alphanumeric() || c == '_') { return col_ident.to_string(); }
+    let lower = col_ident.to_lowercase();
+    let t = SCHEMA_TYPES.read().unwrap();
+    if let Some(ty) = t.get(&lower) {
+        if ty.starts_with("IPv4") { return format!("IPv4NumToString({})", col_ident); }
+        if ty.starts_with("IPv6") { return format!("IPv6NumToString({})", col_ident); }
+    }
+    col_ident.to_string()
+}
+
+fn expand_outcome(value: &str) -> Option<String> {
+    let v = value.to_lowercase();
+    if v != "success" && v != "fail" { return None; }
+    // Windows event IDs present?
+    if has_col("event_id") {
+        if v == "success" {
+            // 4624,4768,4769,4776; optionally consider Status
+            let st = if has_col("status") { " OR lower(Status) IN ('0x0','ok','success','succeeded')" } else { "" };
+            return Some(format!("( event_id IN (4624,4768,4769,4776){} )", st));
+        } else {
+            return Some("( event_id IN (4625,4771) )".to_string());
+        }
+    }
+    // Syslog/SSH by program/type + message
+    let has_msg = has_col("message") || has_col("msg") || has_col("log") || has_col("_raw");
+    let et = resolve_canonical("event_type");
+    if has_msg {
+        let prog = et.unwrap_or_else(|| "event_type".to_string());
+        if v == "success" {
+            return Some(format!("( lower({}) IN ('sshd','ssh','auth') AND match(message, '(?i)accepted|authenticat(ed|ion) succeeded|login successful') )", prog));
+        } else {
+            return Some(format!("( lower({}) IN ('sshd','ssh','auth') AND match(message, '(?i)failed|failure|denied|invalid user|pam_authenticate.*failed') )", prog));
+        }
+    }
+    // Generic status column family
+    if let Some(st) = resolve_canonical("status") {
+        if v == "success" { return Some(format!("lower({}) IN ('ok','success','succeeded','pass','accepted','true','0x0')", st)); }
+        else { return Some(format!("lower({}) IN ('fail','failed','failure','denied','invalid','false')", st)); }
+    }
+    // JSON fallback
+    if let Some(extra) = resolve_canonical("extra") {
+        let j = |k: &str| format!("lower(JSONExtractString({}, '{}'))", extra, k);
+        if v == "success" { return Some(format!("{} IN ('ok','success','succeeded','pass','accepted','true','0x0') OR {} IN ('ok','success','accepted')", j("status"), j("result"))); }
+        else { return Some(format!("{} IN ('fail','failed','failure','denied','invalid','false') OR {} IN ('fail','failed','denied')", j("status"), j("result"))); }
+    }
+    None
 }
 
 /// compile_search compiles a SearchDsl (filter only) into a SELECT ... WHERE ... SQL with bounds
@@ -244,7 +349,18 @@ fn compile_expr(expr: &Expr, out: &mut String) -> Result<(), String> {
         Expr::Not(inner) => {
             let mut b=String::new(); compile_expr(inner, &mut b)?; if !b.is_empty(){ write!(out, "(NOT {})", b).unwrap(); }
         }
-        Expr::Eq((f,v)) => write!(out, "{} = '{}'", map_field(f), escape_sql(&json_to_str(v))).unwrap(),
+        Expr::Eq((f,v)) => {
+            // Expand outcome aliases if value is 'success' or 'fail'
+            if let serde_json::Value::String(s) = v {
+                if let Some(expanded) = expand_outcome(s) {
+                    write!(out, "{}", expanded).unwrap();
+                } else {
+                    write!(out, "{} = '{}'", map_field(f), escape_sql(&json_to_str(v))).unwrap();
+                }
+            } else {
+                write!(out, "{} = '{}'", map_field(f), escape_sql(&json_to_str(v))).unwrap();
+            }
+        }
         Expr::Ne((f,v)) => write!(out, "{} != '{}'", map_field(f), escape_sql(&json_to_str(v))).unwrap(),
         Expr::In((f,vals)) => {
             let items = vals.iter().map(|v| format!("'{}'", escape_sql(&json_to_str(v)))).collect::<Vec<_>>().join(",");
@@ -294,7 +410,10 @@ fn compile_expr(expr: &Expr, out: &mut String) -> Result<(), String> {
             if re.len() > 256 || re.contains("(a+)+") {
                 return Err("regex_guard: pattern too costly".to_string());
             }
-            write!(out, "match({}, '{}')", map_field(f), escape_sql(re)).unwrap();
+            // If regex over IP columns, stringify
+            let col = map_field(f);
+            let ip_str = ip_stringify_if_needed(&col);
+            write!(out, "match({}, '{}')", ip_str, escape_sql(re)).unwrap();
         }
         Expr::Gt((f,n)) => write!(out, "{} > {}", map_field(f), n).unwrap(),
         Expr::Gte((f,n)) => write!(out, "{} >= {}", map_field(f), n).unwrap(),
@@ -338,32 +457,25 @@ fn split_json_path(path: &str) -> (&str, String) {
 }
 
 fn map_field(f: &str) -> String {
-    match f {
-        // Canonical projections for UI/DSL field names
-        // Time
-        "time" | "ts" | "@timestamp" | "event_timestamp" => "event_timestamp".to_string(),
-        // Severity: map synonyms to canonical column to avoid referencing non-existent columns
-        "severity" | "level" | "log_level" => "severity".to_string(),
-        // Source
-        // Avoid referencing non-existent columns; prefer canonical single columns
-        "source" => "source_type".to_string(),
-        "service" => "service".to_string(),
-        "program" => "program".to_string(),
-        "logger" => "logger".to_string(),
-        "facility" => "facility".to_string(),
-        // Message/log
-        "message" | "msg" | "log" | "event_message" | "raw_message" | "raw_log" =>
-            "message".to_string(),
-        // Host
-        "host" | "host_name" => "host".to_string(),
-        // Vendor/Product
-        "vendor" | "product" => "coalesce(vendor, product)".to_string(),
-        // Event type
-        "event_type" | "event_category" | "event_action" =>
-            "event_type".to_string(),
-        // Pass-through by default
-        other => escape_sql(other),
+    let lower = f.to_lowercase();
+    let canon = match lower.as_str() {
+        "time" | "ts" | "@timestamp" | "event_timestamp" | "datetime" => "ts",
+        "severity" | "level" | "log_level" => return if has_col("severity") { "severity".to_string() } else { escape_sql(f) },
+        "source" | "service" | "program" | "logger" | "facility" | "source_type" => "event_type",
+        "message" | "msg" | "log" | "event_message" | "raw_message" | "raw_log" | "_raw" => "message",
+        "host" | "host_name" | "hostname" | "computer" => "host",
+        "event_type" | "type" | "category" | "syslog_program" => "event_type",
+        "outcome" | "result" | "status" | "event_outcome" | "auth_result" => "status",
+        "user" | "user_name" | "username" | "account" | "subject_user" | "samaccountname" => "user",
+        "src_ip" | "source_ip" | "client_ip" | "src" | "srcaddress" => "src_ip",
+        "dest_ip" | "destination_ip" | "server_ip" | "dst" | "dstaddress" => "dest_ip",
+        _ => "",
+    };
+    if !canon.is_empty() {
+        if let Some(actual) = resolve_canonical(canon) { return actual; }
     }
+    if has_col(&lower) { return lower; }
+    escape_sql(f)
 }
 
 /// Compile DSL logic family expressions by delegating to detection family compilers
