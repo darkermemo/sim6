@@ -307,7 +307,7 @@ function SearchPageContent() {
           { field: 'event_type', size: 8 }
         ], urlState.tenant_id, urlState.last_seconds),
         searchAggs(finalQuery || '', urlState.tenant_id, urlState.last_seconds),
-        finalQuery ? compileSearch(finalQuery, urlState.tenant_id) : Promise.resolve({ sql: '' })
+        finalQuery ? compileSearch(finalQuery, urlState.tenant_id, urlState.last_seconds) : Promise.resolve({ sql: '' })
       ]);
 
       const derivedError = eventsResult.status === 'rejected'
@@ -452,6 +452,7 @@ function SearchPageContent() {
       }
 
       const finalQ = parts.join(' AND ');
+      urlState.setQuery(finalQ);
       handleExecuteSearch(finalQ);
     });
   }, [urlState, handleExecuteSearch]);
