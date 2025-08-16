@@ -14,6 +14,8 @@ import { getSearchFields, searchEvents, searchAggs, searchFacets, compileSearch,
 import { formatTimestamp } from '@/lib/api';
 import { ActionButton } from '@/components/ui/ActionButton';
 import { FacetPanel } from '@/components/search/FacetPanel';
+import { setFilterExecutor, type FilterAction, quoteValue } from '@/state/queryBuilder';
+import { Cell } from '@/components/search/Cell';
 import { RowInspector } from '@/components/search/RowInspector';
 import type { Filter } from '@/types/filters';
 import { compileFiltersToQ } from '@/lib/filters-compiler';
@@ -81,7 +83,7 @@ function SearchPageContent() {
 
   // Facet state
   const [selectedFacets, setSelectedFacets] = useState<Record<string, string[]>>({});
-
+  
   // UI state
   const [selectedFields, setSelectedFields] = useState<string[]>([
     'event_type','severity','user','host','source_ip','destination_ip','vendor','product','protocol','source_port','destination_port'
@@ -237,6 +239,8 @@ function SearchPageContent() {
     setDragColIndex(null);
   }, [dragColIndex]);
 
+  
+
   // Streaming hook for real-time updates
   const streaming = useStreaming(
     urlState.q,
@@ -247,7 +251,7 @@ function SearchPageContent() {
       console.log('New streaming events:', newEvents);
     }, [])
   );
-
+  
   // Load available fields from API
   React.useEffect(() => {
     if (urlState.tenant_id) {
@@ -404,6 +408,53 @@ function SearchPageContent() {
     const finalQ = [urlState.q?.trim(), compiledQ !== '*' ? compiledQ : ''].filter(Boolean).join(' AND ');
     handleExecuteSearch(finalQ);
   }, [compiledQ, urlState.q, handleExecuteSearch]);
+
+  // Unified filter dispatcher wiring (after handleExecuteSearch is defined)
+  React.useEffect(() => {
+    setFilterExecutor((action: FilterAction) => {
+      const base = (urlState.q || '').trim();
+      const parts: string[] = [];
+      if (base && base !== '*') parts.push(base);
+
+      switch (action.type) {
+        case 'include':
+          parts.push(`${action.field}:${quoteValue(action.value)}`);
+          break;
+        case 'exclude':
+          parts.push(`NOT ${action.field}:${quoteValue(action.value)}`);
+          break;
+        case 'in': {
+          const vals = (action.values || []).map(quoteValue).join(',');
+          parts.push(`${action.field} IN (${vals})`);
+          break;
+        }
+        case 'exists':
+          parts.push(`${action.negate ? 'NOT ' : ''}exists(${action.field})`);
+          break;
+        case 'op': {
+          const v = quoteValue(action.value);
+          if (action.op === 'regex') parts.push(`${action.field} ~ ${v}`);
+          else if (action.op === 'contains') parts.push(`contains(${action.field}, ${v})`);
+          else if (action.op === 'startsWith') parts.push(`startsWith(${action.field}, ${v})`);
+          else if (action.op === 'endsWith') parts.push(`endsWith(${action.field}, ${v})`);
+          else parts.push(`${action.field} ${action.op} ${v}`);
+          break;
+        }
+        case 'sequence_add': {
+          parts.push(`stage_${action.stage}(${action.field}:${quoteValue(action.value)})`);
+          break;
+        }
+        case 'time_range': {
+          const seconds = Math.max(1, Math.floor((action.to - action.from) / 1000));
+          urlState.setTimeRange(seconds);
+          break;
+        }
+      }
+
+      const finalQ = parts.join(' AND ');
+      handleExecuteSearch(finalQ);
+    });
+  }, [urlState, handleExecuteSearch]);
 
   const toggleRowExpansion = useCallback((rowId: string) => {
     const newExpanded = new Set(expandedRows);
@@ -604,13 +655,13 @@ function SearchPageContent() {
         <div className="flex-1 grid grid-cols-[300px_1fr] gap-6 overflow-hidden">
           {/* Facets (left) */}
           <div className="overflow-auto min-w-0 pr-2">
-            <FacetPanel
+          <FacetPanel
               query={buildQuery()}
-              tenantId={urlState.tenant_id}
-              timeRange={urlState.last_seconds}
-              onFacetSelect={handleFacetSelect}
-              selectedFacets={selectedFacets}
-              onFacetRemove={handleFacetRemove}
+            tenantId={urlState.tenant_id}
+            timeRange={urlState.last_seconds}
+            onFacetSelect={handleFacetSelect}
+            selectedFacets={selectedFacets}
+            onFacetRemove={handleFacetRemove}
               facetsData={searchResults.facets}
               kibanaList
             />
@@ -649,7 +700,7 @@ function SearchPageContent() {
                 No timeline data available
               </div>
             )}
-            </div>
+              </div>
             </div>
             
             {/* Results Table */}
@@ -705,7 +756,9 @@ function SearchPageContent() {
                             {event.message || event.raw_message || event._source || JSON.stringify(event).substring(0, 100)}
                           </td>
                           {selectedFields.map((f) => (
-                            <td key={f} className="p-3 text-sm text-gray-900">{renderCell(f, event)}</td>
+                            <td key={f} className="p-3 text-sm text-gray-900">
+                              <Cell field={f} value={renderCell(f, event)} />
+                            </td>
                           ))}
                         </tr>
                       ))}
@@ -776,8 +829,8 @@ function SearchPageContent() {
           >
             <ModalContent>
               <pre className="bg-muted text-foreground p-4 rounded-lg text-sm overflow-auto">
-                {sqlPreviewModal}
-              </pre>
+                  {sqlPreviewModal}
+                </pre>
             </ModalContent>
           </Modal>
         )}
@@ -824,10 +877,10 @@ function SearchPageContent() {
                             const tmp = out[i+1]; out[i+1] = out[i]; out[i] = tmp; return out; })}>↓</Button>
                         </div>
                       )}
-                    </div>
+            </div>
                   );
                 })}
-              </div>
+          </div>
               <div className="mt-4 text-xs text-muted-foreground">Fields are sourced from the backend schema and the current page of results.</div>
             </ModalContent>
           </Modal>
