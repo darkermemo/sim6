@@ -342,8 +342,8 @@ fn map_field(f: &str) -> String {
         // Canonical projections for UI/DSL field names
         // Time
         "time" | "ts" | "@timestamp" | "event_timestamp" => "event_timestamp".to_string(),
-        // Severity
-        "severity" | "level" | "log_level" => "coalesce(severity, level, log_level)".to_string(),
+        // Severity: map synonyms to canonical column to avoid referencing non-existent columns
+        "severity" | "level" | "log_level" => "severity".to_string(),
         // Source (logger/app/host)
         "source" | "service" | "program" | "logger" | "facility" =>
             "coalesce(source, service, program, logger, facility, host)".to_string(),
