@@ -344,19 +344,23 @@ fn map_field(f: &str) -> String {
         "time" | "ts" | "@timestamp" | "event_timestamp" => "event_timestamp".to_string(),
         // Severity: map synonyms to canonical column to avoid referencing non-existent columns
         "severity" | "level" | "log_level" => "severity".to_string(),
-        // Source (logger/app/host)
-        "source" | "service" | "program" | "logger" | "facility" =>
-            "coalesce(source, service, program, logger, facility, host)".to_string(),
+        // Source
+        // Avoid referencing non-existent columns; prefer canonical single columns
+        "source" => "source_type".to_string(),
+        "service" => "service".to_string(),
+        "program" => "program".to_string(),
+        "logger" => "logger".to_string(),
+        "facility" => "facility".to_string(),
         // Message/log
         "message" | "msg" | "log" | "event_message" | "raw_message" | "raw_log" =>
-            "coalesce(message, msg, log, event_message, raw_message, raw_log)".to_string(),
+            "message".to_string(),
         // Host
-        "host" | "host_name" => "coalesce(host, host_name)".to_string(),
+        "host" | "host_name" => "host".to_string(),
         // Vendor/Product
         "vendor" | "product" => "coalesce(vendor, product)".to_string(),
-        // Event type/category/action
+        // Event type
         "event_type" | "event_category" | "event_action" =>
-            "coalesce(event_type, event_category, event_action)".to_string(),
+            "event_type".to_string(),
         // Pass-through by default
         other => escape_sql(other),
     }
