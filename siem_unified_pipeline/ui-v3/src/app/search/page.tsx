@@ -748,13 +748,13 @@ function SearchPageContent() {
                           onClick={() => handleRowClick(event)}
                         >
                           <td className="p-3 text-sm text-gray-900">
-                            {event.tsIso ? formatTimestamp(event.tsIso) : (event.timestamp ? formatTimestamp(event.timestamp) : '-')}
+                            <Cell field="event_timestamp" value={event.tsIso || event.timestamp || ''} />
                           </td>
                           <td className="p-3 text-sm text-gray-600">
-                            {event.source || event.host || event.source_type || '-'}
+                            <Cell field="source" value={event.source || event.host || event.source_type || ''} />
                           </td>
                           <td className="p-3 text-sm text-gray-900 max-w-md truncate">
-                            {event.message || event.raw_message || event._source || JSON.stringify(event).substring(0, 100)}
+                            <Cell field="message" value={event.message || event.raw_message || event._source || JSON.stringify(event)} />
                           </td>
                           {selectedFields.map((f) => (
                             <td key={f} className="p-3 text-sm text-gray-900">
