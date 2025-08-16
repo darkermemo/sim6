@@ -17,6 +17,7 @@ import { FacetPanel } from '@/components/search/FacetPanel';
 import { RowInspector } from '@/components/search/RowInspector';
 import type { Filter } from '@/types/filters';
 import { compileFiltersToQ } from '@/lib/filters-compiler';
+import { FilterBuilderDialog } from '@/app/search/FilterBuilderDialog';
 
 /**
  * UI-V3 View (Search2 - Kibana Style)
@@ -511,6 +512,18 @@ function SearchPageContent() {
     return () => clearTimeout(t);
   }, [urlState.q, urlState.last_seconds, selectedFacets]);
 
+  const [builderOpen, setBuilderOpen] = useState(false);
+
+  const handleApplyFromBuilder = useCallback((newQuery: string, time: { last_seconds?: number }) => {
+    const base = (urlState.q || '').trim();
+    const parts = [base && base !== '*' ? base : '', newQuery && newQuery.trim() ? newQuery.trim() : ''].filter(Boolean);
+    const finalQ = parts.length ? parts.join(' AND ') : '';
+    if (typeof time?.last_seconds === 'number' && !Number.isNaN(time.last_seconds)) {
+      urlState.setTimeRange(time.last_seconds);
+    }
+    handleExecuteSearch(finalQ);
+  }, [urlState, handleExecuteSearch]);
+
   return (
     <div className="flex-1 flex flex-col bg-background overflow-hidden">
       <div className="flex-1 flex flex-col px-4 pt-4 pb-2 space-y-4 max-w-[1600px] mx-auto w-full overflow-hidden">
@@ -582,6 +595,7 @@ function SearchPageContent() {
                 SQL
               </Button>
               <Button variant="outline" onClick={() => setColumnsModalOpen(true)}>Columns</Button>
+              <Button variant="outline" onClick={() => setBuilderOpen(true)}>Filters</Button>
             </div>
           </div>
         </div>
@@ -836,6 +850,15 @@ function SearchPageContent() {
           </div>
         )}
       </div>
+
+        {builderOpen && (
+          <FilterBuilderDialog
+            open={builderOpen}
+            onOpenChange={setBuilderOpen}
+            onApply={handleApplyFromBuilder}
+            tenantId={urlState.tenant_id}
+          />
+        )}
     </div>
   );
 }
