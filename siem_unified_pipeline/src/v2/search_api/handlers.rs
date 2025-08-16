@@ -328,7 +328,6 @@ pub struct SavedSearch {
     pub name: String,
     pub q: String,
     pub time_last_seconds: u32,
-    pub filters: String,
     pub pinned: u8,
     pub created_at: String,
     pub updated_at: String,
@@ -345,49 +344,40 @@ pub async fn saved_searches(
     Query(params): Query<SavedSearchQuery>
 ) -> Result<Json<SavedSearchesResponse>, axum::http::StatusCode> {
     let tenant = params.tenant_id.unwrap_or_else(|| "default".to_string());
-    
     let sql = format!(
-        "SELECT id, name, q, time_last_seconds, filters, pinned, formatDateTime(created_at, '%Y-%m-%d %H:%M:%S') as created_at, formatDateTime(updated_at, '%Y-%m-%d %H:%M:%S') as updated_at FROM dev.saved_searches WHERE tenant_id = '{}' ORDER BY pinned DESC, updated_at DESC FORMAT JSON",
+        "SELECT tenant_id, id as saved_id, name, q, time_last_seconds, pinned, formatDateTime(created_at, '%Y-%m-%d %H:%M:%S') as created_at, formatDateTime(updated_at, '%Y-%m-%d %H:%M:%S') as updated_at FROM dev.saved_searches WHERE tenant_id = '{}' ORDER BY updated_at DESC FORMAT JSON",
         tenant.replace("'", "''")
     );
-    
     let client = reqwest::Client::new();
+    // ClickHouse requires POST with Content-Length header for INSERTs
     let resp = client
-        .get("http://localhost:8123/")
+        .post("http://localhost:8123/")
         .query(&[("query", &sql)])
+        .header("Content-Length", "0")
         .send()
         .await
         .map_err(|_| axum::http::StatusCode::BAD_GATEWAY)?;
-
-    if !resp.status().is_success() {
-        return Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR);
-    }
-
+    if !resp.status().is_success() { return Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR); }
     let text = resp.text().await.map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
     let v: Value = serde_json::from_str(&text).map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
-    
     let rows = v.get("data").and_then(|d| d.as_array()).cloned().unwrap_or_default();
     let mut saved_searches = Vec::new();
-    
     for row in rows {
-        if let (Some(id), Some(name), Some(q)) = (
-            row.get("id").and_then(|v| v.as_str()),
-            row.get("name").and_then(|v| v.as_str()),
-            row.get("q").and_then(|v| v.as_str())
-        ) {
-            saved_searches.push(SavedSearch {
-                id: id.to_string(),
-                name: name.to_string(),
-                q: q.to_string(),
-                time_last_seconds: row.get("time_last_seconds").and_then(|v| v.as_u64()).unwrap_or(3600) as u32,
-                filters: row.get("filters").and_then(|v| v.as_str()).unwrap_or("").to_string(),
-                pinned: row.get("pinned").and_then(|v| v.as_u64()).unwrap_or(0) as u8,
-                created_at: row.get("created_at").and_then(|v| v.as_str()).unwrap_or("").to_string(),
-                updated_at: row.get("updated_at").and_then(|v| v.as_str()).unwrap_or("").to_string(),
-            });
-        }
+        let id = row.get("saved_id").and_then(|v| v.as_str()).unwrap_or("");
+        let name = row.get("name").and_then(|v| v.as_str()).unwrap_or("");
+        let q = row.get("q").and_then(|v| v.as_str()).unwrap_or("").to_string();
+        let time_last_seconds = row.get("time_last_seconds").and_then(|v| v.as_u64()).unwrap_or(3600) as u32;
+        let pinned = row.get("pinned").and_then(|v| v.as_u64()).unwrap_or(0) as u8;
+        saved_searches.push(SavedSearch {
+            id: id.to_string(),
+            name: name.to_string(),
+            q,
+            time_last_seconds,
+            pinned,
+            created_at: row.get("created_at").and_then(|v| v.as_str()).unwrap_or("").to_string(),
+            updated_at: row.get("updated_at").and_then(|v| v.as_str()).unwrap_or("").to_string(),
+        });
     }
-    
     Ok(Json(SavedSearchesResponse { saved: saved_searches }))
 }
 
@@ -397,7 +387,6 @@ pub struct SaveSearchRequest {
     pub name: String,
     pub q: String,
     pub time_last_seconds: Option<u32>,
-    pub filters: Option<String>,
     pub pinned: Option<u8>,
 }
 
@@ -412,22 +401,17 @@ pub async fn save_search(
     Json(req): Json<SaveSearchRequest>
 ) -> Result<Json<SaveSearchResponse>, axum::http::StatusCode> {
     let time_seconds = req.time_last_seconds.unwrap_or(3600);
-    let filters = req.filters.unwrap_or_default();
     let pinned = req.pinned.unwrap_or(0);
-    
-    // Generate UUID and insert, then return it  
     let new_id = Uuid::new_v4().to_string();
     let sql = format!(
-        "INSERT INTO dev.saved_searches (tenant_id, id, name, q, time_last_seconds, filters, pinned) VALUES ('{}', toUUID('{}'), '{}', '{}', {}, '{}', {})",
+        "INSERT INTO dev.saved_searches (tenant_id, id, name, q, time_last_seconds, filters, pinned, created_at, updated_at) VALUES ('{}', toUUID('{}'), '{}', '{}', {}, '', {}, now64(3), now64(3))",
         req.tenant_id.replace("'", "''"),
         new_id,
         req.name.replace("'", "''"),
         req.q.replace("'", "''"),
         time_seconds,
-        filters.replace("'", "''"),
         pinned
     );
-    
     let client = reqwest::Client::new();
     let resp = client
         .get("http://localhost:8123/")
@@ -435,11 +419,7 @@ pub async fn save_search(
         .send()
         .await
         .map_err(|_| axum::http::StatusCode::BAD_GATEWAY)?;
-
-    if !resp.status().is_success() {
-        return Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR);
-    }
-    
+    if !resp.status().is_success() { return Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR); }
     Ok(Json(SaveSearchResponse { id: new_id }))
 }
 
@@ -449,10 +429,9 @@ pub async fn delete_search(
     axum::extract::Path(id): axum::extract::Path<String>
 ) -> Result<Json<Value>, axum::http::StatusCode> {
     let sql = format!(
-        "ALTER TABLE dev.saved_searches DELETE WHERE id = toUUID('{}')",
+        "ALTER TABLE dev.saved_searches DELETE WHERE saved_id = '{}'",
         id.replace("'", "''")
     );
-    
     let client = reqwest::Client::new();
     let resp = client
         .get("http://localhost:8123/")
@@ -460,15 +439,8 @@ pub async fn delete_search(
         .send()
         .await
         .map_err(|_| axum::http::StatusCode::BAD_GATEWAY)?;
-
-    if !resp.status().is_success() {
-        return Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR);
-    }
-    
-    Ok(Json(serde_json::json!({
-        "deleted": true,
-        "id": id
-    })))
+    if !resp.status().is_success() { return Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR); }
+    Ok(Json(serde_json::json!({ "deleted": true, "id": id })))
 }
 
 /// GET /api/v2/search/grammar - static grammar for UI help

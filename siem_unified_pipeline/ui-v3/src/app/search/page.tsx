@@ -20,6 +20,8 @@ import { RowInspector } from '@/components/search/RowInspector';
 import type { Filter } from '@/types/filters';
 import { compileFiltersToQ } from '@/lib/filters-compiler';
 import { FilterBuilderDialog } from '@/app/search/FilterBuilderDialog';
+import { SaveSearchDialog } from '@/app/search/SaveSearchDialog';
+import { getSavedSearches } from '@/lib/api';
 
 /**
  * UI-V3 View (Search2 - Kibana Style)
@@ -622,6 +624,16 @@ function SearchPageContent() {
   }, [urlState.q, urlState.last_seconds, selectedFacets]);
 
   const [builderOpen, setBuilderOpen] = useState(false);
+  const [saveOpen, setSaveOpen] = useState(false);
+  const [savedList, setSavedList] = useState<Array<{id:string,name:string,q:string}>>([]);
+  React.useEffect(() => {
+    (async () => {
+      try {
+        const items = await getSavedSearches(urlState.tenant_id, 50);
+        setSavedList(items.map(i => ({ id: i.id, name: i.name, q: i.q })));
+      } catch {}
+    })();
+  }, [urlState.tenant_id]);
 
   const handleApplyFromBuilder = useCallback((newQuery: string, time: { last_seconds?: number }) => {
     const base = (urlState.q || '').trim();
@@ -705,6 +717,7 @@ function SearchPageContent() {
               </Button>
               <Button variant="outline" onClick={() => setColumnsModalOpen(true)}>Columns</Button>
               <Button variant="outline" onClick={() => setBuilderOpen(true)}>Filters</Button>
+              <Button variant="outline" onClick={() => setSaveOpen(true)}>Save</Button>
             </div>
           </div>
         </div>
@@ -713,6 +726,18 @@ function SearchPageContent() {
         <div className="flex-1 grid grid-cols-[300px_1fr] gap-6 overflow-hidden">
           {/* Facets (left) */}
           <div className="overflow-auto min-w-0 pr-2">
+            {savedList.length > 0 && (
+              <div className="mb-3">
+                <div className="text-xs font-medium mb-1">Saved Filters</div>
+                <div className="space-y-1">
+                  {savedList.map((s) => (
+                    <div key={s.id} className="flex items-center justify-between gap-2 text-xs">
+                      <button className="underline" onClick={() => { urlState.setQuery(s.q); handleExecuteSearch(s.q); }}>{s.name}</button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           <FacetPanel
               query={buildQuery()}
             tenantId={urlState.tenant_id}
@@ -993,6 +1018,15 @@ function SearchPageContent() {
             onOpenChange={setBuilderOpen}
             onApply={handleApplyFromBuilder}
             tenantId={urlState.tenant_id}
+          />
+        )}
+        {saveOpen && (
+          <SaveSearchDialog
+            open={saveOpen}
+            onOpenChange={(o) => { setSaveOpen(o); if (!o) { (async()=>{ try{ const items=await getSavedSearches(urlState.tenant_id,50); setSavedList(items.map(i=>({id:i.id,name:i.name,q:i.q}))); } catch{} })(); } }}
+            tenantId={urlState.tenant_id}
+            currentQuery={urlState.q}
+            timeLastSeconds={urlState.last_seconds}
           />
         )}
     </div>

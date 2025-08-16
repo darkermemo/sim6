@@ -334,3 +334,39 @@ export async function putServerColumns(tenantId = 'all', columns: string[]): Pro
     return false;
   }
 }
+
+// ============================================================================
+// Saved Searches API
+// ============================================================================
+
+export interface SavedSearchItem {
+  id: string;
+  name: string;
+  q: string;
+  time_last_seconds?: number;
+  pinned?: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export async function getSavedSearches(tenantId = 'all', limit = 50): Promise<SavedSearchItem[]> {
+  const params = new URLSearchParams({ tenant_id: tenantId, limit: String(limit) });
+  const res = await http<{ saved: SavedSearchItem[] }>(`/search/saved?${params.toString()}`);
+  return Array.isArray((res as any).saved) ? (res as any).saved : [];
+}
+
+export async function createSavedSearch(params: { tenant_id: string; name: string; q: string; time_last_seconds?: number; pinned?: boolean }): Promise<{ id?: string }> {
+  const body = {
+    tenant_id: params.tenant_id || 'all',
+    name: params.name,
+    q: params.q || '',
+    time_last_seconds: params.time_last_seconds ?? 0,
+    pinned: params.pinned ?? false
+  } as any;
+  const res = await http<any>(`/search/saved`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+  return res || {};
+}
