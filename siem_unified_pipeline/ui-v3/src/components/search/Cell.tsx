@@ -21,13 +21,17 @@ export function Cell({ field, value }: { field: string; value: any }) {
       <ContextMenuTrigger asChild>
         <button
           onClick={onClick}
+          onContextMenu={(e) => {
+            // ensure the context menu opens without triggering row click
+            e.stopPropagation();
+          }}
           className="max-w-[28rem] truncate rounded px-1.5 py-0.5 text-left hover:bg-muted"
           title={`${field} = ${str}`}
         >
           {str}
         </button>
       </ContextMenuTrigger>
-      <ContextMenuContent>
+      <ContextMenuContent onClick={(e) => e.stopPropagation()}>
         <ContextMenuItem onClick={() => dispatchFilter({ type: 'include', field, value })}>Include</ContextMenuItem>
         <ContextMenuItem onClick={() => dispatchFilter({ type: 'exclude', field, value })}>Exclude</ContextMenuItem>
         <ContextMenuItem onClick={() => dispatchFilter({ type: 'in', field, values: [value] })}>Add to IN(…)</ContextMenuItem>
